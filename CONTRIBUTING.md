@@ -40,7 +40,7 @@ npm run format        # Prettier
 
 ## Testing
 
-Tests use [Vitest](https://vitest.dev/) with `describe`/`it`/`expect` and `vi.mock`/`vi.hoisted` for mocking. Tests live in `__tests__/` mirroring the `src/` structure. Tests are currently JavaScript (`.spec.js`) and import directly from TypeScript source via Vitest's resolve alias.
+Tests use [Vitest](https://vitest.dev/) with `describe`/`it`/`expect` and `vi.mock`/`vi.hoisted` for mocking. Tests live in `__tests__/` mirroring the `src/` structure. Tests are TypeScript (`.spec.ts`) with vitest globals enabled — no need to import `describe`/`it`/`expect`/`vi` explicitly.
 
 Coverage thresholds are enforced:
 - Statements: 92%

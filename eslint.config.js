@@ -35,13 +35,13 @@ export default [
       'no-var': 'error'
     }
   },
-  // TypeScript source files
+  // TypeScript source and test files
   ...tseslint.configs.recommended.map(config => ({
     ...config,
-    files: ['src/**/*.ts']
+    files: ['src/**/*.ts', '**/__tests__/**/*.ts']
   })),
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.ts', '**/__tests__/**/*.ts'],
     rules: {
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [
@@ -55,22 +55,11 @@ export default [
       '@typescript-eslint/no-explicit-any': 'warn'
     }
   },
-  // Test files - add vitest globals
+  // Test files — relax strict typing for mocks
   {
-    files: ['**/__tests__/**/*.js'],
-    languageOptions: {
-      globals: {
-        describe: 'readonly',
-        it: 'readonly',
-        test: 'readonly',
-        expect: 'readonly',
-        beforeEach: 'readonly',
-        afterEach: 'readonly',
-        beforeAll: 'readonly',
-        afterAll: 'readonly',
-        vi: 'readonly',
-        performance: 'readonly'
-      }
+    files: ['**/__tests__/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off'
     }
   },
   // Browser UI files (MCP Apps)
