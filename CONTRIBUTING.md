@@ -19,6 +19,8 @@ npm test
 ## Development
 
 ```bash
+npm run build:check   # Type-check without emitting (fast feedback)
+npm run build         # Compile TypeScript → dist/ (JS + .d.ts)
 npm test              # Run all tests (1978 tests)
 npm run test:watch    # Watch mode
 npm run test:coverage # Coverage report (thresholds: 92% statements, 85% branches)
@@ -28,7 +30,8 @@ npm run format        # Prettier
 
 ## Code Style
 
-- ES modules (`"type": "module"`) with `.js` extensions in imports
+- TypeScript with `.js` extensions in imports (NodeNext module resolution)
+- `import type` for type-only imports (`verbatimModuleSyntax: true`)
 - `camelCase` for functions/variables, `SCREAMING_SNAKE_CASE` for constants
 - `snake_case` for API attributes (Rails conventions)
 - 2 spaces, single quotes, no semicolons, 100 char width
@@ -37,7 +40,7 @@ npm run format        # Prettier
 
 ## Testing
 
-Tests use [Vitest](https://vitest.dev/) with `describe`/`it`/`expect` and `vi.mock`/`vi.hoisted` for mocking. Tests live in `__tests__/lib/` mirroring the `lib/` structure.
+Tests use [Vitest](https://vitest.dev/) with `describe`/`it`/`expect` and `vi.mock`/`vi.hoisted` for mocking. Tests live in `__tests__/` mirroring the `src/` structure. Tests are currently JavaScript (`.spec.js`) and import directly from TypeScript source via Vitest's resolve alias.
 
 Coverage thresholds are enforced:
 - Statements: 92%
@@ -49,7 +52,7 @@ Coverage thresholds are enforced:
 
 1. Fork the repo and create a branch from `main`
 2. Add tests for any new functionality
-3. Ensure `npm test` and `npm run lint` pass
+3. Ensure `npm run build:check`, `npm test`, and `npm run lint` pass
 4. Keep PRs focused — one feature or fix per PR
 
 ## Contribution Areas
@@ -79,7 +82,7 @@ Working example servers demonstrating different use cases.
 
 ## Architecture
 
-The `lib/` directory is organized into modules:
+The `src/` directory is organized into modules:
 
 | Module | Description |
 |--------|-------------|
@@ -91,8 +94,8 @@ The `lib/` directory is organized into modules:
 | `services/` | Logger, tracing, error tracking, embeddings, memory |
 
 Key principles:
-- **lib/ never reads env vars** — configuration is injected
-- **lib/ has no domain knowledge** — your server adds the domain
+- **src/ never reads env vars** — configuration is injected
+- **src/ has no domain knowledge** — your server adds the domain
 - **Category-driven auth** — tools declare category, framework infers auth
 - **Model is source of truth** — `attributesConfig` drives everything
 

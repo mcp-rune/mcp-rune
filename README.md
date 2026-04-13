@@ -12,12 +12,13 @@
 
 mcp-kit is an opinionated, model-driven framework for building [Model Context Protocol](https://modelcontextprotocol.io/) servers. Like Rails was extracted from Basecamp, mcp-kit was extracted from production MCP servers that power real workflows daily.
 
-```javascript
+```typescript
 import { BaseModel } from 'mcp-kit/core'
+import type { AttributeDefinition } from 'mcp-kit/core'
 
 export class Book extends BaseModel {
-  static endpoint = 'books'
-  static attributes = {
+  static override endpoint = 'books'
+  static override attributes: Record<string, AttributeDefinition> = {
     title:  { type: 'string', required: true, description: 'Book title' },
     author: { type: 'string', required: true, description: 'Author name' },
     status: { type: 'enum', enumValues: ['unread', 'reading', 'completed'], default: 'unread' },
@@ -102,16 +103,16 @@ The LLM passes the model name as a parameter — `{ "model": "book", "attributes
 
 Tools declare a **category** and the framework infers auth requirements automatically:
 
-```javascript
+```typescript
 import { BaseTool, TOOL_CATEGORIES } from 'mcp-kit'
 
 export class ArchiveProjectTool extends BaseTool {
-  static get category() { return TOOL_CATEGORIES.CUSTOM }
+  static override get category() { return TOOL_CATEGORIES.CUSTOM }
 
-  get name() { return 'archive_project' }
+  override get name() { return 'archive_project' }
 
-  async execute({ project_id }) {
-    return this.apiClient.post(`/projects/${project_id}/archive`)
+  override async execute({ project_id }: { project_id: string }) {
+    return this.apiClient!.post(`/projects/${project_id}/archive`)
   }
 }
 ```
@@ -135,14 +136,15 @@ How does an LLM correctly fill out a 25-field form? Most MCP servers don't try. 
 | **Hybrid**    | 10-20  | `getDocumentation`, `validateFields`, `generateSummary` | Medium forms    |
 | **Stateful**  | 20+    | All above + `validateSection`, `getProgress`           | Complex forms    |
 
-```javascript
+```typescript
 import { BasePrompt, derivePromptSchema, PromptContentGenerator } from 'mcp-kit/prompts'
+import type { PromptContent } from 'mcp-kit/prompts'
 import { Book } from '../models/book.js'
 
 export class BookPrompt extends BasePrompt {
-  static strategy = 'hybrid'
+  static override strategy = 'hybrid' as const
 
-  static fieldGroups = {
+  static override fieldGroups = {
     identity: { fields: ['title', 'author'], context: 'Book Identity', required: true },
     status:   { fields: ['status', 'rating'], context: 'Reading Status' }
   }
@@ -154,7 +156,7 @@ export class BookPrompt extends BasePrompt {
     this.fieldDefinitions = schema.fieldDefinitions
   }
 
-  get promptContent() {
+  override get promptContent(): PromptContent[] {
     return PromptContentGenerator.for(BookPrompt, 'book')
       .add('# Book Creation Guide\n\nCreate a new book in the library.')
       .standard()              // flowDiagram → guidance → allSections → summary
@@ -180,19 +182,20 @@ The convention handles payload wrapping, association resolution, and response no
 
 **Search adapters** bridge mcp-kit's generic filter format to whatever the backend expects:
 
-```javascript
+```typescript
 import { SearchAdapter } from 'mcp-kit/search'
 
 export class ActivitySearchAdapter extends SearchAdapter {
-  buildBody(query, filters) {
-    const body = super.buildBody(query, filters)
+  override buildBody(query: string | null, filters?: Record<string, unknown>) {
+    const body = super.buildBody(query, filters) as Record<string, unknown>
 
     // Transform: { duration_minutes: { from: 40, to: 120 } }
     //        →   { min_duration: 40, max_duration: 120 }
-    if (filters?.duration_minutes) {
-      body.min_duration = filters.duration_minutes.from
-      body.max_duration = filters.duration_minutes.to
-      delete body.filters?.duration_minutes
+    const duration = filters?.duration_minutes as { from?: number; to?: number } | undefined
+    if (duration) {
+      body.min_duration = duration.from
+      body.max_duration = duration.to
+      delete (body.filters as Record<string, unknown>)?.duration_minutes
     }
 
     return body
@@ -219,7 +222,7 @@ Generated from the same `attributesConfig` that drives the tools and prompts. Ad
 
 Encode business knowledge, rules, and operational workflows that guide the LLM:
 
-```javascript
+```typescript
 import { WorkflowDefinition } from 'mcp-kit/domain'
 
 export const onboardNewUser = new WorkflowDefinition({
@@ -248,7 +251,7 @@ Production-grade OAuth2 built on [openid-client](https://github.com/panva/openid
 | 8707  | Resource Indicators              |
 | 9728  | Protected Resource Metadata      |
 
-```javascript
+```typescript
 import { OAuthService } from 'mcp-kit/oauth2'
 
 const oauth = new OAuthService({
@@ -268,13 +271,13 @@ await oauth.revokeToken(token)
 
 Both transports share the same server factory — your tools, prompts, and apps work identically:
 
-```javascript
+```typescript
 import { StdioServer } from 'mcp-kit/server'
 // Local development (spawned by Claude Desktop, Cursor, etc.)
 new StdioServer({ accessToken: process.env.ACCESS_TOKEN, mcp: mcpConfig }).start()
 ```
 
-```javascript
+```typescript
 import { HttpServer } from 'mcp-kit/server'
 // Remote access (multi-user, OAuth-protected)
 new HttpServer({ port: 4100, oauth, mcp: mcpConfig }).start()
@@ -296,7 +299,7 @@ new HttpServer({ port: 4100, oauth, mcp: mcpConfig }).start()
 git clone https://github.com/dsaenztagarro/mcp-kit.git
 cd mcp-kit/examples/bookshelf
 npm install
-npx @modelcontextprotocol/inspector -- node server.js
+npx @modelcontextprotocol/inspector -- npx tsx server.ts
 ```
 
 This starts a working MCP server with a Book model, prompt strategy, and all 10 polymorphic tools. Open the MCP Inspector and try:
@@ -312,10 +315,12 @@ See the [bookshelf example](examples/bookshelf/) for the full source (~150 lines
 
 mcp-kit exposes modules via subpath imports for targeted usage:
 
-```javascript
+```typescript
 import { BaseModel } from 'mcp-kit/core'
+import type { AttributeDefinition } from 'mcp-kit/core'
 import { StdioServer, HttpServer, createServer } from 'mcp-kit/server'
 import { BaseTool, TOOL_CATEGORIES, CRUD_TOOL_CLASSES } from 'mcp-kit/tools'
+import type { ApiClient, ToolDependencies } from 'mcp-kit/tools'
 import { BasePrompt, PromptContentGenerator, derivePromptSchema } from 'mcp-kit/prompts'
 import { AppRegistry, createCreateFormApp } from 'mcp-kit/apps'
 import { SearchClient, SearchAdapter } from 'mcp-kit/search'
@@ -337,8 +342,8 @@ your-server/                          (you write this)
     ├─ tools/                          Custom tools (extend BaseTool)
     ├─ domain/                         Workflows, rules, knowledge
     └─ servers/
-        ├─ local.js                    StdioServer entry point
-        └─ remote.js                   HttpServer entry point
+        ├─ local.ts                    StdioServer entry point
+        └─ remote.ts                   HttpServer entry point
 
 mcp-kit/                              (the framework)
     │
@@ -417,9 +422,76 @@ API converters generate tools from OpenAPI specs. mcp-kit goes the other directi
 
 ---
 
+## Development
+
+### Prerequisites
+
+- Node.js >= 24.0.0
+- npm >= 11.6.0
+
+### Setup
+
+```bash
+git clone https://github.com/dsaenztagarro/mcp-kit.git
+cd mcp-kit
+npm install
+```
+
+### Commands
+
+```bash
+# Type check (no output, fast feedback)
+npm run build:check
+
+# Compile TypeScript → dist/ (JS + .d.ts declarations)
+npm run build
+
+# Run all 1978 tests
+npm test
+
+# Watch mode (re-runs on file changes)
+npm run test:watch
+
+# Coverage report (thresholds: 92% statements, 85% branches)
+npm run test:coverage
+
+# Lint and format
+npm run lint
+npm run format
+```
+
+### Starting servers
+
+```bash
+# Local development — stdio transport (spawned by Claude Desktop, Cursor, etc.)
+npx tsx examples/bookshelf/server.ts
+
+# Or compile first, then run with Node:
+npm run build
+node dist/examples/bookshelf/server.js
+```
+
+### Claude Desktop configuration
+
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "bookshelf": {
+      "command": "npx",
+      "args": ["tsx", "/path/to/mcp-kit/examples/bookshelf/server.ts"]
+    }
+  }
+}
+```
+
+---
+
 ## Tech Stack
 
-- **Runtime:** Node.js >= 24 (pure ES modules, no build step)
+- **Language:** TypeScript 5.9 (strict mode, compiled with `tsc`)
+- **Runtime:** Node.js >= 24 (ES modules)
 - **MCP SDK:** `@modelcontextprotocol/sdk` (spec 2025-06-18)
 - **Schema:** Zod v4
 - **HTTP:** Express 5
@@ -427,6 +499,7 @@ API converters generate tools from OpenAPI specs. mcp-kit goes the other directi
 - **Database:** PostgreSQL
 - **Apps:** Vite (build only)
 - **Testing:** Vitest (1978 tests, 92%+ coverage)
+- **CI:** GitHub Actions
 
 ---
 
