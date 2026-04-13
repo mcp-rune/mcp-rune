@@ -11,7 +11,7 @@ import {
   embedBatch,
   getEmbeddingDimensions,
   initEmbeddings
-} from '../../../lib/services/embeddings.js'
+} from '../../../src/services/embeddings.js'
 
 describe('lib/services/embeddings', () => {
   beforeEach(() => {

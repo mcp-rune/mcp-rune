@@ -9,7 +9,7 @@ import {
   startToolTransaction,
   addToolBreadcrumb,
   setMcpClientContext
-} from '../../../../../lib/services/vendor/sentry/mcp-integration.js'
+} from '../../../../../src/services/vendor/sentry/mcp-integration.js'
 
 // Mock Sentry to avoid actual API calls
 vi.mock('@sentry/node', () => ({

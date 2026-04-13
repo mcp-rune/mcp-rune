@@ -28,21 +28,21 @@ vi.mock('openid-client', () => ({
   allowInsecureRequests: Symbol('allowInsecureRequests')
 }))
 
-vi.mock('#lib/services/logger.js', () => ({
+vi.mock('#src/services/logger.js', () => ({
   info: vi.fn(),
   warn: vi.fn(),
   error: vi.fn(),
   debug: vi.fn()
 }))
 
-vi.mock('../../../lib/oauth2/token-store.js', () => ({
+vi.mock('../../../src/oauth2/token-store.js', () => ({
   storeTokens: vi.fn(),
   getTokensBySession: vi.fn()
 }))
 
-import { OAuthService } from '../../../lib/oauth2/service.js'
+import { OAuthService } from '../../../src/oauth2/service.js'
 import * as client from 'openid-client'
-import * as tokenStore from '../../../lib/oauth2/token-store.js'
+import * as tokenStore from '../../../src/oauth2/token-store.js'
 
 const defaultOptions = {
   identityUrl: 'http://localhost:4000',

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { SearchAdapter } from '../../../../lib/mcp/search/search-adapter.js'
+import { SearchAdapter } from '../../../../src/mcp/search/search-adapter.js'
 
 describe('SearchAdapter', () => {
   const adapter = new SearchAdapter()

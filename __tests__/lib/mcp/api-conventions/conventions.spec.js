@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { BaseConvention } from '../../../../lib/mcp/api-conventions/base-convention.js'
-import { jsonApiConvention } from '../../../../lib/mcp/api-conventions/json-api.js'
+import { BaseConvention } from '../../../../src/mcp/api-conventions/base-convention.js'
+import { jsonApiConvention } from '../../../../src/mcp/api-conventions/json-api.js'
 
 describe('lib/mcp/api-conventions', () => {
   describe('BaseConvention', () => {

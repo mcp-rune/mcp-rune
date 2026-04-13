@@ -22,10 +22,10 @@ const { mockLogger } = vi.hoisted(() => ({
 }))
 
 // Mock logger
-vi.mock('#lib/services/logger.js', () => mockLogger)
+vi.mock('#src/services/logger.js', () => mockLogger)
 
-import * as logger from '#lib/services/logger.js'
-import { createRequestLoggerMiddleware } from '../../../../lib/mcp/middleware/request-logger.js'
+import * as logger from '#src/services/logger.js'
+import { createRequestLoggerMiddleware } from '../../../../src/mcp/middleware/request-logger.js'
 
 describe('lib/mcp/middleware/request-logger', () => {
   let middleware

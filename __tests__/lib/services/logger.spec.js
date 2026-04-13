@@ -36,7 +36,7 @@ vi.mock('winston-daily-rotate-file', () => ({
   default: vi.fn()
 }))
 
-const logger = await import('../../../lib/services/logger.js')
+const logger = await import('../../../src/services/logger.js')
 import winston from 'winston'
 
 describe('lib/services/logger', () => {
@@ -117,7 +117,7 @@ describe('lib/services/logger', () => {
       else delete process.env.LOG_FILE_ENABLED
       try {
         vi.resetModules()
-        await import('../../../lib/services/logger.js')
+        await import('../../../src/services/logger.js')
         return (await import('winston-daily-rotate-file')).default
       } finally {
         if (prev === undefined) delete process.env.LOG_FILE_ENABLED

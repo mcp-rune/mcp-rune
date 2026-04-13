@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('../../../lib/services/vendor/langfuse/index.js', () => ({
+vi.mock('../../../src/services/vendor/langfuse/index.js', () => ({
   initialize: vi.fn(() => true),
   isConfigured: vi.fn(() => true),
   traceToolCall: vi.fn(async (name, args, handler) => handler()),
@@ -22,9 +22,9 @@ import {
   extractTraceContext,
   flushTracing,
   closeTracing
-} from '../../../lib/services/tracing.js'
+} from '../../../src/services/tracing.js'
 
-import * as vendor from '../../../lib/services/vendor/langfuse/index.js'
+import * as vendor from '../../../src/services/vendor/langfuse/index.js'
 
 describe('lib/services/tracing', () => {
   beforeEach(() => {

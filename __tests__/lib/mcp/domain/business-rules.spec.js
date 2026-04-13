@@ -1,4 +1,4 @@
-import { BusinessRule, RuleSet } from '../../../../lib/mcp/domain/business-rules.js'
+import { BusinessRule, RuleSet } from '../../../../src/mcp/domain/business-rules.js'
 
 describe('lib/mcp/domain/business-rules', () => {
   describe('BusinessRule', () => {

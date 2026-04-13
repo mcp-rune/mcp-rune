@@ -19,12 +19,12 @@ describe('OAuth2 Interchangeability', () => {
   const implementations = [
     {
       name: 'Production (lib/oauth2)',
-      module: '#lib/oauth2/service.js',
+      module: '#src/oauth2/service.js',
       className: 'OAuthService'
     },
     {
       name: 'Reference (lib/oauth2-ref)',
-      module: '#lib/oauth2-ref/index.js',
+      module: '#src/oauth2-ref/index.js',
       className: 'OAuth2ReferenceService'
     }
   ]
@@ -203,12 +203,12 @@ describe('OAuth2 Interchangeability', () => {
       }
 
       // Test with production implementation
-      const prodModule = await import('#lib/oauth2/service.js')
+      const prodModule = await import('#src/oauth2/service.js')
       const prodService = await useOAuthService(prodModule.OAuthService)
       expect(prodService).toBeDefined()
 
       // Test with reference implementation
-      const refModule = await import('#lib/oauth2-ref/index.js')
+      const refModule = await import('#src/oauth2-ref/index.js')
       const refService = await useOAuthService(refModule.OAuth2ReferenceService)
       expect(refService).toBeDefined()
 
@@ -236,10 +236,10 @@ describe('OAuth2 Interchangeability', () => {
       // Pattern: Use env var to choose implementation
       const getOAuthService = async (impl = 'production') => {
         if (impl === 'reference') {
-          const module = await import('#lib/oauth2-ref/index.js')
+          const module = await import('#src/oauth2-ref/index.js')
           return new module.OAuth2ReferenceService(mockConfig)
         } else {
-          const module = await import('#lib/oauth2/service.js')
+          const module = await import('#src/oauth2/service.js')
           return new module.OAuthService(mockConfig)
         }
       }
@@ -257,7 +257,7 @@ describe('OAuth2 Interchangeability', () => {
 
 describe('OAuth2 Reference Implementation Specific Tests', () => {
   test('reference implementation exposes core modules', async () => {
-    const module = await import('#lib/oauth2-ref/index.js')
+    const module = await import('#src/oauth2-ref/index.js')
 
     // Core modules should be exported
     expect(module.OAuth2Orchestrator).toBeDefined()
@@ -273,7 +273,7 @@ describe('OAuth2 Reference Implementation Specific Tests', () => {
   })
 
   test('reference implementation has phase-based logger', async () => {
-    const module = await import('#lib/oauth2-ref/index.js')
+    const module = await import('#src/oauth2-ref/index.js')
 
     expect(module.OAUTH2_PHASES).toBeDefined()
     expect(typeof module.OAUTH2_PHASES).toBe('object')

@@ -32,15 +32,15 @@ vi.mock('axios', () => ({
 }))
 
 // Mock logger
-vi.mock('#lib/services/logger.js', () => mockLogger)
+vi.mock('#src/services/logger.js', () => mockLogger)
 
-import * as logger from '#lib/services/logger.js'
+import * as logger from '#src/services/logger.js'
 import {
   extractBearerToken,
   buildResourceMetadataUrl,
   sendUnauthorized,
   createOAuthRouter
-} from '../../../../lib/mcp/middleware/oauth-router.js'
+} from '../../../../src/mcp/middleware/oauth-router.js'
 
 describe('lib/mcp/middleware/oauth-router', () => {
   beforeEach(() => {

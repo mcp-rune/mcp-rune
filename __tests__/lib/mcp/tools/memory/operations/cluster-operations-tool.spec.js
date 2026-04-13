@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('#lib/services/memory-storage.js', () => ({
+vi.mock('#src/services/memory-storage.js', () => ({
   getOperationClusters: vi.fn()
 }))
 
-import { ClusterOperationsTool } from '../../../../../../lib/mcp/tools/memory/operations/cluster-operations-tool.js'
-import { getOperationClusters } from '#lib/services/memory-storage.js'
-import { TOOL_CATEGORIES } from '../../../../../../lib/mcp/tools/categories.js'
+import { ClusterOperationsTool } from '../../../../../../src/mcp/tools/memory/operations/cluster-operations-tool.js'
+import { getOperationClusters } from '#src/services/memory-storage.js'
+import { TOOL_CATEGORIES } from '../../../../../../src/mcp/tools/categories.js'
 
 describe('ClusterOperationsTool', () => {
   let tool

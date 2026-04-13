@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { SelectionStore } from '../../../../lib/mcp/apps/selection-store.js'
+import { SelectionStore } from '../../../../src/mcp/apps/selection-store.js'
 
 describe('SelectionStore', () => {
   let store

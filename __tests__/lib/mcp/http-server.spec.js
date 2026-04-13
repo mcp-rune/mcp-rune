@@ -52,27 +52,27 @@ vi.mock('@modelcontextprotocol/sdk/server/streamableHttp.js', () => ({
   StreamableHTTPServerTransport: MockStreamableHTTPServerTransport
 }))
 
-vi.mock('#lib/services/logger.js', () => mockLogger)
+vi.mock('#src/services/logger.js', () => mockLogger)
 
-vi.mock('../../../lib/mcp/middleware/request-id.js', () => ({
+vi.mock('../../../src/mcp/middleware/request-id.js', () => ({
   createRequestIdMiddleware: mockRequestIdMiddleware
 }))
 
-vi.mock('../../../lib/mcp/middleware/request-logger.js', () => ({
+vi.mock('../../../src/mcp/middleware/request-logger.js', () => ({
   createRequestLoggerMiddleware: mockRequestLoggerMiddleware
 }))
 
-vi.mock('../../../lib/mcp/middleware/oauth-router.js', () => ({
+vi.mock('../../../src/mcp/middleware/oauth-router.js', () => ({
   createOAuthRouter: vi.fn(() => mockOAuthRouter),
   extractBearerToken: mockExtractBearerToken,
   sendUnauthorized: mockSendUnauthorized
 }))
 
-import * as logger from '#lib/services/logger.js'
-import { createRequestIdMiddleware } from '../../../lib/mcp/middleware/request-id.js'
-import { createRequestLoggerMiddleware } from '../../../lib/mcp/middleware/request-logger.js'
-import { createOAuthRouter, sendUnauthorized } from '../../../lib/mcp/middleware/oauth-router.js'
-import { HttpServer } from '../../../lib/mcp/http-server.js'
+import * as logger from '#src/services/logger.js'
+import { createRequestIdMiddleware } from '../../../src/mcp/middleware/request-id.js'
+import { createRequestLoggerMiddleware } from '../../../src/mcp/middleware/request-logger.js'
+import { createOAuthRouter, sendUnauthorized } from '../../../src/mcp/middleware/oauth-router.js'
+import { HttpServer } from '../../../src/mcp/http-server.js'
 
 describe('lib/mcp/http-server', () => {
   let server

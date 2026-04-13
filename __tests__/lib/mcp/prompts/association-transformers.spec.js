@@ -4,7 +4,7 @@ import {
   getSelectTransformers,
   getAutocompleteTransformers,
   getMultiSelectTransformers
-} from '../../../../lib/mcp/prompts/association-transformers.js'
+} from '../../../../src/mcp/prompts/association-transformers.js'
 
 const transformers = {
   licensor: {

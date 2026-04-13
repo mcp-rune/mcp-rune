@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { GetFiltersGuideTool } from '../../../../../lib/mcp/tools/crud/get-filters-guide-tool.js'
+import { GetFiltersGuideTool } from '../../../../../src/mcp/tools/crud/get-filters-guide-tool.js'
 
 // Mock model classes with static filters
 const mockModels = {

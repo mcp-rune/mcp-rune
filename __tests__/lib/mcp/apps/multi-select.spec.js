@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createMultiSelectApp } from '../../../../lib/mcp/apps/multi-select.js'
+import { createMultiSelectApp } from '../../../../src/mcp/apps/multi-select.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 

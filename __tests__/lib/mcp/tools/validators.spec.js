@@ -3,7 +3,7 @@ import {
   validateNestedResource,
   validateFilterValues,
   normalizeFilterValues
-} from '../../../../lib/mcp/tools/validators.js'
+} from '../../../../src/mcp/tools/validators.js'
 import { MOCK_MODELS } from '../../../__fixtures__/models-config-mock.js'
 
 describe('lib/mcp/tools/validators', () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
-import { GetFormSummaryTool } from '../../../../../lib/mcp/prompts/tools/get-form-summary-tool.js'
-import { BaseStrategyTool } from '../../../../../lib/mcp/prompts/tools/base-strategy-tool.js'
+import { GetFormSummaryTool } from '../../../../../src/mcp/prompts/tools/get-form-summary-tool.js'
+import { BaseStrategyTool } from '../../../../../src/mcp/prompts/tools/base-strategy-tool.js'
 
 describe('lib/mcp/prompts/tools/get-form-summary-tool', () => {
   describe('inheritance', () => {

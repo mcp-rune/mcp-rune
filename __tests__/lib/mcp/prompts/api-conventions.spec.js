@@ -2,7 +2,7 @@
  * API Convention Adapter Tests
  */
 
-import { halConvention, jsonApiConvention } from '../../../../lib/mcp/prompts/api-conventions.js'
+import { halConvention, jsonApiConvention } from '../../../../src/mcp/prompts/api-conventions.js'
 
 describe('lib/mcp/prompts/api-conventions', () => {
   const relConfig = {

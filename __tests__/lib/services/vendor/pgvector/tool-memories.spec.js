@@ -6,14 +6,14 @@ import {
   getClusters,
   getStats,
   cleanupExpired
-} from '../../../../../lib/services/vendor/pgvector/tool-memories.js'
+} from '../../../../../src/services/vendor/pgvector/tool-memories.js'
 
 // Mock cosine-similarity
-vi.mock('../../../../../lib/services/cosine-similarity.js', () => ({
+vi.mock('../../../../../src/services/cosine-similarity.js', () => ({
   cosineSimilarity: vi.fn()
 }))
 
-import { cosineSimilarity } from '../../../../../lib/services/cosine-similarity.js'
+import { cosineSimilarity } from '../../../../../src/services/cosine-similarity.js'
 
 function createMockPool(rows = [], rowCount = 0) {
   return {

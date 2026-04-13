@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createCreateFormApp } from '../../../../lib/mcp/apps/model-form.js'
+import { createCreateFormApp } from '../../../../src/mcp/apps/model-form.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 

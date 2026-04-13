@@ -10,7 +10,7 @@ describe('OAuth2 Reference Implementation - Smoke Test', () => {
   let OAuth2ReferenceService
 
   beforeEach(async () => {
-    const module = await import('#lib/oauth2-ref/index.js')
+    const module = await import('#src/oauth2-ref/index.js')
     OAuth2ReferenceService = module.OAuth2ReferenceService
   })
 
@@ -43,7 +43,7 @@ describe('OAuth2 Reference Implementation - Smoke Test', () => {
       OAuth2ClientRegistrationService,
       OAuth2Logger,
       OAUTH2_PHASES
-    } = await import('#lib/oauth2-ref/index.js')
+    } = await import('#src/oauth2-ref/index.js')
 
     expect(OAuth2Orchestrator).toBeDefined()
     expect(OAuth2AuthorizationFlowService).toBeDefined()
@@ -56,7 +56,7 @@ describe('OAuth2 Reference Implementation - Smoke Test', () => {
 
   it('should export adapter modules', async () => {
     const { OAuth2LocalFlowHandler, OAuth2UserInfoService } =
-      await import('#lib/oauth2-ref/index.js')
+      await import('#src/oauth2-ref/index.js')
 
     expect(OAuth2LocalFlowHandler).toBeDefined()
     expect(OAuth2UserInfoService).toBeDefined()

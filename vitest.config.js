@@ -1,26 +1,32 @@
 import { defineConfig } from 'vitest/config'
+import path from 'node:path'
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '#src': path.resolve(import.meta.dirname, 'src')
+    }
+  },
   test: {
     globals: true,
     environment: 'node',
-    include: ['**/__tests__/**/*.spec.js'],
+    include: ['**/__tests__/**/*.spec.{js,ts}'],
     testTimeout: 10000,
     coverage: {
       provider: 'v8',
-      include: ['lib/**/*.js'],
+      include: ['src/**/*.ts'],
       exclude: [
         '**/__tests__/**',
         'vitest.config.js',
-        'lib/mcp/stdio-server.js',
-        'lib/services/vendor/sentry/index.js',
-        'lib/oauth2/index.js',
-        'lib/oauth2/adapters/base-adapter.js',
-        'lib/mcp/tools/crud/index.js',
-        'lib/mcp/tools/domain/index.js',
-        'lib/mcp/tools/memory/index.js',
-        'lib/mcp/prompts/tools/index.js',
-        'lib/oauth2-ref/**'
+        'src/mcp/stdio-server.ts',
+        'src/services/vendor/sentry/index.ts',
+        'src/oauth2/index.ts',
+        'src/oauth2/adapters/base-adapter.ts',
+        'src/mcp/tools/crud/index.ts',
+        'src/mcp/tools/domain/index.ts',
+        'src/mcp/tools/memory/index.ts',
+        'src/mcp/prompts/tools/index.ts',
+        'src/oauth2-ref/**'
       ],
       thresholds: {
         statements: 92,

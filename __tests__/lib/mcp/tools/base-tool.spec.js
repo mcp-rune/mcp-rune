@@ -1,6 +1,6 @@
 import { vi, describe, it, expect } from 'vitest'
-import { BaseTool } from '../../../../lib/mcp/tools/base-tool.js'
-import { TOOL_CATEGORIES } from '../../../../lib/mcp/tools/categories.js'
+import { BaseTool } from '../../../../src/mcp/tools/base-tool.js'
+import { TOOL_CATEGORIES } from '../../../../src/mcp/tools/categories.js'
 
 describe('lib/mcp/tools/base-tool', () => {
   describe('abstract methods', () => {

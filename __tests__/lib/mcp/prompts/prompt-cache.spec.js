@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest'
-import { PromptCache, createPromptCache } from '../../../../lib/mcp/prompts/prompt-cache.js'
+import { PromptCache, createPromptCache } from '../../../../src/mcp/prompts/prompt-cache.js'
 
 describe('PromptCache', () => {
   let mockRegistry

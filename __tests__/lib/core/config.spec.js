@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { loadConfig } from '#lib/core/config.js'
+import { loadConfig } from '#src/core/config.js'
 
 describe('lib/core/config', () => {
   const savedEnv = {}

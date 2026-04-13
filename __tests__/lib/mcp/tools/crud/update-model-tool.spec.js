@@ -1,12 +1,12 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { UpdateModelTool } from '../../../../../lib/mcp/tools/crud/update-model-tool.js'
-import { halConvention } from '../../../../../lib/mcp/api-conventions/hal.js'
+import { UpdateModelTool } from '../../../../../src/mcp/tools/crud/update-model-tool.js'
+import { halConvention } from '../../../../../src/mcp/api-conventions/hal.js'
 
-vi.mock('#lib/services/memory-storage.js', () => ({
+vi.mock('#src/services/memory-storage.js', () => ({
   storeOperation: vi.fn().mockResolvedValue(null)
 }))
 
-const { storeOperation } = await import('#lib/services/memory-storage.js')
+const { storeOperation } = await import('#src/services/memory-storage.js')
 
 describe('lib/mcp/tools/crud/update-model-tool', () => {
   describe('description composition', () => {

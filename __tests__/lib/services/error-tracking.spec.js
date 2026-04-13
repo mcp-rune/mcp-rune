@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock the vendor module
-vi.mock('../../../lib/services/vendor/sentry/index.js', () => ({
+vi.mock('../../../src/services/vendor/sentry/index.js', () => ({
   ErrorCategory: {
     VALIDATION: 'validation_error',
     AUTH: 'auth_error',
@@ -47,9 +47,9 @@ import {
   flushErrorTracking,
   closeErrorTracking,
   ErrorCategory
-} from '../../../lib/services/error-tracking.js'
+} from '../../../src/services/error-tracking.js'
 
-import * as vendor from '../../../lib/services/vendor/sentry/index.js'
+import * as vendor from '../../../src/services/vendor/sentry/index.js'
 
 describe('lib/services/error-tracking', () => {
   beforeEach(() => {

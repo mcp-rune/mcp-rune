@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createFormDataTools } from '../../../../lib/mcp/apps/form-data-tools.js'
-import { FormDataStore } from '../../../../lib/mcp/apps/form-data-store.js'
+import { createFormDataTools } from '../../../../src/mcp/apps/form-data-tools.js'
+import { FormDataStore } from '../../../../src/mcp/apps/form-data-store.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 

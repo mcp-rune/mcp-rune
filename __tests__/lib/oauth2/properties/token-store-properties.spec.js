@@ -15,7 +15,7 @@ import {
   getTokensBySession,
   deleteTokens,
   _setAdapter
-} from '../../../../lib/oauth2/token-store.js'
+} from '../../../../src/oauth2/token-store.js'
 
 describe('Token Store Properties', () => {
   let store

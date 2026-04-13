@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { BaseStrategyTool } from '../../../../../lib/mcp/prompts/tools/base-strategy-tool.js'
-import { BaseTool } from '../../../../../lib/mcp/tools/base-tool.js'
-import { TOOL_CATEGORIES } from '../../../../../lib/mcp/tools/categories.js'
+import { BaseStrategyTool } from '../../../../../src/mcp/prompts/tools/base-strategy-tool.js'
+import { BaseTool } from '../../../../../src/mcp/tools/base-tool.js'
+import { TOOL_CATEGORIES } from '../../../../../src/mcp/tools/categories.js'
 
 describe('lib/mcp/prompts/tools/base-strategy-tool', () => {
   describe('inheritance', () => {

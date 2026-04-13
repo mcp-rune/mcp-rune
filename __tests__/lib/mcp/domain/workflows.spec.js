@@ -2,7 +2,7 @@ import {
   WorkflowStep,
   WorkflowDefinition,
   WorkflowRegistry
-} from '../../../../lib/mcp/domain/workflows.js'
+} from '../../../../src/mcp/domain/workflows.js'
 
 describe('lib/mcp/domain/workflows', () => {
   describe('WorkflowStep', () => {
