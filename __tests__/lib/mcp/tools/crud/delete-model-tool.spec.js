@@ -1,11 +1,11 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { DeleteModelTool } from '../../../../../lib/mcp/tools/crud/delete-model-tool.js'
+import { DeleteModelTool } from '../../../../../src/mcp/tools/crud/delete-model-tool.js'
 
-vi.mock('#lib/services/memory-storage.js', () => ({
+vi.mock('#src/services/memory-storage.js', () => ({
   storeOperation: vi.fn().mockResolvedValue(null)
 }))
 
-const { storeOperation } = await import('#lib/services/memory-storage.js')
+const { storeOperation } = await import('#src/services/memory-storage.js')
 
 describe('lib/mcp/tools/crud/delete-model-tool', () => {
   describe('tool definition', () => {

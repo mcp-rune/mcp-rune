@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { requireEnv, optionalEnv, intEnv, boolEnv } from '#lib/core/env.js'
+import { requireEnv, optionalEnv, intEnv, boolEnv } from '#src/core/env.js'
 
 describe('lib/core/env', () => {
   const TEST_VAR = 'TEST_ENV_UTIL_VAR'

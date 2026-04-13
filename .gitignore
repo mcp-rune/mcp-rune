@@ -24,5 +24,9 @@ coverage/
 .DS_Store
 Thumbs.db
 
+# Build output
+dist/
+*.tsbuildinfo
+
 # AI
 .claude/

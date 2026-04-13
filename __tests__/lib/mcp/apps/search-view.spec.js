@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createSearchViewApp } from '../../../../lib/mcp/apps/search-view.js'
+import { createSearchViewApp } from '../../../../src/mcp/apps/search-view.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 

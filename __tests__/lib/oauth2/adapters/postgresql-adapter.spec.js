@@ -13,13 +13,13 @@ const { mockPool } = vi.hoisted(() => {
   return { mockPool }
 })
 
-vi.mock('#lib/services/logger.js', () => ({
+vi.mock('#src/services/logger.js', () => ({
   info: vi.fn(),
   warn: vi.fn(),
   error: vi.fn()
 }))
 
-import { PostgresqlAdapter } from '../../../../lib/oauth2/adapters/postgresql-adapter.js'
+import { PostgresqlAdapter } from '../../../../src/oauth2/adapters/postgresql-adapter.js'
 
 describe('PostgresqlAdapter', () => {
   let adapter

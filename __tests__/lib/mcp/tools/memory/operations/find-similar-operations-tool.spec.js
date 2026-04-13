@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('#lib/services/memory-storage.js', () => ({
+vi.mock('#src/services/memory-storage.js', () => ({
   findSimilarOperations: vi.fn()
 }))
 
-import { FindSimilarOperationsTool } from '../../../../../../lib/mcp/tools/memory/operations/find-similar-operations-tool.js'
-import { findSimilarOperations } from '#lib/services/memory-storage.js'
-import { TOOL_CATEGORIES } from '../../../../../../lib/mcp/tools/categories.js'
+import { FindSimilarOperationsTool } from '../../../../../../src/mcp/tools/memory/operations/find-similar-operations-tool.js'
+import { findSimilarOperations } from '#src/services/memory-storage.js'
+import { TOOL_CATEGORIES } from '../../../../../../src/mcp/tools/categories.js'
 
 describe('FindSimilarOperationsTool', () => {
   let tool

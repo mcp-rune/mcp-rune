@@ -1,4 +1,4 @@
-import { DomainConcept, DomainKnowledge } from '../../../../lib/mcp/domain/knowledge.js'
+import { DomainConcept, DomainKnowledge } from '../../../../src/mcp/domain/knowledge.js'
 
 describe('lib/mcp/domain/knowledge', () => {
   const testConcepts = [

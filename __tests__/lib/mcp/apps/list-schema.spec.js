@@ -3,7 +3,7 @@ import {
   generateListSchema,
   applyColumnSelection,
   getAvailableColumnNames
-} from '../../../../lib/mcp/apps/list-schema.js'
+} from '../../../../src/mcp/apps/list-schema.js'
 
 describe('lib/mcp/apps/list-schema', () => {
   function makeModel(overrides = {}) {

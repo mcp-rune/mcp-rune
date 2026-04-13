@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock tool-memories to prevent real DB calls
-vi.mock('../../../../../lib/services/vendor/pgvector/tool-memories.js', () => ({
+vi.mock('../../../../../src/services/vendor/pgvector/tool-memories.js', () => ({
   cleanupExpired: vi.fn(() => Promise.resolve(0))
 }))
 
 // Must import after mocks
-const pgvectorModule = await import('../../../../../lib/services/vendor/pgvector/index.js')
+const pgvectorModule = await import('../../../../../src/services/vendor/pgvector/index.js')
 const { isConfigured, initialize, close, getPool } = pgvectorModule
 
 describe('lib/services/vendor/pgvector/index', () => {
@@ -51,7 +51,7 @@ describe('lib/services/vendor/pgvector/index', () => {
 
     it('should run async cleanup on init', async () => {
       const { cleanupExpired } =
-        await import('../../../../../lib/services/vendor/pgvector/tool-memories.js')
+        await import('../../../../../src/services/vendor/pgvector/tool-memories.js')
 
       initialize({ pool: mockPool, serviceName: 'test', retentionDays: 14 })
 

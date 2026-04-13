@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { FormDataStore } from '../../../../lib/mcp/apps/form-data-store.js'
+import { FormDataStore } from '../../../../src/mcp/apps/form-data-store.js'
 
 describe('FormDataStore', () => {
   let store

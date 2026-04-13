@@ -19,21 +19,21 @@ vi.mock('openid-client', () => ({
   allowInsecureRequests: Symbol('allowInsecureRequests')
 }))
 
-vi.mock('#lib/services/logger.js', () => ({
+vi.mock('#src/services/logger.js', () => ({
   info: vi.fn(),
   debug: vi.fn(),
   error: vi.fn(),
   warn: vi.fn()
 }))
 
-vi.mock('../../../../lib/oauth2/token-store.js', () => ({
+vi.mock('../../../../src/oauth2/token-store.js', () => ({
   getTokensBySession: vi.fn(),
   storeTokens: vi.fn()
 }))
 
 import * as openidClient from 'openid-client'
-import * as tokenStore from '../../../../lib/oauth2/token-store.js'
-import { OAuthService } from '../../../../lib/oauth2/service.js'
+import * as tokenStore from '../../../../src/oauth2/token-store.js'
+import { OAuthService } from '../../../../src/oauth2/service.js'
 
 describe('Refresh Token Properties (RFC 6749 Section 6)', () => {
   let oauth

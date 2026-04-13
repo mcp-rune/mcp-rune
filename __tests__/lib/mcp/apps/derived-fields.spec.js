@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveDerivedFields } from '../../../../lib/mcp/apps/derived-fields.js'
+import { resolveDerivedFields } from '../../../../src/mcp/apps/derived-fields.js'
 
 describe('lib/mcp/apps/derived-fields', () => {
   function makeModel(attributes = {}) {

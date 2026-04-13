@@ -2,7 +2,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 import {
   BulkGetNestedResourcesTool,
   MAX_BATCH_SIZE
-} from '../../../../../lib/mcp/tools/crud/bulk-get-nested-resources-tool.js'
+} from '../../../../../src/mcp/tools/crud/bulk-get-nested-resources-tool.js'
 
 describe('lib/mcp/tools/crud/bulk-get-nested-resources-tool', () => {
   const mockModels = {

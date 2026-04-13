@@ -18,7 +18,7 @@ vi.mock('openid-client', () => ({
   allowInsecureRequests: Symbol('allowInsecureRequests')
 }))
 
-vi.mock('#lib/services/logger.js', () => ({
+vi.mock('#src/services/logger.js', () => ({
   info: vi.fn(),
   debug: vi.fn(),
   error: vi.fn(),
@@ -26,7 +26,7 @@ vi.mock('#lib/services/logger.js', () => ({
 }))
 
 import * as openidClient from 'openid-client'
-import { OAuthService } from '../../../../lib/oauth2/service.js'
+import { OAuthService } from '../../../../src/oauth2/service.js'
 
 describe('Client Credentials Properties (RFC 6749 Section 4.4)', () => {
   let oauth

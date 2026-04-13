@@ -29,7 +29,7 @@ vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
 vi.mock('@modelcontextprotocol/sdk/types.js', () => mockSchemas)
 
 // Mock logger
-vi.mock('#lib/services/logger.js', () => ({
+vi.mock('#src/services/logger.js', () => ({
   debug: vi.fn(),
   info: vi.fn(),
   warn: vi.fn(),
@@ -37,14 +37,14 @@ vi.mock('#lib/services/logger.js', () => ({
 }))
 
 // Mock form handlers
-vi.mock('#lib/mcp/forms/form-handlers.js', () => ({
+vi.mock('#src/mcp/forms/form-handlers.js', () => ({
   registerFormHandlers: vi.fn(),
   addFormCapabilityMeta: vi.fn((prompts) => prompts)
 }))
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { CompleteRequestSchema } from '@modelcontextprotocol/sdk/types.js'
-import { createServer } from '../../../lib/mcp/server-factory.js'
+import { createServer } from '../../../src/mcp/server-factory.js'
 
 describe('lib/mcp/server-factory', () => {
   let mockToolRegistry

@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { createRequestIdMiddleware } from '../../../../lib/mcp/middleware/request-id.js'
+import { createRequestIdMiddleware } from '../../../../src/mcp/middleware/request-id.js'
 
 describe('lib/mcp/middleware/request-id', () => {
   let middleware

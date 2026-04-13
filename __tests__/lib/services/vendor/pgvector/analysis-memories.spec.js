@@ -4,7 +4,7 @@ import {
   recallMemories,
   clearMemories,
   cleanupExpired
-} from '../../../../../lib/services/vendor/pgvector/analysis-memories.js'
+} from '../../../../../src/services/vendor/pgvector/analysis-memories.js'
 
 describe('lib/services/vendor/pgvector/analysis-memories', () => {
   let mockPool

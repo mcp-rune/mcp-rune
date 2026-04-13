@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock the vendor module
-vi.mock('../../../lib/services/vendor/pgvector/index.js', () => ({
+vi.mock('../../../src/services/vendor/pgvector/index.js', () => ({
   initialize: vi.fn(() => true),
   isConfigured: vi.fn(() => true),
   getPool: vi.fn(() => ({})),
@@ -10,7 +10,7 @@ vi.mock('../../../lib/services/vendor/pgvector/index.js', () => ({
 }))
 
 // Mock the operations module
-vi.mock('../../../lib/services/vendor/pgvector/tool-memories.js', () => ({
+vi.mock('../../../src/services/vendor/pgvector/tool-memories.js', () => ({
   storeOperation: vi.fn(() => Promise.resolve('uuid-123')),
   findSimilar: vi.fn(() =>
     Promise.resolve([
@@ -31,7 +31,7 @@ vi.mock('../../../lib/services/vendor/pgvector/tool-memories.js', () => ({
 }))
 
 // Mock the analysis memories module
-vi.mock('../../../lib/services/vendor/pgvector/analysis-memories.js', () => ({
+vi.mock('../../../src/services/vendor/pgvector/analysis-memories.js', () => ({
   storeMemory: vi.fn(() => Promise.resolve('analysis-uuid-123')),
   recallMemories: vi.fn(() =>
     Promise.resolve([
@@ -47,13 +47,13 @@ vi.mock('../../../lib/services/vendor/pgvector/analysis-memories.js', () => ({
 }))
 
 // Mock the embeddings module
-vi.mock('../../../lib/services/embeddings.js', () => ({
+vi.mock('../../../src/services/embeddings.js', () => ({
   embed: vi.fn(() => Promise.resolve(new Float32Array(384).fill(0.1))),
   embedBatch: vi.fn((texts) => Promise.resolve(texts.map(() => new Float32Array(384).fill(0.1))))
 }))
 
 // Mock the tool output adapters module
-vi.mock('../../../lib/services/tool-output-adapters.js', () => ({
+vi.mock('../../../src/services/tool-output-adapters.js', () => ({
   adaptToolOutput: vi.fn(() => null)
 }))
 
@@ -70,13 +70,13 @@ import {
   clearAnalysisMemories,
   flushMemoryStorage,
   closeMemoryStorage
-} from '../../../lib/services/memory-storage.js'
+} from '../../../src/services/memory-storage.js'
 
-import * as vendor from '../../../lib/services/vendor/pgvector/index.js'
-import * as operations from '../../../lib/services/vendor/pgvector/tool-memories.js'
-import * as analysisMemories from '../../../lib/services/vendor/pgvector/analysis-memories.js'
-import { embed, embedBatch } from '../../../lib/services/embeddings.js'
-import { adaptToolOutput } from '../../../lib/services/tool-output-adapters.js'
+import * as vendor from '../../../src/services/vendor/pgvector/index.js'
+import * as operations from '../../../src/services/vendor/pgvector/tool-memories.js'
+import * as analysisMemories from '../../../src/services/vendor/pgvector/analysis-memories.js'
+import { embed, embedBatch } from '../../../src/services/embeddings.js'
+import { adaptToolOutput } from '../../../src/services/tool-output-adapters.js'
 
 describe('lib/services/memory-storage', () => {
   beforeEach(() => {

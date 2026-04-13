@@ -11,8 +11,8 @@ import {
   findStepInfo,
   findNextStepOrder,
   collectStepGroup
-} from '../../../../../lib/mcp/tools/domain/workflow-renderer.js'
-import { WorkflowDefinition } from '../../../../../lib/mcp/domain/workflows.js'
+} from '../../../../../src/mcp/tools/domain/workflow-renderer.js'
+import { WorkflowDefinition } from '../../../../../src/mcp/domain/workflows.js'
 
 const APP_TOOL_NAMES = ['search_records_view', 'list_records_view', 'view_records']
 

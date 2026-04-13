@@ -9,7 +9,7 @@ import {
   clearSchemaCaches,
   getSchemaCacheStats,
   enhanceModelConfig
-} from '../../../../lib/mcp/prompts/schema-derivation.js'
+} from '../../../../src/mcp/prompts/schema-derivation.js'
 
 describe('lib/mcp/prompts/schema-derivation - Memoization', () => {
   beforeEach(() => {

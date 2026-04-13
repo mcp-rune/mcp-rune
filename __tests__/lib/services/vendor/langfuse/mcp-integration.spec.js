@@ -12,12 +12,12 @@ vi.mock('@langfuse/tracing', () => ({
 }))
 
 // Mock shared sanitizers
-vi.mock('../../../../../lib/services/sanitizers.js', () => ({
+vi.mock('../../../../../src/services/sanitizers.js', () => ({
   sanitizeToolArgs: vi.fn((args) => ({ ...args, _sanitized: true }))
 }))
 
 // Mock logger
-vi.mock('../../../../../lib/services/logger.js', () => ({
+vi.mock('../../../../../src/services/logger.js', () => ({
   default: {},
   warn: vi.fn(),
   info: vi.fn(),
@@ -32,11 +32,11 @@ import {
   tracePromptGeneration,
   setSessionContext,
   setConfigured
-} from '../../../../../lib/services/vendor/langfuse/mcp-integration.js'
+} from '../../../../../src/services/vendor/langfuse/mcp-integration.js'
 
 import { startActiveObservation, propagateAttributes } from '@langfuse/tracing'
-import { sanitizeToolArgs } from '../../../../../lib/services/sanitizers.js'
-import * as logger from '../../../../../lib/services/logger.js'
+import { sanitizeToolArgs } from '../../../../../src/services/sanitizers.js'
+import * as logger from '../../../../../src/services/logger.js'
 
 describe('lib/services/vendor/langfuse/mcp-integration', () => {
   beforeEach(() => {

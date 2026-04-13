@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from 'vitest'
 import * as fc from 'fast-check'
-import { buildResourceMetadataUrl } from '../../../../lib/mcp/middleware/oauth-router.js'
+import { buildResourceMetadataUrl } from '../../../../src/mcp/middleware/oauth-router.js'
 
 describe('Protected Resource Metadata Properties (RFC 9728)', () => {
   // Arbitrary for valid HTTPS resource URLs

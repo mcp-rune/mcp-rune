@@ -1,13 +1,13 @@
 import { vi } from 'vitest'
-import { SemanticSearch } from '../../../../lib/mcp/domain/semantic-search.js'
+import { SemanticSearch } from '../../../../src/mcp/domain/semantic-search.js'
 
 // Mock embeddings module
-vi.mock('#lib/services/embeddings.js', () => ({
+vi.mock('#src/services/embeddings.js', () => ({
   embed: vi.fn(),
   embedBatch: vi.fn()
 }))
 
-import { embed, embedBatch } from '#lib/services/embeddings.js'
+import { embed, embedBatch } from '#src/services/embeddings.js'
 
 describe('lib/mcp/domain/semantic-search', () => {
   beforeEach(() => {

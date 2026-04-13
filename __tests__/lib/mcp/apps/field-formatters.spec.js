@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { FIELD_FORMATTERS } from '../../../../lib/mcp/apps/model-form-ui/field-formatters.js'
+import { FIELD_FORMATTERS } from '../../../../src/mcp/apps/model-form-ui/field-formatters.js'
 
 describe('lib/mcp/apps/field-formatters', () => {
   describe('datetime-local', () => {

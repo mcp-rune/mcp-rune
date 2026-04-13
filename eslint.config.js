@@ -1,4 +1,5 @@
 import js from '@eslint/js'
+import tseslint from 'typescript-eslint'
 
 export default [
   js.configs.recommended,
@@ -32,6 +33,26 @@ export default [
       'no-console': 'off',
       'prefer-const': 'error',
       'no-var': 'error'
+    }
+  },
+  // TypeScript source files
+  ...tseslint.configs.recommended.map(config => ({
+    ...config,
+    files: ['src/**/*.ts']
+  })),
+  {
+    files: ['src/**/*.ts'],
+    rules: {
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          varsIgnorePattern: '^_'
+        }
+      ],
+      '@typescript-eslint/no-explicit-any': 'warn'
     }
   },
   // Test files - add vitest globals

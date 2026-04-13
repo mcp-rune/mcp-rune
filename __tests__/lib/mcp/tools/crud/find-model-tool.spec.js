@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { FindModelTool } from '../../../../../lib/mcp/tools/crud/find-model-tool.js'
+import { FindModelTool } from '../../../../../src/mcp/tools/crud/find-model-tool.js'
 
 describe('FindModelTool', () => {
   it('should have no usage rules', () => {

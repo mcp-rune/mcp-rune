@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock memory storage
-vi.mock('#lib/services/memory-storage.js', () => ({
+vi.mock('#src/services/memory-storage.js', () => ({
   storeAnalysisMemory: vi.fn(() => Promise.resolve('uuid-123')),
   recallAnalysisMemories: vi.fn(() =>
     Promise.resolve([
@@ -19,15 +19,15 @@ vi.mock('#lib/services/memory-storage.js', () => ({
   clearAnalysisMemories: vi.fn(() => Promise.resolve(3))
 }))
 
-import { StoreAnalysisMemoryTool } from '../../../../../../lib/mcp/tools/memory/analysis/store-analysis-memory-tool.js'
-import { RecallAnalysisMemoriesTool } from '../../../../../../lib/mcp/tools/memory/analysis/recall-analysis-memories-tool.js'
-import { ClearAnalysisMemoriesTool } from '../../../../../../lib/mcp/tools/memory/analysis/clear-analysis-memories-tool.js'
+import { StoreAnalysisMemoryTool } from '../../../../../../src/mcp/tools/memory/analysis/store-analysis-memory-tool.js'
+import { RecallAnalysisMemoriesTool } from '../../../../../../src/mcp/tools/memory/analysis/recall-analysis-memories-tool.js'
+import { ClearAnalysisMemoriesTool } from '../../../../../../src/mcp/tools/memory/analysis/clear-analysis-memories-tool.js'
 import {
   storeAnalysisMemory,
   recallAnalysisMemories,
   clearAnalysisMemories
-} from '#lib/services/memory-storage.js'
-import { TOOL_CATEGORIES } from '../../../../../../lib/mcp/tools/categories.js'
+} from '#src/services/memory-storage.js'
+import { TOOL_CATEGORIES } from '../../../../../../src/mcp/tools/categories.js'
 
 describe('Analysis Memory Tools', () => {
   beforeEach(() => {

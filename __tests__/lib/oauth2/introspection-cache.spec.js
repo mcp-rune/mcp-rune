@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest'
-import { OAuthService } from '../../../lib/oauth2/service.js'
+import { OAuthService } from '../../../src/oauth2/service.js'
 
 describe('OAuth2 Token Introspection Caching Logic', () => {
   let oauth

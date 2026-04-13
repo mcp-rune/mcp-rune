@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { StartupTracker } from '#lib/core/startup-tracker.js'
+import { StartupTracker } from '#src/core/startup-tracker.js'
 
 function createMockLogger() {
   const childInstance = {

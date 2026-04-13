@@ -1,23 +1,23 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { GetNestedResourcesTool } from '../../../../../lib/mcp/tools/crud/get-nested-resources-tool.js'
+import { GetNestedResourcesTool } from '../../../../../src/mcp/tools/crud/get-nested-resources-tool.js'
 
-vi.mock('#lib/core/helpers.js', async () => {
-  const actual = await vi.importActual('#lib/core/helpers.js')
+vi.mock('#src/core/helpers.js', async () => {
+  const actual = await vi.importActual('#src/core/helpers.js')
   return {
     sanitizeResponseData: vi.fn((data) => JSON.stringify(data, null, 2)),
     pickFields: actual.pickFields
   }
 })
 
-vi.mock('#lib/services/logger.js', () => ({
+vi.mock('#src/services/logger.js', () => ({
   default: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }
 }))
 
-vi.mock('../../../../../lib/mcp/tools/validators.js', () => ({
+vi.mock('../../../../../src/mcp/tools/validators.js', () => ({
   validateNestedResource: vi.fn()
 }))
 
-const { validateNestedResource } = await import('../../../../../lib/mcp/tools/validators.js')
+const { validateNestedResource } = await import('../../../../../src/mcp/tools/validators.js')
 
 describe('lib/mcp/tools/crud/get-nested-resources-tool', () => {
   describe('tool definition', () => {

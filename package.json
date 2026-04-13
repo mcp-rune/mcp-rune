@@ -1,43 +1,69 @@
 {
   "name": "mcp-kit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Batteries-included MCP framework. Define models, get CRUD tools, prompt strategies, interactive apps, OAuth, and docs — the Rails of MCP servers.",
   "type": "module",
-  "main": "./index.js",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./index.js",
-    "./server": "./server.js",
-    "./tools": "./tools.js",
-    "./prompts": "./prompts.js",
-    "./apps": "./apps.js",
-    "./search": "./search.js",
-    "./domain": "./domain.js",
-    "./oauth2": "./oauth2.js",
-    "./services": "./services.js",
-    "./db": "./db.js",
-    "./core": "./core.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    },
+    "./tools": {
+      "types": "./dist/tools.d.ts",
+      "import": "./dist/tools.js"
+    },
+    "./prompts": {
+      "types": "./dist/prompts.d.ts",
+      "import": "./dist/prompts.js"
+    },
+    "./apps": {
+      "types": "./dist/apps.d.ts",
+      "import": "./dist/apps.js"
+    },
+    "./search": {
+      "types": "./dist/search.d.ts",
+      "import": "./dist/search.js"
+    },
+    "./domain": {
+      "types": "./dist/domain.d.ts",
+      "import": "./dist/domain.js"
+    },
+    "./oauth2": {
+      "types": "./dist/oauth2.d.ts",
+      "import": "./dist/oauth2.js"
+    },
+    "./services": {
+      "types": "./dist/services.d.ts",
+      "import": "./dist/services.js"
+    },
+    "./db": {
+      "types": "./dist/db.d.ts",
+      "import": "./dist/db.js"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
+    }
   },
   "imports": {
-    "#lib/*": "./lib/*"
+    "#src/*": "./dist/*"
   },
   "files": [
-    "index.js",
-    "server.js",
-    "tools.js",
-    "prompts.js",
-    "apps.js",
-    "search.js",
-    "domain.js",
-    "oauth2.js",
-    "services.js",
-    "db.js",
-    "core.js",
-    "lib/",
+    "dist/",
     "vendor/",
     "docs/",
     "LICENSE"
   ],
   "scripts": {
+    "build": "tsc",
+    "build:check": "tsc --noEmit",
+    "build:apps": "vite build -c src/mcp/apps/vite.config.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -45,7 +71,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "build:apps": "vite build -c lib/mcp/apps/vite.config.js"
+    "prepublishOnly": "npm run build"
   },
   "engines": {
     "node": ">=24.0.0",
@@ -64,7 +90,8 @@
     "ai",
     "claude",
     "mcp-server",
-    "model-driven"
+    "model-driven",
+    "typescript"
   ],
   "repository": {
     "type": "git",
@@ -98,12 +125,18 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/cors": "^2.8.18",
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.15.0",
     "@vitest/coverage-v8": "^4.0.17",
     "ajv": "^8.18.0",
     "eslint": "^10.0.2",
     "eslint-config-prettier": "^10.1.8",
     "fast-check": "^4.6.0",
     "prettier": "^3.7.4",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.32.0",
     "vite": "^7.3.1",
     "vite-plugin-singlefile": "^2.3.0",
     "vitest": "^4.0.17"
