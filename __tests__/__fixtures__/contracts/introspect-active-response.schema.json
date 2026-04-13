@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Token Introspection Active Response (RFC 7662)",
+  "type": "object",
+  "required": ["active"],
+  "properties": {
+    "active": { "const": true },
+    "scope": { "type": "string" },
+    "client_id": { "type": "string" },
+    "token_type": { "type": "string", "enum": ["Bearer"] },
+    "exp": { "type": "integer" },
+    "iat": { "type": "integer" },
+    "sub": { "type": "string" },
+    "username": { "type": "string" },
+    "name": { "type": "string" },
+    "admin": { "type": "boolean" },
+    "locale": { "type": "string" },
+    "aud": { "type": "string" }
+  },
+  "additionalProperties": true
+}

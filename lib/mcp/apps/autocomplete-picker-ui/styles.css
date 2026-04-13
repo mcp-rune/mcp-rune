@@ -1,0 +1,105 @@
+/* autocomplete-picker — app-specific styles (base.css provides reset, palette, buttons, status bar) */
+
+/* Inline selection info in header */
+.header-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: nowrap; }
+.header-row h1 { margin-bottom: 0; }
+.header-row .btn-primary { margin-left: auto; }
+.selection-info { font-size: 1.15em; color: var(--color-accent); white-space: nowrap; }
+#selection-count { font-weight: 500; }
+
+/* Search input */
+.search-box {
+  margin-bottom: 12px;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-md);
+  color: var(--color-text-primary);
+  font-size: 0.95em;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.search-box input:focus {
+  border-color: var(--color-accent);
+}
+
+.search-box input::placeholder {
+  color: var(--color-text-info);
+}
+
+/* Results list */
+.result-list {
+  list-style: none;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.result-item:hover {
+  background: var(--row-hover);
+}
+
+.result-item.selected {
+  background: rgba(196, 112, 75, 0.12);
+}
+
+.result-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.result-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.result-display {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-fields {
+  font-size: 0.8em;
+  color: var(--color-text-info);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* Entity type tag (group mode) */
+.entity-type-tag {
+  display: inline-block;
+  font-size: 0.7em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--row-hover);
+  color: var(--color-text-info);
+  margin-bottom: 2px;
+}
+
+/* Button size override */
+button {
+  padding: 6px 14px;
+  font-size: 0.85em;
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Dynamic Client Registration Response (RFC 7591)",
+  "type": "object",
+  "required": ["client_id"],
+  "properties": {
+    "client_id": { "type": "string" },
+    "client_secret": { "type": "string" },
+    "redirect_uris": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "grant_types": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "token_endpoint_auth_method": { "type": "string" },
+    "client_id_issued_at": { "type": "integer" }
+  },
+  "additionalProperties": true
+}

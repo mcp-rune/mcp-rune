@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Token Revocation Success Response (RFC 7009 Section 2.1)",
+  "description": "Per RFC 7009 Section 2.1, the authorization server responds with HTTP status code 200 for both successful and unsuccessful revocation requests. The response body is intentionally empty or a JSON object with no required fields.",
+  "oneOf": [
+    {
+      "type": "object",
+      "maxProperties": 0
+    },
+    {
+      "type": "null"
+    }
+  ]
+}

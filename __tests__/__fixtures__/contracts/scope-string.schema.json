@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OAuth 2.0 Scope String (RFC 6749 Section 3.3)",
+  "description": "Validates the format of OAuth scope strings. Per RFC 6749 Section 3.3, scope is a space-delimited list of case-sensitive scope tokens. Each token is one or more characters from the set: %x21 / %x23-5B / %x5D-7E (printable ASCII excluding space, backslash, and double-quote).",
+  "type": "string",
+  "minLength": 1,
+  "pattern": "^[!#-\\[\\]-~]+(?: [!#-\\[\\]-~]+)*$"
+}

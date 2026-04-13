@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Token Introspection Inactive Response (RFC 7662)",
+  "type": "object",
+  "required": ["active"],
+  "properties": {
+    "active": { "const": false }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,76 @@
+import { createServer } from 'mcp-kit/server'
+import { CRUD_TOOL_CLASSES } from 'mcp-kit/tools'
+import { STRATEGY_TOOL_CLASSES } from 'mcp-kit/prompts'
+import { Book } from './models/book.js'
+import { BookPrompt } from './prompts/book-prompt.js'
+
+// Model and prompt registries
+const MODEL_CLASSES = { book: Book }
+
+const promptRegistry = {
+  getDefinitions() {
+    return [{ name: 'book', description: Book.description, required: true }]
+  },
+  getPrompt(name) {
+    if (name === 'book') return new BookPrompt()
+    return null
+  }
+}
+
+// Tool registry — registers CRUD + strategy tools
+const toolRegistry = {
+  serverContext: {
+    name: 'Bookshelf',
+    namespace: 'bookshelf',
+    description: 'personal book library'
+  },
+
+  registerTools(mcpServer, { getAccessToken, logContext }) {
+    const deps = {
+      logger: console,
+      models: MODEL_CLASSES,
+      promptRegistry,
+      serverContext: this.serverContext
+    }
+
+    // Register CRUD tools (require auth — work when API backend is available)
+    for (const [, ToolClass] of Object.entries(CRUD_TOOL_CLASSES)) {
+      const tool = new ToolClass(deps)
+      mcpServer.tool(
+        tool.name,
+        tool.baseDescription,
+        tool.inputSchema,
+        async (args) => {
+          const apiClient = { /* inject your API client here */ }
+          tool.apiClient = apiClient
+          return tool.execute(args)
+        }
+      )
+    }
+
+    // Register strategy tools (no auth needed — work immediately)
+    for (const [, ToolClass] of Object.entries(STRATEGY_TOOL_CLASSES)) {
+      const tool = new ToolClass(deps)
+      mcpServer.tool(tool.name, tool.baseDescription, tool.inputSchema, async (args) =>
+        tool.execute(args)
+      )
+    }
+  }
+}
+
+/**
+ * Create MCP server instance for this bookshelf server
+ */
+export const mcpConfig = {
+  name: 'bookshelf-mcp',
+
+  createServer({ sessionId, getAccessToken }) {
+    return createServer({
+      name: 'bookshelf-mcp',
+      version: '1.0.0',
+      toolRegistry,
+      promptRegistry,
+      getAccessToken
+    })
+  }
+}

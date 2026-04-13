@@ -1,0 +1,5 @@
+{
+  "name": "sharp-noop",
+  "version": "0.34.5",
+  "description": "No-op replacement for sharp — unused transitive dependency of @huggingface/transformers"
+}

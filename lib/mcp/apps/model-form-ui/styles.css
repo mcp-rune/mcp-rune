@@ -1,0 +1,159 @@
+/* model-form — app-specific styles (base.css provides reset, palette, buttons, status bar) */
+
+.subtitle { margin-bottom: 16px; }
+
+/* Horizontal label-field layout (CSS grid: label left, input right) */
+.field {
+  display: grid;
+  grid-template-columns: minmax(100px, 25%) 1fr;
+  align-items: start;
+  gap: 0 8px;
+  margin-bottom: 10px;
+}
+.field:last-child { margin-bottom: 0; }
+
+/* Stacked variant for field types with inline option labels (checkbox_group, multiselect, checkbox) */
+.field--stacked { grid-template-columns: 1fr; }
+.field--stacked label { text-align: left; padding-top: 0; }
+
+label {
+  display: block;
+  font-size: 0.85em;
+  font-weight: 500;
+  text-align: right;
+  padding-top: 7px;
+  color: var(--color-text-info);
+}
+
+label .required { color: var(--color-accent); margin-left: 2px; }
+
+input[type="text"],
+input[type="number"],
+input[type="url"],
+input[type="date"],
+select,
+textarea {
+  width: 100%;
+  padding: 7px 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-md);
+  color: var(--color-text-primary);
+  font-size: 0.9em;
+  font-family: inherit;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+textarea { resize: vertical; min-height: 60px; }
+
+/* Checkbox group (fixed enum values like formats) */
+.checkbox-group { display: flex; gap: 12px; flex-wrap: wrap; }
+.checkbox-group label {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 0.9em; color: var(--color-text-primary); cursor: pointer;
+}
+
+/* Multiselect group (association values like tags) */
+.multiselect-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.multiselect-group label {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 0.9em; color: var(--color-text-primary); cursor: pointer;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-md);
+  transition: border-color 0.2s;
+}
+.multiselect-group label:has(input:checked) {
+  border-color: var(--color-accent);
+}
+
+.color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.empty-options {
+  font-size: 0.85em;
+  color: var(--color-text-info);
+  font-style: italic;
+}
+
+/* Searchable select (inline autocomplete for large option lists) */
+.searchable-select { position: relative; }
+.searchable-select__input {
+  width: 100%;
+  padding: 7px 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-md);
+  color: var(--color-text-primary);
+  font-size: 0.9em;
+  font-family: inherit;
+}
+.searchable-select__input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+.searchable-select__dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 180px;
+  overflow-y: auto;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--border-radius-md) var(--border-radius-md);
+  z-index: 10;
+}
+.searchable-select__option {
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 0.9em;
+  color: var(--color-text-primary);
+}
+.searchable-select__option:hover {
+  background: var(--color-accent);
+  color: #fff;
+}
+.searchable-select__empty {
+  padding: 6px 10px;
+  font-size: 0.85em;
+  color: var(--color-text-info);
+  font-style: italic;
+}
+
+/* Actions */
+.actions {
+  display: flex; gap: 8px; margin-top: 16px;
+}
+
+/* Error states */
+.field.has-error input,
+.field.has-error select,
+.field.has-error textarea { border-color: var(--color-error); }
+.field .error-msg { grid-column: 1 / -1; color: var(--color-error); font-size: 0.8em; margin-top: 2px; }
+
+/* Field row layout (side-by-side fields within a group) */
+.field-row { display: flex; gap: 12px; }
+.field-row > .field { flex: 1; grid-template-columns: 1fr; }
+.field-row > .field label { text-align: left; padding-top: 0; }
+
+/* Legacy row layout (kept for compatibility with hardcoded forms) */
+.row { display: flex; gap: 12px; }
+.row > .field { flex: 1; }
+
+/* Narrow viewport: revert to stacked layout */
+@media (max-width: 400px) {
+  .field { grid-template-columns: 1fr; }
+  .field label { text-align: left; padding-top: 0; }
+  .field-row { flex-direction: column; gap: 0; }
+}

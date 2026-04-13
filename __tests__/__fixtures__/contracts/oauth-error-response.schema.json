@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OAuth Error Response (RFC 6749 Section 5.2)",
+  "type": "object",
+  "required": ["error"],
+  "properties": {
+    "error": { "type": "string" },
+    "error_description": { "type": "string" },
+    "error_uri": { "type": "string", "format": "uri" }
+  },
+  "additionalProperties": true
+}

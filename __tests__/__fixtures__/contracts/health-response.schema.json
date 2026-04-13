@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HttpServer Health Response",
+  "description": "Health check response shape for both OAuth and Token mode. Validates the contract between the MCP server and monitoring systems.",
+  "type": "object",
+  "required": ["status", "service", "transport", "activeSessions"],
+  "properties": {
+    "status": { "type": "string", "const": "ok" },
+    "service": { "type": "string", "minLength": 1 },
+    "transport": { "type": "string", "const": "streamable-http" },
+    "activeSessions": { "type": "integer", "minimum": 0 },
+    "promptCache": { "type": "object" }
+  },
+  "additionalProperties": true
+}

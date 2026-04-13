@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OAuth 2.0 Protected Resource Metadata Response (RFC 9728)",
+  "type": "object",
+  "required": ["resource", "authorization_servers"],
+  "properties": {
+    "resource": { "type": "string", "format": "uri" },
+    "authorization_servers": {
+      "type": "array",
+      "items": { "type": "string", "format": "uri" },
+      "minItems": 1
+    },
+    "scopes_supported": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "bearer_methods_supported": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "resource_documentation": { "type": "string", "format": "uri" }
+  },
+  "additionalProperties": true
+}

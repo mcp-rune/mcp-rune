@@ -1,0 +1,111 @@
+{
+  "name": "mcp-kit",
+  "version": "0.1.0",
+  "description": "Batteries-included MCP framework. Define models, get CRUD tools, prompt strategies, interactive apps, OAuth, and docs — the Rails of MCP servers.",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./server": "./server.js",
+    "./tools": "./tools.js",
+    "./prompts": "./prompts.js",
+    "./apps": "./apps.js",
+    "./search": "./search.js",
+    "./domain": "./domain.js",
+    "./oauth2": "./oauth2.js",
+    "./services": "./services.js",
+    "./db": "./db.js",
+    "./core": "./core.js"
+  },
+  "imports": {
+    "#lib/*": "./lib/*"
+  },
+  "files": [
+    "index.js",
+    "server.js",
+    "tools.js",
+    "prompts.js",
+    "apps.js",
+    "search.js",
+    "domain.js",
+    "oauth2.js",
+    "services.js",
+    "db.js",
+    "core.js",
+    "lib/",
+    "vendor/",
+    "docs/",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "build:apps": "vite build -c lib/mcp/apps/vite.config.js"
+  },
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=11.6.0"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "framework",
+    "crud",
+    "oauth2",
+    "tools",
+    "prompts",
+    "apps",
+    "llm",
+    "ai",
+    "claude",
+    "mcp-server",
+    "model-driven"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dsaenztagarro/mcp-kit.git"
+  },
+  "homepage": "https://github.com/dsaenztagarro/mcp-kit#readme",
+  "bugs": {
+    "url": "https://github.com/dsaenztagarro/mcp-kit/issues"
+  },
+  "author": "David Saenz",
+  "license": "MIT",
+  "dependencies": {
+    "@huggingface/transformers": "^3.8.1",
+    "@langfuse/otel": "^4.0.0",
+    "@langfuse/tracing": "^4.0.0",
+    "@modelcontextprotocol/ext-apps": "^1.2.0",
+    "@modelcontextprotocol/sdk": "^1.25.1",
+    "@opentelemetry/sdk-node": "^0.213.0",
+    "@sentry/node": "^10.36.0",
+    "axios": "^1.13.6",
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
+    "open": "^11.0.0",
+    "openid-client": "^6.8.1",
+    "pg": "^8.18.0",
+    "winston": "^3.18.3",
+    "sharp": "file:./vendor/sharp-noop",
+    "winston-daily-rotate-file": "^5.0.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@vitest/coverage-v8": "^4.0.17",
+    "ajv": "^8.18.0",
+    "eslint": "^10.0.2",
+    "eslint-config-prettier": "^10.1.8",
+    "fast-check": "^4.6.0",
+    "prettier": "^3.7.4",
+    "vite": "^7.3.1",
+    "vite-plugin-singlefile": "^2.3.0",
+    "vitest": "^4.0.17"
+  }
+}

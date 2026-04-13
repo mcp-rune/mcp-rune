@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OAuth 2.0 Authorization Server Metadata Response (RFC 8414)",
+  "type": "object",
+  "required": [
+    "issuer",
+    "authorization_endpoint",
+    "token_endpoint",
+    "response_types_supported"
+  ],
+  "properties": {
+    "issuer": { "type": "string", "format": "uri" },
+    "authorization_endpoint": { "type": "string", "format": "uri" },
+    "token_endpoint": { "type": "string", "format": "uri" },
+    "response_types_supported": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "revocation_endpoint": { "type": "string", "format": "uri" },
+    "introspection_endpoint": { "type": "string", "format": "uri" },
+    "registration_endpoint": { "type": "string", "format": "uri" },
+    "scopes_supported": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "grant_types_supported": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "token_endpoint_auth_methods_supported": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "code_challenge_methods_supported": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": true
+}

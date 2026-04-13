@@ -1,0 +1,9 @@
+{
+  "name": "bookshelf-mcp",
+  "version": "1.0.0",
+  "description": "Example MCP server built with mcp-kit",
+  "type": "module",
+  "dependencies": {
+    "mcp-kit": "file:../../"
+  }
+}

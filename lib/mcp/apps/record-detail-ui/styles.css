@@ -1,0 +1,136 @@
+/* record-detail — app-specific styles (base.css provides reset, palette, buttons, status bar) */
+
+.header { margin-bottom: 16px; }
+
+/* Detail card */
+.detail-card {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+}
+
+.detail-row {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  background: var(--color-background-primary);
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-row.wide {
+  grid-template-columns: 1fr;
+}
+
+.detail-label {
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: 0.82em;
+  color: var(--color-text-info);
+  display: flex;
+  align-items: flex-start;
+}
+
+.detail-value {
+  padding: 10px 14px;
+  word-break: break-word;
+}
+
+.detail-row.wide .detail-label {
+  padding-bottom: 4px;
+}
+
+.detail-row.wide .detail-value {
+  padding-top: 4px;
+  white-space: pre-wrap;
+}
+
+/* Status badge */
+.status-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 0.82em;
+  font-weight: 500;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+/* Rating stars */
+.rating {
+  color: #f5a623;
+  letter-spacing: 2px;
+  font-size: 1.1em;
+}
+
+/* Array tags */
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.82em;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+/* URL link */
+.detail-link {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.detail-link:hover {
+  text-decoration: underline;
+  color: var(--color-accent-hover);
+}
+
+/* Empty value */
+.empty-value {
+  color: var(--color-text-info);
+  font-style: italic;
+  opacity: 0.6;
+}
+
+/* Multi-record: per-card heading */
+.record-heading {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--color-text-info);
+  margin-top: 16px;
+  margin-bottom: 6px;
+}
+
+.record-heading:first-child {
+  margin-top: 0;
+}
+
+/* Multi-record: spacing between cards */
+.detail-card + .detail-card,
+.detail-card + .record-heading {
+  margin-top: 16px;
+}
+
+/* Error line for failed fetches */
+.error-line {
+  font-size: 0.85em;
+  color: var(--color-text-info);
+  opacity: 0.7;
+  margin: 8px 0;
+}
+
+/* Capped message */
+.capped-message {
+  font-size: 0.82em;
+  color: var(--color-text-info);
+  margin-bottom: 12px;
+}
