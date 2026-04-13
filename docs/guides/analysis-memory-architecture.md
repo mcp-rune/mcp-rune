@@ -555,7 +555,7 @@ Generates text embeddings using a local model — no API keys, no network calls 
 ### API
 
 ```javascript
-import { embed, embedBatch, getEmbeddingDimensions } from '#lib/services/embeddings.js'
+import { embed, embedBatch, getEmbeddingDimensions } from '#src/services/embeddings.js'
 
 // Single text
 const vector = await embed('Created deal BBC Drama Package')
@@ -574,7 +574,7 @@ getEmbeddingDimensions() // → 384
 Optional startup pre-warm to avoid cold-start latency:
 
 ```javascript
-import { initEmbeddings } from '#lib/services/embeddings.js'
+import { initEmbeddings } from '#src/services/embeddings.js'
 await initEmbeddings() // Downloads model if needed
 ```
 
@@ -735,7 +735,7 @@ import {
   adaptToolOutput,
   registerOutputAdapter,
   pickFields
-} from '#lib/services/tool-output-adapters.js'
+} from '#src/services/tool-output-adapters.js'
 
 // Register an adapter that extracts key fields
 registerOutputAdapter('create_model', pickFields(['id', 'name', 'status']))
@@ -754,7 +754,7 @@ Prevents bloated JSONB from large API responses polluting the vector database.
 Pure math utility for in-memory vector comparison:
 
 ```javascript
-import { cosineSimilarity } from '#lib/services/cosine-similarity.js'
+import { cosineSimilarity } from '#src/services/cosine-similarity.js'
 
 const similarity = cosineSimilarity(embeddingA, embeddingB)
 // 1.0 = identical direction

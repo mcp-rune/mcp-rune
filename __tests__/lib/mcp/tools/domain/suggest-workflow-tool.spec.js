@@ -1,9 +1,9 @@
-import { SuggestWorkflowTool } from '../../../../../lib/mcp/tools/domain/suggest-workflow-tool.js'
-import { DomainRegistry } from '../../../../../lib/mcp/domain/registry.js'
-import { DomainKnowledge } from '../../../../../lib/mcp/domain/knowledge.js'
-import { RuleSet } from '../../../../../lib/mcp/domain/business-rules.js'
-import { WorkflowRegistry, WorkflowDefinition } from '../../../../../lib/mcp/domain/workflows.js'
-import { TOOL_CATEGORIES } from '../../../../../lib/mcp/tools/categories.js'
+import { SuggestWorkflowTool } from '../../../../../src/mcp/tools/domain/suggest-workflow-tool.js'
+import { DomainRegistry } from '../../../../../src/mcp/domain/registry.js'
+import { DomainKnowledge } from '../../../../../src/mcp/domain/knowledge.js'
+import { RuleSet } from '../../../../../src/mcp/domain/business-rules.js'
+import { WorkflowRegistry, WorkflowDefinition } from '../../../../../src/mcp/domain/workflows.js'
+import { TOOL_CATEGORIES } from '../../../../../src/mcp/tools/categories.js'
 
 function createTestRegistry() {
   return new DomainRegistry({

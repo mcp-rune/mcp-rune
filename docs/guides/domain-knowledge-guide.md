@@ -88,7 +88,7 @@ A `DomainConcept` captures knowledge that spans multiple models and cannot be ex
 ### Constructor
 
 ```javascript
-import { DomainConcept } from '#lib/mcp/domain/knowledge.js'
+import { DomainConcept } from '#src/mcp/domain/knowledge.js'
 
 new DomainConcept({
   name: 'deal_rights_hierarchy',              // Unique identifier (snake_case)
@@ -231,7 +231,7 @@ A `BusinessRule` validates constraints between entities that individual model va
 ### Constructor
 
 ```javascript
-import { BusinessRule } from '#lib/mcp/domain/business-rules.js'
+import { BusinessRule } from '#src/mcp/domain/business-rules.js'
 
 new BusinessRule({
   name: 'catchup_requires_transmission_config', // Unique identifier (snake_case)
@@ -397,7 +397,7 @@ Add rules to `src/<server>/domain/rules/<domain>-rules.js`. Each file exports an
 
 ```javascript
 // src/<server>/domain/rules/rights-rules.js
-import { BusinessRule } from '#lib/mcp/domain/business-rules.js'
+import { BusinessRule } from '#src/mcp/domain/business-rules.js'
 
 export const rightsRules = [
   new BusinessRule({ ... }),
@@ -421,7 +421,7 @@ A `WorkflowDefinition` is a structured multi-step process guide. It can include 
 ### Constructor
 
 ```javascript
-import { WorkflowDefinition } from '#lib/mcp/domain/workflows.js'
+import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
 
 new WorkflowDefinition({
   name: 'catchup_vod_setup',                    // Unique identifier (snake_case)
@@ -540,7 +540,7 @@ Add workflows to `src/<server>/domain/workflows/<category>.js`. Each file export
 
 ```javascript
 // src/<server>/domain/workflows/catchup-vod.js
-import { WorkflowDefinition } from '#lib/mcp/domain/workflows.js'
+import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
 
 export const catchupWorkflows = [
   new WorkflowDefinition({ ... }),  // Setup
@@ -561,7 +561,7 @@ A `DiagramTemplate` is a pre-built Mermaid diagram for visual domain explanation
 ### Constructor
 
 ```javascript
-import { DiagramTemplate } from '#lib/mcp/domain/diagrams.js'
+import { DiagramTemplate } from '#src/mcp/domain/diagrams.js'
 
 new DiagramTemplate({
   name: 'deal_structure', // Unique identifier (snake_case)
@@ -632,11 +632,11 @@ The `DomainRegistry` aggregates all domain intelligence into a single injectable
 
 ```javascript
 // src/<server>/domain/registry.js
-import { DomainKnowledge } from '#lib/mcp/domain/knowledge.js'
-import { RuleSet } from '#lib/mcp/domain/business-rules.js'
-import { WorkflowRegistry } from '#lib/mcp/domain/workflows.js'
-import { DiagramTemplateRegistry } from '#lib/mcp/domain/diagrams.js'
-import { DomainRegistry } from '#lib/mcp/domain/registry.js'
+import { DomainKnowledge } from '#src/mcp/domain/knowledge.js'
+import { RuleSet } from '#src/mcp/domain/business-rules.js'
+import { WorkflowRegistry } from '#src/mcp/domain/workflows.js'
+import { DiagramTemplateRegistry } from '#src/mcp/domain/diagrams.js'
+import { DomainRegistry } from '#src/mcp/domain/registry.js'
 import { MODEL_CLASSES } from '../models/index.js'
 
 import { concepts } from './knowledge/concepts.js'
@@ -765,7 +765,7 @@ src/<server>/domain/
 
 ```javascript
 // src/<server>/domain/knowledge/concepts.js
-import { DomainConcept } from '#lib/mcp/domain/knowledge.js'
+import { DomainConcept } from '#src/mcp/domain/knowledge.js'
 
 export const concepts = [
   new DomainConcept({
@@ -786,7 +786,7 @@ export const concepts = [
 
 ```javascript
 // src/<server>/domain/rules/<domain>-rules.js
-import { BusinessRule } from '#lib/mcp/domain/business-rules.js'
+import { BusinessRule } from '#src/mcp/domain/business-rules.js'
 
 export const myRules = [
   new BusinessRule({
@@ -813,7 +813,7 @@ export const myRules = [
 
 ```javascript
 // src/<server>/domain/workflows/<category>.js
-import { WorkflowDefinition } from '#lib/mcp/domain/workflows.js'
+import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
 
 export const myWorkflows = [
   new WorkflowDefinition({
@@ -848,7 +848,7 @@ export const myWorkflows = [
 
 ```javascript
 // src/<server>/domain/diagrams/<category>.js
-import { DiagramTemplate } from '#lib/mcp/domain/diagrams.js'
+import { DiagramTemplate } from '#src/mcp/domain/diagrams.js'
 
 export const myDiagrams = [
   new DiagramTemplate({
@@ -875,11 +875,11 @@ export const diagramTemplates = [...myDiagrams]
 
 ```javascript
 // src/<server>/domain/registry.js
-import { DomainKnowledge } from '#lib/mcp/domain/knowledge.js'
-import { RuleSet } from '#lib/mcp/domain/business-rules.js'
-import { WorkflowRegistry } from '#lib/mcp/domain/workflows.js'
-import { DiagramTemplateRegistry } from '#lib/mcp/domain/diagrams.js'
-import { DomainRegistry } from '#lib/mcp/domain/registry.js'
+import { DomainKnowledge } from '#src/mcp/domain/knowledge.js'
+import { RuleSet } from '#src/mcp/domain/business-rules.js'
+import { WorkflowRegistry } from '#src/mcp/domain/workflows.js'
+import { DiagramTemplateRegistry } from '#src/mcp/domain/diagrams.js'
+import { DomainRegistry } from '#src/mcp/domain/registry.js'
 import { MODEL_CLASSES } from '../models/index.js'
 
 import { concepts } from './knowledge/concepts.js'
@@ -931,7 +931,7 @@ Domain tools use **embedding-based semantic search** over the domain knowledge b
 `lib/mcp/domain/semantic-search.js` is a composable utility — each registry gets its own instance:
 
 ```javascript
-import { SemanticSearch } from '#lib/mcp/domain/semantic-search.js'
+import { SemanticSearch } from '#src/mcp/domain/semantic-search.js'
 
 const search = new SemanticSearch({ threshold: 0.3, topK: 20 })
 await search.initialize(items, (item) => `${item.name} ${item.title}: ${item.description}`)

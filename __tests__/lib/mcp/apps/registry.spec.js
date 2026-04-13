@@ -17,9 +17,9 @@ vi.mock('@modelcontextprotocol/ext-apps/server', () => ({
   RESOURCE_MIME_TYPE: 'text/html;profile=mcp-app'
 }))
 
-vi.mock('#lib/services/logger.js', () => mockLogger)
+vi.mock('#src/services/logger.js', () => mockLogger)
 
-import { AppRegistry } from '../../../../lib/mcp/apps/registry.js'
+import { AppRegistry } from '../../../../src/mcp/apps/registry.js'
 
 function makeApp(overrides = {}) {
   return {

@@ -4,7 +4,7 @@ import {
   sanitizeHeaders,
   sanitizeToolArgs,
   beforeSendSanitizer
-} from '../../../../../lib/services/vendor/sentry/sanitizers.js'
+} from '../../../../../src/services/vendor/sentry/sanitizers.js'
 
 describe('lib/services/vendor/sentry/sanitizers', () => {
   describe('sanitizeObject', () => {

@@ -31,7 +31,7 @@ The LLM receives the workflow via `suggest_workflow` (roadmap + first step), the
 ### WorkflowDefinition
 
 ```javascript
-import { WorkflowDefinition } from '#lib/mcp/domain/workflows.js'
+import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
 
 new WorkflowDefinition({
   name,            // string — unique identifier, snake_case (e.g., 'log_study_session')
@@ -470,7 +470,7 @@ src/<server>/domain/workflows/<workflow-name>.js
 ### Export pattern
 
 ```javascript
-import { WorkflowDefinition } from '#lib/mcp/domain/workflows.js'
+import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
 
 export const myWorkflows = [
   new WorkflowDefinition({

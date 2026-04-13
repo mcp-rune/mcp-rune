@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createSelectionTools } from '../../../../lib/mcp/apps/selection-tools.js'
-import { SelectionStore } from '../../../../lib/mcp/apps/selection-store.js'
+import { createSelectionTools } from '../../../../src/mcp/apps/selection-tools.js'
+import { SelectionStore } from '../../../../src/mcp/apps/selection-store.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 

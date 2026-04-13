@@ -44,7 +44,7 @@ A 5-layer architecture for generating prompt documentation from model and prompt
 Generates `fieldDefinitions` from model's `attributes`. This is the foundation — all field metadata comes from the model.
 
 ```javascript
-import { derivePromptSchema } from '#lib/mcp/prompts/schema-derivation.js'
+import { derivePromptSchema } from '#src/mcp/prompts/schema-derivation.js'
 import { Activity } from '../models/index.js'
 
 static {
@@ -262,7 +262,7 @@ ${this.generateAttributeReference()}  ← Custom method per prompt
 ### After (framework)
 
 ```javascript
-import { PromptContentGenerator } from '#lib/mcp/prompts/prompt-content-generator.js'
+import { PromptContentGenerator } from '#src/mcp/prompts/prompt-content-generator.js'
 
 get promptContent() {
   return PromptContentGenerator.for(MyPrompt, 'my_model')
@@ -276,7 +276,7 @@ get promptContent() {
 
 ### Migration Steps
 
-1. Add `import { PromptContentGenerator } from '#lib/mcp/prompts/prompt-content-generator.js'`
+1. Add `import { PromptContentGenerator } from '#src/mcp/prompts/prompt-content-generator.js'`
 2. Replace `promptContent` getter with builder pipeline
 3. Remove `generateAttributeReference()` → replaced by `.attributeReference()`
 4. Remove `generateSummarySection()` → replaced by `.summary()` (stateful)

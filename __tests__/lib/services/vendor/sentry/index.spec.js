@@ -22,7 +22,7 @@ vi.mock('@sentry/node', () => ({
   onUnhandledRejectionIntegration: vi.fn(() => ({}))
 }))
 
-vi.mock('#lib/services/logger.js', () => ({
+vi.mock('#src/services/logger.js', () => ({
   info: vi.fn(),
   warn: vi.fn(),
   error: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock('#lib/services/logger.js', () => ({
 }))
 
 // Must import after mocks
-const sentry = await import('../../../../../lib/services/vendor/sentry/index.js')
+const sentry = await import('../../../../../src/services/vendor/sentry/index.js')
 import * as Sentry from '@sentry/node'
 
 describe('lib/services/vendor/sentry/index', () => {

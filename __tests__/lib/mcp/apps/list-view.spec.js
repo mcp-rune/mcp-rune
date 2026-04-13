@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createListViewApp } from '../../../../lib/mcp/apps/list-view.js'
+import { createListViewApp } from '../../../../src/mcp/apps/list-view.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 

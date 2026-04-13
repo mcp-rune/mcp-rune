@@ -3,15 +3,15 @@ import {
   SubstringSearch,
   EmbeddingSearch,
   createDomainSearch
-} from '../../../../lib/mcp/domain/search-strategy.js'
+} from '../../../../src/mcp/domain/search-strategy.js'
 
 // Mock embeddings module (used by SemanticSearch inside EmbeddingSearch)
-vi.mock('#lib/services/embeddings.js', () => ({
+vi.mock('#src/services/embeddings.js', () => ({
   embed: vi.fn(),
   embedBatch: vi.fn()
 }))
 
-import { embed, embedBatch } from '#lib/services/embeddings.js'
+import { embed, embedBatch } from '#src/services/embeddings.js'
 
 const testItems = [
   {

@@ -24,14 +24,14 @@ vi.mock('@langfuse/otel', () => {
   return { LangfuseSpanProcessor: MockLangfuseSpanProcessor }
 })
 
-vi.mock('#lib/services/logger.js', () => ({
+vi.mock('#src/services/logger.js', () => ({
   info: vi.fn(),
   warn: vi.fn(),
   error: vi.fn(),
   debug: vi.fn()
 }))
 
-vi.mock('../../../../../lib/services/vendor/langfuse/mcp-integration.js', () => ({
+vi.mock('../../../../../src/services/vendor/langfuse/mcp-integration.js', () => ({
   traceToolCall: vi.fn(),
   traceApiCall: vi.fn(),
   tracePromptGeneration: vi.fn(),
@@ -40,8 +40,8 @@ vi.mock('../../../../../lib/services/vendor/langfuse/mcp-integration.js', () => 
   setConfigured: vi.fn()
 }))
 
-const langfuse = await import('../../../../../lib/services/vendor/langfuse/index.js')
-import { setConfigured } from '../../../../../lib/services/vendor/langfuse/mcp-integration.js'
+const langfuse = await import('../../../../../src/services/vendor/langfuse/index.js')
+import { setConfigured } from '../../../../../src/services/vendor/langfuse/mcp-integration.js'
 
 describe('lib/services/vendor/langfuse/index', () => {
   beforeEach(() => {

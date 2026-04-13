@@ -36,8 +36,8 @@ describe('Implementation Interchangeability Properties', () => {
   ]
 
   it('both implementations instantiate successfully with random valid configs', async () => {
-    const prodModule = await import('#lib/oauth2/service.js')
-    const refModule = await import('#lib/oauth2-ref/index.js')
+    const prodModule = await import('#src/oauth2/service.js')
+    const refModule = await import('#src/oauth2-ref/index.js')
 
     fc.assert(
       fc.property(oauthConfigArb, (config) => {
@@ -54,8 +54,8 @@ describe('Implementation Interchangeability Properties', () => {
   })
 
   it('both implementations expose identical method sets', async () => {
-    const prodModule = await import('#lib/oauth2/service.js')
-    const refModule = await import('#lib/oauth2-ref/index.js')
+    const prodModule = await import('#src/oauth2/service.js')
+    const refModule = await import('#src/oauth2-ref/index.js')
 
     fc.assert(
       fc.property(oauthConfigArb, (config) => {
@@ -72,8 +72,8 @@ describe('Implementation Interchangeability Properties', () => {
   })
 
   it('method arities match between implementations', async () => {
-    const prodModule = await import('#lib/oauth2/service.js')
-    const refModule = await import('#lib/oauth2-ref/index.js')
+    const prodModule = await import('#src/oauth2/service.js')
+    const refModule = await import('#src/oauth2-ref/index.js')
 
     fc.assert(
       fc.property(oauthConfigArb, (config) => {
@@ -89,8 +89,8 @@ describe('Implementation Interchangeability Properties', () => {
   })
 
   it('scopes configuration is preserved in both implementations', async () => {
-    const prodModule = await import('#lib/oauth2/service.js')
-    const refModule = await import('#lib/oauth2-ref/index.js')
+    const prodModule = await import('#src/oauth2/service.js')
+    const refModule = await import('#src/oauth2-ref/index.js')
 
     fc.assert(
       fc.property(oauthConfigArb, (config) => {

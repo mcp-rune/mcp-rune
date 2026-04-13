@@ -28,14 +28,14 @@ vi.mock('openid-client', () => ({
   allowInsecureRequests: Symbol('allowInsecureRequests')
 }))
 
-vi.mock('#lib/services/logger.js', () => ({
+vi.mock('#src/services/logger.js', () => ({
   info: vi.fn(),
   debug: vi.fn(),
   error: vi.fn(),
   warn: vi.fn()
 }))
 
-import { OAuthService } from '../../../../lib/oauth2/service.js'
+import { OAuthService } from '../../../../src/oauth2/service.js'
 
 describe('Resource Indicators Properties (RFC 8707)', () => {
   // Arbitrary for resource URIs

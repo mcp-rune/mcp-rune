@@ -175,7 +175,7 @@ Field definitions are derived from model classes via `derivePromptSchema()`. Thi
 ### How It Works
 
 ```javascript
-import { derivePromptSchema } from '#lib/mcp/prompts/schema-derivation.js'
+import { derivePromptSchema } from '#src/mcp/prompts/schema-derivation.js'
 import { Activity } from '../models/index.js'
 
 export class ActivityPrompt extends BasePrompt {
@@ -219,7 +219,7 @@ The `PromptContentGenerator` is a fluent builder for assembling prompt content f
 ### Usage
 
 ```javascript
-import { PromptContentGenerator } from '#lib/mcp/prompts/prompt-content-generator.js'
+import { PromptContentGenerator } from '#src/mcp/prompts/prompt-content-generator.js'
 
 get promptContent() {
   return PromptContentGenerator.for(ActivityPrompt, 'activity')

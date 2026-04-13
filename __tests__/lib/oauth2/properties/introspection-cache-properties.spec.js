@@ -10,7 +10,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import * as fc from 'fast-check'
-import { OAuthService } from '../../../../lib/oauth2/service.js'
+import { OAuthService } from '../../../../src/oauth2/service.js'
 
 describe('Introspection Cache Properties', () => {
   let oauth

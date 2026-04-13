@@ -80,7 +80,7 @@ Tools are organized by category which determines authentication requirements:
 Override the static `category` property:
 
 ```javascript
-import { TOOL_CATEGORIES } from '#lib/mcp/tools/categories.js'
+import { TOOL_CATEGORIES } from '#src/mcp/tools/categories.js'
 
 export class MyTool extends EngineerBaseTool {
   static category = TOOL_CATEGORIES.STRATEGY // No auth required

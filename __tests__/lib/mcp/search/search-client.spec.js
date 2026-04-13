@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { SearchClient } from '../../../../lib/mcp/search/search-client.js'
-import { halConvention } from '../../../../lib/mcp/api-conventions/hal.js'
+import { SearchClient } from '../../../../src/mcp/search/search-client.js'
+import { halConvention } from '../../../../src/mcp/api-conventions/hal.js'
 
 // Mock model classes
 const DirectSearchModel = {

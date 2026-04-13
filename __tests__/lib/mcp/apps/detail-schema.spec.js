@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateDetailSchema } from '../../../../lib/mcp/apps/detail-schema.js'
+import { generateDetailSchema } from '../../../../src/mcp/apps/detail-schema.js'
 
 describe('lib/mcp/apps/detail-schema', () => {
   function makeModel(overrides = {}) {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { SaveModelBaseTool } from '../../../../lib/mcp/tools/save-model-base-tool.js'
+import { SaveModelBaseTool } from '../../../../src/mcp/tools/save-model-base-tool.js'
 
 describe('lib/mcp/tools/save-model-base-tool', () => {
   describe('getUsageRules', () => {

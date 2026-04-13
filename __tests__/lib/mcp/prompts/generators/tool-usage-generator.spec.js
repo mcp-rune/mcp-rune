@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateToolUsage } from '../../../../../lib/mcp/prompts/generators/tool-usage-generator.js'
+import { generateToolUsage } from '../../../../../src/mcp/prompts/generators/tool-usage-generator.js'
 
 // =============================================================================
 // MOCK HELPERS

@@ -6,7 +6,7 @@ import {
   formatErrorResponse,
   coerceToObject,
   pickFields
-} from '../../../lib/core/helpers.js'
+} from '../../../src/core/helpers.js'
 
 describe('lib/core/helpers', () => {
   describe('truncateString', () => {

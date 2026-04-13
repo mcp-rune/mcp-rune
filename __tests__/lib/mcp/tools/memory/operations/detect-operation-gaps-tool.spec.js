@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('#lib/services/memory-storage.js', () => ({
+vi.mock('#src/services/memory-storage.js', () => ({
   detectOperationGaps: vi.fn()
 }))
 
-import { DetectOperationGapsTool } from '../../../../../../lib/mcp/tools/memory/operations/detect-operation-gaps-tool.js'
-import { detectOperationGaps } from '#lib/services/memory-storage.js'
-import { TOOL_CATEGORIES } from '../../../../../../lib/mcp/tools/categories.js'
+import { DetectOperationGapsTool } from '../../../../../../src/mcp/tools/memory/operations/detect-operation-gaps-tool.js'
+import { detectOperationGaps } from '#src/services/memory-storage.js'
+import { TOOL_CATEGORIES } from '../../../../../../src/mcp/tools/categories.js'
 
 describe('DetectOperationGapsTool', () => {
   let tool

@@ -51,7 +51,7 @@ describe('OAuthService Interface Contract', () => {
     let service
 
     beforeAll(async () => {
-      const module = await import('../../../../lib/oauth2/service.js')
+      const module = await import('../../../../src/oauth2/service.js')
       service = new module.OAuthService(mockConfig)
     })
 
@@ -77,7 +77,7 @@ describe('OAuthService Interface Contract', () => {
     })
 
     it('should conform to interface schema with resourceUri configured', async () => {
-      const mod = await import('../../../../lib/oauth2/service.js')
+      const mod = await import('../../../../src/oauth2/service.js')
       const serviceWithResource = new mod.OAuthService({
         ...mockConfig,
         resourceUri: 'https://mcp.example.com'
@@ -102,7 +102,7 @@ describe('OAuthService Interface Contract', () => {
     let service
 
     beforeAll(async () => {
-      const module = await import('#lib/oauth2-ref/index.js')
+      const module = await import('#src/oauth2-ref/index.js')
       service = new module.OAuth2ReferenceService(mockConfig)
     })
 
@@ -128,7 +128,7 @@ describe('OAuthService Interface Contract', () => {
     })
 
     it('should conform to interface schema with resourceUri configured', async () => {
-      const mod = await import('#lib/oauth2-ref/index.js')
+      const mod = await import('#src/oauth2-ref/index.js')
       const serviceWithResource = new mod.OAuth2ReferenceService({
         ...mockConfig,
         resourceUri: 'https://mcp.example.com'
@@ -151,8 +151,8 @@ describe('OAuthService Interface Contract', () => {
 
   describe('cross-implementation compatibility', () => {
     it('both implementations produce schema-valid instances with same config', async () => {
-      const prodModule = await import('../../../../lib/oauth2/service.js')
-      const refModule = await import('#lib/oauth2-ref/index.js')
+      const prodModule = await import('../../../../src/oauth2/service.js')
+      const refModule = await import('#src/oauth2-ref/index.js')
 
       const prodService = new prodModule.OAuthService(mockConfig)
       const refService = new refModule.OAuth2ReferenceService(mockConfig)
@@ -185,8 +185,8 @@ describe('OAuthService Interface Contract', () => {
     })
 
     it('both implementations expose the same method set', async () => {
-      const prodModule = await import('../../../../lib/oauth2/service.js')
-      const refModule = await import('#lib/oauth2-ref/index.js')
+      const prodModule = await import('../../../../src/oauth2/service.js')
+      const refModule = await import('#src/oauth2-ref/index.js')
 
       const prodService = new prodModule.OAuthService(mockConfig)
       const refService = new refModule.OAuth2ReferenceService(mockConfig)

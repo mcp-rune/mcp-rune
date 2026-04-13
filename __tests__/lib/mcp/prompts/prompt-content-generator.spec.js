@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { PromptContentGenerator } from '../../../../lib/mcp/prompts/prompt-content-generator.js'
+import { PromptContentGenerator } from '../../../../src/mcp/prompts/prompt-content-generator.js'
 
 // Minimal mock prompt class with required static methods
 class MockPrompt {

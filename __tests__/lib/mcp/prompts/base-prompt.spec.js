@@ -10,7 +10,7 @@
  */
 
 import { describe, test, expect } from 'vitest'
-import { BasePrompt } from '../../../../lib/mcp/prompts/base-prompt.js'
+import { BasePrompt } from '../../../../src/mcp/prompts/base-prompt.js'
 
 // Mock prompt class with full sections architecture
 class MockStatefulPrompt extends BasePrompt {

@@ -1,4 +1,4 @@
-import { cosineSimilarity } from '../../../lib/services/cosine-similarity.js'
+import { cosineSimilarity } from '../../../src/services/cosine-similarity.js'
 
 describe('lib/services/cosine-similarity', () => {
   it('should return 1.0 for identical vectors', () => {
