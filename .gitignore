@@ -29,4 +29,5 @@ dist/
 *.tsbuildinfo
 
 # AI
-.claude/
+.claude/settings.local.json
+.claude/workspaces
