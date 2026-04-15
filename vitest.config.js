@@ -22,7 +22,7 @@ export default defineConfig({
         'src/services/vendor/sentry/index.ts',
         'src/oauth2/index.ts',
         'src/oauth2/adapters/base-adapter.ts',
-        'src/mcp/tools/crud/index.ts',
+        'src/mcp/tools/data/index.ts',
         'src/mcp/tools/domain/index.ts',
         'src/mcp/tools/memory/index.ts',
         'src/mcp/prompts/tools/index.ts',

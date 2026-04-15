@@ -1,4 +1,4 @@
-import { UpdateModelTool } from '../../../../../src/mcp/tools/crud/update-model-tool.js'
+import { UpdateModelTool } from '../../../../../src/mcp/tools/data/update-model-tool.js'
 import { halConvention } from '../../../../../src/mcp/api-conventions/hal.js'
 
 vi.mock('#src/services/memory-storage.js', () => ({
@@ -7,7 +7,7 @@ vi.mock('#src/services/memory-storage.js', () => ({
 
 const { storeOperation } = await import('#src/services/memory-storage.js')
 
-describe('lib/mcp/tools/crud/update-model-tool', () => {
+describe('lib/mcp/tools/data/update-model-tool', () => {
   describe('description composition', () => {
     it('should include serverContext scope in description', () => {
       const tool = new UpdateModelTool({

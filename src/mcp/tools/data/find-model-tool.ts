@@ -51,7 +51,9 @@ Use this tool to:
   }
 
   override getUsageRules(): string[] {
-    return []
+    return [
+      'For large-scale analysis (multiple pages of data), prefer analysis_ingest which stores records for offline querying without polluting context. Use find_model only when you need a specific record by ID or a small set of results to act on immediately (e.g., before updating or deleting).'
+    ]
   }
 
   override async execute(args: Record<string, unknown>): Promise<ToolResult> {

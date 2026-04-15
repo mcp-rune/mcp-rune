@@ -1,10 +1,11 @@
-import { FindModelTool } from '../../../../../src/mcp/tools/crud/find-model-tool.js'
+import { FindModelTool } from '../../../../../src/mcp/tools/data/find-model-tool.js'
 
 describe('FindModelTool', () => {
-  it('should have no usage rules', () => {
+  it('should have usage rule directing to analysis_ingest for large datasets', () => {
     const tool = new FindModelTool({ models: {}, serverContext: { appsEnabled: true } })
     const rules = tool.getUsageRules()
-    expect(rules).toHaveLength(0)
+    expect(rules).toHaveLength(1)
+    expect(rules[0]).toContain('analysis_ingest')
   })
 
   it('should not cross-reference view tools in description', () => {

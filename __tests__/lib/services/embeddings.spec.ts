@@ -1,4 +1,11 @@
 
+// Mock logger to prevent console output during tests
+vi.mock('#src/services/logger.js', () => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn()
+}))
+
 // Mock @huggingface/transformers
 const mockPipeline = vi.fn()
 vi.mock('@huggingface/transformers', () => ({

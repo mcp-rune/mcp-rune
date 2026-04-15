@@ -9,11 +9,14 @@
  * Tool category constants
  */
 export const TOOL_CATEGORIES = {
-  /** CRUD tools - require API authentication
-   * Create, Read, Update, Delete operations on models
-   * Examples: list_models, find_model, create_model, update_model, delete_model
+  /** Data tools - require API authentication
+   * CRUD operations, bulk operations, search, and discovery on models
+   * Examples: list_models, find_model, create_model, update_model, delete_model, analysis_ingest
    */
-  CRUD: 'crud',
+  DATA: 'data',
+
+  /** @deprecated Use DATA */
+  CRUD: 'data' as const,
 
   /** Strategy tools - no authentication required
    * Prompt guidance, validation, and summary tools
@@ -59,11 +62,11 @@ export interface CategoryConfig {
  * Defines default behavior for each category
  */
 export const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
-  [TOOL_CATEGORIES.CRUD]: {
+  [TOOL_CATEGORIES.DATA]: {
     requiresAuth: true,
     requiresPromptRegistry: false,
     isGeneric: true,
-    description: 'CRUD operations on models, requires API authentication'
+    description: 'Data operations on models (CRUD, bulk, search, discovery), requires API authentication'
   },
   [TOOL_CATEGORIES.STRATEGY]: {
     requiresAuth: false,

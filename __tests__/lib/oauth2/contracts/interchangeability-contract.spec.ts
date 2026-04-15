@@ -42,7 +42,7 @@ describe('OAuthService Interface Contract', () => {
   let validate
 
   beforeAll(() => {
-    const ajv = new Ajv({ allErrors: true, strict: false })
+    const ajv = new Ajv({ allErrors: true, strict: false, logger: false })
     validate = ajv.compile(loadSchema('oauth-service-interface.schema.json'))
   })
 

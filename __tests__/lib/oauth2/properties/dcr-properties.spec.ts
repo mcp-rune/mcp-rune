@@ -24,7 +24,7 @@ function loadSchema(filename) {
 }
 
 describe('Dynamic Client Registration Properties (RFC 7591)', () => {
-  const ajv = new Ajv({ allErrors: true, strict: false })
+  const ajv = new Ajv({ allErrors: true, strict: false, logger: false })
   const validateRequest = ajv.compile(loadSchema('dcr-request.schema.json'))
   const validateResponse = ajv.compile(loadSchema('dcr-response.schema.json'))
 

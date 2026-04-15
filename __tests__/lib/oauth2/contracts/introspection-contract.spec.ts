@@ -29,7 +29,7 @@ describe('Token Introspection Contract (RFC 7662)', () => {
   let validateInactive
 
   beforeAll(() => {
-    const ajv = new Ajv({ allErrors: true, strict: false })
+    const ajv = new Ajv({ allErrors: true, strict: false, logger: false })
     validateActive = ajv.compile(loadSchema('introspect-active-response.schema.json'))
     validateInactive = ajv.compile(loadSchema('introspect-inactive-response.schema.json'))
   })
@@ -126,7 +126,7 @@ describe('Dynamic Client Registration Contract (RFC 7591)', () => {
   let validateResponse
 
   beforeAll(() => {
-    const ajv = new Ajv({ allErrors: true, strict: false })
+    const ajv = new Ajv({ allErrors: true, strict: false, logger: false })
     validateRequest = ajv.compile(loadSchema('dcr-request.schema.json'))
     validateResponse = ajv.compile(loadSchema('dcr-response.schema.json'))
   })

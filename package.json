@@ -1,6 +1,6 @@
 {
   "name": "mcp-kit",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Batteries-included MCP framework. Define models, get CRUD tools, prompt strategies, interactive apps, OAuth, and docs — the Rails of MCP servers.",
   "type": "module",
   "main": "./dist/index.js",
@@ -82,7 +82,7 @@
     "mcp",
     "model-context-protocol",
     "framework",
-    "crud",
+    "data",
     "oauth2",
     "tools",
     "prompts",

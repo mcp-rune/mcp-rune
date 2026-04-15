@@ -10,3 +10,10 @@ export {
 } from './mcp/prompts/schema-derivation.js'
 export * from './mcp/prompts/strategies/index.js'
 export * from './mcp/prompts/tools/index.js'
+export { createPromptCache } from './mcp/prompts/prompt-cache.js'
+export {
+  BaseConvention,
+  halConvention,
+  jsonApiConvention,
+  defaultConvention
+} from './mcp/api-conventions/index.js'

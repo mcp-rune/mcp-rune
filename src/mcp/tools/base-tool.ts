@@ -152,7 +152,7 @@ export class BaseTool {
    * Override in subclasses to specify category.
    */
   static get category(): ToolCategory {
-    return TOOL_CATEGORIES.CRUD // Default to requiring auth
+    return TOOL_CATEGORIES.DATA // Default to requiring auth
   }
 
   /**
