@@ -1,4 +1,4 @@
-import { GetNestedResourcesTool } from '../../../../../src/mcp/tools/crud/get-nested-resources-tool.js'
+import { GetNestedResourcesTool } from '../../../../../src/mcp/tools/data/get-nested-resources-tool.js'
 
 vi.mock('#src/core/helpers.js', async () => {
   const actual = await vi.importActual('#src/core/helpers.js')
@@ -18,7 +18,7 @@ vi.mock('../../../../../src/mcp/tools/validators.js', () => ({
 
 const { validateNestedResource } = await import('../../../../../src/mcp/tools/validators.js')
 
-describe('lib/mcp/tools/crud/get-nested-resources-tool', () => {
+describe('lib/mcp/tools/data/get-nested-resources-tool', () => {
   describe('tool definition', () => {
     it('should have correct name', () => {
       const tool = new GetNestedResourcesTool({})

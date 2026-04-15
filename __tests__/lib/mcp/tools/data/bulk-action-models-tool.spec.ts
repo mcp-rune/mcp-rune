@@ -1,7 +1,7 @@
 import {
   BulkActionModelsTool,
   MAX_BATCH_SIZE
-} from '../../../../../src/mcp/tools/crud/bulk-action-models-tool.js'
+} from '../../../../../src/mcp/tools/data/bulk-action-models-tool.js'
 import { halConvention } from '../../../../../src/mcp/api-conventions/hal.js'
 
 vi.mock('#src/services/memory-storage.js', () => ({
@@ -10,7 +10,7 @@ vi.mock('#src/services/memory-storage.js', () => ({
 
 const { storeOperation } = await import('#src/services/memory-storage.js')
 
-describe('lib/mcp/tools/crud/bulk-action-models-tool', () => {
+describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
   const mockModels = {
     activity: {
       endpoint: 'activities',

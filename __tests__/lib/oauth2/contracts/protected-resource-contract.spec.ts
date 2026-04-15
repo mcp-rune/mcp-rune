@@ -27,7 +27,7 @@ describe('Protected Resource Metadata Contract (RFC 9728)', () => {
   let validate
 
   beforeAll(() => {
-    const ajv = new Ajv({ allErrors: true, strict: false })
+    const ajv = new Ajv({ allErrors: true, strict: false, logger: false })
     validate = ajv.compile(loadSchema('protected-resource-metadata-response.schema.json'))
   })
 

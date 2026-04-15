@@ -25,7 +25,7 @@ describe('Token Mode Contract (Health Response)', () => {
   let validate
 
   beforeAll(() => {
-    const ajv = new Ajv({ allErrors: true, strict: false })
+    const ajv = new Ajv({ allErrors: true, strict: false, logger: false })
     validate = ajv.compile(loadSchema('health-response.schema.json'))
   })
 

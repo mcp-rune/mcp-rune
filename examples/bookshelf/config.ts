@@ -1,5 +1,5 @@
 import { createServer } from 'mcp-kit/server'
-import { CRUD_TOOL_CLASSES } from 'mcp-kit/tools'
+import { DATA_TOOL_CLASSES } from 'mcp-kit/tools'
 import { STRATEGY_TOOL_CLASSES } from 'mcp-kit/prompts'
 import { Book } from './models/book.js'
 import { BookPrompt } from './prompts/book-prompt.js'
@@ -33,8 +33,8 @@ const toolRegistry = {
       serverContext: this.serverContext
     }
 
-    // Register CRUD tools (require auth — work when API backend is available)
-    for (const [, ToolClass] of Object.entries(CRUD_TOOL_CLASSES)) {
+    // Register data tools (require auth — work when API backend is available)
+    for (const [, ToolClass] of Object.entries(DATA_TOOL_CLASSES)) {
       const tool = new ToolClass(deps)
       ;(mcpServer as { tool: Function }).tool(
         tool.name,

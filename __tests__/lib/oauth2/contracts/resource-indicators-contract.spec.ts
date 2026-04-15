@@ -25,7 +25,7 @@ describe('Authorization Request Parameters Contract (RFC 6749 + RFC 7636 + RFC 8
   let validate
 
   beforeAll(() => {
-    const ajv = new Ajv({ allErrors: true, strict: false })
+    const ajv = new Ajv({ allErrors: true, strict: false, logger: false })
     validate = ajv.compile(loadSchema('authorization-request-params.schema.json'))
   })
 

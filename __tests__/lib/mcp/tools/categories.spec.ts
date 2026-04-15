@@ -8,7 +8,7 @@ import {
 describe('lib/mcp/tools/categories', () => {
   describe('TOOL_CATEGORIES', () => {
     it('should define all expected category values', () => {
-      expect(TOOL_CATEGORIES.CRUD).toBe('crud')
+      expect(TOOL_CATEGORIES.DATA).toBe('data')
       expect(TOOL_CATEGORIES.STRATEGY).toBe('strategy')
       expect(TOOL_CATEGORIES.AUTOCOMPLETE).toBe('autocomplete')
       expect(TOOL_CATEGORIES.MEMORY).toBe('memory')
@@ -16,8 +16,12 @@ describe('lib/mcp/tools/categories', () => {
       expect(TOOL_CATEGORIES.CUSTOM).toBe('custom')
     })
 
-    it('should have exactly 6 categories', () => {
-      expect(Object.keys(TOOL_CATEGORIES)).toHaveLength(6)
+    it('should provide deprecated CRUD alias pointing to data', () => {
+      expect(TOOL_CATEGORIES.CRUD).toBe('data')
+    })
+
+    it('should have exactly 7 category keys (6 + deprecated CRUD alias)', () => {
+      expect(Object.keys(TOOL_CATEGORIES)).toHaveLength(7)
     })
   })
 
@@ -30,9 +34,9 @@ describe('lib/mcp/tools/categories', () => {
       }
     })
 
-    it('should mark CRUD as requiring auth', () => {
-      expect(CATEGORY_CONFIG.crud.requiresAuth).toBe(true)
-      expect(CATEGORY_CONFIG.crud.isGeneric).toBe(true)
+    it('should mark DATA as requiring auth', () => {
+      expect(CATEGORY_CONFIG.data.requiresAuth).toBe(true)
+      expect(CATEGORY_CONFIG.data.isGeneric).toBe(true)
     })
 
     it('should mark STRATEGY as not requiring auth', () => {
@@ -82,8 +86,8 @@ describe('lib/mcp/tools/categories', () => {
   })
 
   describe('categoryRequiresAuth', () => {
-    it('should return true for CRUD', () => {
-      expect(categoryRequiresAuth(TOOL_CATEGORIES.CRUD)).toBe(true)
+    it('should return true for DATA', () => {
+      expect(categoryRequiresAuth(TOOL_CATEGORIES.DATA)).toBe(true)
     })
 
     it('should return true for AUTOCOMPLETE', () => {

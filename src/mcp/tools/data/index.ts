@@ -1,8 +1,10 @@
 /**
- * Generic CRUD tools for MCP servers.
+ * Generic data tools for MCP servers.
  *
  * These tools operate on any models registry injected via constructor
  * dependencies and contain zero server-specific logic.
+ *
+ * Covers CRUD operations, bulk operations, search, and discovery.
  */
 
 import { ListModelsTool } from './list-models-tool.js'
@@ -15,6 +17,7 @@ import { SearchRecordsTool } from './search-records-tool.js'
 import { GetFiltersGuideTool } from './get-filters-guide-tool.js'
 import { BulkActionModelsTool } from './bulk-action-models-tool.js'
 import { BulkGetNestedResourcesTool } from './bulk-get-nested-resources-tool.js'
+import { AnalysisIngestTool } from './analysis-ingest-tool.js'
 
 export {
   ListModelsTool,
@@ -26,11 +29,12 @@ export {
   SearchRecordsTool,
   GetFiltersGuideTool,
   BulkActionModelsTool,
-  BulkGetNestedResourcesTool
+  BulkGetNestedResourcesTool,
+  AnalysisIngestTool
 }
 
-/** All CRUD tool classes mapped by tool name */
-export const CRUD_TOOL_CLASSES = {
+/** All data tool classes mapped by tool name */
+export const DATA_TOOL_CLASSES = {
   list_models: ListModelsTool,
   find_model: FindModelTool,
   create_model: CreateModelTool,
@@ -39,5 +43,9 @@ export const CRUD_TOOL_CLASSES = {
   get_nested_resources: GetNestedResourcesTool,
   get_filters_guide: GetFiltersGuideTool,
   bulk_action_models: BulkActionModelsTool,
-  bulk_get_nested_resources: BulkGetNestedResourcesTool
+  bulk_get_nested_resources: BulkGetNestedResourcesTool,
+  analysis_ingest: AnalysisIngestTool
 }
+
+/** @deprecated Use DATA_TOOL_CLASSES */
+export const CRUD_TOOL_CLASSES = DATA_TOOL_CLASSES
