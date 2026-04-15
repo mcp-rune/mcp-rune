@@ -1,4 +1,4 @@
-import { GetFiltersGuideTool } from '../../../../../src/mcp/tools/crud/get-filters-guide-tool.js'
+import { GetFiltersGuideTool } from '../../../../../src/mcp/tools/data/get-filters-guide-tool.js'
 
 // Mock model classes with static filters
 const mockModels = {
@@ -90,7 +90,7 @@ describe('GetFiltersGuideTool', () => {
   })
 
   it('should return error for unknown model', async () => {
-    expect(() => tool.execute({ model: 'unknown' })).rejects.toThrow('Unknown model')
+    await expect(() => tool.execute({ model: 'unknown' })).rejects.toThrow('Unknown model')
   })
 
   it('should have strategy category (no auth required)', () => {

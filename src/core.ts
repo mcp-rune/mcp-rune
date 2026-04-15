@@ -18,3 +18,4 @@ export {
   validateModel
 } from './core/validators.js'
 export { readPackageInfo } from './core/package-info.js'
+export { StartupTracker } from './core/startup-tracker.js'

@@ -1,9 +1,9 @@
 import {
   BulkGetNestedResourcesTool,
   MAX_BATCH_SIZE
-} from '../../../../../src/mcp/tools/crud/bulk-get-nested-resources-tool.js'
+} from '../../../../../src/mcp/tools/data/bulk-get-nested-resources-tool.js'
 
-describe('lib/mcp/tools/crud/bulk-get-nested-resources-tool', () => {
+describe('lib/mcp/tools/data/bulk-get-nested-resources-tool', () => {
   const mockModels = {
     activity: {
       endpoint: 'activities',

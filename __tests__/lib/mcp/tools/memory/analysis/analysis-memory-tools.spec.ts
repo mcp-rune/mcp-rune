@@ -15,31 +15,54 @@ vi.mock('#src/services/memory-storage.js', () => ({
       { id: 'a2', analysisId: 'test', finding: 'Finding 2', category: 'gap', createdAt: new Date() }
     ])
   ),
-  clearAnalysisMemories: vi.fn(() => Promise.resolve(3))
+  clearAnalysisMemories: vi.fn(() => Promise.resolve(3)),
+  clearIngestedRecords: vi.fn(() => Promise.resolve(10)),
+  queryIngestedData: vi.fn(() => Promise.resolve([]))
 }))
 
-import { StoreAnalysisMemoryTool } from '../../../../../../src/mcp/tools/memory/analysis/store-analysis-memory-tool.js'
-import { RecallAnalysisMemoriesTool } from '../../../../../../src/mcp/tools/memory/analysis/recall-analysis-memories-tool.js'
-import { ClearAnalysisMemoriesTool } from '../../../../../../src/mcp/tools/memory/analysis/clear-analysis-memories-tool.js'
+import { AnalysisStoreTool } from '../../../../../../src/mcp/tools/memory/analysis/analysis-store-tool.js'
+import { AnalysisQueryTool } from '../../../../../../src/mcp/tools/memory/analysis/analysis-query-tool.js'
+import { AnalysisClearTool } from '../../../../../../src/mcp/tools/memory/analysis/analysis-clear-tool.js'
 import {
   storeAnalysisMemory,
   recallAnalysisMemories,
-  clearAnalysisMemories
+  clearAnalysisMemories,
+  clearIngestedRecords,
+  queryIngestedData
 } from '#src/services/memory-storage.js'
 import { TOOL_CATEGORIES } from '../../../../../../src/mcp/tools/categories.js'
+
+// Verify deprecated re-exports still work
+import { StoreAnalysisMemoryTool } from '../../../../../../src/mcp/tools/memory/analysis/store-analysis-memory-tool.js'
+import { RecallAnalysisMemoriesTool } from '../../../../../../src/mcp/tools/memory/analysis/recall-analysis-memories-tool.js'
+import { ClearAnalysisMemoriesTool } from '../../../../../../src/mcp/tools/memory/analysis/clear-analysis-memories-tool.js'
 
 describe('Analysis Memory Tools', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  describe('StoreAnalysisMemoryTool', () => {
-    const tool = new StoreAnalysisMemoryTool({})
+  describe('deprecated re-exports', () => {
+    it('should re-export AnalysisStoreTool as StoreAnalysisMemoryTool', () => {
+      expect(StoreAnalysisMemoryTool).toBe(AnalysisStoreTool)
+    })
+
+    it('should re-export AnalysisQueryTool as RecallAnalysisMemoriesTool', () => {
+      expect(RecallAnalysisMemoriesTool).toBe(AnalysisQueryTool)
+    })
+
+    it('should re-export AnalysisClearTool as ClearAnalysisMemoriesTool', () => {
+      expect(ClearAnalysisMemoriesTool).toBe(AnalysisClearTool)
+    })
+  })
+
+  describe('AnalysisStoreTool', () => {
+    const tool = new AnalysisStoreTool({})
 
     it('should have correct metadata', () => {
-      expect(tool.name).toBe('store_analysis_memory')
-      expect(StoreAnalysisMemoryTool.category).toBe(TOOL_CATEGORIES.MEMORY)
-      expect(StoreAnalysisMemoryTool.requiresAuth).toBe(false)
+      expect(tool.name).toBe('analysis_store')
+      expect(AnalysisStoreTool.category).toBe(TOOL_CATEGORIES.MEMORY)
+      expect(AnalysisStoreTool.requiresAuth).toBe(false)
     })
 
     it('should store a single finding via findings array', async () => {
@@ -140,167 +163,333 @@ describe('Analysis Memory Tools', () => {
       expect(schema.analysis_id).toBeDefined()
       expect(schema.findings).toBeDefined()
       expect(schema.persistent).toBeDefined()
-      // Old single-finding params should not exist
-      expect(schema.finding).toBeUndefined()
-      expect(schema.scratch_ref).toBeUndefined()
     })
 
-    it('should have baseDescription mentioning batching', () => {
-      expect(tool.baseDescription).toContain('qualitative analysis')
+    it('should have baseDescription mentioning insights and max batch size', () => {
+      expect(tool.baseDescription).toContain('qualitative')
       expect(tool.baseDescription).toContain('25')
     })
   })
 
-  describe('RecallAnalysisMemoriesTool', () => {
-    const tool = new RecallAnalysisMemoriesTool({})
+  describe('AnalysisQueryTool', () => {
+    const tool = new AnalysisQueryTool({})
 
     it('should have correct metadata', () => {
-      expect(tool.name).toBe('recall_analysis_memories')
-      expect(RecallAnalysisMemoriesTool.category).toBe(TOOL_CATEGORIES.MEMORY)
+      expect(tool.name).toBe('analysis_query')
+      expect(AnalysisQueryTool.category).toBe(TOOL_CATEGORIES.MEMORY)
     })
 
-    it('should recall by analysis ID', async () => {
-      const result = await tool.execute({
-        analysis_id: 'test'
+    describe('semantic mode', () => {
+      it('should recall by analysis ID and query', async () => {
+        const result = await tool.execute({
+          analysis_id: 'test',
+          mode: 'semantic',
+          query: 'missing data'
+        })
+
+        expect(recallAnalysisMemories).toHaveBeenCalledWith(
+          { analysisId: 'test', query: 'missing data' },
+          {}
+        )
+
+        expect(result.content[0].text).toContain('2 finding(s)')
+        expect(result.content[0].text).toContain('Finding 1')
+        expect(result.content[0].text).toContain('Finding 2')
       })
 
-      expect(recallAnalysisMemories).toHaveBeenCalledWith({ analysisId: 'test' }, {})
+      it('should require query param in semantic mode', async () => {
+        const result = await tool.execute({
+          analysis_id: 'test',
+          mode: 'semantic'
+        })
 
-      expect(result.content[0].text).toContain('2 finding(s)')
-      expect(result.content[0].text).toContain('Finding 1')
-      expect(result.content[0].text).toContain('Finding 2')
-    })
-
-    it('should recall by semantic query', async () => {
-      await tool.execute({
-        query: 'missing metadata'
+        expect(result.content[0].text).toContain('Please provide')
+        expect(recallAnalysisMemories).not.toHaveBeenCalled()
       })
 
-      expect(recallAnalysisMemories).toHaveBeenCalledWith({ query: 'missing metadata' }, {})
-    })
+      it('should pass top_k option', async () => {
+        await tool.execute({
+          analysis_id: 'test',
+          mode: 'semantic',
+          query: 'test',
+          top_k: 100
+        })
 
-    it('should require either analysis_id or query', async () => {
-      const result = await tool.execute({})
-
-      expect(result.content[0].text).toContain('Please provide')
-      expect(recallAnalysisMemories).not.toHaveBeenCalled()
-    })
-
-    it('should pass top_k option', async () => {
-      await tool.execute({
-        analysis_id: 'test',
-        top_k: 100
+        expect(recallAnalysisMemories).toHaveBeenCalledWith(expect.anything(), { topK: 100 })
       })
 
-      expect(recallAnalysisMemories).toHaveBeenCalledWith(expect.anything(), { topK: 100 })
-    })
+      it('should group results by category', async () => {
+        const result = await tool.execute({
+          analysis_id: 'test',
+          mode: 'semantic',
+          query: 'test'
+        })
 
-    it('should group results by category', async () => {
-      const result = await tool.execute({ analysis_id: 'test' })
-
-      expect(result.content[0].text).toContain('## gap (2)')
-    })
-
-    it('should handle no results', async () => {
-      recallAnalysisMemories.mockResolvedValueOnce([])
-
-      const result = await tool.execute({ analysis_id: 'empty' })
-
-      expect(result.content[0].text).toContain('No analysis findings found')
-    })
-
-    it('should show similarity scores when present', async () => {
-      recallAnalysisMemories.mockResolvedValueOnce([
-        {
-          id: 'a1',
-          analysisId: 'test',
-          finding: 'Semantic match',
-          category: 'gap',
-          similarity: 0.92,
-          createdAt: new Date()
-        }
-      ])
-
-      const result = await tool.execute({ query: 'missing data' })
-
-      expect(result.content[0].text).toContain('92.0% match')
-    })
-
-    it('should group uncategorized findings', async () => {
-      recallAnalysisMemories.mockResolvedValueOnce([
-        { id: 'a1', analysisId: 'test', finding: 'No category', createdAt: new Date() }
-      ])
-
-      const result = await tool.execute({ analysis_id: 'test' })
-
-      expect(result.content[0].text).toContain('## uncategorized (1)')
-    })
-
-    it('should show metadata in output when present', async () => {
-      recallAnalysisMemories.mockResolvedValueOnce([
-        {
-          id: 'a1',
-          analysisId: 'test',
-          finding: 'With meta',
-          category: 'gap',
-          metadata: { count: 5 },
-          createdAt: new Date()
-        }
-      ])
-
-      const result = await tool.execute({ analysis_id: 'test' })
-
-      expect(result.content[0].text).toContain('"count":5')
-    })
-
-    it('should not show metadata marker when absent', async () => {
-      recallAnalysisMemories.mockResolvedValueOnce([
-        { id: 'a1', analysisId: 'test', finding: 'No meta', category: 'gap', createdAt: new Date() }
-      ])
-
-      const result = await tool.execute({ analysis_id: 'test' })
-
-      // Should have the finding but no " | " metadata separator
-      expect(result.content[0].text).toContain('No meta')
-      expect(result.content[0].text).not.toContain(' | ')
-    })
-
-    it('should pass category filter', async () => {
-      await tool.execute({
-        analysis_id: 'test',
-        category: 'gap'
+        expect(result.content[0].text).toContain('## gap (2)')
       })
 
-      expect(recallAnalysisMemories).toHaveBeenCalledWith(
-        { analysisId: 'test', category: 'gap' },
-        {}
-      )
+      it('should handle no results', async () => {
+        recallAnalysisMemories.mockResolvedValueOnce([])
+
+        const result = await tool.execute({
+          analysis_id: 'empty',
+          mode: 'semantic',
+          query: 'nothing'
+        })
+
+        expect(result.content[0].text).toContain('No findings match')
+      })
+
+      it('should show similarity scores when present', async () => {
+        recallAnalysisMemories.mockResolvedValueOnce([
+          {
+            id: 'a1',
+            analysisId: 'test',
+            finding: 'Semantic match',
+            category: 'gap',
+            similarity: 0.92,
+            createdAt: new Date()
+          }
+        ])
+
+        const result = await tool.execute({
+          analysis_id: 'test',
+          mode: 'semantic',
+          query: 'missing data'
+        })
+
+        expect(result.content[0].text).toContain('92.0% match')
+      })
+
+      it('should group uncategorized findings', async () => {
+        recallAnalysisMemories.mockResolvedValueOnce([
+          { id: 'a1', analysisId: 'test', finding: 'No category', createdAt: new Date() }
+        ])
+
+        const result = await tool.execute({
+          analysis_id: 'test',
+          mode: 'semantic',
+          query: 'test'
+        })
+
+        expect(result.content[0].text).toContain('## uncategorized (1)')
+      })
+
+      it('should show metadata in output when present', async () => {
+        recallAnalysisMemories.mockResolvedValueOnce([
+          {
+            id: 'a1',
+            analysisId: 'test',
+            finding: 'With meta',
+            category: 'gap',
+            metadata: { count: 5 },
+            createdAt: new Date()
+          }
+        ])
+
+        const result = await tool.execute({
+          analysis_id: 'test',
+          mode: 'semantic',
+          query: 'test'
+        })
+
+        expect(result.content[0].text).toContain('"count":5')
+      })
+
+      it('should not show metadata marker when absent', async () => {
+        recallAnalysisMemories.mockResolvedValueOnce([
+          {
+            id: 'a1',
+            analysisId: 'test',
+            finding: 'No meta',
+            category: 'gap',
+            createdAt: new Date()
+          }
+        ])
+
+        const result = await tool.execute({
+          analysis_id: 'test',
+          mode: 'semantic',
+          query: 'test'
+        })
+
+        expect(result.content[0].text).toContain('No meta')
+        expect(result.content[0].text).not.toContain(' | ')
+      })
+
+      it('should pass category filter', async () => {
+        await tool.execute({
+          analysis_id: 'test',
+          mode: 'semantic',
+          query: 'test',
+          category: 'gap'
+        })
+
+        expect(recallAnalysisMemories).toHaveBeenCalledWith(
+          { analysisId: 'test', category: 'gap', query: 'test' },
+          {}
+        )
+      })
     })
 
-    it('should have input schema and baseDescription', () => {
+    describe('aggregate mode', () => {
+      it('should require group_by param', async () => {
+        const result = await tool.execute({
+          analysis_id: 'test',
+          mode: 'aggregate'
+        })
+
+        expect(result.content[0].text).toContain('Please provide')
+      })
+
+      it('should return distribution', async () => {
+        queryIngestedData.mockResolvedValueOnce([
+          { value: 'active', count: 100 },
+          { value: 'draft', count: 50 }
+        ])
+
+        const result = await tool.execute({
+          analysis_id: 'test',
+          mode: 'aggregate',
+          group_by: 'status'
+        })
+
+        expect(queryIngestedData).toHaveBeenCalledWith('test', {
+          mode: 'aggregate',
+          groupBy: 'status'
+        })
+        expect(result.content[0].text).toContain('active: 100')
+        expect(result.content[0].text).toContain('draft: 50')
+        expect(result.content[0].text).toContain('150 total')
+      })
+
+      it('should handle no data', async () => {
+        queryIngestedData.mockResolvedValueOnce([])
+
+        const result = await tool.execute({
+          analysis_id: 'empty',
+          mode: 'aggregate',
+          group_by: 'status'
+        })
+
+        expect(result.content[0].text).toContain('No ingested records')
+        expect(result.content[0].text).toContain('analysis_ingest')
+      })
+    })
+
+    describe('filter mode', () => {
+      it('should require where param', async () => {
+        const result = await tool.execute({
+          analysis_id: 'test',
+          mode: 'filter'
+        })
+
+        expect(result.content[0].text).toContain('Please provide')
+      })
+
+      it('should return matching records', async () => {
+        queryIngestedData.mockResolvedValueOnce([
+          { id: '1', name: 'Deal A', status: 'active' },
+          { id: '2', name: 'Deal B', status: 'active' }
+        ])
+
+        const result = await tool.execute({
+          analysis_id: 'test',
+          mode: 'filter',
+          where: { status: 'active' },
+          limit: 10
+        })
+
+        expect(queryIngestedData).toHaveBeenCalledWith('test', {
+          mode: 'filter',
+          where: { status: 'active' },
+          limit: 10
+        })
+        expect(result.content[0].text).toContain('Deal A')
+      })
+
+      it('should handle no matches', async () => {
+        queryIngestedData.mockResolvedValueOnce([])
+
+        const result = await tool.execute({
+          analysis_id: 'test',
+          mode: 'filter',
+          where: { status: 'nonexistent' }
+        })
+
+        expect(result.content[0].text).toContain('No records match')
+      })
+    })
+
+    describe('sample mode', () => {
+      it('should return random records', async () => {
+        queryIngestedData.mockResolvedValueOnce([
+          { id: '1', name: 'Sample A' },
+          { id: '2', name: 'Sample B' }
+        ])
+
+        const result = await tool.execute({
+          analysis_id: 'test',
+          mode: 'sample',
+          sample_size: 2
+        })
+
+        expect(queryIngestedData).toHaveBeenCalledWith('test', {
+          mode: 'sample',
+          sampleSize: 2
+        })
+        expect(result.content[0].text).toContain('Sample A')
+      })
+
+      it('should handle no data', async () => {
+        queryIngestedData.mockResolvedValueOnce([])
+
+        const result = await tool.execute({
+          analysis_id: 'empty',
+          mode: 'sample'
+        })
+
+        expect(result.content[0].text).toContain('No ingested records')
+      })
+    })
+
+    it('should have input schema with all mode params', () => {
       const schema = tool.inputSchema
       expect(schema.analysis_id).toBeDefined()
+      expect(schema.mode).toBeDefined()
       expect(schema.query).toBeDefined()
       expect(schema.category).toBeDefined()
       expect(schema.top_k).toBeDefined()
-      expect(tool.baseDescription).toContain('analysis')
+      expect(schema.group_by).toBeDefined()
+      expect(schema.where).toBeDefined()
+      expect(schema.limit).toBeDefined()
+      expect(schema.sample_size).toBeDefined()
+    })
+
+    it('should have baseDescription mentioning all four modes', () => {
+      expect(tool.baseDescription).toContain('semantic')
+      expect(tool.baseDescription).toContain('aggregate')
+      expect(tool.baseDescription).toContain('filter')
+      expect(tool.baseDescription).toContain('sample')
     })
   })
 
-  describe('ClearAnalysisMemoriesTool', () => {
-    const tool = new ClearAnalysisMemoriesTool({})
+  describe('AnalysisClearTool', () => {
+    const tool = new AnalysisClearTool({})
 
     it('should have correct metadata', () => {
-      expect(tool.name).toBe('clear_analysis_memories')
-      expect(ClearAnalysisMemoriesTool.category).toBe(TOOL_CATEGORIES.MEMORY)
+      expect(tool.name).toBe('analysis_clear')
+      expect(AnalysisClearTool.category).toBe(TOOL_CATEGORIES.MEMORY)
     })
 
-    it('should clear and return count', async () => {
+    it('should cascade-clear both analysis memories and ingested records', async () => {
       const result = await tool.execute({
         analysis_id: 'audit-2024'
       })
 
       expect(clearAnalysisMemories).toHaveBeenCalledWith('audit-2024')
+      expect(clearIngestedRecords).toHaveBeenCalledWith('audit-2024')
+      expect(result.content[0].text).toContain('10 ingested record(s)')
       expect(result.content[0].text).toContain('3 finding(s)')
       expect(result.content[0].text).toContain('audit-2024')
     })
@@ -308,7 +497,9 @@ describe('Analysis Memory Tools', () => {
     it('should have input schema and baseDescription', () => {
       const schema = tool.inputSchema
       expect(schema.analysis_id).toBeDefined()
-      expect(tool.baseDescription).toContain('Clear')
+      expect(tool.baseDescription).toContain('Clean up')
+      expect(tool.baseDescription).toContain('ingested records')
+      expect(tool.baseDescription).toContain('findings')
     })
   })
 })

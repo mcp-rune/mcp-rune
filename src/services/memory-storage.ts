@@ -23,6 +23,7 @@
 import * as vendor from './vendor/pgvector/index.js'
 import * as operations from './vendor/pgvector/tool-memories.js'
 import * as analysisMemories from './vendor/pgvector/analysis-memories.js'
+import * as ingestedRecords from './vendor/pgvector/ingested-records.js'
 import { embed, embedBatch } from './embeddings.js'
 import { adaptToolOutput } from './tool-output-adapters.js'
 
@@ -234,6 +235,50 @@ export async function recallAnalysisMemories(
   }
 
   return analysisMemories.recallMemories(pool, queryFilters, options)
+}
+
+export interface IngestRecordsParams {
+  analysisId: string
+  model: string
+  records: Array<{ id?: string; data: Record<string, unknown> }>
+}
+
+export type IngestedDataQuery =
+  | { mode: 'aggregate'; groupBy: string }
+  | { mode: 'filter'; where: Record<string, unknown>; limit?: number }
+  | { mode: 'sample'; sampleSize?: number }
+
+/** Store ingested records for analysis */
+export async function storeIngestedRecords(params: IngestRecordsParams): Promise<number> {
+  if (!vendor.isConfigured()) return 0
+
+  const pool = vendor.getPool()
+  if (!pool) return 0
+
+  return ingestedRecords.storeRecords(pool, params)
+}
+
+/** Query ingested records (aggregate, filter, or sample) */
+export async function queryIngestedData(
+  analysisId: string,
+  query: IngestedDataQuery
+): Promise<Record<string, unknown>[]> {
+  if (!vendor.isConfigured()) return []
+
+  const pool = vendor.getPool()
+  if (!pool) return []
+
+  return ingestedRecords.queryRecords(pool, analysisId, query)
+}
+
+/** Clear ingested records by analysis ID */
+export async function clearIngestedRecords(analysisId: string): Promise<number> {
+  if (!vendor.isConfigured()) return 0
+
+  const pool = vendor.getPool()
+  if (!pool) return 0
+
+  return ingestedRecords.clearRecords(pool, analysisId)
 }
 
 /** Clear analysis memories by analysis ID */

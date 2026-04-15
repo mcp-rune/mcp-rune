@@ -73,8 +73,8 @@ describe('lib/mcp/tools/base-tool', () => {
   })
 
   describe('category and authentication', () => {
-    it('should default to CRUD category', () => {
-      expect(BaseTool.category).toBe(TOOL_CATEGORIES.CRUD)
+    it('should default to DATA category', () => {
+      expect(BaseTool.category).toBe(TOOL_CATEGORIES.DATA)
     })
 
     it('should require auth by default', () => {

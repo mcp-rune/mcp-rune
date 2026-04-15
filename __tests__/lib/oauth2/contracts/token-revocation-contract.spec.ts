@@ -33,7 +33,7 @@ describe('Token Revocation Contract (RFC 7009)', () => {
   let validateError
 
   beforeAll(() => {
-    const ajv = new Ajv({ allErrors: true, strict: false })
+    const ajv = new Ajv({ allErrors: true, strict: false, logger: false })
     validateRevocation = ajv.compile(loadSchema('token-revocation-response.schema.json'))
     validateError = ajv.compile(loadSchema('oauth-error-response.schema.json'))
   })

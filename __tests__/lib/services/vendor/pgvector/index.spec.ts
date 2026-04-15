@@ -1,4 +1,11 @@
 
+// Mock logger to prevent console output during tests
+vi.mock('../../../../../src/services/logger.js', () => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn()
+}))
+
 // Mock tool-memories to prevent real DB calls
 vi.mock('../../../../../src/services/vendor/pgvector/tool-memories.js', () => ({
   cleanupExpired: vi.fn(() => Promise.resolve(0))

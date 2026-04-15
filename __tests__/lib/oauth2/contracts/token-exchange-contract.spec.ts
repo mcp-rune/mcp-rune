@@ -29,7 +29,7 @@ describe('Token Exchange Contract (RFC 6749)', () => {
   let validateError
 
   beforeAll(() => {
-    const ajv = new Ajv({ allErrors: true, strict: false })
+    const ajv = new Ajv({ allErrors: true, strict: false, logger: false })
     validateToken = ajv.compile(loadSchema('token-exchange-response.schema.json'))
     validateError = ajv.compile(loadSchema('oauth-error-response.schema.json'))
   })

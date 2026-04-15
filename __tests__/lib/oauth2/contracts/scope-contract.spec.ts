@@ -36,7 +36,7 @@ describe('Scope Contract (RFC 6749 Section 3.3)', () => {
   let validateDcrRequest
 
   beforeAll(() => {
-    const ajv = new Ajv({ allErrors: true, strict: false })
+    const ajv = new Ajv({ allErrors: true, strict: false, logger: false })
     validateScope = ajv.compile(loadSchema('scope-string.schema.json'))
     validateToken = ajv.compile(loadSchema('token-exchange-response.schema.json'))
     validateIntrospection = ajv.compile(loadSchema('introspect-active-response.schema.json'))

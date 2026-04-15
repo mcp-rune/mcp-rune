@@ -27,7 +27,7 @@ describe('OAuth Metadata Contract (RFC 8414)', () => {
   let validate
 
   beforeAll(() => {
-    const ajv = new Ajv({ allErrors: true, strict: false })
+    const ajv = new Ajv({ allErrors: true, strict: false, logger: false })
     validate = ajv.compile(loadSchema('oauth-metadata-response.schema.json'))
   })
 

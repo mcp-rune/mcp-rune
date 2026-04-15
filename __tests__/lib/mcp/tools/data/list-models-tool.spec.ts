@@ -1,6 +1,6 @@
-import { ListModelsTool } from '../../../../../src/mcp/tools/crud/list-models-tool.js'
+import { ListModelsTool } from '../../../../../src/mcp/tools/data/list-models-tool.js'
 
-describe('lib/mcp/tools/crud/list-models-tool', () => {
+describe('lib/mcp/tools/data/list-models-tool', () => {
   describe('description composition', () => {
     it('should include serverContext scope in description', () => {
       const tool = new ListModelsTool({
