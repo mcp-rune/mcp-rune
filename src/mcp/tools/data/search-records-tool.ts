@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { BaseTool } from '../base-tool.js'
-import type { ToolResult, ModelConfig } from '../base-tool.js'
+import type { ToolResult, ModelConfig, ToolAnnotations } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
 import type { FilterSchema } from '../validators.js'
 import { SearchClient } from '#src/mcp/search/search-client.js'
@@ -28,6 +28,10 @@ export class SearchRecordsTool extends BaseTool {
   override get baseDescription(): string {
     const scope = this.serverContext.name ? ` in the ${this.serverContext.name} API` : ''
     return `Search records${scope} using filters. Returns raw JSON results. Call get_filters_guide first to learn available filters.`
+  }
+
+  override get annotations(): ToolAnnotations {
+    return { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
   }
 
   override getUsageRules(): string[] {

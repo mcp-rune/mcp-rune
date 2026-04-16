@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { BaseTool } from '../base-tool.js'
-import type { ToolResult } from '../base-tool.js'
+import type { ToolResult, ToolAnnotations } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
 import { validateSearchParams } from '../validators.js'
 import { pickFields } from '#src/core/helpers.js'
@@ -21,6 +21,10 @@ Use this tool to:
 - Look up a specific record by ID
 - Query records with specific search filters
 - Get raw record data for further processing`
+  }
+
+  override get annotations(): ToolAnnotations {
+    return { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
   }
 
   override get inputSchema(): Record<string, ZodTypeAny> {

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { BaseTool } from '../base-tool.js'
-import type { ToolResult } from '../base-tool.js'
+import type { ToolResult, ToolAnnotations } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
 import type { NestedValidationError, NestedValidationSuccess } from '../validators.js'
 import { validateNestedResource } from '../validators.js'
@@ -32,6 +32,10 @@ interface BulkNestedResult {
 export class BulkGetNestedResourcesTool extends BaseTool {
   override get name(): string {
     return 'bulk_get_nested_resources'
+  }
+
+  override get annotations(): ToolAnnotations {
+    return { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
   }
 
   override get baseDescription(): string {

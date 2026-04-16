@@ -1,5 +1,5 @@
 import { BaseTool } from '../base-tool.js'
-import type { ToolResult, ModelConfig } from '../base-tool.js'
+import type { ToolResult, ModelConfig, ToolAnnotations } from '../base-tool.js'
 import type { ToolCategory } from '../categories.js'
 import { TOOL_CATEGORIES } from '../categories.js'
 import type { ZodTypeAny } from 'zod'
@@ -27,6 +27,10 @@ export class GetFiltersGuideTool extends BaseTool {
 
   override get name(): string {
     return 'get_filters_guide'
+  }
+
+  override get annotations(): ToolAnnotations {
+    return { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
   }
 
   override get baseDescription(): string {

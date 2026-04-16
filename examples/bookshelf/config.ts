@@ -40,6 +40,7 @@ const toolRegistry = {
         tool.name,
         tool.baseDescription,
         tool.inputSchema,
+        tool.annotations,
         async (args: Record<string, unknown>) => {
           const apiClient = { /* inject your API client here */ }
           tool.apiClient = apiClient as never
@@ -55,6 +56,7 @@ const toolRegistry = {
         tool.name,
         tool.baseDescription,
         tool.inputSchema,
+        tool.annotations,
         async (args: Record<string, unknown>) => tool.execute(args)
       )
     }

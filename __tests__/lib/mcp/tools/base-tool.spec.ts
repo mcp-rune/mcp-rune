@@ -92,6 +92,53 @@ describe('lib/mcp/tools/base-tool', () => {
     })
   })
 
+  describe('annotations', () => {
+    it('should return DATA category defaults for base tool', () => {
+      const tool = new BaseTool()
+      const annotations = tool.annotations
+      expect(annotations).toEqual({
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true
+      })
+    })
+
+    it('should return category-specific defaults for subclasses', () => {
+      class StrategyTool extends BaseTool {
+        static get category() {
+          return TOOL_CATEGORIES.STRATEGY
+        }
+      }
+      const tool = new StrategyTool()
+      expect(tool.annotations).toEqual({
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: false
+      })
+    })
+
+    it('should allow per-tool overrides', () => {
+      class ReadOnlyDataTool extends BaseTool {
+        get annotations() {
+          return { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
+        }
+      }
+      const tool = new ReadOnlyDataTool()
+      expect(tool.annotations.readOnlyHint).toBe(true)
+      expect(tool.annotations.destructiveHint).toBe(false)
+    })
+
+    it('should return a fresh copy each time', () => {
+      const tool = new BaseTool()
+      const a = tool.annotations
+      const b = tool.annotations
+      expect(a).toEqual(b)
+      expect(a).not.toBe(b)
+    })
+  })
+
   describe('getModelNames', () => {
     it('should return array of model names', () => {
       const tool = new BaseTool({

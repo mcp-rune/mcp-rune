@@ -1,5 +1,5 @@
 import { BaseTool } from '../base-tool.js'
-import type { ToolResult } from '../base-tool.js'
+import type { ToolResult, ToolAnnotations } from '../base-tool.js'
 
 /**
  * Tool for listing all available API models
@@ -12,6 +12,10 @@ export class ListModelsTool extends BaseTool {
   override get baseDescription(): string {
     const scope = this.serverContext.name ? ` in the ${this.serverContext.name} API` : ''
     return `List all available models/resources${scope} with their attributes and descriptions.`
+  }
+
+  override get annotations(): ToolAnnotations {
+    return { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
   }
 
   override get inputSchema(): Record<string, never> {

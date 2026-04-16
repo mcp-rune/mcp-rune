@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] — 2026-04-16
+
+### Added
+- **MCP tool annotations** for all 21 tools — `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` per the MCP spec, enabling clients (e.g., Claude Connectors UI) to properly categorize tools into permission groups
+- `defaultAnnotations` field on `CategoryConfig` — category-level annotation defaults so tools inherit correct hints automatically
+- `annotations` getter on `BaseTool` — returns category defaults, overridable per-tool
+- `ToolAnnotations` type re-exported from `mcp-kit/tools` for consumer convenience
+- Enforcement test (`annotations.spec.ts`) ensuring every tool declares annotations with explicit `readOnlyHint`
+
+### Changed
+- Bookshelf example updated to pass `tool.annotations` via the 5-arg `mcpServer.tool()` signature
+- 10 tools override category defaults with per-tool annotations (read-only DATA tools, non-destructive write tools, ANALYSIS write tools)
+
+[0.5.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.4.0...v0.5.0
+
 ## [0.4.0] — 2026-04-16
 
 ### Added
