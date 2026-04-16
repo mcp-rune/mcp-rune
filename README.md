@@ -323,6 +323,76 @@ See the [bookshelf example](examples/bookshelf/) for the full source (~150 lines
 
 ---
 
+## Database
+
+mcp-kit uses PostgreSQL with the [pgvector](https://github.com/pgvector/pgvector) extension for token storage, operation memory, and analysis features. Database features are **opt-in** — if `DATABASE_URL` is not set, everything works without a database.
+
+### Tables
+
+| Table               | Feature    | Required When           | Purpose                                                        |
+| ------------------- | ---------- | ----------------------- | -------------------------------------------------------------- |
+| `oauth_sessions`    | `core`     | `DATABASE_URL` set      | OAuth2 token storage (access/refresh tokens per session)       |
+| `tool_memories`     | `core`     | `DATABASE_URL` set      | Semantic operation memory (384-dim embeddings via pgvector)    |
+| `analysis_memories` | `analysis` | `ANALYSIS_ENABLED=true` | Analysis findings with embeddings (ephemeral 1h or persistent) |
+| `ingested_records`  | `analysis` | `ANALYSIS_ENABLED=true` | Temporary dataset storage for large-scale analysis (1h expiry) |
+
+### Running Migrations
+
+mcp-kit exports migration SQL via `mcp-kit/db/migrations`. Write a migration runner that suits your project — here's a minimal example:
+
+```typescript
+import pg from 'pg'
+import { migrations } from 'mcp-kit/db/migrations'
+
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
+const client = await pool.connect()
+
+// Track applied migrations
+await client.query(`
+  CREATE TABLE IF NOT EXISTS schema_migrations (
+    version TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )
+`)
+
+const { rows } = await client.query('SELECT version FROM schema_migrations')
+const applied = new Set(rows.map((r) => r.version))
+
+for (const migration of migrations) {
+  if (applied.has(migration.version)) continue
+
+  await client.query('BEGIN')
+  await client.query(migration.up)
+  await client.query('INSERT INTO schema_migrations (version, name) VALUES ($1, $2)', [
+    migration.version,
+    migration.name
+  ])
+  await client.query('COMMIT')
+  console.log(`Applied: ${migration.version}_${migration.name}`)
+}
+
+client.release()
+await pool.end()
+```
+
+To apply only a subset (e.g., skip analysis tables when `ANALYSIS_ENABLED` is false):
+
+```typescript
+const needed = migrations.filter(
+  (m) => m.feature === 'core' || process.env.ANALYSIS_ENABLED === 'true'
+)
+```
+
+### Environment Variables
+
+| Variable           | Default | Description                                                                                                               |
+| ------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`     | —       | PostgreSQL connection string. When unset, all database features are disabled.                                             |
+| `ANALYSIS_ENABLED` | `false` | Enable analysis tools (`analysis_ingest`, `analysis_query`, `analysis_store`, `analysis_clear`). Requires `DATABASE_URL`. |
+
+---
+
 ## Subpath Imports
 
 mcp-kit exposes modules via subpath imports for targeted usage:
@@ -340,6 +410,7 @@ import { DomainRegistry, WorkflowDefinition } from 'mcp-kit/domain'
 import { OAuthService } from 'mcp-kit/oauth2'
 import { logger, tracing, errorTracking } from 'mcp-kit/services'
 import { setPool, query } from 'mcp-kit/db'
+import { migrations } from 'mcp-kit/db/migrations'
 ```
 
 ---
