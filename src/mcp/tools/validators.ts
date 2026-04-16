@@ -20,12 +20,13 @@ export interface FilterSchema {
 
 export interface SearchValidationSuccess {
   valid: true
+  filters?: Record<string, unknown>
 }
 
 export interface SearchValidationError {
   valid: false
   error: string
-  searchableFields: string[]
+  availableFilters: string[]
   suggestion: string
 }
 
@@ -154,7 +155,13 @@ export function validateFilterValues(
 }
 
 /**
- * Validate search parameters against a model's searchable fields
+ * Validate search filters against a model's filter schema.
+ *
+ * Validates both filter keys (must exist in schema) and enum values
+ * (must match declared enumValues). Normalizes comma-separated enum
+ * strings into arrays.
+ *
+ * Returns normalized filters on success for use by the caller.
  */
 export function validateSearchParams(
   model: string,
@@ -162,29 +169,49 @@ export function validateSearchParams(
   models: ModelsRegistry
 ): SearchValidationResult {
   const modelConfig = models[model]
-  const searchableFields = modelConfig?.search?.autocompleteFields ?? []
+  const filterSchema = (modelConfig?.search?.filters ?? {}) as Record<string, FilterSchema>
 
   if (!searchParams || Object.keys(searchParams).length === 0) {
     return { valid: true }
   }
 
-  const invalidFields = Object.keys(searchParams).filter(
-    (field) => !searchableFields.includes(field)
-  )
-
-  if (invalidFields.length > 0) {
+  // Check if model supports filters
+  const availableFilters = Object.keys(filterSchema)
+  if (availableFilters.length === 0) {
     return {
       valid: false,
-      error: `The following search parameters are not supported for '${model}': ${invalidFields.join(', ')}`,
-      searchableFields,
-      suggestion:
-        searchableFields.length > 0
-          ? `Available searchable fields: ${searchableFields.join(', ')}\n\nTip: You can find specific records by ID using the 'id' parameter.`
-          : `Model '${model}' does not support search parameters. Use 'id' to find specific records by their ID.`
+      error: `Model '${model}' does not support search filters.`,
+      availableFilters: [],
+      suggestion: `This model does not have filter support configured. Use find_model to retrieve records by ID.`
     }
   }
 
-  return { valid: true }
+  // Normalize comma-separated enum strings into arrays
+  const normalizedFilters = normalizeFilterValues(searchParams, filterSchema)!
+
+  // Phase 1: Reject unknown filter keys
+  const unknownFilters = Object.keys(normalizedFilters).filter((f) => !filterSchema[f])
+  if (unknownFilters.length > 0) {
+    return {
+      valid: false,
+      error: `Unknown filter(s) for ${model}: ${unknownFilters.join(', ')}`,
+      availableFilters,
+      suggestion: `Available filters: ${availableFilters.join(', ')}\n\nCall get_filters_guide("${model}") to see filter documentation.`
+    }
+  }
+
+  // Phase 2: Validate enum filter values
+  const enumError = validateFilterValues(model, normalizedFilters, filterSchema)
+  if (enumError) {
+    return {
+      valid: false,
+      error: enumError,
+      availableFilters,
+      suggestion: `Call get_filters_guide("${model}") to see valid filter values.`
+    }
+  }
+
+  return { valid: true, filters: normalizedFilters }
 }
 
 /**

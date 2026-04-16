@@ -3,7 +3,14 @@ export const MOCK_MODELS = {
     endpoint: 'titles',
     attributes: ['id', 'name', 'external_id', 'title_type', 'episode_number', 'tags'],
     required: ['name'],
-    search: { autocompleteFields: ['external_id', 'external_id_type'] },
+    search: {
+      autocompleteFields: ['external_id', 'external_id_type'],
+      filters: {
+        external_id: { type: 'text', label: 'External ID' },
+        title_type: { type: 'enum', label: 'Title Type', enumValues: ['feature', 'episode'] },
+        licensor_id: { type: 'relation', label: 'Licensor', relatedModel: 'licensor' }
+      }
+    },
     description: 'Titles (movies, episodes, features)',
     associations: {
       belongsTo: {
@@ -22,7 +29,12 @@ export const MOCK_MODELS = {
     endpoint: 'images',
     attributes: ['id', 'encoding', 'width', 'height', 'type', 'is_cover'],
     required: ['encoding'],
-    search: { autocompleteFields: ['external_id'] },
+    search: {
+      autocompleteFields: ['external_id'],
+      filters: {
+        type: { type: 'enum', label: 'Image Type', enumValues: ['poster', 'thumbnail'] }
+      }
+    },
     description: 'Images for titles and brands',
     associations: {
       belongsTo: {
