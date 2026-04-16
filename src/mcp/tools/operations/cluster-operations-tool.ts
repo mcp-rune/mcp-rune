@@ -1,8 +1,8 @@
 import { z } from 'zod'
-import { BaseMemoryTool } from '../base-memory-tool.js'
-import type { ToolResult } from '../../base-tool.js'
+import { BaseOperationsTool } from './base-operations-tool.js'
+import type { ToolResult } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
-import { getOperationClusters } from '#src/services/memory-storage.js'
+import { getOperationClusters } from '#src/services/vector-storage.js'
 
 interface ClusterOperation {
   toolName: string
@@ -22,7 +22,7 @@ interface Cluster {
  *
  * Identifies clusters of related operations and outliers.
  */
-export class ClusterOperationsTool extends BaseMemoryTool {
+export class ClusterOperationsTool extends BaseOperationsTool {
   override get name(): string {
     return 'cluster_operations'
   }

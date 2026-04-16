@@ -236,6 +236,10 @@ export function deriveFieldDefinitions(
       fieldDef.enumValues = attrConfig.enumValues
     }
 
+    if (attrConfig.enumDescriptions) {
+      fieldDef.enumDescriptions = attrConfig.enumDescriptions as Record<string, string>
+    }
+
     if (attrConfig.format) {
       fieldDef.format = attrConfig.format
     }

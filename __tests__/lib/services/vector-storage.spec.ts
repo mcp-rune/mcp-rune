@@ -57,8 +57,8 @@ vi.mock('../../../src/services/tool-output-adapters.js', () => ({
 }))
 
 import {
-  initMemoryStorage,
-  isMemoryStorageEnabled,
+  initVectorStorage,
+  isVectorStorageEnabled,
   storeOperation,
   findSimilarOperations,
   detectOperationGaps,
@@ -67,9 +67,9 @@ import {
   storeAnalysisMemory,
   recallAnalysisMemories,
   clearAnalysisMemories,
-  flushMemoryStorage,
-  closeMemoryStorage
-} from '../../../src/services/memory-storage.js'
+  flushVectorStorage,
+  closeVectorStorage
+} from '../../../src/services/vector-storage.js'
 
 import * as vendor from '../../../src/services/vendor/pgvector/index.js'
 import * as operations from '../../../src/services/vendor/pgvector/tool-memories.js'
@@ -77,26 +77,26 @@ import * as analysisMemories from '../../../src/services/vendor/pgvector/analysi
 import { embed, embedBatch } from '../../../src/services/embeddings.js'
 import { adaptToolOutput } from '../../../src/services/tool-output-adapters.js'
 
-describe('lib/services/memory-storage', () => {
+describe('lib/services/vector-storage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vendor.isConfigured.mockReturnValue(true)
     vendor.getPool.mockReturnValue({})
   })
 
-  describe('initMemoryStorage', () => {
+  describe('initVectorStorage', () => {
     it('should delegate to vendor.initialize', () => {
       const options = { serviceName: 'test', version: '1.0.0', retentionDays: 30 }
-      const result = initMemoryStorage(options)
+      const result = initVectorStorage(options)
 
       expect(vendor.initialize).toHaveBeenCalledWith(options)
       expect(result).toBe(true)
     })
   })
 
-  describe('isMemoryStorageEnabled', () => {
+  describe('isVectorStorageEnabled', () => {
     it('should delegate to vendor.isConfigured', () => {
-      const result = isMemoryStorageEnabled()
+      const result = isVectorStorageEnabled()
 
       expect(vendor.isConfigured).toHaveBeenCalled()
       expect(result).toBe(true)
@@ -265,26 +265,26 @@ describe('lib/services/memory-storage', () => {
   })
 
   describe('lifecycle methods', () => {
-    it('should delegate flushMemoryStorage to vendor.flush', async () => {
-      await flushMemoryStorage(3000)
+    it('should delegate flushVectorStorage to vendor.flush', async () => {
+      await flushVectorStorage(3000)
 
       expect(vendor.flush).toHaveBeenCalledWith(3000)
     })
 
     it('should use default timeout for flush', async () => {
-      await flushMemoryStorage()
+      await flushVectorStorage()
 
       expect(vendor.flush).toHaveBeenCalledWith(5000)
     })
 
-    it('should delegate closeMemoryStorage to vendor.close', async () => {
-      await closeMemoryStorage(10000)
+    it('should delegate closeVectorStorage to vendor.close', async () => {
+      await closeVectorStorage(10000)
 
       expect(vendor.close).toHaveBeenCalledWith(10000)
     })
 
     it('should use default timeout for close', async () => {
-      await closeMemoryStorage()
+      await closeVectorStorage()
 
       expect(vendor.close).toHaveBeenCalledWith(5000)
     })

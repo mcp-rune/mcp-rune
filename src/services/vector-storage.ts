@@ -1,8 +1,9 @@
 /**
- * Memory Storage Service - Vendor-Agnostic Public API
+ * Vector Storage Service - Vendor-Agnostic Public API
  *
- * Captures tool operations as semantic embeddings for retrospective analysis:
- * "what did I miss?", "how does this compare?", "what patterns emerge?"
+ * Shared pgvector backend for analysis and operations tool categories.
+ * Stores semantic embeddings for tool operations, analysis findings,
+ * and ingested records.
  *
  * Mirrors the facade pattern of tracing.js and error-tracking.js.
  * To switch vendors, update the import below.
@@ -10,10 +11,10 @@
  * When not configured (no env vars), all functions become no-ops.
  *
  * @example
- * import { initMemoryStorage, storeOperation } from '#src/services/memory-storage.js'
+ * import { initVectorStorage, storeOperation } from '#src/services/vector-storage.js'
  *
  * // Initialize once at startup
- * initMemoryStorage({ serviceName: 'mcp-server-mod', retentionDays: 30 })
+ * initVectorStorage({ serviceName: 'mcp-server-mod', retentionDays: 30 })
  *
  * // Store after tool operations (fire-and-forget)
  * storeOperation({ toolName: 'create_model', toolArgs: { model: 'deal', attributes: { ... } } })
@@ -27,7 +28,7 @@ import * as ingestedRecords from './vendor/pgvector/ingested-records.js'
 import { embed, embedBatch } from './embeddings.js'
 import { adaptToolOutput } from './tool-output-adapters.js'
 
-export interface MemoryStorageOptions {
+export interface VectorStorageOptions {
   serviceName?: string
   version?: string
   retentionDays?: number
@@ -104,12 +105,12 @@ export interface RecallOptions {
  *
  * Call once at server startup. No-op if env vars not set.
  */
-export function initMemoryStorage(options: MemoryStorageOptions = {}): boolean {
+export function initVectorStorage(options: VectorStorageOptions = {}): boolean {
   return vendor.initialize(options)
 }
 
-/** Check if memory storage is configured and enabled */
-export function isMemoryStorageEnabled(): boolean {
+/** Check if vector storage is configured and enabled */
+export function isVectorStorageEnabled(): boolean {
   return vendor.isConfigured()
 }
 
@@ -294,14 +295,14 @@ export async function clearAnalysisMemories(analysisId: string): Promise<number>
 /**
  * Flush pending memory storage writes
  */
-export async function flushMemoryStorage(timeout = 5000): Promise<void> {
+export async function flushVectorStorage(timeout = 5000): Promise<void> {
   return vendor.flush(timeout)
 }
 
 /**
  * Close memory storage service
  */
-export async function closeMemoryStorage(timeout = 5000): Promise<void> {
+export async function closeVectorStorage(timeout = 5000): Promise<void> {
   return vendor.close(timeout)
 }
 

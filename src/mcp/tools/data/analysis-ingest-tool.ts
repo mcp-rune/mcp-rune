@@ -7,7 +7,7 @@ import { pickFields } from '#src/core/helpers.js'
 import {
   storeIngestedRecords,
   storeAnalysisMemory
-} from '#src/services/memory-storage.js'
+} from '#src/services/vector-storage.js'
 
 /** Max pages allowed when ingest_all is true */
 const MAX_INGEST_PAGES = 50
