@@ -435,6 +435,7 @@ API converters generate tools from OpenAPI specs. mcp-kit goes the other directi
 git clone https://github.com/dsaenztagarro/mcp-kit.git
 cd mcp-kit
 npm install
+npm run build:full
 ```
 
 ### Commands
@@ -443,8 +444,14 @@ npm install
 # Type check (no output, fast feedback)
 npm run build:check
 
-# Compile TypeScript → dist/ (JS + .d.ts declarations)
+# Build all Vite UI apps (single-file HTML bundles)
+npm run build:all-apps
+
+# Compile TypeScript → dist/ and copy HTML apps
 npm run build
+
+# Full pipeline from scratch (Vite apps + tsc + copy)
+npm run build:full
 
 # Run all 1978 tests
 npm test
