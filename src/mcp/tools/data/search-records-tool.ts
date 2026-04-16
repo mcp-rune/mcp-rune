@@ -122,7 +122,7 @@ export class SearchRecordsTool extends BaseTool {
       const searchClient = this._createSearchClient()
       const { records, pagination } = (await searchClient.search(
         ModelClass as unknown as Parameters<typeof searchClient.search>[0],
-        null as unknown as string,
+        '',
         {
           page,
           perPage: clampedPerPage,

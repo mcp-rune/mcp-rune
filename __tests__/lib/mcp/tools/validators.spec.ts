@@ -1,55 +1,55 @@
 import {
   normalizeFilterValues,
+  validateFilterParams,
   validateFilterValues,
-  validateNestedResource,
-  validateSearchParams
+  validateNestedResource
 } from '../../../../src/mcp/tools/validators.js'
 import { MOCK_MODELS } from '../../../__fixtures__/models-config-mock.js'
 
 describe('lib/mcp/tools/validators', () => {
-  describe('validateSearchParams', () => {
+  describe('validateFilterParams', () => {
     it('should return valid for empty search params', () => {
-      const result = validateSearchParams('title', {}, MOCK_MODELS)
+      const result = validateFilterParams('title', {}, MOCK_MODELS)
       expect(result.valid).toBe(true)
     })
 
     it('should return valid for null search params', () => {
-      const result = validateSearchParams('title', null, MOCK_MODELS)
+      const result = validateFilterParams('title', null, MOCK_MODELS)
       expect(result.valid).toBe(true)
     })
 
     it('should return valid for valid filter fields', () => {
-      const result = validateSearchParams('title', { external_id: 'test-123' }, MOCK_MODELS)
+      const result = validateFilterParams('title', { external_id: 'test-123' }, MOCK_MODELS)
       expect(result.valid).toBe(true)
     })
 
     it('should return invalid for non-existent filter fields', () => {
-      const result = validateSearchParams('title', { invalid_field: 'value' }, MOCK_MODELS)
+      const result = validateFilterParams('title', { invalid_field: 'value' }, MOCK_MODELS)
       expect(result.valid).toBe(false)
       expect(result.error).toContain('invalid_field')
       expect(result.error).toContain('Unknown filter')
     })
 
     it('should include suggestion with available filters', () => {
-      const result = validateSearchParams('title', { bad_field: 'test' }, MOCK_MODELS)
+      const result = validateFilterParams('title', { bad_field: 'test' }, MOCK_MODELS)
       expect(result.valid).toBe(false)
       expect(result.suggestion).toContain('external_id')
     })
 
     it('should handle model with no filters', () => {
-      const result = validateSearchParams('scheduling', { anything: 'value' }, MOCK_MODELS)
+      const result = validateFilterParams('scheduling', { anything: 'value' }, MOCK_MODELS)
       expect(result.valid).toBe(false)
       expect(result.error).toContain('does not support search filters')
     })
 
     it('should normalize and return filters on success', () => {
-      const result = validateSearchParams('title', { title_type: 'feature,episode' }, MOCK_MODELS)
+      const result = validateFilterParams('title', { title_type: 'feature,episode' }, MOCK_MODELS)
       expect(result.valid).toBe(true)
       expect(result.filters).toEqual({ title_type: ['feature', 'episode'] })
     })
 
     it('should validate enum filter values', () => {
-      const result = validateSearchParams('title', { title_type: 'invalid_type' }, MOCK_MODELS)
+      const result = validateFilterParams('title', { title_type: 'invalid_type' }, MOCK_MODELS)
       expect(result.valid).toBe(false)
       expect(result.error).toContain('Invalid value')
       expect(result.error).toContain('title_type')
