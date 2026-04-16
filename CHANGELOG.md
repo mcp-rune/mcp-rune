@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.1] — 2026-04-16
+
+### Fixed
+- `npm run build` fails on fresh clone — target directory `dist/mcp/apps/dist/` not created by `tsc`
+
+### Added
+- `build:all-apps` script — builds all 6 Vite UI targets sequentially
+- `build:full` script — runs the complete pipeline (Vite apps + tsc + copy) for fresh clones
+- `prepublishOnly` now runs `build:full` to ensure `npm publish` produces a complete package
+
+[0.5.1]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.5.0...v0.5.1
+
 ## [0.5.0] — 2026-04-16
 
 ### Added
