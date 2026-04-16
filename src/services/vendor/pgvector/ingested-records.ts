@@ -267,6 +267,22 @@ export async function describeSession(
   return { model: row.model, totalRecords: row.total }
 }
 
+/** Get all record IDs for a given analysis session and model */
+export async function getRecordIds(
+  pool: Pool,
+  analysisId: string,
+  model: string
+): Promise<string[]> {
+  const result = await pool.query(
+    `SELECT record_id FROM ingested_records
+     WHERE analysis_id = $1 AND model = $2
+       AND record_id IS NOT NULL
+       AND (expires_at IS NULL OR expires_at > NOW())`,
+    [analysisId, model]
+  )
+  return (result.rows as Array<{ record_id: string }>).map((r) => r.record_id)
+}
+
 /** Clear ingested records by analysis ID */
 export async function clearRecords(pool: Pool, analysisId: string): Promise<number> {
   const result = await pool.query(`DELETE FROM ingested_records WHERE analysis_id = $1`, [

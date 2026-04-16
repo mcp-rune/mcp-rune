@@ -2,14 +2,25 @@ import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
 import { pickFields } from '#src/core/helpers.js'
-import { storeAnalysisMemory, storeIngestedRecords } from '#src/services/vector-storage.js'
+import {
+  getIngestedRecordIds,
+  storeAnalysisMemory,
+  storeIngestedRecords
+} from '#src/services/vector-storage.js'
 
 import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
-import { validateSearchParams } from '../validators.js'
+import type { NestedValidationError, NestedValidationSuccess } from '../validators.js'
+import { validateNestedResource, validateSearchParams } from '../validators.js'
 
 /** Max pages allowed when ingest_all is true */
 const MAX_INGEST_PAGES = 50
+
+/** Max parent IDs per nested ingestion call */
+const MAX_NESTED_BATCH = 25
+
+/** Max concurrent nested resource fetches */
+const MAX_NESTED_CONCURRENCY = 5
 
 /**
  * Ingest model records into offline storage for large-scale analysis.
@@ -41,18 +52,24 @@ export class AnalysisIngestTool extends BaseTool {
 
 Use this tool instead of find_model when you need to analyze a large dataset (more than one page of results). Records are stored for querying via analysis_query — only a status summary is returned to context.
 
-Workflow:
-1. Call analysis_ingest with ingest_all: true to fetch and store all records
+Top-level ingestion:
+1. Call analysis_ingest with model + search + ingest_all: true to fetch and store all records
 2. Use analysis_query to reason about the data (aggregations, filters, semantic search)
-3. Use analysis_store to save your own qualitative findings
-4. Call analysis_clear when analysis is complete
+
+Nested resource ingestion (for child resources like metadata_errors, conflicts):
+1. Ingest parent records first: analysis_ingest({ model: "scheduling", search: {...}, ingest_all: true })
+2. Ingest children: analysis_ingest({ parent_model: "scheduling", child_resource: "metadata_errors" })
+   Parent IDs are auto-resolved from step 1's ingested records — no need to list them.
+3. Query children: analysis_query({ mode: "aggregate", group_by: "message" })
+
+Each child record gets a _parent_id field injected for cross-referencing with the parent.
 
 When NOT to use: For quick lookups of specific records by ID or small result sets you need in context immediately, use find_model instead.`
   }
 
   override get inputSchema(): Record<string, ZodTypeAny> {
     return {
-      model: this.zodEnum(this.getModelNames()).describe('Model name'),
+      model: this.zodEnum(this.getModelNames()).describe('Model name').optional(),
       analysis_id: z
         .string()
         .describe('Unique identifier for this analysis session (e.g., "q1-deal-audit")'),
@@ -79,7 +96,29 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         .describe(
           `When true, auto-paginates all pages (up to ${MAX_INGEST_PAGES} pages). Default: false (single page).`
         ),
-      user_id: z.string().describe('User ID to impersonate (service accounts only).').optional()
+      user_id: z.string().describe('User ID to impersonate (service accounts only).').optional(),
+
+      // Nested resource ingestion params
+      parent_model: this.zodEnum(this.getModelNames())
+        .optional()
+        .describe(
+          'Parent model name for nested resource ingestion. When set, auto-resolves parent IDs ' +
+            'from previously ingested records of this model in the same analysis session.'
+        ),
+      parent_ids: z
+        .array(z.string())
+        .max(MAX_NESTED_BATCH)
+        .optional()
+        .describe(
+          `Explicit parent IDs (max ${MAX_NESTED_BATCH}). If omitted when parent_model is set, ` +
+            'auto-resolves from ingested records.'
+        ),
+      child_resource: z
+        .string()
+        .optional()
+        .describe(
+          "Nested resource name (e.g., 'metadata_errors', 'conflicts'). Required when parent_model is set."
+        )
     }
   }
 
@@ -99,9 +138,12 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         per_page = 50,
         fields,
         ingest_all = false,
-        user_id
+        user_id,
+        parent_model,
+        parent_ids,
+        child_resource
       } = args as {
-        model: string
+        model?: string
         analysis_id: string
         search?: Record<string, unknown>
         page?: number
@@ -109,11 +151,56 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         fields?: string[]
         ingest_all?: boolean
         user_id?: string
+        parent_model?: string
+        parent_ids?: string[]
+        child_resource?: string
+      }
+
+      const api = this.apiClient! as unknown as Record<
+        string,
+        (...args: unknown[]) => Promise<unknown>
+      >
+      const options = user_id ? { userId: user_id } : {}
+
+      // --- Nested resource ingestion mode ---
+      if (parent_model) {
+        if (!child_resource) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: 'child_resource is required when parent_model is set. Provide the nested resource name (e.g., "metadata_errors").'
+              }
+            ],
+            isError: true
+          }
+        }
+        return await this._ingestNestedResources(
+          api,
+          analysis_id,
+          parent_model,
+          child_resource,
+          parent_ids,
+          fields,
+          options
+        )
+      }
+
+      // --- Top-level model ingestion mode ---
+      if (!model) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'Either "model" (for top-level ingestion) or "parent_model" + "child_resource" (for nested ingestion) is required.'
+            }
+          ],
+          isError: true
+        }
       }
 
       this.validateModel(model)
       const modelConfig = this.getModelConfig(model)!
-      const options = user_id ? { userId: user_id } : {}
 
       // Validate search params
       if (search) {
@@ -135,11 +222,6 @@ When NOT to use: For quick lookups of specific records by ID or small result set
           ingestAll: ingest_all
         })
       }
-
-      const api = this.apiClient! as unknown as Record<
-        string,
-        (...args: unknown[]) => Promise<unknown>
-      >
 
       if (ingest_all) {
         return await this._ingestAllPages(
@@ -276,6 +358,190 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         `\nAnalysis: ${analysisId}` +
         `\nModel: ${model}`,
       { meta: { context: { consumed: true } } }
+    )
+  }
+
+  /** Ingest nested resources for parent records */
+  private async _ingestNestedResources(
+    api: Record<string, (...args: unknown[]) => Promise<unknown>>,
+    analysisId: string,
+    parentModel: string,
+    childResource: string,
+    explicitParentIds: string[] | undefined,
+    fields: string[] | undefined,
+    apiOptions: Record<string, unknown>
+  ): Promise<ToolResult> {
+    this.validateModel(parentModel)
+
+    // Validate the nested resource exists on the parent model
+    const validation = validateNestedResource(parentModel, childResource, this.models)
+    if (!validation.valid) {
+      const err = validation as NestedValidationError
+      if (this.logger) {
+        this.logger.error('Nested resource validation failed', {
+          service: 'mcp-tools',
+          tool: 'analysis_ingest',
+          parentModel,
+          childResource,
+          error: err.error,
+          availableLinks: err.availableLinks
+        })
+      }
+      return {
+        content: [{ type: 'text', text: `${err.error}\n${err.suggestion}` }],
+        isError: true
+      }
+    }
+
+    const parentConfig = this.getModelConfig(parentModel)!
+    const linkInfo = (validation as NestedValidationSuccess).linkInfo as
+      | Record<string, unknown>
+      | undefined
+    const childPath = (linkInfo?.path as string) || childResource
+    const childModelName = (linkInfo?.target_model as string) || childResource
+
+    // Resolve parent IDs: explicit list or auto-resolve from ingested records
+    let parentIds: string[]
+    if (explicitParentIds && explicitParentIds.length > 0) {
+      parentIds = explicitParentIds
+    } else {
+      parentIds = await getIngestedRecordIds(analysisId, parentModel)
+      if (parentIds.length === 0) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text:
+                `No ingested ${parentModel} records found for analysis "${analysisId}". ` +
+                `Ingest parent records first: analysis_ingest({ model: "${parentModel}", ..., ingest_all: true })`
+            }
+          ],
+          isError: true
+        }
+      }
+    }
+
+    if (this.logger) {
+      this.logger.info('Ingesting nested resources', {
+        service: 'mcp-tools',
+        tool: 'analysis_ingest',
+        analysisId,
+        parentModel,
+        childResource,
+        parentCount: parentIds.length,
+        idsSource: explicitParentIds ? 'explicit' : 'auto-resolved'
+      })
+    }
+
+    // Fetch nested resources for each parent with concurrency cap
+    const allRecords: Record<string, unknown>[] = []
+    const errors: Array<{ parentId: string; error: string }> = []
+
+    const tasks = parentIds.map((parentId) => async () => {
+      try {
+        const endpoint = `${parentConfig.endpoint}/${parentId}/${childPath}`
+        const data = (await api.get!(endpoint, {}, apiOptions)) as Record<string, unknown>
+        const rawRecords = this._extractRecords(data)
+        const records = fields
+          ? (pickFields(rawRecords, fields) as Record<string, unknown>[])
+          : rawRecords
+
+        // Inject _parent_id for cross-referencing
+        for (const record of records) {
+          record._parent_id = parentId
+        }
+        allRecords.push(...records)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        errors.push({ parentId, error: message })
+        if (this.logger) {
+          this.logger.warn('Failed to fetch nested resource for parent', {
+            service: 'mcp-tools',
+            tool: 'analysis_ingest',
+            parentModel,
+            parentId,
+            childResource,
+            error: message
+          })
+        }
+      }
+    })
+
+    await this._runParallel(tasks)
+
+    // Store collected records
+    let totalStored = 0
+    if (allRecords.length > 0) {
+      totalStored = await storeIngestedRecords({
+        analysisId,
+        model: childModelName,
+        records: allRecords.map((r) => ({
+          id: r.id as string,
+          data: r
+        }))
+      })
+
+      // Store page summary for the batch
+      await this._storePageSummary(analysisId, childModelName, 1, 1, allRecords, fields)
+    }
+
+    // Build result summary with logging of successes and failures
+    const succeeded = parentIds.length - errors.length
+    const parts = [
+      `Stored ${totalStored} nested record(s) from ${succeeded}/${parentIds.length} parent(s).`,
+      `Analysis: ${analysisId}`,
+      `Parent: ${parentModel}. Child: ${childResource}`
+    ]
+
+    if (errors.length > 0) {
+      parts.push(
+        `\nFailed parents (${errors.length}):`,
+        ...errors.map((e) => `  - ${e.parentId}: ${e.error}`)
+      )
+    }
+
+    if (this.logger) {
+      this.logger.info('Nested resource ingestion completed', {
+        service: 'mcp-tools',
+        tool: 'analysis_ingest',
+        analysisId,
+        parentModel,
+        childResource,
+        totalStored,
+        succeeded,
+        failed: errors.length
+      })
+    }
+
+    const response = this.formatResponse(parts.join('\n'), {
+      meta: { context: { consumed: true } }
+    })
+
+    // isError only when ALL failed
+    if (succeeded === 0 && parentIds.length > 0) {
+      ;(response as unknown as Record<string, unknown>).isError = true
+    }
+
+    return response
+  }
+
+  /**
+   * Run async tasks with a concurrency limit.
+   *
+   * Spawns up to MAX_NESTED_CONCURRENCY workers that pull from a shared task queue.
+   */
+  private async _runParallel(tasks: Array<() => Promise<void>>): Promise<void> {
+    let next = 0
+
+    async function worker(): Promise<void> {
+      while (next < tasks.length) {
+        const i = next++
+        await tasks[i]!()
+      }
+    }
+
+    await Promise.allSettled(
+      Array.from({ length: Math.min(MAX_NESTED_CONCURRENCY, tasks.length) }, () => worker())
     )
   }
 
