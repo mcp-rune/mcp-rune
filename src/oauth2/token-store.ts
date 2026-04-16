@@ -8,7 +8,11 @@
  * DATABASE_URL was not set and database features are disabled.
  */
 
-import type { BaseTokenStoreAdapter, StoreTokensParams, TokenData } from './adapters/base-adapter.js'
+import type {
+  BaseTokenStoreAdapter,
+  StoreTokensParams,
+  TokenData
+} from './adapters/base-adapter.js'
 
 let adapter: BaseTokenStoreAdapter | null = null
 

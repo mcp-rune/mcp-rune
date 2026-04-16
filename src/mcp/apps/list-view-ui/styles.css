@@ -105,17 +105,49 @@ button {
 }
 
 /* Checkbox column */
-.col-checkbox { width: 32px; padding: 8px 4px 8px 10px; text-align: center; }
-.col-checkbox input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+.col-checkbox {
+  width: 32px;
+  padding: 8px 4px 8px 10px;
+  text-align: center;
+}
+.col-checkbox input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
 
 /* Inline selection info in header */
-.header-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: nowrap; }
-.header-row h1 { margin-bottom: 0; }
-.header-row .btn-primary { margin-left: auto; }
-.selection-info { font-size: 1.15em; color: var(--color-accent); white-space: nowrap; }
-#selection-count { font-weight: 500; }
-.select-all-banner a { color: var(--color-accent); text-decoration: underline; cursor: pointer; font-weight: 500; }
-.select-all-banner a:hover { color: var(--color-accent-hover); }
+.header-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+.header-row h1 {
+  margin-bottom: 0;
+}
+.header-row .btn-primary {
+  margin-left: auto;
+}
+.selection-info {
+  font-size: 1.15em;
+  color: var(--color-accent);
+  white-space: nowrap;
+}
+#selection-count {
+  font-weight: 500;
+}
+.select-all-banner a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 500;
+}
+.select-all-banner a:hover {
+  color: var(--color-accent-hover);
+}
 
 /* Selected row */
-tbody tr.selected { background: rgba(196, 112, 75, 0.12); }
+tbody tr.selected {
+  background: rgba(196, 112, 75, 0.12);
+}

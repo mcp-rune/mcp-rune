@@ -18,7 +18,12 @@
  */
 
 import { humanize } from './helpers.js'
-import type { AppModelClass, AppAttributeDefinition, ColumnDefinition, DetailFieldDefinition } from './types.js'
+import type {
+  AppAttributeDefinition,
+  AppModelClass,
+  ColumnDefinition,
+  DetailFieldDefinition
+} from './types.js'
 
 export class DisplayAdapter {
   /**

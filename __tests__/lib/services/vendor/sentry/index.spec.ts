@@ -1,4 +1,3 @@
-
 vi.mock('@sentry/node', () => ({
   init: vi.fn(),
   withScope: vi.fn((cb) =>

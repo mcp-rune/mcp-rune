@@ -3,13 +3,7 @@
   "title": "Authorization Request Parameters (RFC 6749 + RFC 7636 + RFC 8707)",
   "description": "Parameters the MCP server passes to buildAuthorizationUrl. Validates the shape of the authorization request constructed by OAuthService.",
   "type": "object",
-  "required": [
-    "redirect_uri",
-    "scope",
-    "code_challenge",
-    "code_challenge_method",
-    "state"
-  ],
+  "required": ["redirect_uri", "scope", "code_challenge", "code_challenge_method", "state"],
   "properties": {
     "redirect_uri": { "type": "string", "format": "uri" },
     "scope": { "type": "string", "minLength": 1 },

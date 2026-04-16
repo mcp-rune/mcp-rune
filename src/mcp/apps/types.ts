@@ -6,11 +6,12 @@
  * layer does not know about.
  */
 
-import type { BaseConvention, AssociationConfig } from '#src/mcp/api-conventions/base-convention.js'
+import type { AssociationConfig, BaseConvention } from '#src/mcp/api-conventions/base-convention.js'
 import type { ApiClient } from '#src/mcp/search/search-client.js'
 import type { SearchClient } from '#src/mcp/search/search-client.js'
-import type { SelectionStore } from './selection-store.js'
+
 import type { FormDataStore } from './form-data-store.js'
+import type { SelectionStore } from './selection-store.js'
 
 // Re-export for convenience
 export type { ApiClient }

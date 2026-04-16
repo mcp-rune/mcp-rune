@@ -3,13 +3,7 @@
   "title": "OAuthService Interface Contract",
   "description": "Validates the shape of OAuthService instances. Any implementation (production or reference) must expose these properties and methods. Used to guarantee interchangeability.",
   "type": "object",
-  "required": [
-    "identityUrl",
-    "clientId",
-    "clientSecret",
-    "redirectUri",
-    "scopes"
-  ],
+  "required": ["identityUrl", "clientId", "clientSecret", "redirectUri", "scopes"],
   "properties": {
     "identityUrl": { "type": "string", "minLength": 1 },
     "clientId": { "type": "string", "minLength": 1 },
@@ -17,10 +11,7 @@
     "redirectUri": { "type": "string", "minLength": 1 },
     "scopes": { "type": "string", "minLength": 1 },
     "resourceUri": {
-      "oneOf": [
-        { "type": "string", "minLength": 1 },
-        { "type": "null" }
-      ]
+      "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
     }
   }
 }

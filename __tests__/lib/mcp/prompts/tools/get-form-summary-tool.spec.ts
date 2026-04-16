@@ -1,5 +1,5 @@
-import { GetFormSummaryTool } from '../../../../../src/mcp/prompts/tools/get-form-summary-tool.js'
 import { BaseStrategyTool } from '../../../../../src/mcp/prompts/tools/base-strategy-tool.js'
+import { GetFormSummaryTool } from '../../../../../src/mcp/prompts/tools/get-form-summary-tool.js'
 
 describe('lib/mcp/prompts/tools/get-form-summary-tool', () => {
   describe('inheritance', () => {

@@ -1,7 +1,7 @@
 import {
   adaptToolOutput,
-  registerOutputAdapter,
-  pickFields
+  pickFields,
+  registerOutputAdapter
 } from '../../../src/services/tool-output-adapters.js'
 
 describe('lib/services/tool-output-adapters', () => {

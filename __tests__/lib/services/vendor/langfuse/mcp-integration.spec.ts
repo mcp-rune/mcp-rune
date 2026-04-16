@@ -1,4 +1,3 @@
-
 // Mock @langfuse/tracing
 vi.mock('@langfuse/tracing', () => ({
   startActiveObservation: vi.fn(async (name, callback, _options) => {
@@ -24,18 +23,18 @@ vi.mock('../../../../../src/services/logger.js', () => ({
   debug: vi.fn()
 }))
 
+import { propagateAttributes, startActiveObservation } from '@langfuse/tracing'
+
+import * as logger from '../../../../../src/services/logger.js'
+import { sanitizeToolArgs } from '../../../../../src/services/sanitizers.js'
 import {
   extractTraceContext,
-  traceToolCall,
+  setConfigured,
+  setSessionContext,
   traceApiCall,
   tracePromptGeneration,
-  setSessionContext,
-  setConfigured
+  traceToolCall
 } from '../../../../../src/services/vendor/langfuse/mcp-integration.js'
-
-import { startActiveObservation, propagateAttributes } from '@langfuse/tracing'
-import { sanitizeToolArgs } from '../../../../../src/services/sanitizers.js'
-import * as logger from '../../../../../src/services/logger.js'
 
 describe('lib/services/vendor/langfuse/mcp-integration', () => {
   beforeEach(() => {

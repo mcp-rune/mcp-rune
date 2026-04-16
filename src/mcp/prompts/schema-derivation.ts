@@ -12,8 +12,12 @@
  * - Memoization ensures static schemas are computed only once
  */
 
-import type { PromptFieldDefinition, FieldGroup } from './base-prompt.js'
-import type { BaseConvention, FieldDefinition, BelongsToAssociation } from '../api-conventions/base-convention.js'
+import type {
+  BaseConvention,
+  BelongsToAssociation,
+  FieldDefinition
+} from '../api-conventions/base-convention.js'
+import type { FieldGroup, PromptFieldDefinition } from './base-prompt.js'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -283,14 +287,22 @@ export function deriveFieldDefinitions(
 function addAssociationFields(
   fieldDefinitions: Record<string, PromptFieldDefinition>,
   associations: AssociationsConfig,
-  options: { overrides: Record<string, Partial<PromptFieldDefinition>>; exclude: string[]; apiConvention: BaseConvention }
+  options: {
+    overrides: Record<string, Partial<PromptFieldDefinition>>
+    exclude: string[]
+    apiConvention: BaseConvention
+  }
 ): void {
   const { overrides = {}, exclude = [], apiConvention } = options
 
   // Process belongsTo relations
   if (associations.belongsTo) {
     for (const [relName, relConfig] of Object.entries(associations.belongsTo)) {
-      const resolvedFields = apiConvention.resolveAssociationFields(relName, relConfig, overrides as Record<string, Partial<FieldDefinition>>) as Record<string, FieldDefinition>
+      const resolvedFields = apiConvention.resolveAssociationFields(
+        relName,
+        relConfig,
+        overrides as Record<string, Partial<FieldDefinition>>
+      ) as Record<string, FieldDefinition>
 
       for (const [fieldName, fieldDef] of Object.entries(resolvedFields)) {
         // Skip excluded fields and fields already defined from attributes

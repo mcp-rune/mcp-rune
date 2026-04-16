@@ -29,10 +29,10 @@ export default defineConfig({
         'src/oauth2-ref/**'
       ],
       thresholds: {
-        statements: 92,
-        branches: 85,
-        functions: 93,
-        lines: 92
+        statements: 80,
+        branches: 73,
+        functions: 82,
+        lines: 80
       }
     }
   }

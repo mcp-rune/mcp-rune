@@ -1,13 +1,13 @@
 import {
-  categorizeError,
-  getAlertLevel,
-  ErrorCategory,
-  captureToolError,
+  addToolBreadcrumb,
   captureApiError,
   capturePromptError,
-  startToolTransaction,
-  addToolBreadcrumb,
-  setMcpClientContext
+  captureToolError,
+  categorizeError,
+  ErrorCategory,
+  getAlertLevel,
+  setMcpClientContext,
+  startToolTransaction
 } from '../../../../../src/services/vendor/sentry/mcp-integration.js'
 
 // Mock Sentry to avoid actual API calls

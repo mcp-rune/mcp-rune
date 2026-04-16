@@ -76,22 +76,38 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
     requiresAuth: true,
     requiresPromptRegistry: false,
     isGeneric: true,
-    description: 'Data operations on models (CRUD, bulk, search, discovery), requires API authentication',
-    defaultAnnotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }
+    description:
+      'Data operations on models (CRUD, bulk, search, discovery), requires API authentication',
+    defaultAnnotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true
+    }
   },
   [TOOL_CATEGORIES.STRATEGY]: {
     requiresAuth: false,
     requiresPromptRegistry: true,
     isGeneric: true,
     description: 'Prompt guidance and validation tools, no auth required',
-    defaultAnnotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: false }
+    defaultAnnotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false
+    }
   },
   [TOOL_CATEGORIES.AUTOCOMPLETE]: {
     requiresAuth: true,
     requiresPromptRegistry: false,
     isGeneric: false,
     description: 'Field value suggestions, requires API authentication',
-    defaultAnnotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: true }
+    defaultAnnotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true
+    }
   },
   [TOOL_CATEGORIES.ANALYSIS]: {
     requiresAuth: false,
@@ -99,15 +115,26 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
     requiresVectorStorage: true,
     isGeneric: true,
     description: 'Analysis tools for qualitative data analysis sessions, requires vector storage',
-    defaultAnnotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: false }
+    defaultAnnotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false
+    }
   },
   [TOOL_CATEGORIES.OPERATIONS]: {
     requiresAuth: false,
     requiresPromptRegistry: false,
     requiresVectorStorage: true,
     isGeneric: true,
-    description: 'Operations tools for retrospective CRUD operation analysis, requires vector storage',
-    defaultAnnotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: false }
+    description:
+      'Operations tools for retrospective CRUD operation analysis, requires vector storage',
+    defaultAnnotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false
+    }
   },
   [TOOL_CATEGORIES.DOMAIN]: {
     requiresAuth: false,
@@ -115,14 +142,24 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
     requiresDomainRegistry: true,
     isGeneric: true,
     description: 'Domain intelligence tools, requires domain registry configuration',
-    defaultAnnotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: false }
+    defaultAnnotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false
+    }
   },
   [TOOL_CATEGORIES.CUSTOM]: {
     requiresAuth: true, // Default to requiring auth for safety
     requiresPromptRegistry: false,
     isGeneric: false,
     description: 'Server-specific behavior, auth requirement varies',
-    defaultAnnotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }
+    defaultAnnotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true
+    }
   }
 }
 

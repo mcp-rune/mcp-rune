@@ -1,4 +1,3 @@
-
 // Mock the vendor module
 vi.mock('../../../src/services/vendor/pgvector/index.js', () => ({
   initialize: vi.fn(() => true),
@@ -56,26 +55,25 @@ vi.mock('../../../src/services/tool-output-adapters.js', () => ({
   adaptToolOutput: vi.fn(() => null)
 }))
 
-import {
-  initVectorStorage,
-  isVectorStorageEnabled,
-  storeOperation,
-  findSimilarOperations,
-  detectOperationGaps,
-  getOperationClusters,
-  getOperationStats,
-  storeAnalysisMemory,
-  recallAnalysisMemories,
-  clearAnalysisMemories,
-  flushVectorStorage,
-  closeVectorStorage
-} from '../../../src/services/vector-storage.js'
-
-import * as vendor from '../../../src/services/vendor/pgvector/index.js'
-import * as operations from '../../../src/services/vendor/pgvector/tool-memories.js'
-import * as analysisMemories from '../../../src/services/vendor/pgvector/analysis-memories.js'
 import { embed, embedBatch } from '../../../src/services/embeddings.js'
 import { adaptToolOutput } from '../../../src/services/tool-output-adapters.js'
+import {
+  clearAnalysisMemories,
+  closeVectorStorage,
+  detectOperationGaps,
+  findSimilarOperations,
+  flushVectorStorage,
+  getOperationClusters,
+  getOperationStats,
+  initVectorStorage,
+  isVectorStorageEnabled,
+  recallAnalysisMemories,
+  storeAnalysisMemory,
+  storeOperation
+} from '../../../src/services/vector-storage.js'
+import * as analysisMemories from '../../../src/services/vendor/pgvector/analysis-memories.js'
+import * as vendor from '../../../src/services/vendor/pgvector/index.js'
+import * as operations from '../../../src/services/vendor/pgvector/tool-memories.js'
 
 describe('lib/services/vector-storage', () => {
   beforeEach(() => {

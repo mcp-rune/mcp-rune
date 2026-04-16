@@ -124,7 +124,9 @@ export class RuleSet {
   }
 
   /** Describe rules for a model in human-readable format */
-  describeRules(model: string): Array<{ name: string; description: string; severity: RuleSeverity }> {
+  describeRules(
+    model: string
+  ): Array<{ name: string; description: string; severity: RuleSeverity }> {
     return this.getRulesForModel(model).map((r) => ({
       name: r.name,
       description: r.description,

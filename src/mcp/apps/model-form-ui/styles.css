@@ -1,6 +1,8 @@
 /* model-form — app-specific styles (base.css provides reset, palette, buttons, status bar) */
 
-.subtitle { margin-bottom: 16px; }
+.subtitle {
+  margin-bottom: 16px;
+}
 
 /* Horizontal label-field layout (CSS grid: label left, input right) */
 .field {
@@ -10,11 +12,18 @@
   gap: 0 8px;
   margin-bottom: 10px;
 }
-.field:last-child { margin-bottom: 0; }
+.field:last-child {
+  margin-bottom: 0;
+}
 
 /* Stacked variant for field types with inline option labels (checkbox_group, multiselect, checkbox) */
-.field--stacked { grid-template-columns: 1fr; }
-.field--stacked label { text-align: left; padding-top: 0; }
+.field--stacked {
+  grid-template-columns: 1fr;
+}
+.field--stacked label {
+  text-align: left;
+  padding-top: 0;
+}
 
 label {
   display: block;
@@ -25,12 +34,15 @@ label {
   color: var(--color-text-info);
 }
 
-label .required { color: var(--color-accent); margin-left: 2px; }
+label .required {
+  color: var(--color-accent);
+  margin-left: 2px;
+}
 
-input[type="text"],
-input[type="number"],
-input[type="url"],
-input[type="date"],
+input[type='text'],
+input[type='number'],
+input[type='url'],
+input[type='date'],
 select,
 textarea {
   width: 100%;
@@ -43,25 +55,46 @@ textarea {
   font-family: inherit;
 }
 
-input:focus, select:focus, textarea:focus {
+input:focus,
+select:focus,
+textarea:focus {
   outline: none;
   border-color: var(--color-accent);
 }
 
-textarea { resize: vertical; min-height: 60px; }
+textarea {
+  resize: vertical;
+  min-height: 60px;
+}
 
 /* Checkbox group (fixed enum values like formats) */
-.checkbox-group { display: flex; gap: 12px; flex-wrap: wrap; }
+.checkbox-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 .checkbox-group label {
-  display: flex; align-items: center; gap: 4px;
-  font-size: 0.9em; color: var(--color-text-primary); cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.9em;
+  color: var(--color-text-primary);
+  cursor: pointer;
 }
 
 /* Multiselect group (association values like tags) */
-.multiselect-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.multiselect-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .multiselect-group label {
-  display: flex; align-items: center; gap: 4px;
-  font-size: 0.9em; color: var(--color-text-primary); cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.9em;
+  color: var(--color-text-primary);
+  cursor: pointer;
   padding: 3px 8px;
   border: 1px solid var(--border);
   border-radius: var(--border-radius-md);
@@ -85,7 +118,9 @@ textarea { resize: vertical; min-height: 60px; }
 }
 
 /* Searchable select (inline autocomplete for large option lists) */
-.searchable-select { position: relative; }
+.searchable-select {
+  position: relative;
+}
 .searchable-select__input {
   width: 100%;
   padding: 7px 10px;
@@ -133,27 +168,58 @@ textarea { resize: vertical; min-height: 60px; }
 
 /* Actions */
 .actions {
-  display: flex; gap: 8px; margin-top: 16px;
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
 }
 
 /* Error states */
 .field.has-error input,
 .field.has-error select,
-.field.has-error textarea { border-color: var(--color-error); }
-.field .error-msg { grid-column: 1 / -1; color: var(--color-error); font-size: 0.8em; margin-top: 2px; }
+.field.has-error textarea {
+  border-color: var(--color-error);
+}
+.field .error-msg {
+  grid-column: 1 / -1;
+  color: var(--color-error);
+  font-size: 0.8em;
+  margin-top: 2px;
+}
 
 /* Field row layout (side-by-side fields within a group) */
-.field-row { display: flex; gap: 12px; }
-.field-row > .field { flex: 1; grid-template-columns: 1fr; }
-.field-row > .field label { text-align: left; padding-top: 0; }
+.field-row {
+  display: flex;
+  gap: 12px;
+}
+.field-row > .field {
+  flex: 1;
+  grid-template-columns: 1fr;
+}
+.field-row > .field label {
+  text-align: left;
+  padding-top: 0;
+}
 
 /* Legacy row layout (kept for compatibility with hardcoded forms) */
-.row { display: flex; gap: 12px; }
-.row > .field { flex: 1; }
+.row {
+  display: flex;
+  gap: 12px;
+}
+.row > .field {
+  flex: 1;
+}
 
 /* Narrow viewport: revert to stacked layout */
 @media (max-width: 400px) {
-  .field { grid-template-columns: 1fr; }
-  .field label { text-align: left; padding-top: 0; }
-  .field-row { flex-direction: column; gap: 0; }
+  .field {
+    grid-template-columns: 1fr;
+  }
+  .field label {
+    text-align: left;
+    padding-top: 0;
+  }
+  .field-row {
+    flex-direction: column;
+    gap: 0;
+  }
 }

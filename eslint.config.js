@@ -1,5 +1,10 @@
 import js from '@eslint/js'
+import globals from 'globals'
+import simpleImportSort from 'eslint-plugin-simple-import-sort'
+import unicorn from 'eslint-plugin-unicorn'
+import n from 'eslint-plugin-n'
 import tseslint from 'typescript-eslint'
+import prettierConfig from 'eslint-config-prettier'
 
 export default [
   js.configs.recommended,
@@ -8,17 +13,7 @@ export default [
       ecmaVersion: 2022,
       sourceType: 'module',
       globals: {
-        // Node.js globals
-        console: 'readonly',
-        process: 'readonly',
-        Buffer: 'readonly',
-        __dirname: 'readonly',
-        __filename: 'readonly',
-        setTimeout: 'readonly',
-        clearTimeout: 'readonly',
-        setInterval: 'readonly',
-        clearInterval: 'readonly',
-        URL: 'readonly'
+        ...globals.node
       }
     },
     rules: {
@@ -36,12 +31,17 @@ export default [
     }
   },
   // TypeScript source and test files
-  ...tseslint.configs.recommended.map(config => ({
+  ...tseslint.configs.recommended.map((config) => ({
     ...config,
     files: ['src/**/*.ts', '**/__tests__/**/*.ts']
   })),
   {
     files: ['src/**/*.ts', '**/__tests__/**/*.ts'],
+    plugins: {
+      'simple-import-sort': simpleImportSort,
+      unicorn,
+      n
+    },
     rules: {
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [
@@ -52,7 +52,15 @@ export default [
           varsIgnorePattern: '^_'
         }
       ],
-      '@typescript-eslint/no-explicit-any': 'warn'
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        { prefer: 'type-imports', fixStyle: 'separate-type-imports' }
+      ],
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
+      'n/prefer-node-protocol': 'error',
+      'unicorn/filename-case': ['error', { case: 'kebabCase' }]
     }
   },
   // Test files — relax strict typing for mocks
@@ -74,7 +82,8 @@ export default [
       }
     }
   },
+  prettierConfig,
   {
-    ignores: ['node_modules/**', 'coverage/**', 'dist/**', '*.config.js']
+    ignores: ['node_modules/**', 'coverage/**', 'dist/**', 'src/oauth2-ref/**', '*.config.js']
   }
 ]

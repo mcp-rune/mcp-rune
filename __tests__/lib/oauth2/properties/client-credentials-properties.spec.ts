@@ -25,6 +25,7 @@ vi.mock('#src/services/logger.js', () => ({
 }))
 
 import * as openidClient from 'openid-client'
+
 import { OAuthService } from '../../../../src/oauth2/service.js'
 
 describe('Client Credentials Properties (RFC 6749 Section 4.4)', () => {

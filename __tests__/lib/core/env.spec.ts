@@ -1,4 +1,4 @@
-import { requireEnv, optionalEnv, intEnv, boolEnv } from '#src/core/env.js'
+import { boolEnv, intEnv, optionalEnv, requireEnv } from '#src/core/env.js'
 
 describe('lib/core/env', () => {
   const TEST_VAR = 'TEST_ENV_UTIL_VAR'

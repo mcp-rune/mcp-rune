@@ -14,8 +14,9 @@
  * Example models: Feature, Clip, Brand
  */
 
-import { BaseStrategy } from './base-strategy.js'
 import * as logger from '#src/services/logger.js'
+
+import { BaseStrategy } from './base-strategy.js'
 
 export class StatelessStrategy extends BaseStrategy {
   static override type = 'stateless'
@@ -25,7 +26,10 @@ export class StatelessStrategy extends BaseStrategy {
   }
 
   /** Get prompt content for the prompt */
-  static override getDocumentation(promptInstance: { promptContent: string; constructor: { name: string } }): string {
+  static override getDocumentation(promptInstance: {
+    promptContent: string
+    constructor: { name: string }
+  }): string {
     const promptContent = promptInstance.promptContent
 
     logger.debug('getDocumentation called', {

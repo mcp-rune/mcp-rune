@@ -1,8 +1,8 @@
+import { halConvention } from '../../../../../src/mcp/api-conventions/hal.js'
 import {
   BulkActionModelsTool,
   MAX_BATCH_SIZE
 } from '../../../../../src/mcp/tools/data/bulk-action-models-tool.js'
-import { halConvention } from '../../../../../src/mcp/api-conventions/hal.js'
 
 vi.mock('#src/services/vector-storage.js', () => ({
   storeOperation: vi.fn().mockResolvedValue(null)

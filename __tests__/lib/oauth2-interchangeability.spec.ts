@@ -5,7 +5,6 @@
  * implement the same interface and can be used interchangeably.
  */
 
-
 describe('OAuth2 Interchangeability', () => {
   const mockConfig = {
     identityUrl: 'http://localhost:4000',

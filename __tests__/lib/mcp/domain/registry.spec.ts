@@ -1,7 +1,7 @@
+import { BusinessRule, RuleSet } from '../../../../src/mcp/domain/business-rules.js'
+import { DomainConcept, DomainKnowledge } from '../../../../src/mcp/domain/knowledge.js'
 import { DomainRegistry } from '../../../../src/mcp/domain/registry.js'
-import { DomainKnowledge, DomainConcept } from '../../../../src/mcp/domain/knowledge.js'
-import { RuleSet, BusinessRule } from '../../../../src/mcp/domain/business-rules.js'
-import { WorkflowRegistry, WorkflowDefinition } from '../../../../src/mcp/domain/workflows.js'
+import { WorkflowDefinition, WorkflowRegistry } from '../../../../src/mcp/domain/workflows.js'
 
 describe('lib/mcp/domain/registry', () => {
   let registry

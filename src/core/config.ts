@@ -159,11 +159,7 @@ function formatLines(
       lines.push(`  ${path}: ${display}${suffix}`)
     } else if (node !== null && typeof node === 'object') {
       lines.push(
-        ...formatLines(
-          (config[key] as Record<string, unknown>) || {},
-          node as ConfigSchema,
-          path
-        )
+        ...formatLines((config[key] as Record<string, unknown>) || {}, node as ConfigSchema, path)
       )
     }
   }

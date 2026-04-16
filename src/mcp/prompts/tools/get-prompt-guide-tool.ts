@@ -5,10 +5,12 @@
  * It retrieves documentation for creating complex models.
  */
 
-import { z } from 'zod'
 import type { ZodTypeAny } from 'zod'
-import { BaseStrategyTool } from './base-strategy-tool.js'
+import { z } from 'zod'
+
 import type { ToolResult } from '#src/mcp/tools/base-tool.js'
+
+import { BaseStrategyTool } from './base-strategy-tool.js'
 
 export class GetPromptGuideTool extends BaseStrategyTool {
   get name(): string {
@@ -20,7 +22,10 @@ export class GetPromptGuideTool extends BaseStrategyTool {
   }
 
   get inputSchema(): Record<string, ZodTypeAny> {
-    const allGuideNames = (this.promptRegistry as Record<string, unknown> & { getAllPromptNames?: () => string[] })?.getAllPromptNames?.() || []
+    const allGuideNames =
+      (
+        this.promptRegistry as Record<string, unknown> & { getAllPromptNames?: () => string[] }
+      )?.getAllPromptNames?.() || []
 
     return {
       guide_name: this.zodEnum(allGuideNames).describe('Name of the guide to retrieve'),
@@ -43,13 +48,20 @@ export class GetPromptGuideTool extends BaseStrategyTool {
     const rules: string[] = []
 
     // Determine which models have Interactive Form support
-    const formRegistry = (this.serverContext as Record<string, unknown>)?.formRegistry as Record<string, unknown> | undefined
+    const formRegistry = (this.serverContext as Record<string, unknown>)?.formRegistry as
+      | Record<string, unknown>
+      | undefined
     const formModels = formRegistry
       ? Object.entries(this.models || {})
-          .filter(([name]) => (formRegistry as Record<string, unknown> & { hasForm: (n: string) => boolean }).hasForm(name))
+          .filter(([name]) =>
+            (formRegistry as Record<string, unknown> & { hasForm: (n: string) => boolean }).hasForm(
+              name
+            )
+          )
           .map(([name]) => name)
       : []
-    const hasFormModels = (this.serverContext as Record<string, unknown>)?.appsEnabled && formModels.length > 0
+    const hasFormModels =
+      (this.serverContext as Record<string, unknown>)?.appsEnabled && formModels.length > 0
 
     if (hasFormModels) {
       rules.push(
@@ -85,7 +97,9 @@ Then call this tool with the chosen mode parameter.`
       )
     }
 
-    const registry = this.promptRegistry as Record<string, unknown> & { getToolDocDescriptionList?: () => string }
+    const registry = this.promptRegistry as Record<string, unknown> & {
+      getToolDocDescriptionList?: () => string
+    }
     if (registry?.getToolDocDescriptionList) {
       const allGuidesList = registry.getToolDocDescriptionList()
       rules.push(`Available guides:\n${allGuidesList}`)
@@ -105,7 +119,12 @@ After calling this tool, follow the mode-specific workflow in the documentation.
   }
 
   async execute(args: Record<string, unknown>): Promise<ToolResult> {
-    const { guide_name, mode = 'guided', parent_type, parent_id } = args as {
+    const {
+      guide_name,
+      mode = 'guided',
+      parent_type,
+      parent_id
+    } = args as {
       guide_name: string
       mode?: string
       parent_type?: string
@@ -135,9 +154,20 @@ After calling this tool, follow the mode-specific workflow in the documentation.
 
     // Use registry to get prompt instance
     const getPromptInstance =
-      (registry.getPromptInstance as ((name: string, args: Record<string, string>) => { promptContent: string; description: string } | null) | undefined) ||
+      (registry.getPromptInstance as
+        | ((
+            name: string,
+            args: Record<string, string>
+          ) => { promptContent: string; description: string } | null)
+        | undefined) ||
       ((name: string, pArgs: Record<string, string>) => {
-        const getPromptClass = registry.getPromptClass as ((n: string) => (new (a: Record<string, string>) => { promptContent: string; description: string }) | null) | undefined
+        const getPromptClass = registry.getPromptClass as
+          | ((
+              n: string
+            ) =>
+              | (new (a: Record<string, string>) => { promptContent: string; description: string })
+              | null)
+          | undefined
         const PromptClass = getPromptClass?.(name)
         return PromptClass ? new PromptClass(pArgs) : null
       })

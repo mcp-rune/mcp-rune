@@ -1,27 +1,27 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="color-scheme" content="light dark">
-  <title>Model Form</title>
-  <link rel="stylesheet" href="../shared/base.css">
-  <link rel="stylesheet" href="./styles.css">
-</head>
-<body>
-  <h1 id="form-title">Create Record</h1>
-  <p class="subtitle" id="form-subtitle">Fill in the details below</p>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Model Form</title>
+    <link rel="stylesheet" href="../shared/base.css" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <h1 id="form-title">Create Record</h1>
+    <p class="subtitle" id="form-subtitle">Fill in the details below</p>
 
-  <form id="model-form" onsubmit="return false">
-    <!-- Fieldsets rendered dynamically by app.js -->
-  </form>
+    <form id="model-form" onsubmit="return false">
+      <!-- Fieldsets rendered dynamically by app.js -->
+    </form>
 
-  <div class="actions" id="form-actions" style="display: none">
-    <button type="button" class="btn-primary" id="btn-done">Done</button>
-  </div>
+    <div class="actions" id="form-actions" style="display: none">
+      <button type="button" class="btn-primary" id="btn-done">Done</button>
+    </div>
 
-  <div id="status-bar" class="status-bar"></div>
+    <div id="status-bar" class="status-bar"></div>
 
-  <script type="module" src="./app.js"></script>
-</body>
+    <script type="module" src="./app.js"></script>
+  </body>
 </html>

@@ -16,9 +16,9 @@
  * CRUD operations still use apiClient directly via Model.endpoint.
  */
 
+import { defaultConvention } from '../api-conventions/index.js'
 import type { SearchConfig } from './search-adapter.js'
 import { SearchAdapter } from './search-adapter.js'
-import { defaultConvention } from '../api-conventions/index.js'
 
 const defaultAdapter = new SearchAdapter()
 
@@ -82,7 +82,10 @@ export class SearchClient {
   private _apiClient: ApiClient
   private _searchGroups: Record<string, SearchGroup>
 
-  constructor(apiClient: ApiClient, { searchGroups = {} }: { searchGroups?: Record<string, SearchGroup> } = {}) {
+  constructor(
+    apiClient: ApiClient,
+    { searchGroups = {} }: { searchGroups?: Record<string, SearchGroup> } = {}
+  ) {
     this._apiClient = apiClient
     this._searchGroups = searchGroups
   }
@@ -100,7 +103,11 @@ export class SearchClient {
   async search(
     ModelClass: SearchModelClass,
     query: string,
-    { page = 1, perPage = 20, filters }: { page?: number; perPage?: number; filters?: Record<string, unknown> } = {}
+    {
+      page = 1,
+      perPage = 20,
+      filters
+    }: { page?: number; perPage?: number; filters?: Record<string, unknown> } = {}
   ): Promise<SearchResult> {
     const fullText = ModelClass.search?.fullText
 
@@ -140,7 +147,17 @@ export class SearchClient {
   async groupSearch(
     groupName: string,
     query: string,
-    { page = 1, perPage = 20, models, filters }: { page?: number; perPage?: number; models?: string[]; filters?: Record<string, unknown> } = {}
+    {
+      page = 1,
+      perPage = 20,
+      models,
+      filters
+    }: {
+      page?: number
+      perPage?: number
+      models?: string[]
+      filters?: Record<string, unknown>
+    } = {}
   ): Promise<SearchResult> {
     const group = this._searchGroups[groupName]
     if (!group) {
@@ -150,7 +167,9 @@ export class SearchClient {
     }
 
     const adapter = group.adapter || defaultAdapter
-    const body = adapter.buildBody(query, filters, { page, perPage }, { fullText: group } as SearchConfig)
+    const body = adapter.buildBody(query, filters, { page, perPage }, {
+      fullText: group
+    } as SearchConfig)
 
     // Model scoping is separate from filters -- stays at top level
     if (models && models.length > 0) {
@@ -166,7 +185,12 @@ export class SearchClient {
    */
   async list(
     ModelClass: SearchModelClass,
-    { page = 1, perPage = 20, sort, ...fieldFilters }: { page?: number; perPage?: number; sort?: string; [key: string]: unknown } = {}
+    {
+      page = 1,
+      perPage = 20,
+      sort,
+      ...fieldFilters
+    }: { page?: number; perPage?: number; sort?: string; [key: string]: unknown } = {}
   ): Promise<SearchResult> {
     const params: Record<string, unknown> = { page, per_page: perPage, ...fieldFilters }
     if (sort) params.sort = sort
@@ -199,7 +223,14 @@ export class SearchClient {
   private async _directSearch(
     ModelClass: SearchModelClass,
     query: string,
-    { page, perPage, filters }: { page: number; perPage: number; filters?: Record<string, unknown> } = { page: 1, perPage: 20 }
+    {
+      page,
+      perPage,
+      filters
+    }: { page: number; perPage: number; filters?: Record<string, unknown> } = {
+      page: 1,
+      perPage: 20
+    }
   ): Promise<SearchResult> {
     const fullText = ModelClass.search?.fullText
     const method = (fullText!.method || 'POST').toUpperCase()
@@ -248,9 +279,7 @@ export class SearchClient {
     // HAL format: _embedded.{key} where key is the first array value
     if (response._embedded) {
       const embedded = response._embedded as Record<string, unknown>
-      const embeddedKey = Object.keys(embedded).find((k) =>
-        Array.isArray(embedded[k])
-      )
+      const embeddedKey = Object.keys(embedded).find((k) => Array.isArray(embedded[k]))
       if (embeddedKey) return embedded[embeddedKey] as Record<string, unknown>[]
     }
 
@@ -273,7 +302,10 @@ export class SearchClient {
     return {
       page: (response.page as number) || page,
       per_page: (response.per_page as number) || perPage,
-      total: (response.total_count ?? response.total_entries ?? response.total ?? records.length) as number,
+      total: (response.total_count ??
+        response.total_entries ??
+        response.total ??
+        records.length) as number,
       total_pages: response.total_pages as number | undefined
     }
   }

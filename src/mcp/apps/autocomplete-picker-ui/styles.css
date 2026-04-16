@@ -1,11 +1,26 @@
 /* autocomplete-picker — app-specific styles (base.css provides reset, palette, buttons, status bar) */
 
 /* Inline selection info in header */
-.header-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: nowrap; }
-.header-row h1 { margin-bottom: 0; }
-.header-row .btn-primary { margin-left: auto; }
-.selection-info { font-size: 1.15em; color: var(--color-accent); white-space: nowrap; }
-#selection-count { font-weight: 500; }
+.header-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+.header-row h1 {
+  margin-bottom: 0;
+}
+.header-row .btn-primary {
+  margin-left: auto;
+}
+.selection-info {
+  font-size: 1.15em;
+  color: var(--color-accent);
+  white-space: nowrap;
+}
+#selection-count {
+  font-weight: 500;
+}
 
 /* Search input */
 .search-box {
@@ -56,7 +71,7 @@
   background: rgba(196, 112, 75, 0.12);
 }
 
-.result-item input[type="checkbox"] {
+.result-item input[type='checkbox'] {
   width: 16px;
   height: 16px;
   cursor: pointer;

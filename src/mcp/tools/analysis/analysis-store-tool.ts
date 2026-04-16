@@ -1,8 +1,10 @@
-import { z } from 'zod'
-import { BaseAnalysisTool } from './base-analysis-tool.js'
-import type { ToolResult, ToolAnnotations } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
+import { z } from 'zod'
+
 import { storeAnalysisMemory } from '#src/services/vector-storage.js'
+
+import type { ToolAnnotations, ToolResult } from '../base-tool.js'
+import { BaseAnalysisTool } from './base-analysis-tool.js'
 
 const MAX_BATCH_SIZE = 25
 
@@ -28,7 +30,12 @@ export class AnalysisStoreTool extends BaseAnalysisTool {
   }
 
   override get annotations(): ToolAnnotations {
-    return { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }
+    return {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false
+    }
   }
 
   override get baseDescription(): string {

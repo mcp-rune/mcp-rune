@@ -1,5 +1,5 @@
+import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
-import type { ToolResult, ToolAnnotations } from '../base-tool.js'
 
 /**
  * Tool for listing all available API models
@@ -15,7 +15,12 @@ export class ListModelsTool extends BaseTool {
   }
 
   override get annotations(): ToolAnnotations {
-    return { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+    return {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
   }
 
   override get inputSchema(): Record<string, never> {
@@ -29,7 +34,9 @@ export class ListModelsTool extends BaseTool {
 
     const modelList = Object.entries(this.models).map(([modelName, config]) => {
       const attrs = config.attributes ?? {}
-      const enumFields = Object.keys(attrs).filter((k) => (attrs[k] as Record<string, unknown>)?.enumValues)
+      const enumFields = Object.keys(attrs).filter(
+        (k) => (attrs[k] as Record<string, unknown>)?.enumValues
+      )
       const filters = config.search?.filters
 
       return {

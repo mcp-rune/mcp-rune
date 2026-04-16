@@ -7,8 +7,9 @@
  * - Verifiers conform to RFC 7636 character set restrictions
  */
 
+import { createHash, randomBytes } from 'node:crypto'
+
 import * as fc from 'fast-check'
-import { createHash, randomBytes } from 'crypto'
 
 /**
  * Calculate S256 code challenge from a code verifier (same as openid-client)

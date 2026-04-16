@@ -1,16 +1,17 @@
-import { z } from 'zod'
-import { BaseDomainTool } from './base-domain-tool.js'
-import type { ToolResult } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
+import { z } from 'zod'
+
+import type { ToolResult } from '../base-tool.js'
+import { BaseDomainTool } from './base-domain-tool.js'
 import {
-  renderWorkflowOverview,
+  collectStepGroup,
+  renderLoopGroup,
+  renderNextStepHint,
+  renderParallelGroup,
   renderRoadmap,
   renderStepDetail,
-  renderLoopGroup,
-  renderParallelGroup,
-  renderNextStepHint,
   renderWorkflowList,
-  collectStepGroup
+  renderWorkflowOverview
 } from './workflow-renderer.js'
 
 interface WorkflowStep {
@@ -115,7 +116,9 @@ Available workflows include troubleshooting guides, configuration walkthroughs, 
 
     // Goal search
     if (goal) {
-      const results = (await (registry.suggestWorkflow as (g: string) => Promise<WorkflowDefinition[]>)(goal))
+      const results = await (
+        registry.suggestWorkflow as (g: string) => Promise<WorkflowDefinition[]>
+      )(goal)
       if (results.length === 0) {
         return this.formatResponse(this._formatNoResults(goal))
       }
@@ -147,7 +150,8 @@ Available workflows include troubleshooting guides, configuration walkthroughs, 
    * the first step's tool in detail.
    */
   private _formatWorkflow(w: WorkflowDefinition): string {
-    const appToolNames = ((this.serverContext as Record<string, unknown>)?.appToolNames as string[]) ?? []
+    const appToolNames =
+      ((this.serverContext as Record<string, unknown>)?.appToolNames as string[]) ?? []
     const parts: string[] = []
 
     // Overview: title, description, tags, models

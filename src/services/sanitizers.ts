@@ -78,7 +78,9 @@ export function sanitizeHeaders(headers: Record<string, string>): Record<string,
 }
 
 /** Sanitize tool arguments before sending to external services */
-export function sanitizeToolArgs(args: Record<string, unknown> | null | undefined): Record<string, unknown> {
+export function sanitizeToolArgs(
+  args: Record<string, unknown> | null | undefined
+): Record<string, unknown> {
   if (!args) return {}
 
   const sanitized = sanitizeObject(args) as Record<string, unknown>

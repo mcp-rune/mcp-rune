@@ -10,14 +10,17 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+
 import { z } from 'zod'
+
+import { defaultConvention } from '#src/mcp/api-conventions/index.js'
+import { errorMeta } from '#src/mcp/apps/helpers.js'
 import { createSelectionTools } from '#src/mcp/apps/selection-tools.js'
+import type { ApiClient } from '#src/mcp/search/search-client.js'
 import { SearchClient } from '#src/mcp/search/search-client.js'
 import * as logger from '#src/services/logger.js'
-import { errorMeta } from '#src/mcp/apps/helpers.js'
-import { defaultConvention } from '#src/mcp/api-conventions/index.js'
+
 import type { AppModelClass, ToolResult } from './types.js'
-import type { ApiClient } from '#src/mcp/search/search-client.js'
 
 const DIST_DIR = path.resolve(import.meta.dirname, 'dist')
 const HTML_PATH = path.join(DIST_DIR, 'autocomplete-picker.html')
@@ -147,7 +150,12 @@ export function createAutocompletePickerApp({
       args: Record<string, unknown> = {},
       { apiClient, searchClient }: { apiClient?: ApiClient; searchClient?: SearchClient } = {}
     ): Promise<ToolResult> {
-      const { model, group, query, limit = 10 } = args as {
+      const {
+        model,
+        group,
+        query,
+        limit = 10
+      } = args as {
         model?: string
         group?: string
         query?: string
@@ -262,7 +270,9 @@ export function createAutocompletePickerApp({
 
       if (searchClient && query) {
         try {
-          const { records } = await searchClient.search(ModelClass as never, query, { perPage: limit })
+          const { records } = await searchClient.search(ModelClass as never, query, {
+            perPage: limit
+          })
           results = records.map((record) => {
             const instance = new ModelClass(record)
             return {

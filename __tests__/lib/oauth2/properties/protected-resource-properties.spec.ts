@@ -8,6 +8,7 @@
  */
 
 import * as fc from 'fast-check'
+
 import { buildResourceMetadataUrl } from '../../../../src/mcp/middleware/oauth-router.js'
 
 describe('Protected Resource Metadata Properties (RFC 9728)', () => {

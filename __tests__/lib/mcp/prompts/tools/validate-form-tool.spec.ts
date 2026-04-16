@@ -1,5 +1,5 @@
-import { ValidateFormTool } from '../../../../../src/mcp/prompts/tools/validate-form-tool.js'
 import { BaseStrategyTool } from '../../../../../src/mcp/prompts/tools/base-strategy-tool.js'
+import { ValidateFormTool } from '../../../../../src/mcp/prompts/tools/validate-form-tool.js'
 
 describe('lib/mcp/prompts/tools/validate-form-tool', () => {
   describe('inheritance', () => {

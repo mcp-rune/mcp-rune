@@ -1,4 +1,3 @@
-
 vi.mock('../../../src/services/vendor/langfuse/index.js', () => ({
   initialize: vi.fn(() => true),
   isConfigured: vi.fn(() => true),
@@ -12,17 +11,16 @@ vi.mock('../../../src/services/vendor/langfuse/index.js', () => ({
 }))
 
 import {
-  initTracing,
-  isTracingEnabled,
-  traceToolCall,
-  traceApiCall,
-  tracePromptGeneration,
-  setSessionContext,
+  closeTracing,
   extractTraceContext,
   flushTracing,
-  closeTracing
+  initTracing,
+  isTracingEnabled,
+  setSessionContext,
+  traceApiCall,
+  tracePromptGeneration,
+  traceToolCall
 } from '../../../src/services/tracing.js'
-
 import * as vendor from '../../../src/services/vendor/langfuse/index.js'
 
 describe('lib/services/tracing', () => {

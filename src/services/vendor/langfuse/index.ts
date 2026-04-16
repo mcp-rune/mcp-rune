@@ -7,18 +7,19 @@
  * @see https://langfuse.com/docs/observability/sdk/typescript/instrumentation
  */
 
-import { NodeSDK } from '@opentelemetry/sdk-node'
 import { LangfuseSpanProcessor } from '@langfuse/otel'
+import { NodeSDK } from '@opentelemetry/sdk-node'
+
 import * as logger from '../../logger.js'
 import { setConfigured } from './mcp-integration.js'
 
 // Re-export MCP-specific tracing functions
 export {
-  traceToolCall,
+  extractTraceContext,
+  setSessionContext,
   traceApiCall,
   tracePromptGeneration,
-  setSessionContext,
-  extractTraceContext
+  traceToolCall
 } from './mcp-integration.js'
 
 interface LangfuseOptions {
@@ -45,7 +46,12 @@ export function isConfigured(): boolean {
  * internally. We set them here so the SDK picks them up. This is the only
  * acceptable place to write to process.env — it's an SDK requirement, not a fallback.
  */
-export function initialize({ publicKey, secretKey, serviceName, version }: LangfuseOptions = {}): boolean {
+export function initialize({
+  publicKey,
+  secretKey,
+  serviceName,
+  version
+}: LangfuseOptions = {}): boolean {
   if (!publicKey || !secretKey) {
     if (!process.env.VITEST) {
       logger.warn('Langfuse keys not provided, tracing disabled', {

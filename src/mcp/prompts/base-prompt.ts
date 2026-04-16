@@ -14,20 +14,20 @@
  * This is the shared library version. Server-specific BasePrompts should extend this class.
  */
 
+import { generateAttributeReference } from './generators/attribute-reference-generator.js'
+import type { FlowSection } from './generators/flow-diagram-generator.js'
+import {
+  generateFlowDiagram as generateFlowDiagramFromContext,
+  renderFlowDiagram
+} from './generators/flow-diagram-generator.js'
+import { generateGuidance } from './generators/guidance-generator.js'
 import type { ExtractionExample } from './generators/helpers.js'
 import {
   renderEnumTable as renderEnumTableHelper,
   renderExtractionExamples
 } from './generators/helpers.js'
-import { generateAttributeReference } from './generators/attribute-reference-generator.js'
-import { generateSummary } from './generators/summary-generator.js'
-import {
-  renderFlowDiagram,
-  generateFlowDiagram as generateFlowDiagramFromContext
-} from './generators/flow-diagram-generator.js'
-import type { FlowSection } from './generators/flow-diagram-generator.js'
-import { generateGuidance } from './generators/guidance-generator.js'
 import { generateSection } from './generators/section-generator.js'
+import { generateSummary } from './generators/summary-generator.js'
 
 // ---------------------------------------------------------------------------
 // Exported type definitions
@@ -292,9 +292,13 @@ export class BasePrompt {
   }
 
   /** Get section by group name (reverse lookup). */
-  static getSectionForGroup(
-    groupName: string
-  ): { name: string; title: string; description: string; required: boolean; groups: string[] } | null {
+  static getSectionForGroup(groupName: string): {
+    name: string
+    title: string
+    description: string
+    required: boolean
+    groups: string[]
+  } | null {
     for (const [sectionName, section] of Object.entries(this.sections)) {
       if (section.groups.includes(groupName)) {
         return { name: sectionName, ...section }

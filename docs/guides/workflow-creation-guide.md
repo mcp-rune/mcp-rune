@@ -20,7 +20,7 @@ This guide covers how to create effective `WorkflowDefinition` files that the LL
 Workflows are multi-step process definitions that guide the LLM through complex tasks. They are:
 
 - **LLM-consumed** — the `suggest_workflow` tool renders them as structured markdown for the LLM to follow
-- **Declarative** — they describe *what* to do, not *how* to implement it
+- **Declarative** — they describe _what_ to do, not _how_ to implement it
 - **Tool-oriented** — each step references MCP tools the LLM should call
 - **User-interactive** — decision steps let the user steer the workflow
 
@@ -34,27 +34,27 @@ The LLM receives the workflow via `suggest_workflow` (roadmap + first step), the
 import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
 
 new WorkflowDefinition({
-  name,            // string — unique identifier, snake_case (e.g., 'log_study_session')
-  title,           // string — human-readable title (e.g., 'Log a Study Session')
-  description,     // string — what this workflow accomplishes (1-2 sentences)
-  tags,            // string[] — filtering tags (e.g., ['activity', 'onboarding'])
-  models,          // string[] — models involved (e.g., ['activity', 'theme', 'category'])
-  steps,           // WorkflowStep[] — ordered steps (see below)
-  draftRequired,   // boolean — must call preview_mutation_plan before mutations?
-  mutationPlans    // object — plan definitions (see Mutation Plans section)
+  name, // string — unique identifier, snake_case (e.g., 'log_study_session')
+  title, // string — human-readable title (e.g., 'Log a Study Session')
+  description, // string — what this workflow accomplishes (1-2 sentences)
+  tags, // string[] — filtering tags (e.g., ['activity', 'onboarding'])
+  models, // string[] — models involved (e.g., ['activity', 'theme', 'category'])
+  steps, // WorkflowStep[] — ordered steps (see below)
+  draftRequired, // boolean — must call preview_mutation_plan before mutations?
+  mutationPlans // object — plan definitions (see Mutation Plans section)
 })
 ```
 
-| Property | Required | Description |
-| --- | --- | --- |
-| `name` | Yes | Unique snake_case identifier. Used for exact lookup via `suggest_workflow(workflow: "name")` |
-| `title` | Yes | Displayed in workflow lists and as the heading when rendered |
-| `description` | Yes | Searchable description. Include key verbs and nouns for goal-based search |
-| `tags` | No | Used for `suggest_workflow(tag: "...")` filtering. Reuse existing tags when possible |
-| `models` | No | Enables `getWorkflowsByModel()` — workflows shown when the LLM works with these models |
-| `steps` | Yes | Array of step objects. Must have sequential `order` values starting from 1 |
-| `draftRequired` | No | When `true`, the rendered workflow includes a "Draft Required" notice |
-| `mutationPlans` | No | Defines named plans for `preview_mutation_plan`. Keyed by plan name |
+| Property        | Required | Description                                                                                  |
+| --------------- | -------- | -------------------------------------------------------------------------------------------- |
+| `name`          | Yes      | Unique snake_case identifier. Used for exact lookup via `suggest_workflow(workflow: "name")` |
+| `title`         | Yes      | Displayed in workflow lists and as the heading when rendered                                 |
+| `description`   | Yes      | Searchable description. Include key verbs and nouns for goal-based search                    |
+| `tags`          | No       | Used for `suggest_workflow(tag: "...")` filtering. Reuse existing tags when possible         |
+| `models`        | No       | Enables `getWorkflowsByModel()` — workflows shown when the LLM works with these models       |
+| `steps`         | Yes      | Array of step objects. Must have sequential `order` values starting from 1                   |
+| `draftRequired` | No       | When `true`, the rendered workflow includes a "Draft Required" notice                        |
+| `mutationPlans` | No       | Defines named plans for `preview_mutation_plan`. Keyed by plan name                          |
 
 ### WorkflowStep
 
@@ -227,6 +227,7 @@ Adjacent steps with the same `loopGroup` iterate together per page. Use this whe
 ```
 
 The renderer groups these steps and instructs the LLM:
+
 - Execute all steps in the group
 - Check `pagination.total_pages` from the search response
 - If more pages, repeat the group with the next page number
@@ -242,11 +243,11 @@ The prompt-chaining approach (`suggest_workflow` → `get_workflow_step`) scopes
 
 Data tools and view tools occupy overlapping semantic space:
 
-| Data tool | View tool | Shared semantics |
-|-----------|-----------|-----------------|
-| `list_models` | `list_records_view` | "list", "show", "browse" |
-| `search_records` | `search_records_view` | "search", "find", "filter" |
-| `find_model` | `view_records` | "view", "see", "show details" |
+| Data tool        | View tool             | Shared semantics              |
+| ---------------- | --------------------- | ----------------------------- |
+| `list_models`    | `list_records_view`   | "list", "show", "browse"      |
+| `search_records` | `search_records_view` | "search", "find", "filter"    |
+| `find_model`     | `view_records`        | "view", "see", "show details" |
 
 The LLM treats `_view` tools as strictly better (same data + visual UI), so it will substitute them unless the workflow step explicitly steers it away.
 
@@ -277,10 +278,10 @@ description: 'Retrieve activity data to identify records with incorrect assignme
 ```
 
 | Avoid (matches `_view` tools) | Use instead (matches data tools) |
-|-------------------------------|----------------------------------|
-| browse, display, show | fetch, retrieve, get |
-| visually review, view records | check, examine, inspect data |
-| search for, find and select | query, filter, look up |
+| ----------------------------- | -------------------------------- |
+| browse, display, show         | fetch, retrieve, get             |
+| visually review, view records | check, examine, inspect data     |
+| search for, find and select   | query, filter, look up           |
 
 **3. Step titles should use neutral or data-oriented verbs.**
 
@@ -305,6 +306,7 @@ Use `_view` tools only when the workflow **intentionally** wants to render an in
 **Example:** `log_study_session` — find theme → find category → create activity → link resources (decision) → review
 
 Key traits:
+
 - Each step feeds data to the next (theme ID → category lookup → activity creation)
 - One optional decision point for branching
 - Final review step to confirm the result
@@ -316,6 +318,7 @@ Search → aggregate → visualize → decide → act. For workflows that analyz
 **Example:** `weekly_learning_review` — search activities → store analysis memories → render diagram → identify gaps (decision) → plan
 
 Key traits:
+
 - Uses `store_analysis_memory` and `recall_analysis_memories` for intermediate state
 - `render_diagram` for visualization
 - Decision based on analysis results
@@ -327,6 +330,7 @@ For workflows that preview bulk changes before applying them.
 **Example:** `reclassify_activities` — review themes → search activities → analyze → recall → decide scope (decision) → preview draft → apply
 
 Key traits:
+
 - `draftRequired: true` on the workflow definition
 - `mutationPlans` object defining named plans
 - Step with `preview_mutation_plan` tool
@@ -475,7 +479,7 @@ import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
 export const myWorkflows = [
   new WorkflowDefinition({
     name: 'my_workflow',
-    title: 'My Workflow',
+    title: 'My Workflow'
     // ...
   })
 ]
@@ -491,10 +495,7 @@ Add the import and spread into the `WorkflowRegistry` in `src/<server>/domain/re
 import { myWorkflows } from './workflows/my-workflow.js'
 
 export function createEngineerDomainRegistry() {
-  const workflows = new WorkflowRegistry([
-    ...existingWorkflows,
-    ...myWorkflows
-  ])
+  const workflows = new WorkflowRegistry([...existingWorkflows, ...myWorkflows])
   // ...
 }
 ```

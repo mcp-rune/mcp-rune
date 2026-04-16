@@ -1,8 +1,8 @@
 import {
-  validateSearchParams,
-  validateNestedResource,
+  normalizeFilterValues,
   validateFilterValues,
-  normalizeFilterValues
+  validateNestedResource,
+  validateSearchParams
 } from '../../../../src/mcp/tools/validators.js'
 import { MOCK_MODELS } from '../../../__fixtures__/models-config-mock.js'
 

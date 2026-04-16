@@ -216,10 +216,7 @@ Display the found content to the user for confirmation.
 }
 
 /** Generate instructions for select transformers. */
-function _generateSelectInstructions(
-  transformer: TransformerEntry,
-  appsEnabled: boolean
-): string {
+function _generateSelectInstructions(transformer: TransformerEntry, appsEnabled: boolean): string {
   const model = transformer.source.model
   const label = _titleCase(transformer.key)
   const targetField = transformer.targetField

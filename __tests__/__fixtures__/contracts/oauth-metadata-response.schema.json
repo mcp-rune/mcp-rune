@@ -2,12 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "OAuth 2.0 Authorization Server Metadata Response (RFC 8414)",
   "type": "object",
-  "required": [
-    "issuer",
-    "authorization_endpoint",
-    "token_endpoint",
-    "response_types_supported"
-  ],
+  "required": ["issuer", "authorization_endpoint", "token_endpoint", "response_types_supported"],
   "properties": {
     "issuer": { "type": "string", "format": "uri" },
     "authorization_endpoint": { "type": "string", "format": "uri" },

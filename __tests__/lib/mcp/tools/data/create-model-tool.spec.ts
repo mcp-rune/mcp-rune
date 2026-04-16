@@ -1,5 +1,5 @@
-import { CreateModelTool } from '../../../../../src/mcp/tools/data/create-model-tool.js'
 import { halConvention } from '../../../../../src/mcp/api-conventions/hal.js'
+import { CreateModelTool } from '../../../../../src/mcp/tools/data/create-model-tool.js'
 
 vi.mock('#src/services/vector-storage.js', () => ({
   storeOperation: vi.fn().mockResolvedValue(null)
