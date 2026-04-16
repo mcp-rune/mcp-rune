@@ -3,12 +3,12 @@ import type { ToolCategory } from '../categories.js'
 import { TOOL_CATEGORIES } from '../categories.js'
 
 /**
- * Base class for memory retrospective tools
+ * Base class for analysis tools
  *
- * Sets category to MEMORY (no auth required, needs memory storage).
+ * Sets category to ANALYSIS (no auth required, needs vector storage).
  */
-export class BaseMemoryTool extends BaseTool {
+export class BaseAnalysisTool extends BaseTool {
   static override get category(): ToolCategory {
-    return TOOL_CATEGORIES.MEMORY
+    return TOOL_CATEGORIES.ANALYSIS
   }
 }

@@ -1,8 +1,8 @@
 import { z } from 'zod'
-import { BaseMemoryTool } from '../base-memory-tool.js'
-import type { ToolResult } from '../../base-tool.js'
+import { BaseAnalysisTool } from './base-analysis-tool.js'
+import type { ToolResult } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
-import { storeAnalysisMemory } from '#src/services/memory-storage.js'
+import { storeAnalysisMemory } from '#src/services/vector-storage.js'
 
 const MAX_BATCH_SIZE = 25
 
@@ -22,7 +22,7 @@ interface Finding {
  * querying ingested data via analysis_query. Findings are embedded
  * semantically and can be recalled later via analysis_query in semantic mode.
  */
-export class AnalysisStoreTool extends BaseMemoryTool {
+export class AnalysisStoreTool extends BaseAnalysisTool {
   override get name(): string {
     return 'analysis_store'
   }

@@ -1,8 +1,8 @@
 import { z } from 'zod'
-import { BaseMemoryTool } from '../base-memory-tool.js'
-import type { ToolResult } from '../../base-tool.js'
+import { BaseOperationsTool } from './base-operations-tool.js'
+import type { ToolResult } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
-import { findSimilarOperations } from '#src/services/memory-storage.js'
+import { findSimilarOperations } from '#src/services/vector-storage.js'
 
 interface SimilarOperation {
   similarity: number
@@ -18,7 +18,7 @@ interface SimilarOperation {
  * Embeds the query text and runs similarity search against
  * stored operation embeddings.
  */
-export class FindSimilarOperationsTool extends BaseMemoryTool {
+export class FindSimilarOperationsTool extends BaseOperationsTool {
   override get name(): string {
     return 'find_similar_operations'
   }

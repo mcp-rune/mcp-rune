@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { BaseTool } from '../base-tool.js'
 import type { ToolResult } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
-import { storeOperation } from '#src/services/memory-storage.js'
+import { storeOperation } from '#src/services/vector-storage.js'
 
 /**
  * Tool for deleting records

@@ -1,8 +1,8 @@
 import { z } from 'zod'
-import { BaseMemoryTool } from '../base-memory-tool.js'
-import type { ToolResult } from '../../base-tool.js'
+import { BaseAnalysisTool } from './base-analysis-tool.js'
+import type { ToolResult } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
-import { recallAnalysisMemories, queryIngestedData } from '#src/services/memory-storage.js'
+import { recallAnalysisMemories, queryIngestedData } from '#src/services/vector-storage.js'
 
 interface AnalysisMemory {
   finding: string
@@ -23,7 +23,7 @@ interface AnalysisMemory {
  *   - filter: Find specific records matching exact criteria
  *   - sample: Get a random sample of records
  */
-export class AnalysisQueryTool extends BaseMemoryTool {
+export class AnalysisQueryTool extends BaseAnalysisTool {
   override get name(): string {
     return 'analysis_query'
   }

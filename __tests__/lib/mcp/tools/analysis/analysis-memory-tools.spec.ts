@@ -1,6 +1,6 @@
 
 // Mock memory storage
-vi.mock('#src/services/memory-storage.js', () => ({
+vi.mock('#src/services/vector-storage.js', () => ({
   storeAnalysisMemory: vi.fn(() => Promise.resolve('uuid-123')),
   recallAnalysisMemories: vi.fn(() =>
     Promise.resolve([
@@ -20,40 +20,22 @@ vi.mock('#src/services/memory-storage.js', () => ({
   queryIngestedData: vi.fn(() => Promise.resolve([]))
 }))
 
-import { AnalysisStoreTool } from '../../../../../../src/mcp/tools/memory/analysis/analysis-store-tool.js'
-import { AnalysisQueryTool } from '../../../../../../src/mcp/tools/memory/analysis/analysis-query-tool.js'
-import { AnalysisClearTool } from '../../../../../../src/mcp/tools/memory/analysis/analysis-clear-tool.js'
+import { AnalysisStoreTool } from '../../../../../src/mcp/tools/analysis/analysis-store-tool.js'
+import { AnalysisQueryTool } from '../../../../../src/mcp/tools/analysis/analysis-query-tool.js'
+import { AnalysisClearTool } from '../../../../../src/mcp/tools/analysis/analysis-clear-tool.js'
 import {
   storeAnalysisMemory,
   recallAnalysisMemories,
   clearAnalysisMemories,
   clearIngestedRecords,
   queryIngestedData
-} from '#src/services/memory-storage.js'
-import { TOOL_CATEGORIES } from '../../../../../../src/mcp/tools/categories.js'
+} from '#src/services/vector-storage.js'
+import { TOOL_CATEGORIES } from '../../../../../src/mcp/tools/categories.js'
 
-// Verify deprecated re-exports still work
-import { StoreAnalysisMemoryTool } from '../../../../../../src/mcp/tools/memory/analysis/store-analysis-memory-tool.js'
-import { RecallAnalysisMemoriesTool } from '../../../../../../src/mcp/tools/memory/analysis/recall-analysis-memories-tool.js'
-import { ClearAnalysisMemoriesTool } from '../../../../../../src/mcp/tools/memory/analysis/clear-analysis-memories-tool.js'
 
 describe('Analysis Memory Tools', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-  })
-
-  describe('deprecated re-exports', () => {
-    it('should re-export AnalysisStoreTool as StoreAnalysisMemoryTool', () => {
-      expect(StoreAnalysisMemoryTool).toBe(AnalysisStoreTool)
-    })
-
-    it('should re-export AnalysisQueryTool as RecallAnalysisMemoriesTool', () => {
-      expect(RecallAnalysisMemoriesTool).toBe(AnalysisQueryTool)
-    })
-
-    it('should re-export AnalysisClearTool as ClearAnalysisMemoriesTool', () => {
-      expect(ClearAnalysisMemoriesTool).toBe(AnalysisClearTool)
-    })
   })
 
   describe('AnalysisStoreTool', () => {
@@ -61,7 +43,7 @@ describe('Analysis Memory Tools', () => {
 
     it('should have correct metadata', () => {
       expect(tool.name).toBe('analysis_store')
-      expect(AnalysisStoreTool.category).toBe(TOOL_CATEGORIES.MEMORY)
+      expect(AnalysisStoreTool.category).toBe(TOOL_CATEGORIES.ANALYSIS)
       expect(AnalysisStoreTool.requiresAuth).toBe(false)
     })
 
@@ -176,7 +158,7 @@ describe('Analysis Memory Tools', () => {
 
     it('should have correct metadata', () => {
       expect(tool.name).toBe('analysis_query')
-      expect(AnalysisQueryTool.category).toBe(TOOL_CATEGORIES.MEMORY)
+      expect(AnalysisQueryTool.category).toBe(TOOL_CATEGORIES.ANALYSIS)
     })
 
     describe('semantic mode', () => {
@@ -479,7 +461,7 @@ describe('Analysis Memory Tools', () => {
 
     it('should have correct metadata', () => {
       expect(tool.name).toBe('analysis_clear')
-      expect(AnalysisClearTool.category).toBe(TOOL_CATEGORIES.MEMORY)
+      expect(AnalysisClearTool.category).toBe(TOOL_CATEGORIES.ANALYSIS)
     })
 
     it('should cascade-clear both analysis memories and ingested records', async () => {

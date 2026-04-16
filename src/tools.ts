@@ -1,4 +1,4 @@
-// mcp-kit/tools — base classes, categories, data, domain, memory
+// mcp-kit/tools — base classes, categories, data, domain, analysis, operations
 export { BaseTool } from './mcp/tools/base-tool.js'
 export {
   TOOL_CATEGORIES,
@@ -11,8 +11,10 @@ export {
   normalizeFilterValues,
   validateFilterValues,
   validateSearchParams,
-  validateNestedResource
+  validateNestedResource,
+  validateToolSchema
 } from './mcp/tools/validators.js'
 export * from './mcp/tools/data/index.js'
 export * from './mcp/tools/domain/index.js'
-export * from './mcp/tools/memory/index.js'
+export * from './mcp/tools/analysis/index.js'
+export * from './mcp/tools/operations/index.js'

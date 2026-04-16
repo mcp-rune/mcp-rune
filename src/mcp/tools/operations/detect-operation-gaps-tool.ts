@@ -1,8 +1,8 @@
 import { z } from 'zod'
-import { BaseMemoryTool } from '../base-memory-tool.js'
-import type { ToolResult } from '../../base-tool.js'
+import { BaseOperationsTool } from './base-operations-tool.js'
+import type { ToolResult } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
-import { detectOperationGaps } from '#src/services/memory-storage.js'
+import { detectOperationGaps } from '#src/services/vector-storage.js'
 
 /**
  * Detect missing workflow steps for a record
@@ -10,7 +10,7 @@ import { detectOperationGaps } from '#src/services/memory-storage.js'
  * Compares actual operations on a record against expected
  * workflow steps to identify gaps.
  */
-export class DetectOperationGapsTool extends BaseMemoryTool {
+export class DetectOperationGapsTool extends BaseOperationsTool {
   override get name(): string {
     return 'detect_operation_gaps'
   }

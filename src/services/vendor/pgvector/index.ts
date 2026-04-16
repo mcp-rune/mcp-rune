@@ -2,7 +2,7 @@
  * pgvector Vendor Implementation - SDK Lifecycle
  *
  * Manages pgvector vector storage via an injected PostgreSQL pool.
- * This module should only be imported by lib/services/memory-storage.js
+ * This module should only be imported by services/vector-storage.ts
  *
  * Pool injection only — never creates pools or reads env vars.
  * DDL is managed by scripts/db-migrate.js.

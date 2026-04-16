@@ -1,11 +1,11 @@
 
-vi.mock('#src/services/memory-storage.js', () => ({
+vi.mock('#src/services/vector-storage.js', () => ({
   getOperationClusters: vi.fn()
 }))
 
-import { ClusterOperationsTool } from '../../../../../../src/mcp/tools/memory/operations/cluster-operations-tool.js'
-import { getOperationClusters } from '#src/services/memory-storage.js'
-import { TOOL_CATEGORIES } from '../../../../../../src/mcp/tools/categories.js'
+import { ClusterOperationsTool } from '../../../../../src/mcp/tools/operations/cluster-operations-tool.js'
+import { getOperationClusters } from '#src/services/vector-storage.js'
+import { TOOL_CATEGORIES } from '../../../../../src/mcp/tools/categories.js'
 
 describe('ClusterOperationsTool', () => {
   let tool
@@ -19,8 +19,8 @@ describe('ClusterOperationsTool', () => {
     expect(tool.name).toBe('cluster_operations')
   })
 
-  it('should have MEMORY category', () => {
-    expect(ClusterOperationsTool.category).toBe(TOOL_CATEGORIES.MEMORY)
+  it('should have OPERATIONS category', () => {
+    expect(ClusterOperationsTool.category).toBe(TOOL_CATEGORIES.OPERATIONS)
   })
 
   it('should have no required parameters', () => {

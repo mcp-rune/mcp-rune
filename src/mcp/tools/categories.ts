@@ -30,10 +30,17 @@ export const TOOL_CATEGORIES = {
    */
   AUTOCOMPLETE: 'autocomplete',
 
-  /** Memory tools - retrospective analysis of CRUD operations
-   * Requires memory storage configuration, no API auth required
+  /** Analysis tools - qualitative data analysis sessions
+   * Requires vector storage configuration, no API auth required
+   * Examples: analysis_store, analysis_query, analysis_clear
    */
-  MEMORY: 'memory',
+  ANALYSIS: 'analysis',
+
+  /** Operations tools - retrospective analysis of CRUD operations
+   * Requires vector storage configuration, no API auth required
+   * Examples: find_similar_operations, detect_operation_gaps, cluster_operations
+   */
+  OPERATIONS: 'operations',
 
   /** Domain tools - domain intelligence (knowledge, rules, workflows)
    * Requires domain registry configuration, no API auth required
@@ -51,7 +58,7 @@ export type ToolCategory = (typeof TOOL_CATEGORIES)[keyof typeof TOOL_CATEGORIES
 export interface CategoryConfig {
   requiresAuth: boolean
   requiresPromptRegistry: boolean
-  requiresMemoryStorage?: boolean
+  requiresVectorStorage?: boolean
   requiresDomainRegistry?: boolean
   isGeneric: boolean
   description: string
@@ -80,12 +87,19 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
     isGeneric: false,
     description: 'Field value suggestions, requires API authentication'
   },
-  [TOOL_CATEGORIES.MEMORY]: {
+  [TOOL_CATEGORIES.ANALYSIS]: {
     requiresAuth: false,
     requiresPromptRegistry: false,
-    requiresMemoryStorage: true,
+    requiresVectorStorage: true,
     isGeneric: true,
-    description: 'Memory retrospective tools, requires memory storage configuration'
+    description: 'Analysis tools for qualitative data analysis sessions, requires vector storage'
+  },
+  [TOOL_CATEGORIES.OPERATIONS]: {
+    requiresAuth: false,
+    requiresPromptRegistry: false,
+    requiresVectorStorage: true,
+    isGeneric: true,
+    description: 'Operations tools for retrospective CRUD operation analysis, requires vector storage'
   },
   [TOOL_CATEGORIES.DOMAIN]: {
     requiresAuth: false,

@@ -1,10 +1,10 @@
 import { DeleteModelTool } from '../../../../../src/mcp/tools/data/delete-model-tool.js'
 
-vi.mock('#src/services/memory-storage.js', () => ({
+vi.mock('#src/services/vector-storage.js', () => ({
   storeOperation: vi.fn().mockResolvedValue(null)
 }))
 
-const { storeOperation } = await import('#src/services/memory-storage.js')
+const { storeOperation } = await import('#src/services/vector-storage.js')
 
 describe('lib/mcp/tools/data/delete-model-tool', () => {
   describe('tool definition', () => {
