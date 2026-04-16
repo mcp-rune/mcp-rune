@@ -284,6 +284,16 @@ export async function describeAnalysisSession(
   return ingestedRecords.describeSession(pool, analysisId)
 }
 
+/** Get all record IDs for a given analysis session and model */
+export async function getIngestedRecordIds(analysisId: string, model: string): Promise<string[]> {
+  if (!vendor.isConfigured()) return []
+
+  const pool = vendor.getPool()
+  if (!pool) return []
+
+  return ingestedRecords.getRecordIds(pool, analysisId, model)
+}
+
 /** Clear ingested records by analysis ID */
 export async function clearIngestedRecords(analysisId: string): Promise<number> {
   if (!vendor.isConfigured()) return 0
