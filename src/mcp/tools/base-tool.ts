@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import type { ZodTypeAny } from 'zod'
+import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
+export type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 import { TOOL_CATEGORIES, getCategoryConfig } from './categories.js'
 import type { ToolCategory } from './categories.js'
 import type { AssociationConfig, BaseConvention } from '../api-conventions/base-convention.js'
@@ -193,6 +195,12 @@ export class BaseTool {
   /** Zod raw shape for tool parameters (override in subclasses) */
   get inputSchema(): Record<string, ZodTypeAny> {
     throw new Error('Tool must implement inputSchema getter')
+  }
+
+  /** MCP tool annotations (override in subclasses to customize) */
+  get annotations(): ToolAnnotations {
+    const config = getCategoryConfig((this.constructor as typeof BaseTool).category)
+    return { ...config.defaultAnnotations }
   }
 
   /** Execute tool logic (override in subclasses) */

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { BaseTool } from '../base-tool.js'
-import type { ToolResult } from '../base-tool.js'
+import type { ToolResult, ToolAnnotations } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
 import { validateSearchParams } from '../validators.js'
 import { pickFields } from '#src/core/helpers.js'
@@ -25,6 +25,10 @@ const MAX_INGEST_PAGES = 50
 export class AnalysisIngestTool extends BaseTool {
   override get name(): string {
     return 'analysis_ingest'
+  }
+
+  override get annotations(): ToolAnnotations {
+    return { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
   }
 
   override get baseDescription(): string {

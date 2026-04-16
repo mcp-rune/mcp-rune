@@ -35,6 +35,17 @@ describe('lib/mcp/tools/categories', () => {
       }
     })
 
+    it('should have defaultAnnotations for every category', () => {
+      for (const category of Object.values(TOOL_CATEGORIES)) {
+        const config = CATEGORY_CONFIG[category]
+        expect(config.defaultAnnotations).toBeDefined()
+        expect(typeof config.defaultAnnotations.readOnlyHint).toBe('boolean')
+        expect(typeof config.defaultAnnotations.destructiveHint).toBe('boolean')
+        expect(typeof config.defaultAnnotations.idempotentHint).toBe('boolean')
+        expect(typeof config.defaultAnnotations.openWorldHint).toBe('boolean')
+      }
+    })
+
     it('should mark DATA as requiring auth', () => {
       expect(CATEGORY_CONFIG.data.requiresAuth).toBe(true)
       expect(CATEGORY_CONFIG.data.isGeneric).toBe(true)
