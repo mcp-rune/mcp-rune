@@ -9,7 +9,7 @@ import {
   storeIngestedRecords
 } from '#src/services/vector-storage.js'
 
-import type { ToolAnnotations, ToolResult } from '../base-tool.js'
+import type { ModelConfig, ToolAnnotations, ToolResult } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
 import type { NestedValidationError, NestedValidationSuccess } from '../validators.js'
 import { validateFilterParams, validateNestedResource } from '../validators.js'
@@ -74,10 +74,6 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       analysis_id: z
         .string()
         .describe('Unique identifier for this analysis session (e.g., "q1-deal-audit")'),
-      query: z
-        .string()
-        .describe('Text search query (optional). Combined with filters for full-text search.')
-        .optional(),
       filters: z
         .record(z.string(), z.unknown())
         .describe(
@@ -138,7 +134,6 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       const {
         model,
         analysis_id,
-        query,
         filters,
         page,
         per_page = 50,
@@ -151,7 +146,6 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       } = args as {
         model?: string
         analysis_id: string
-        query?: string
         filters?: Record<string, unknown>
         page?: number
         per_page?: number
@@ -230,7 +224,6 @@ When NOT to use: For quick lookups of specific records by ID or small result set
           model,
           analysisId: analysis_id,
           ingestAll: ingest_all,
-          hasQuery: !!query,
           hasFilters: !!normalizedFilters
         })
       }
@@ -242,7 +235,6 @@ When NOT to use: For quick lookups of specific records by ID or small result set
           ModelClass,
           modelConfig,
           analysis_id,
-          query,
           normalizedFilters,
           per_page,
           fields,
@@ -255,7 +247,6 @@ When NOT to use: For quick lookups of specific records by ID or small result set
           ModelClass,
           modelConfig,
           analysis_id,
-          query,
           normalizedFilters,
           page ?? 1,
           per_page,
@@ -273,9 +264,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     api: Record<string, (...args: unknown[]) => Promise<unknown>>,
     model: string,
     ModelClass: Record<string, unknown>,
-    modelConfig: { endpoint: string; search?: { fullText?: Record<string, unknown> } },
+    modelConfig: ModelConfig,
     analysisId: string,
-    query: string | undefined,
     filters: Record<string, unknown> | undefined,
     page: number,
     perPage: number,
@@ -285,16 +275,16 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     let rawRecords: Record<string, unknown>[]
     let totalPages: number | null
 
-    // Use SearchClient if model supports fullText search and query/filters provided
+    // Use SearchClient if model supports fullText search and filters provided
     const hasFullText = modelConfig.search?.fullText
-    const hasSearchParams = !!query || (filters && Object.keys(filters).length > 0)
+    const hasSearchParams = filters && Object.keys(filters).length > 0
 
     if (hasFullText && hasSearchParams) {
-      // Use SearchClient for filtered/query-based ingestion
+      // Use SearchClient for filtered ingestion
       const searchClient = this._createSearchClient()
       const { records, pagination } = (await searchClient.search(
         ModelClass as Parameters<typeof searchClient.search>[0],
-        query ?? null,
+        '',
         {
           page,
           perPage,
@@ -305,7 +295,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       rawRecords = records
       totalPages = pagination.total_pages ?? null
     } else {
-      // Use plain GET for simple listing (no filters/query)
+      // Use plain GET for simple listing (no filters)
       const queryParams = { page, per_page: perPage }
       const data = (await api.get!(modelConfig.endpoint, queryParams, apiOptions)) as Record<
         string,
@@ -344,9 +334,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     api: Record<string, (...args: unknown[]) => Promise<unknown>>,
     model: string,
     ModelClass: Record<string, unknown>,
-    modelConfig: { endpoint: string; search?: { fullText?: Record<string, unknown> } },
+    modelConfig: ModelConfig,
     analysisId: string,
-    query: string | undefined,
     filters: Record<string, unknown> | undefined,
     perPage: number,
     fields: string[] | undefined,
@@ -356,19 +345,19 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     let totalStored = 0
     let totalPages: number | null = null
 
-    // Use SearchClient if model supports fullText search and query/filters provided
+    // Use SearchClient if model supports fullText search and filters provided
     const hasFullText = modelConfig.search?.fullText
-    const hasSearchParams = !!query || (filters && Object.keys(filters).length > 0)
+    const hasSearchParams = filters && Object.keys(filters).length > 0
     const searchClient = hasFullText && hasSearchParams ? this._createSearchClient() : null
 
     while (currentPage <= MAX_INGEST_PAGES) {
       let rawRecords: Record<string, unknown>[]
 
       if (searchClient) {
-        // Use SearchClient for filtered/query-based ingestion
+        // Use SearchClient for filtered ingestion
         const { records, pagination } = (await searchClient.search(
           ModelClass as Parameters<typeof searchClient.search>[0],
-          query ?? null,
+          '',
           {
             page: currentPage,
             perPage,
