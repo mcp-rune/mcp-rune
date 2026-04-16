@@ -272,6 +272,18 @@ export async function queryIngestedData(
   return ingestedRecords.queryRecords(pool, analysisId, query)
 }
 
+/** Describe an analysis session — returns model name and record count */
+export async function describeAnalysisSession(
+  analysisId: string
+): Promise<ingestedRecords.SessionDescriptor | null> {
+  if (!vendor.isConfigured()) return null
+
+  const pool = vendor.getPool()
+  if (!pool) return null
+
+  return ingestedRecords.describeSession(pool, analysisId)
+}
+
 /** Clear ingested records by analysis ID */
 export async function clearIngestedRecords(analysisId: string): Promise<number> {
   if (!vendor.isConfigured()) return 0

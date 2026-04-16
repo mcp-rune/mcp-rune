@@ -324,16 +324,40 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       })
       .join('. ')
 
+    // Build numeric stats and date ranges
+    const numericStats = this._buildNumericStats(records)
+    const dateRanges = this._buildDateRanges(records)
+
+    const statsLines = Object.entries(numericStats)
+      .map(
+        ([field, s]) =>
+          `${field}: min=${s.min}, max=${s.max}, avg=${s.avg}, median=${s.median}, n=${s.count}`
+      )
+      .join('. ')
+
+    const dateLines = Object.entries(dateRanges)
+      .map(([field, r]) => `${field}: ${r.earliest}..${r.latest} (${r.count} values)`)
+      .join('. ')
+
     const fieldsNote = fields ? ` Fields: ${fields.join(', ')}.` : ''
     const summary =
       `Page ${pageLabel} of ${model} records (${records.length} records).${fieldsNote}` +
-      (distLines ? ` Distribution: ${distLines}.` : '')
+      (distLines ? ` Distribution: ${distLines}.` : '') +
+      (statsLines ? ` Numeric stats: ${statsLines}.` : '') +
+      (dateLines ? ` Date ranges: ${dateLines}.` : '')
 
     await storeAnalysisMemory({
       analysisId,
       finding: summary,
       category: 'page_summary',
-      metadata: { page, model, record_count: records.length, distributions }
+      metadata: {
+        page,
+        model,
+        record_count: records.length,
+        distributions,
+        numericStats,
+        dateRanges
+      }
     })
   }
 
@@ -368,5 +392,73 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     }
 
     return distributions
+  }
+
+  /** Compute summary statistics for numeric fields */
+  private _buildNumericStats(
+    records: Record<string, unknown>[]
+  ): Record<string, { min: number; max: number; avg: number; median: number; count: number }> {
+    if (records.length === 0) return {}
+
+    const stats: Record<
+      string,
+      { min: number; max: number; avg: number; median: number; count: number }
+    > = {}
+
+    const sample = records[0]!
+    const numericFields = Object.entries(sample)
+      .filter(([key, val]) => key !== 'id' && typeof val === 'number')
+      .map(([key]) => key)
+
+    for (const field of numericFields) {
+      const values = records.map((r) => r[field]).filter((v): v is number => typeof v === 'number')
+
+      if (values.length === 0) continue
+
+      values.sort((a, b) => a - b)
+      const sum = values.reduce((acc, v) => acc + v, 0)
+      const mid = Math.floor(values.length / 2)
+      const median = values.length % 2 === 0 ? (values[mid - 1]! + values[mid]!) / 2 : values[mid]!
+
+      stats[field] = {
+        min: values[0]!,
+        max: values[values.length - 1]!,
+        avg: Math.round((sum / values.length) * 100) / 100,
+        median,
+        count: values.length
+      }
+    }
+
+    return stats
+  }
+
+  /** Compute date ranges for ISO 8601 date string fields */
+  private _buildDateRanges(
+    records: Record<string, unknown>[]
+  ): Record<string, { earliest: string; latest: string; count: number }> {
+    if (records.length === 0) return {}
+
+    const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}/
+    const sample = records[0]!
+    const dateFields = Object.entries(sample)
+      .filter(([key, val]) => key !== 'id' && typeof val === 'string' && ISO_DATE_RE.test(val))
+      .map(([key]) => key)
+
+    const ranges: Record<string, { earliest: string; latest: string; count: number }> = {}
+    for (const field of dateFields) {
+      const values = records
+        .map((r) => r[field])
+        .filter((v): v is string => typeof v === 'string' && ISO_DATE_RE.test(v))
+        .sort()
+
+      if (values.length === 0) continue
+      ranges[field] = {
+        earliest: values[0]!,
+        latest: values[values.length - 1]!,
+        count: values.length
+      }
+    }
+
+    return ranges
   }
 }

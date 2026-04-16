@@ -1,6 +1,6 @@
 {
   "name": "mcp-kit",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Batteries-included MCP framework. Define models, get CRUD tools, prompt strategies, interactive apps, OAuth, and docs — the Rails of MCP servers.",
   "type": "module",
   "main": "./dist/index.js",
@@ -45,6 +45,10 @@
     "./db": {
       "types": "./dist/db.d.ts",
       "import": "./dist/db.js"
+    },
+    "./db/migrations": {
+      "types": "./dist/db/migrations.d.ts",
+      "import": "./dist/db/migrations.js"
     },
     "./core": {
       "types": "./dist/core.d.ts",

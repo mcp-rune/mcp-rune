@@ -1,7 +1,11 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
-import { queryIngestedData, recallAnalysisMemories } from '#src/services/vector-storage.js'
+import {
+  describeAnalysisSession,
+  queryIngestedData,
+  recallAnalysisMemories
+} from '#src/services/vector-storage.js'
 
 import type { ToolResult } from '../base-tool.js'
 import { BaseAnalysisTool } from './base-analysis-tool.js'
@@ -19,10 +23,11 @@ interface AnalysisMemory {
  * Part of the analysis_* tool family:
  *   analysis_ingest → analysis_store → analysis_query → analysis_clear
  *
- * Supports four query modes:
+ * Supports five query modes:
+ *   - describe: Discover available fields, types, and query syntax
  *   - semantic: Search findings and page summaries by meaning
  *   - aggregate: Get counts and distributions by field
- *   - filter: Find specific records matching exact criteria
+ *   - filter: Find specific records matching exact criteria or range conditions
  *   - sample: Get a random sample of records
  */
 export class AnalysisQueryTool extends BaseAnalysisTool {
@@ -31,27 +36,29 @@ export class AnalysisQueryTool extends BaseAnalysisTool {
   }
 
   override get baseDescription(): string {
-    return `Query ingested data and stored findings from an analysis session. Supports four modes for different types of reasoning:
+    return `Query ingested data and stored findings from an analysis session. Supports five modes for different types of reasoning:
 
+- describe: Discover available fields, their types, and query syntax. Call this before querying to understand the data shape and learn which operators are available.
 - semantic: Search findings and page summaries by meaning. Use when asking qualitative questions ("what issues were found?", "any patterns related to missing data?").
 - aggregate: Get counts and distributions by field. Use for quantitative questions ("how many records per status?", "what's the distribution of types?").
-- filter: Find specific records matching exact criteria. Use to inspect records that match a condition ("show me all archived deals", "find records with status=draft").
+- filter: Find specific records matching criteria. Supports exact match and range operators ($gt, $gte, $lt, $lte) for numeric and date fields.
 - sample: Get a random sample of records. Use to get a representative overview before diving deeper.
 
 Typical reasoning flow:
-1. Start with aggregate to understand the shape of the data
-2. Use filter to inspect specific subsets
-3. Use sample to spot-check representative records
-4. Use semantic to recall your own stored findings or search page summaries`
+1. Start with describe to discover available fields and query syntax
+2. Use aggregate to understand distributions
+3. Use filter (with range operators) to inspect specific subsets
+4. Use sample to spot-check representative records
+5. Use semantic to recall your own stored findings or search page summaries`
   }
 
   override get inputSchema(): Record<string, ZodTypeAny> {
     return {
       analysis_id: z.string().describe('Analysis session ID to query'),
       mode: z
-        .enum(['semantic', 'aggregate', 'filter', 'sample'])
+        .enum(['describe', 'semantic', 'aggregate', 'filter', 'sample'])
         .describe(
-          'Query mode: "semantic" for meaning-based search, "aggregate" for counts/distributions, "filter" for exact matches, "sample" for random records'
+          'Query mode: "describe" for field/operator discovery, "semantic" for meaning-based search, "aggregate" for counts/distributions, "filter" for exact/range matches, "sample" for random records'
         ),
 
       // semantic mode params
@@ -70,7 +77,10 @@ Typical reasoning flow:
         .record(z.string(), z.unknown())
         .optional()
         .describe(
-          'JSONB containment filter, e.g., {"status": "active"} (required for filter mode)'
+          'Filter criteria. Exact match: {"status": "active"}. ' +
+            'Range: {"duration_minutes": {"$gte": 40, "$lte": 120}}. ' +
+            'Date range: {"started_at": {"$gte": "2026-01-01"}}. ' +
+            'Operators: $gt, $gte, $lt, $lte.'
         ),
       limit: z.number().optional().describe('Max records to return (filter mode, default: 20)'),
 
@@ -83,7 +93,7 @@ Typical reasoning flow:
     const { analysis_id, mode, query, category, top_k, group_by, where, limit, sample_size } =
       args as {
         analysis_id: string
-        mode: 'semantic' | 'aggregate' | 'filter' | 'sample'
+        mode: 'describe' | 'semantic' | 'aggregate' | 'filter' | 'sample'
         query?: string
         category?: string
         top_k?: number
@@ -94,6 +104,8 @@ Typical reasoning flow:
       }
 
     switch (mode) {
+      case 'describe':
+        return this._queryDescribe(analysis_id)
       case 'semantic':
         return this._querySemantic(analysis_id, query, category, top_k)
       case 'aggregate':
@@ -103,6 +115,115 @@ Typical reasoning flow:
       case 'sample':
         return this._querySample(analysis_id, sample_size)
     }
+  }
+
+  /** Describe analysis session — returns fields, types, and query syntax from model config */
+  private async _queryDescribe(analysisId: string): Promise<ToolResult> {
+    const session = await describeAnalysisSession(analysisId)
+
+    if (!session) {
+      return this.formatResponse(
+        `No ingested records found for analysis "${analysisId}". Run analysis_ingest first.`
+      )
+    }
+
+    const { model, totalRecords } = session
+    const modelConfig = this.getModelConfig(model)
+
+    const parts: string[] = [
+      `# Analysis Session: ${analysisId}`,
+      `Model: ${model} | Records: ${totalRecords}`,
+      ''
+    ]
+
+    if (modelConfig?.attributes) {
+      const attrs = modelConfig.attributes as Record<string, Record<string, unknown>>
+      parts.push('## Available Fields', '')
+      parts.push('| Field | Type | Description |')
+      parts.push('|-------|------|-------------|')
+
+      const numericFields: string[] = []
+      const dateFields: string[] = []
+      const enumFields: string[] = []
+
+      for (const [name, config] of Object.entries(attrs)) {
+        const type = (config.type as string) || 'unknown'
+        const desc = (config.description as string) || ''
+        let details = desc
+
+        if (type === 'enum' && config.enumValues) {
+          const values = (config.enumValues as string[]).map((v) => `\`${v}\``).join(', ')
+          details += ` Values: ${values}`
+          enumFields.push(name)
+        }
+
+        parts.push(`| \`${name}\` | ${type} | ${details} |`)
+
+        if (type === 'integer' || type === 'number' || type === 'float') {
+          numericFields.push(name)
+        }
+        if (type === 'datetime' || type === 'date') {
+          dateFields.push(name)
+        }
+      }
+
+      parts.push('')
+
+      // Query syntax section with concrete examples from this model's fields
+      parts.push('## Query Syntax', '')
+
+      if (enumFields.length > 0) {
+        const field = enumFields[0]!
+        const config = attrs[field]!
+        const values = config.enumValues as string[] | undefined
+        const exampleValue = values?.[0] || 'value'
+        parts.push('### Exact match')
+        parts.push(`\`{"${field}": "${exampleValue}"}\``)
+        parts.push('')
+      } else {
+        parts.push('### Exact match')
+        parts.push('`{"field_name": "value"}`')
+        parts.push('')
+      }
+
+      if (numericFields.length > 0) {
+        const field = numericFields[0]!
+        parts.push('### Numeric range')
+        parts.push(`\`{"${field}": {"$gte": 40, "$lte": 120}}\``)
+        parts.push('')
+      }
+
+      if (dateFields.length > 0) {
+        const field = dateFields[0]!
+        parts.push('### Date range')
+        parts.push(`\`{"${field}": {"$gte": "2026-01-01", "$lte": "2026-03-31"}}\``)
+        parts.push('')
+      }
+
+      parts.push('### Combined')
+      const exampleParts: string[] = []
+      if (enumFields.length > 0) {
+        const config = attrs[enumFields[0]!]!
+        const values = config.enumValues as string[] | undefined
+        exampleParts.push(`"${enumFields[0]}": "${values?.[0] || 'value'}"`)
+      }
+      if (numericFields.length > 0) {
+        exampleParts.push(`"${numericFields[0]}": {"$gte": 60}`)
+      }
+      if (exampleParts.length > 0) {
+        parts.push(`\`{${exampleParts.join(', ')}}\``)
+      } else {
+        parts.push('`{"field": "value", "numeric_field": {"$gte": 10}}`')
+      }
+      parts.push('')
+      parts.push('Operators: `$gt` (>), `$gte` (>=), `$lt` (<), `$lte` (<=)')
+    } else {
+      parts.push(
+        `Model "${model}" has no attribute metadata. Use sample mode to inspect record shape.`
+      )
+    }
+
+    return this.formatResponse(parts.join('\n'))
   }
 
   /** Semantic search on analysis_memories (findings + page summaries) */
