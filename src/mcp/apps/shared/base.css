@@ -24,6 +24,7 @@
   --color-accent: #c4704b;
   --color-accent-hover: #d4845f;
   --color-text-on-accent: #ffffff;
+  --header-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='4' y='3' width='4' height='18' rx='1.5' fill='white'/%3E%3Crect x='4' y='3' width='15' height='3.5' rx='1.5' fill='white'/%3E%3Crect x='4' y='10.25' width='12' height='3.5' rx='1.5' fill='white'/%3E%3Crect x='4' y='17.5' width='15' height='3.5' rx='1.5' fill='white'/%3E%3C/svg%3E");
   --color-success: light-dark(#3a7d44, #5cb85c);
   --color-error: light-dark(#c0392b, #e74c3c);
   --surface: light-dark(#eae6df, #2a2a2c);
@@ -64,8 +65,8 @@ h1::before {
   margin-right: 0.35em;
   vertical-align: -0.15em;
   background-color: var(--color-accent);
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='4' y='3' width='4' height='18' rx='1.5' fill='white'/%3E%3Crect x='4' y='3' width='15' height='3.5' rx='1.5' fill='white'/%3E%3Crect x='4' y='10.25' width='12' height='3.5' rx='1.5' fill='white'/%3E%3Crect x='4' y='17.5' width='15' height='3.5' rx='1.5' fill='white'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='4' y='3' width='4' height='18' rx='1.5' fill='white'/%3E%3Crect x='4' y='3' width='15' height='3.5' rx='1.5' fill='white'/%3E%3Crect x='4' y='10.25' width='12' height='3.5' rx='1.5' fill='white'/%3E%3Crect x='4' y='17.5' width='15' height='3.5' rx='1.5' fill='white'/%3E%3C/svg%3E");
+  -webkit-mask-image: var(--header-icon);
+  mask-image: var(--header-icon);
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
