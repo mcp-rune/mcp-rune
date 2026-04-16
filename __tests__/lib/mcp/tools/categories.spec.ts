@@ -11,7 +11,8 @@ describe('lib/mcp/tools/categories', () => {
       expect(TOOL_CATEGORIES.DATA).toBe('data')
       expect(TOOL_CATEGORIES.STRATEGY).toBe('strategy')
       expect(TOOL_CATEGORIES.AUTOCOMPLETE).toBe('autocomplete')
-      expect(TOOL_CATEGORIES.MEMORY).toBe('memory')
+      expect(TOOL_CATEGORIES.ANALYSIS).toBe('analysis')
+      expect(TOOL_CATEGORIES.OPERATIONS).toBe('operations')
       expect(TOOL_CATEGORIES.DOMAIN).toBe('domain')
       expect(TOOL_CATEGORIES.CUSTOM).toBe('custom')
     })
@@ -20,8 +21,8 @@ describe('lib/mcp/tools/categories', () => {
       expect(TOOL_CATEGORIES.CRUD).toBe('data')
     })
 
-    it('should have exactly 7 category keys (6 + deprecated CRUD alias)', () => {
-      expect(Object.keys(TOOL_CATEGORIES)).toHaveLength(7)
+    it('should have exactly 8 category keys (7 + deprecated CRUD alias)', () => {
+      expect(Object.keys(TOOL_CATEGORIES)).toHaveLength(8)
     })
   })
 
@@ -50,9 +51,14 @@ describe('lib/mcp/tools/categories', () => {
       expect(CATEGORY_CONFIG.autocomplete.isGeneric).toBe(false)
     })
 
-    it('should mark MEMORY as not requiring auth', () => {
-      expect(CATEGORY_CONFIG.memory.requiresAuth).toBe(false)
-      expect(CATEGORY_CONFIG.memory.requiresMemoryStorage).toBe(true)
+    it('should mark ANALYSIS as not requiring auth', () => {
+      expect(CATEGORY_CONFIG.analysis.requiresAuth).toBe(false)
+      expect(CATEGORY_CONFIG.analysis.requiresVectorStorage).toBe(true)
+    })
+
+    it('should mark OPERATIONS as not requiring auth', () => {
+      expect(CATEGORY_CONFIG.operations.requiresAuth).toBe(false)
+      expect(CATEGORY_CONFIG.operations.requiresVectorStorage).toBe(true)
     })
 
     it('should mark DOMAIN as not requiring auth', () => {
@@ -102,8 +108,12 @@ describe('lib/mcp/tools/categories', () => {
       expect(categoryRequiresAuth(TOOL_CATEGORIES.STRATEGY)).toBe(false)
     })
 
-    it('should return false for MEMORY', () => {
-      expect(categoryRequiresAuth(TOOL_CATEGORIES.MEMORY)).toBe(false)
+    it('should return false for ANALYSIS', () => {
+      expect(categoryRequiresAuth(TOOL_CATEGORIES.ANALYSIS)).toBe(false)
+    })
+
+    it('should return false for OPERATIONS', () => {
+      expect(categoryRequiresAuth(TOOL_CATEGORIES.OPERATIONS)).toBe(false)
     })
 
     it('should return false for DOMAIN', () => {

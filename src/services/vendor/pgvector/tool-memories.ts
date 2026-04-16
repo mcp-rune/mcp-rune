@@ -1,7 +1,7 @@
 /**
  * pgvector Tool Memories - Store, Query, and Cleanup
  *
- * Implements the vendor contract that memory-storage.js delegates to.
+ * Implements the vendor contract that vector-storage.ts delegates to.
  * All functions receive the pg pool as the first argument.
  */
 

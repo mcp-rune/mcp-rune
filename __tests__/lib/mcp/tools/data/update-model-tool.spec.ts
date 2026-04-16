@@ -1,11 +1,11 @@
 import { UpdateModelTool } from '../../../../../src/mcp/tools/data/update-model-tool.js'
 import { halConvention } from '../../../../../src/mcp/api-conventions/hal.js'
 
-vi.mock('#src/services/memory-storage.js', () => ({
+vi.mock('#src/services/vector-storage.js', () => ({
   storeOperation: vi.fn().mockResolvedValue(null)
 }))
 
-const { storeOperation } = await import('#src/services/memory-storage.js')
+const { storeOperation } = await import('#src/services/vector-storage.js')
 
 describe('lib/mcp/tools/data/update-model-tool', () => {
   describe('description composition', () => {

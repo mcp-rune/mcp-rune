@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { SaveModelBaseTool } from '../save-model-base-tool.js'
 import type { ToolResult, ModelConfig } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
-import { storeOperation } from '#src/services/memory-storage.js'
+import { storeOperation } from '#src/services/vector-storage.js'
 
 export const MAX_BATCH_SIZE = 25
 const MAX_CONCURRENCY = 5

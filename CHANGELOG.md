@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] — 2026-04-16
+
+### Added
+- **ANALYSIS tool category** — independent category for qualitative data analysis sessions (`analysis_store`, `analysis_query`, `analysis_clear`). Requires vector storage.
+- **OPERATIONS tool category** — independent category for retrospective CRUD operation analysis (`find_similar_operations`, `detect_operation_gaps`, `cluster_operations`). Requires vector storage.
+- `BaseAnalysisTool` and `BaseOperationsTool` base classes in their own directories
+- `validateToolSchema()` — validates tool inputSchema against the MCP SDK serialization pipeline at registration time
+- `"dev": "tsc --watch"` script for rapid development with npm link
+
+### Changed
+- **Split `MEMORY` category into `ANALYSIS` + `OPERATIONS`** — two independent categories, each with its own base class, directory, and `*_TOOL_CLASSES` export
+- **Renamed `memory-storage.ts` → `vector-storage.ts`** — `initVectorStorage()`, `isVectorStorageEnabled()`, `flushVectorStorage()`, `closeVectorStorage()`, `VectorStorageOptions`
+- **Renamed service export** `memoryStorage` → `vectorStorage` from `mcp-kit/services`
+- **Renamed category config** `requiresMemoryStorage` → `requiresVectorStorage` in `CategoryConfig` interface
+- `MEMORY_TOOL_CLASSES` → `ANALYSIS_TOOL_CLASSES` + `OPERATIONS_TOOL_CLASSES`
+- `tools/memory/` directory split into `tools/analysis/` and `tools/operations/`
+
+### Fixed
+- `derivePromptSchema()` now copies `enumDescriptions` from model `attributesConfig`, restoring auto-generated enum tables in section documentation
+
+### Removed
+- `TOOL_CATEGORIES.MEMORY` constant
+- `BaseMemoryTool` base class
+- `tools/memory/` directory
+- Deprecated analysis tool aliases (`StoreAnalysisMemoryTool`, `RecallAnalysisMemoriesTool`, `ClearAnalysisMemoriesTool`)
+
 ## [0.3.0] — 2026-04-15
 
 ### Added

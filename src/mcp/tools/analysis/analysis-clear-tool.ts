@@ -1,8 +1,8 @@
 import { z } from 'zod'
-import { BaseMemoryTool } from '../base-memory-tool.js'
-import type { ToolResult } from '../../base-tool.js'
+import { BaseAnalysisTool } from './base-analysis-tool.js'
+import type { ToolResult } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
-import { clearAnalysisMemories, clearIngestedRecords } from '#src/services/memory-storage.js'
+import { clearAnalysisMemories, clearIngestedRecords } from '#src/services/vector-storage.js'
 
 /**
  * Clean up all data from an analysis session.
@@ -13,7 +13,7 @@ import { clearAnalysisMemories, clearIngestedRecords } from '#src/services/memor
  * Cascade-clears both analysis_memories AND ingested_records for the
  * given analysis_id.
  */
-export class AnalysisClearTool extends BaseMemoryTool {
+export class AnalysisClearTool extends BaseAnalysisTool {
   override get name(): string {
     return 'analysis_clear'
   }
