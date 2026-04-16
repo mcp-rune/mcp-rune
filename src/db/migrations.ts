@@ -1,21 +1,40 @@
 /**
- * Schema migrations shared across all MCP servers.
+ * Database Migrations
  *
- * Each migration has a version string, a human-readable name,
- * and an `up` SQL statement. Migrations are applied in order;
- * the runner tracks applied versions in a `schema_migrations` table.
+ * Exported SQL definitions for all tables required by mcp-kit features.
+ * Consumers import these and feed them to their own migration runner.
+ *
+ * @example
+ * import { migrations } from 'mcp-kit/db/migrations'
+ *
+ * for (const migration of migrations) {
+ *   await client.query(migration.up)
+ * }
  */
 
 export interface Migration {
+  /** Sequential version identifier (e.g. '001') */
   version: string
+  /** Descriptive name (e.g. 'create_oauth_sessions') */
   name: string
+  /** Feature that requires this table: 'core' (DATABASE_URL) or 'analysis' (ANALYSIS_ENABLED) */
+  feature: 'core' | 'analysis'
+  /** SQL DDL to create the table and indexes */
   up: string
 }
 
-export const migrations: Migration[] = [
+/**
+ * All mcp-kit database migrations, ordered by version.
+ *
+ * Feature groups:
+ * - **core**: Required when DATABASE_URL is set (OAuth token storage, operation memory)
+ * - **analysis**: Required when ANALYSIS_ENABLED=true (analysis findings, ingested records)
+ */
+export const migrations: readonly Migration[] = [
   {
     version: '001',
     name: 'create_oauth_sessions',
+    feature: 'core',
     up: `
       CREATE TABLE IF NOT EXISTS oauth_sessions (
         id BIGSERIAL PRIMARY KEY,
@@ -40,6 +59,7 @@ export const migrations: Migration[] = [
   {
     version: '002',
     name: 'create_tool_memories',
+    feature: 'core',
     up: `
       CREATE EXTENSION IF NOT EXISTS vector;
 
@@ -68,23 +88,26 @@ export const migrations: Migration[] = [
   {
     version: '003',
     name: 'create_analysis_memories',
+    feature: 'analysis',
     up: `
       CREATE TABLE IF NOT EXISTS analysis_memories (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        analysis_id VARCHAR(255) NOT NULL,
+        analysis_id TEXT NOT NULL,
         finding TEXT NOT NULL,
-        category VARCHAR(100),
+        category TEXT,
         metadata JSONB DEFAULT '{}',
         embedding vector(384),
         persistent BOOLEAN DEFAULT FALSE,
-        expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '1 hour',
-        created_at TIMESTAMPTZ DEFAULT NOW()
+        expires_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
 
       CREATE INDEX IF NOT EXISTS idx_analysis_memories_analysis_id
-        ON analysis_memories (analysis_id);
+        ON analysis_memories(analysis_id);
+      CREATE INDEX IF NOT EXISTS idx_analysis_memories_category
+        ON analysis_memories(category);
       CREATE INDEX IF NOT EXISTS idx_analysis_memories_expires_at
-        ON analysis_memories (expires_at);
+        ON analysis_memories(expires_at) WHERE persistent = FALSE;
       CREATE INDEX IF NOT EXISTS idx_analysis_memories_embedding
         ON analysis_memories USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
     `
@@ -92,21 +115,22 @@ export const migrations: Migration[] = [
   {
     version: '004',
     name: 'create_ingested_records',
+    feature: 'analysis',
     up: `
       CREATE TABLE IF NOT EXISTS ingested_records (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        analysis_id VARCHAR(255) NOT NULL,
-        model VARCHAR(255) NOT NULL,
+        id BIGSERIAL PRIMARY KEY,
+        analysis_id TEXT NOT NULL,
+        model TEXT NOT NULL,
         record_id TEXT,
-        data JSONB NOT NULL DEFAULT '{}',
-        expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '1 hour',
+        data JSONB NOT NULL,
+        expires_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
 
       CREATE INDEX IF NOT EXISTS idx_ingested_records_analysis_id
-        ON ingested_records (analysis_id);
+        ON ingested_records(analysis_id);
       CREATE INDEX IF NOT EXISTS idx_ingested_records_expires_at
-        ON ingested_records (expires_at);
+        ON ingested_records(expires_at) WHERE expires_at IS NOT NULL;
     `
   }
-]
+] as const
