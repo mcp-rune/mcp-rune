@@ -1,4 +1,3 @@
-
 // Mock the vendor module
 vi.mock('../../../src/services/vendor/sentry/index.js', () => ({
   ErrorCategory: {
@@ -29,25 +28,24 @@ vi.mock('../../../src/services/vendor/sentry/index.js', () => ({
 }))
 
 import {
-  initErrorTracking,
-  isErrorTrackingEnabled,
-  captureToolError,
-  captureApiError,
-  capturePromptError,
-  captureException,
-  captureMessage,
-  categorizeError,
   addBreadcrumb,
   addToolBreadcrumb,
-  setMcpClientContext,
-  setUser,
+  captureApiError,
+  captureException,
+  captureMessage,
+  capturePromptError,
+  captureToolError,
+  categorizeError,
   clearUser,
-  sanitizeToolArgs,
-  flushErrorTracking,
   closeErrorTracking,
-  ErrorCategory
+  ErrorCategory,
+  flushErrorTracking,
+  initErrorTracking,
+  isErrorTrackingEnabled,
+  sanitizeToolArgs,
+  setMcpClientContext,
+  setUser
 } from '../../../src/services/error-tracking.js'
-
 import * as vendor from '../../../src/services/vendor/sentry/index.js'
 
 describe('lib/services/error-tracking', () => {

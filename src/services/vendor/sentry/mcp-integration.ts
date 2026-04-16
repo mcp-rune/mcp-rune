@@ -8,6 +8,7 @@
  */
 
 import * as Sentry from '@sentry/node'
+
 import { sanitizeToolArgs } from './sanitizers.js'
 
 /** MCP error categories for grouping and alerting */
@@ -206,7 +207,10 @@ export function capturePromptError(
 }
 
 /** Create a transaction for tool execution tracking */
-export function startToolTransaction(toolName: string, args: Record<string, unknown> = {}): unknown {
+export function startToolTransaction(
+  toolName: string,
+  args: Record<string, unknown> = {}
+): unknown {
   return Sentry.startSpan(
     {
       name: `mcp.tool.${toolName}`,

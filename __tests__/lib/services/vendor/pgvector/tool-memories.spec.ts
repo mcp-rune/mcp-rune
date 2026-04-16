@@ -1,10 +1,10 @@
 import {
-  storeOperation,
-  findSimilar,
+  cleanupExpired,
   detectGaps,
+  findSimilar,
   getClusters,
   getStats,
-  cleanupExpired
+  storeOperation
 } from '../../../../../src/services/vendor/pgvector/tool-memories.js'
 
 // Mock cosine-similarity

@@ -53,7 +53,9 @@ export function applyColumnSelection(
   if (!columnsToUse) return schema
 
   const columnMap = new Map(schema.columns.map((c) => [c.name, c]))
-  const filtered = columnsToUse.map((name) => columnMap.get(name)).filter(Boolean) as ColumnDefinition[]
+  const filtered = columnsToUse
+    .map((name) => columnMap.get(name))
+    .filter(Boolean) as ColumnDefinition[]
 
   // If filtering produced nothing (all unknown names), fall back to defaults or full schema
   if (filtered.length === 0) {

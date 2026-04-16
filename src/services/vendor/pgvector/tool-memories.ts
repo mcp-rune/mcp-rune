@@ -6,6 +6,7 @@
  */
 
 import type { Pool } from 'pg'
+
 import { cosineSimilarity } from '../../cosine-similarity.js'
 
 export interface OperationMetadata {
@@ -155,7 +156,9 @@ export async function findSimilar(
     params
   )
 
-  return (result.rows as ToolMemoryRow[]).filter((row) => (row.similarity ?? 0) >= threshold) as unknown as Record<string, unknown>[]
+  return (result.rows as ToolMemoryRow[]).filter(
+    (row) => (row.similarity ?? 0) >= threshold
+  ) as unknown as Record<string, unknown>[]
 }
 
 /**

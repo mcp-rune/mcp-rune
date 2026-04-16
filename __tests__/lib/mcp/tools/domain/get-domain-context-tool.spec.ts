@@ -1,9 +1,9 @@
-import { GetDomainContextTool } from '../../../../../src/mcp/tools/domain/get-domain-context-tool.js'
+import { BusinessRule, RuleSet } from '../../../../../src/mcp/domain/business-rules.js'
+import { DomainConcept, DomainKnowledge } from '../../../../../src/mcp/domain/knowledge.js'
 import { DomainRegistry } from '../../../../../src/mcp/domain/registry.js'
-import { DomainKnowledge, DomainConcept } from '../../../../../src/mcp/domain/knowledge.js'
-import { RuleSet, BusinessRule } from '../../../../../src/mcp/domain/business-rules.js'
-import { WorkflowRegistry, WorkflowDefinition } from '../../../../../src/mcp/domain/workflows.js'
+import { WorkflowDefinition, WorkflowRegistry } from '../../../../../src/mcp/domain/workflows.js'
 import { TOOL_CATEGORIES } from '../../../../../src/mcp/tools/categories.js'
+import { GetDomainContextTool } from '../../../../../src/mcp/tools/domain/get-domain-context-tool.js'
 
 function createTestRegistry() {
   return new DomainRegistry({

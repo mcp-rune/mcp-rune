@@ -5,11 +5,13 @@
  * It validates fields using the appropriate strategy for the model.
  */
 
-import { z } from 'zod'
 import type { ZodTypeAny } from 'zod'
-import { BaseStrategyTool } from './base-strategy-tool.js'
-import type { ToolResult } from '#src/mcp/tools/base-tool.js'
+import { z } from 'zod'
+
 import { coerceToObject } from '#src/core/helpers.js'
+import type { ToolResult } from '#src/mcp/tools/base-tool.js'
+
+import { BaseStrategyTool } from './base-strategy-tool.js'
 
 export class ValidateFormTool extends BaseStrategyTool {
   get name(): string {
@@ -78,7 +80,9 @@ Use this tool after collecting form data to:
     }
 
     // Get the strategy for this prompt
-    const strategy = this.getStrategy(promptClass as { strategy?: 'stateless' | 'hybrid' | 'stateful' })
+    const strategy = this.getStrategy(
+      promptClass as { strategy?: 'stateless' | 'hybrid' | 'stateful' }
+    )
 
     // Check if validation is supported
     const check = this.checkOperation(strategy, 'validateFields', model)
@@ -88,7 +92,15 @@ Use this tool after collecting form data to:
 
     // If section is specified and strategy supports it, validate section only
     if (section && strategy.supportsOperation('validateSection')) {
-      const validateSection = (strategy as unknown as { validateSection: (pc: unknown, s: string, f: Record<string, unknown>) => Record<string, unknown> }).validateSection.bind(strategy)
+      const validateSection = (
+        strategy as unknown as {
+          validateSection: (
+            pc: unknown,
+            s: string,
+            f: Record<string, unknown>
+          ) => Record<string, unknown>
+        }
+      ).validateSection.bind(strategy)
       const result = validateSection(promptClass, section, fields || {})
 
       if (this.logger) {
@@ -105,7 +117,11 @@ Use this tool after collecting form data to:
     }
 
     // Full validation
-    const validateFields = (strategy as unknown as { validateFields: (pc: unknown, f: Record<string, unknown>) => Record<string, unknown> }).validateFields.bind(strategy)
+    const validateFields = (
+      strategy as unknown as {
+        validateFields: (pc: unknown, f: Record<string, unknown>) => Record<string, unknown>
+      }
+    ).validateFields.bind(strategy)
     const result = validateFields(promptClass, fields || {})
 
     if (this.logger) {

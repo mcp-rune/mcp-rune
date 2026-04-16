@@ -1,18 +1,18 @@
+import { WorkflowDefinition } from '../../../../../src/mcp/domain/workflows.js'
 import {
+  collectStepGroup,
+  findNextStepOrder,
+  findStepInfo,
+  renderLoopGroup,
+  renderNextStepHint,
+  renderPaginationGuidance,
+  renderParallelGroup,
+  renderRoadmap,
   renderStepDetail,
   renderToolGuidance,
-  renderPaginationGuidance,
-  renderLoopGroup,
-  renderParallelGroup,
-  renderWorkflowOverview,
-  renderRoadmap,
-  renderNextStepHint,
   renderWorkflowList,
-  findStepInfo,
-  findNextStepOrder,
-  collectStepGroup
+  renderWorkflowOverview
 } from '../../../../../src/mcp/tools/domain/workflow-renderer.js'
-import { WorkflowDefinition } from '../../../../../src/mcp/domain/workflows.js'
 
 const APP_TOOL_NAMES = ['search_records_view', 'list_records_view', 'view_records']
 

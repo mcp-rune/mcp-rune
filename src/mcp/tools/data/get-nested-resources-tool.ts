@@ -1,10 +1,12 @@
-import { z } from 'zod'
-import { BaseTool } from '../base-tool.js'
-import type { ToolResult, ToolAnnotations } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
+import { z } from 'zod'
+
+import { pickFields, sanitizeResponseData } from '#src/core/helpers.js'
+
+import type { ToolAnnotations, ToolResult } from '../base-tool.js'
+import { BaseTool } from '../base-tool.js'
 import type { NestedValidationError } from '../validators.js'
 import { validateNestedResource } from '../validators.js'
-import { sanitizeResponseData, pickFields } from '#src/core/helpers.js'
 
 /**
  * Tool for getting nested resources (related records)

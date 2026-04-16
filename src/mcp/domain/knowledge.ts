@@ -10,8 +10,8 @@
  * frameworks, and processes that span multiple models.
  */
 
-import type { DomainSearchStrategy, DomainItem } from './search-strategy.js'
-import { SubstringSearch, createDomainSearch } from './search-strategy.js'
+import type { DomainItem, DomainSearchStrategy } from './search-strategy.js'
+import { createDomainSearch, SubstringSearch } from './search-strategy.js'
 
 export interface DomainConceptConfig {
   name: string

@@ -10,14 +10,17 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+
 import { z } from 'zod'
-import { createSelectionTools } from '#src/mcp/apps/selection-tools.js'
-import * as logger from '#src/services/logger.js'
-import { errorMeta } from '#src/mcp/apps/helpers.js'
+
 import { defaultConvention } from '#src/mcp/api-conventions/index.js'
-import type { AppModelClass, ToolResult } from './types.js'
+import { errorMeta } from '#src/mcp/apps/helpers.js'
+import { createSelectionTools } from '#src/mcp/apps/selection-tools.js'
 import type { ApiClient } from '#src/mcp/search/search-client.js'
 import type { SearchClient } from '#src/mcp/search/search-client.js'
+import * as logger from '#src/services/logger.js'
+
+import type { AppModelClass, ToolResult } from './types.js'
 
 const MAX_RECORDS = 200
 const DIST_DIR = path.resolve(import.meta.dirname, 'dist')

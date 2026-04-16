@@ -2,7 +2,6 @@
  * PostgreSQL Token Store Adapter Tests (mocked pg)
  */
 
-
 const { mockPool } = vi.hoisted(() => {
   const mockPool = {
     query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),

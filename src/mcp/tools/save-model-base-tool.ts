@@ -8,9 +8,8 @@
  * It is extended by server-specific CreateModelTool and UpdateModelTool.
  */
 
-import { BaseTool } from './base-tool.js'
 import { defaultConvention } from '../api-conventions/index.js'
-import type { BaseConvention, BelongsToAssociation } from '../api-conventions/base-convention.js'
+import { BaseTool } from './base-tool.js'
 
 export class SaveModelBaseTool extends BaseTool {
   /**

@@ -8,7 +8,9 @@
  */
 
 import type { Pool } from 'pg'
+
 import * as logger from '#src/services/logger.js'
+
 import type { StoreTokensParams, TokenData } from './base-adapter.js'
 import { BaseTokenStoreAdapter } from './base-adapter.js'
 
@@ -33,7 +35,14 @@ export class PostgresqlAdapter extends BaseTokenStoreAdapter {
     // No-op: pool is managed externally by src/engineer/db.js
   }
 
-  async storeTokens({ userId, accessToken, refreshToken, expiresIn, scope, mcpSessionId }: StoreTokensParams): Promise<void> {
+  async storeTokens({
+    userId,
+    accessToken,
+    refreshToken,
+    expiresIn,
+    scope,
+    mcpSessionId
+  }: StoreTokensParams): Promise<void> {
     this._ensurePool()
 
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString()

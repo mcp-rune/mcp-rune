@@ -1,6 +1,6 @@
 import {
-  generateListSchema,
   applyColumnSelection,
+  generateListSchema,
   getAvailableColumnNames
 } from '../../../../src/mcp/apps/list-schema.js'
 

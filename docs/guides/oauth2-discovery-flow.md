@@ -14,15 +14,15 @@ The MCP server never issues tokens itself (except via the M2M `/mcp/m2m/token` c
 
 ## RFC Map
 
-| RFC                                | Title                                                 | Route(s) exposed                                                                                       | Implementation                                                                                                                       |
-| ---------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| RFC 6749                           | The OAuth 2.0 Authorization Framework                 | `GET /oauth/authorize`, `POST /oauth/token`                                                            | `lib/mcp/middleware/oauth-router.js` — authorize handler, token proxy                                                                |
-| RFC 7591                           | OAuth 2.0 Dynamic Client Registration Protocol (DCR)  | `POST /oauth/register`                                                                                 | `lib/mcp/middleware/oauth-router.js`                                                                                                 |
-| RFC 7636                           | Proof Key for Code Exchange (PKCE)                    | Forwarded through `/oauth/authorize` and `/oauth/token`                                                | Client provides `code_challenge`/`code_verifier`; parameters pass through unchanged                                                  |
-| RFC 8414                           | OAuth 2.0 Authorization Server Metadata               | `GET /.well-known/oauth-authorization-server`, `GET /.well-known/openid-configuration`                 | `lib/mcp/middleware/oauth-router.js` — server metadata, openid alias                                                                 |
-| RFC 8707                           | Resource Indicators for OAuth 2.0                     | `resource` query/body param forwarded on authorize + token                                             | `lib/oauth2/service.js`                                                                                                              |
-| RFC 9728                           | OAuth 2.0 Protected Resource Metadata                 | `GET /.well-known/oauth-protected-resource`, `GET /.well-known/oauth-protected-resource/mcp`           | `lib/mcp/middleware/oauth-router.js` — both forms share one handler                                                                  |
-| MCP Authorization spec 2025-06-18  | MCP-specific framing of the above                     | `WWW-Authenticate` on `/mcp` with `resource_metadata` parameter                                        | `lib/mcp/middleware/oauth-router.js` — `sendUnauthorized()`                                                                          |
+| RFC                               | Title                                                | Route(s) exposed                                                                             | Implementation                                                                      |
+| --------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| RFC 6749                          | The OAuth 2.0 Authorization Framework                | `GET /oauth/authorize`, `POST /oauth/token`                                                  | `lib/mcp/middleware/oauth-router.js` — authorize handler, token proxy               |
+| RFC 7591                          | OAuth 2.0 Dynamic Client Registration Protocol (DCR) | `POST /oauth/register`                                                                       | `lib/mcp/middleware/oauth-router.js`                                                |
+| RFC 7636                          | Proof Key for Code Exchange (PKCE)                   | Forwarded through `/oauth/authorize` and `/oauth/token`                                      | Client provides `code_challenge`/`code_verifier`; parameters pass through unchanged |
+| RFC 8414                          | OAuth 2.0 Authorization Server Metadata              | `GET /.well-known/oauth-authorization-server`, `GET /.well-known/openid-configuration`       | `lib/mcp/middleware/oauth-router.js` — server metadata, openid alias                |
+| RFC 8707                          | Resource Indicators for OAuth 2.0                    | `resource` query/body param forwarded on authorize + token                                   | `lib/oauth2/service.js`                                                             |
+| RFC 9728                          | OAuth 2.0 Protected Resource Metadata                | `GET /.well-known/oauth-protected-resource`, `GET /.well-known/oauth-protected-resource/mcp` | `lib/mcp/middleware/oauth-router.js` — both forms share one handler                 |
+| MCP Authorization spec 2025-06-18 | MCP-specific framing of the above                    | `WWW-Authenticate` on `/mcp` with `resource_metadata` parameter                              | `lib/mcp/middleware/oauth-router.js` — `sendUnauthorized()`                         |
 
 ## End-to-End Discovery Flow
 
@@ -79,9 +79,9 @@ RFC 9728 §3.1 defines how to build the Protected Resource Metadata URL for a re
 
 Example for this repo:
 
-| Resource URL (the `/mcp` endpoint)    | Canonical metadata URL (RFC 9728 §3.1)                                    |
-| ------------------------------------- | ------------------------------------------------------------------------- |
-| `http://localhost:4100/mcp`           | `http://localhost:4100/.well-known/oauth-protected-resource/mcp`          |
+| Resource URL (the `/mcp` endpoint)    | Canonical metadata URL (RFC 9728 §3.1)                                     |
+| ------------------------------------- | -------------------------------------------------------------------------- |
+| `http://localhost:4100/mcp`           | `http://localhost:4100/.well-known/oauth-protected-resource/mcp`           |
 | `https://dsaenz.dev/engineer-mcp/mcp` | `https://dsaenz.dev/.well-known/oauth-protected-resource/engineer-mcp/mcp` |
 
 `buildResourceMetadataUrl()` in `lib/mcp/middleware/oauth-router.js` constructs this form, and `sendUnauthorized()` advertises it in the `WWW-Authenticate: Bearer resource_metadata="…"` header whenever `/mcp` is hit without a token.
@@ -125,10 +125,10 @@ This matches MCP spec 2025-06-18 (`§ Authorization`) and RFC 9728 §5.1. The `r
 
 ## Related Files
 
-| File                                                 | Role                                                                                                                       |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `lib/mcp/middleware/oauth-router.js`                 | Express router with all OAuth routes + `buildResourceMetadataUrl` / `sendUnauthorized` helpers                             |
-| `lib/mcp/http-server.js`                             | HTTP server entry point; mounts the OAuth router and invokes `sendUnauthorized` on unauthenticated `/mcp` requests         |
-| `lib/oauth2/service.js`                              | OAuth client logic: token introspection, client-credentials grant, resource indicator handling                             |
-| `__tests__/lib/mcp/middleware/oauth-router.spec.js`  | Route-level unit tests, including RFC 9728 §3.1 coverage                                                                   |
-| `docs/authorization-coverage.md`                     | Conformance coverage matrix — maps test cases to RFC sections                                                              |
+| File                                                | Role                                                                                                               |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `lib/mcp/middleware/oauth-router.js`                | Express router with all OAuth routes + `buildResourceMetadataUrl` / `sendUnauthorized` helpers                     |
+| `lib/mcp/http-server.js`                            | HTTP server entry point; mounts the OAuth router and invokes `sendUnauthorized` on unauthenticated `/mcp` requests |
+| `lib/oauth2/service.js`                             | OAuth client logic: token introspection, client-credentials grant, resource indicator handling                     |
+| `__tests__/lib/mcp/middleware/oauth-router.spec.js` | Route-level unit tests, including RFC 9728 §3.1 coverage                                                           |
+| `docs/authorization-coverage.md`                    | Conformance coverage matrix — maps test cases to RFC sections                                                      |

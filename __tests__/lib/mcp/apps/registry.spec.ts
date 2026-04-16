@@ -1,4 +1,3 @@
-
 const { mockRegisterAppTool, mockRegisterAppResource, mockLogger } = vi.hoisted(() => ({
   mockRegisterAppTool: vi.fn(),
   mockRegisterAppResource: vi.fn(),

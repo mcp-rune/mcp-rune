@@ -1,6 +1,8 @@
 /* record-detail — app-specific styles (base.css provides reset, palette, buttons, status bar) */
 
-.header { margin-bottom: 16px; }
+.header {
+  margin-bottom: 16px;
+}
 
 /* Detail card */
 .detail-card {

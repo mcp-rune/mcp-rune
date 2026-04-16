@@ -6,10 +6,11 @@
  * returns a valid protected resource metadata document.
  */
 
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 import Ajv from 'ajv'
-import { readFileSync } from 'fs'
-import { resolve, dirname } from 'path'
-import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const fixturesDir = resolve(__dirname, '../../../__fixtures__/contracts')

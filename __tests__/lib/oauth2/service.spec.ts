@@ -9,7 +9,6 @@
  * (HTTP server, browser open) and tested separately if needed.
  */
 
-
 // Mock openid-client
 vi.mock('openid-client', () => ({
   discovery: vi.fn(),
@@ -39,8 +38,9 @@ vi.mock('../../../src/oauth2/token-store.js', () => ({
   getTokensBySession: vi.fn()
 }))
 
-import { OAuthService } from '../../../src/oauth2/service.js'
 import * as client from 'openid-client'
+
+import { OAuthService } from '../../../src/oauth2/service.js'
 import * as tokenStore from '../../../src/oauth2/token-store.js'
 
 const defaultOptions = {

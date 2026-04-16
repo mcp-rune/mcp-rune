@@ -11,9 +11,10 @@
  * @see https://langfuse.com/docs/observability/sdk/typescript/instrumentation
  */
 
-import { startActiveObservation, propagateAttributes } from '@langfuse/tracing'
-import { sanitizeToolArgs } from '../../sanitizers.js'
+import { propagateAttributes, startActiveObservation } from '@langfuse/tracing'
+
 import * as logger from '../../logger.js'
+import { sanitizeToolArgs } from '../../sanitizers.js'
 
 interface TraceContext {
   traceId: string
@@ -55,7 +56,9 @@ export function setConfigured(value: boolean): void {
  * // W3C traceparent format: version-traceId-parentId-traceFlags
  * extractTraceContext({ traceparent: '00-abc123...-def456...-01' })
  */
-export function extractTraceContext(meta: Record<string, unknown> | null | undefined): TraceContext | null {
+export function extractTraceContext(
+  meta: Record<string, unknown> | null | undefined
+): TraceContext | null {
   if (!(meta as Record<string, unknown> | undefined)?.traceparent) return null
 
   const parts = String((meta as Record<string, unknown>).traceparent).split('-')
@@ -277,7 +280,10 @@ export async function tracePromptGeneration<T>(
  * applied per-trace via `propagateAttributes` wrapping (since propagateAttributes
  * is scoped to its callback).
  */
-export function setSessionContext(ctx: { sessionId?: string; metadata?: Record<string, string> }): void {
+export function setSessionContext(ctx: {
+  sessionId?: string
+  metadata?: Record<string, string>
+}): void {
   if (!configured) return
 
   try {

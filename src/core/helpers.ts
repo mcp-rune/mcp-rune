@@ -73,10 +73,7 @@ export function sanitizeResponseData(data: unknown, maxSize: number = 50000): st
  * Returns data unchanged when fields is empty/omitted.
  * Works on single records and arrays. Never mutates input.
  */
-export function pickFields(
-  data: unknown,
-  fields?: string[]
-): unknown {
+export function pickFields(data: unknown, fields?: string[]): unknown {
   if (!fields || fields.length === 0) return data
   if (data == null) return data
   if (Array.isArray(data)) return data.map((item) => pickFields(item, fields))

@@ -1,5 +1,5 @@
-import { UpdateModelTool } from '../../../../../src/mcp/tools/data/update-model-tool.js'
 import { halConvention } from '../../../../../src/mcp/api-conventions/hal.js'
+import { UpdateModelTool } from '../../../../../src/mcp/tools/data/update-model-tool.js'
 
 vi.mock('#src/services/vector-storage.js', () => ({
   storeOperation: vi.fn().mockResolvedValue(null)

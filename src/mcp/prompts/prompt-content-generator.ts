@@ -19,11 +19,11 @@
  */
 
 import type { PromptClassLike } from './base-prompt.js'
-import { generateSection, generateAllSections } from './generators/section-generator.js'
+import { generateAttributeReference } from './generators/attribute-reference-generator.js'
 import { generateFlowDiagram } from './generators/flow-diagram-generator.js'
 import { generateGuidance } from './generators/guidance-generator.js'
+import { generateAllSections, generateSection } from './generators/section-generator.js'
 import { generateSummary } from './generators/summary-generator.js'
-import { generateAttributeReference } from './generators/attribute-reference-generator.js'
 import { generateToolUsage } from './generators/tool-usage-generator.js'
 
 interface GeneratorContext {

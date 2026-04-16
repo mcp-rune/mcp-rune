@@ -21,12 +21,12 @@
  */
 
 // Vendor implementation - change this import to switch vendors
-import * as vendor from './vendor/pgvector/index.js'
-import * as operations from './vendor/pgvector/tool-memories.js'
-import * as analysisMemories from './vendor/pgvector/analysis-memories.js'
-import * as ingestedRecords from './vendor/pgvector/ingested-records.js'
 import { embed, embedBatch } from './embeddings.js'
 import { adaptToolOutput } from './tool-output-adapters.js'
+import * as analysisMemories from './vendor/pgvector/analysis-memories.js'
+import * as vendor from './vendor/pgvector/index.js'
+import * as ingestedRecords from './vendor/pgvector/ingested-records.js'
+import * as operations from './vendor/pgvector/tool-memories.js'
 
 export interface VectorStorageOptions {
   serviceName?: string

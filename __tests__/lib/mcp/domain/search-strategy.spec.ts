@@ -1,7 +1,7 @@
 import {
-  SubstringSearch,
+  createDomainSearch,
   EmbeddingSearch,
-  createDomainSearch
+  SubstringSearch
 } from '../../../../src/mcp/domain/search-strategy.js'
 
 // Mock embeddings module (used by SemanticSearch inside EmbeddingSearch)

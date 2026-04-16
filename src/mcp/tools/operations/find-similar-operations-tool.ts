@@ -1,8 +1,10 @@
-import { z } from 'zod'
-import { BaseOperationsTool } from './base-operations-tool.js'
-import type { ToolResult } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
+import { z } from 'zod'
+
 import { findSimilarOperations } from '#src/services/vector-storage.js'
+
+import type { ToolResult } from '../base-tool.js'
+import { BaseOperationsTool } from './base-operations-tool.js'
 
 interface SimilarOperation {
   similarity: number
@@ -58,7 +60,11 @@ export class FindSimilarOperationsTool extends BaseOperationsTool {
     const options: Record<string, unknown> = {}
     if (top_k) options.topK = top_k
 
-    const results = (await findSimilarOperations(query, filters, options)) as unknown as SimilarOperation[]
+    const results = (await findSimilarOperations(
+      query,
+      filters,
+      options
+    )) as unknown as SimilarOperation[]
 
     if (results.length === 0) {
       return this.formatResponse('No similar operations found for the given query.')

@@ -1,8 +1,10 @@
-import { z } from 'zod'
-import { SaveModelBaseTool } from '../save-model-base-tool.js'
-import type { ToolResult, ToolAnnotations } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
+import { z } from 'zod'
+
 import { storeOperation } from '#src/services/vector-storage.js'
+
+import type { ToolAnnotations, ToolResult } from '../base-tool.js'
+import { SaveModelBaseTool } from '../save-model-base-tool.js'
 
 /**
  * Tool for creating new records
@@ -16,7 +18,12 @@ export class CreateModelTool extends SaveModelBaseTool {
   }
 
   override get annotations(): ToolAnnotations {
-    return { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
+    return {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true
+    }
   }
 
   override get baseDescription(): string {
@@ -87,9 +94,9 @@ export class CreateModelTool extends SaveModelBaseTool {
       }
 
       // Validate required fields
-      const missingFields = ((modelConfig as Record<string, unknown>).required as string[] ?? []).filter(
-        (field: string) => !attributes || attributes[field] === undefined
-      )
+      const missingFields = (
+        ((modelConfig as Record<string, unknown>).required as string[]) ?? []
+      ).filter((field: string) => !attributes || attributes[field] === undefined)
 
       if (missingFields.length > 0) {
         return {
@@ -114,7 +121,10 @@ export class CreateModelTool extends SaveModelBaseTool {
 
       // Build payload using convention adapter
       // Cast to allow server-specific options (e.g., userId impersonation)
-      const api = this.apiClient! as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>
+      const api = this.apiClient! as unknown as Record<
+        string,
+        (...args: unknown[]) => Promise<unknown>
+      >
       const data = (await api.post!(
         endpoint,
         this.buildRequestPayload(model, attributes),

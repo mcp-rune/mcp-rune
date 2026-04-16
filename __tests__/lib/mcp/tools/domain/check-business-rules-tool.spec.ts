@@ -1,9 +1,9 @@
-import { CheckBusinessRulesTool } from '../../../../../src/mcp/tools/domain/check-business-rules-tool.js'
-import { DomainRegistry } from '../../../../../src/mcp/domain/registry.js'
+import { BusinessRule, RuleSet } from '../../../../../src/mcp/domain/business-rules.js'
 import { DomainKnowledge } from '../../../../../src/mcp/domain/knowledge.js'
-import { RuleSet, BusinessRule } from '../../../../../src/mcp/domain/business-rules.js'
+import { DomainRegistry } from '../../../../../src/mcp/domain/registry.js'
 import { WorkflowRegistry } from '../../../../../src/mcp/domain/workflows.js'
 import { TOOL_CATEGORIES } from '../../../../../src/mcp/tools/categories.js'
+import { CheckBusinessRulesTool } from '../../../../../src/mcp/tools/domain/check-business-rules-tool.js'
 
 function createTestRegistry() {
   return new DomainRegistry({

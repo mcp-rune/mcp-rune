@@ -1,12 +1,14 @@
-import { z } from 'zod'
-import { BaseTool } from '../base-tool.js'
-import type { ToolResult, ModelConfig, ToolAnnotations } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
-import type { FilterSchema } from '../validators.js'
-import { SearchClient } from '#src/mcp/search/search-client.js'
-import { validateFilterValues, normalizeFilterValues } from '#src/mcp/tools/validators.js'
+import { z } from 'zod'
+
 import { pickFields } from '#src/core/helpers.js'
 import { resolveDerivedFields } from '#src/mcp/apps/derived-fields.js'
+import { SearchClient } from '#src/mcp/search/search-client.js'
+import { normalizeFilterValues, validateFilterValues } from '#src/mcp/tools/validators.js'
+
+import type { ModelConfig, ToolAnnotations, ToolResult } from '../base-tool.js'
+import { BaseTool } from '../base-tool.js'
+import type { FilterSchema } from '../validators.js'
 
 interface PaginationInfo {
   page: number
@@ -118,13 +120,20 @@ export class SearchRecordsTool extends BaseTool {
 
       const clampedPerPage = Math.min(per_page, 200)
       const searchClient = this._createSearchClient()
-      const { records, pagination } = (await searchClient.search(ModelClass as unknown as Parameters<typeof searchClient.search>[0], null as unknown as string, {
-        page,
-        perPage: clampedPerPage,
-        filters
-      })) as unknown as { records: Record<string, unknown>[]; pagination: PaginationInfo }
+      const { records, pagination } = (await searchClient.search(
+        ModelClass as unknown as Parameters<typeof searchClient.search>[0],
+        null as unknown as string,
+        {
+          page,
+          perPage: clampedPerPage,
+          filters
+        }
+      )) as unknown as { records: Record<string, unknown>[]; pagination: PaginationInfo }
 
-      resolveDerivedFields(records, ModelClass as unknown as Parameters<typeof resolveDerivedFields>[1])
+      resolveDerivedFields(
+        records,
+        ModelClass as unknown as Parameters<typeof resolveDerivedFields>[1]
+      )
       const filteredRecords = pickFields(records, fields)
 
       // Return in list-view compatible shape
@@ -164,8 +173,12 @@ export class SearchRecordsTool extends BaseTool {
 
   /** Create a SearchClient from the tool's apiClient and serverContext */
   private _createSearchClient(): SearchClient {
-    const searchGroups = ((this.serverContext as Record<string, unknown>)?.searchGroups ?? {}) as Record<string, unknown>
-    return new SearchClient(this.apiClient! as unknown as ConstructorParameters<typeof SearchClient>[0], { searchGroups } as unknown as ConstructorParameters<typeof SearchClient>[1])
+    const searchGroups = ((this.serverContext as Record<string, unknown>)?.searchGroups ??
+      {}) as Record<string, unknown>
+    return new SearchClient(
+      this.apiClient! as unknown as ConstructorParameters<typeof SearchClient>[0],
+      { searchGroups } as unknown as ConstructorParameters<typeof SearchClient>[1]
+    )
   }
 
   /**

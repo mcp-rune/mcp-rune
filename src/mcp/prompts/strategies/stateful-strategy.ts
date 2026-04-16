@@ -22,11 +22,12 @@
  * Example models: Rule, Right, Deal
  */
 
-import { BaseStrategy } from './base-strategy.js'
-import { HybridStrategy } from './hybrid-strategy.js'
-import type { ValidationResult, SummaryResult } from './hybrid-strategy.js'
-import type { PromptFieldDefinition, FieldGroup, Section } from '../base-prompt.js'
 import * as logger from '#src/services/logger.js'
+
+import type { FieldGroup, PromptFieldDefinition, Section } from '../base-prompt.js'
+import { BaseStrategy } from './base-strategy.js'
+import type { SummaryResult, ValidationResult } from './hybrid-strategy.js'
+import { HybridStrategy } from './hybrid-strategy.js'
 
 /** Section validation result */
 interface SectionValidationResult {
@@ -114,7 +115,10 @@ export class StatefulStrategy extends BaseStrategy {
   }
 
   /** Get documentation for the prompt */
-  static override getDocumentation(promptInstance: { promptContent: string; constructor: { name: string } }): string {
+  static override getDocumentation(promptInstance: {
+    promptContent: string
+    constructor: { name: string }
+  }): string {
     const promptContent = promptInstance.promptContent
 
     logger.debug('getDocumentation called', {
@@ -344,7 +348,11 @@ export class StatefulStrategy extends BaseStrategy {
     })
 
     // Get base validation from HybridStrategy
-    const result = HybridStrategy.validateFields(promptClass, fields, context) as StatefulValidationResult
+    const result = HybridStrategy.validateFields(
+      promptClass,
+      fields,
+      context
+    ) as StatefulValidationResult
 
     // Add section-level progress
     result.progress = this.getProgress(promptClass, fields)
@@ -481,7 +489,11 @@ export class StatefulStrategy extends BaseStrategy {
       model: context.model
     })
 
-    const summary = HybridStrategy.generateSummary(promptClass, fields, context) as StatefulSummaryResult
+    const summary = HybridStrategy.generateSummary(
+      promptClass,
+      fields,
+      context
+    ) as StatefulSummaryResult
 
     // Add progress to summary
     summary.progress = this.getProgress(promptClass, fields)

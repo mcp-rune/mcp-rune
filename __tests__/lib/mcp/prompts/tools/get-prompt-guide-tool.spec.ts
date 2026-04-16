@@ -1,5 +1,5 @@
-import { GetPromptGuideTool } from '../../../../../src/mcp/prompts/tools/get-prompt-guide-tool.js'
 import { BaseStrategyTool } from '../../../../../src/mcp/prompts/tools/base-strategy-tool.js'
+import { GetPromptGuideTool } from '../../../../../src/mcp/prompts/tools/get-prompt-guide-tool.js'
 
 describe('lib/mcp/prompts/tools/get-prompt-guide-tool', () => {
   describe('inheritance', () => {

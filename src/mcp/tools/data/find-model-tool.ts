@@ -1,9 +1,11 @@
-import { z } from 'zod'
-import { BaseTool } from '../base-tool.js'
-import type { ToolResult, ToolAnnotations } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
-import { validateSearchParams } from '../validators.js'
+import { z } from 'zod'
+
 import { pickFields } from '#src/core/helpers.js'
+
+import type { ToolAnnotations, ToolResult } from '../base-tool.js'
+import { BaseTool } from '../base-tool.js'
+import { validateSearchParams } from '../validators.js'
 
 /**
  * Tool for finding records by ID or search criteria
@@ -101,7 +103,10 @@ Use this tool to:
       }
 
       // Cast to allow server-specific options (e.g., userId impersonation)
-      const api = this.apiClient! as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>
+      const api = this.apiClient! as unknown as Record<
+        string,
+        (...args: unknown[]) => Promise<unknown>
+      >
 
       if (record_id) {
         const data = await api.get!(`${modelConfig.endpoint}/${record_id}`, {}, options)
@@ -114,17 +119,26 @@ Use this tool to:
           page: currentPage,
           per_page: per_page ?? 20
         }
-        const data = (await api.get!(modelConfig.endpoint, queryParams, options)) as Record<string, unknown>
+        const data = (await api.get!(modelConfig.endpoint, queryParams, options)) as Record<
+          string,
+          unknown
+        >
 
         // Transient context: emit _meta hint for large results so the client
         // can collapse this response after a consumer tool processes it
-        const records = Array.isArray(data) ? data : ((data?.data ?? data?.records ?? []) as unknown[])
+        const records = Array.isArray(data)
+          ? data
+          : ((data?.data ?? data?.records ?? []) as unknown[])
         const meta =
           (records as unknown[]).length >= 5
             ? {
                 context: {
                   lifecycle: 'transient',
-                  summary: this._buildTransientSummary(model, records as Record<string, unknown>[], currentPage)
+                  summary: this._buildTransientSummary(
+                    model,
+                    records as Record<string, unknown>[],
+                    currentPage
+                  )
                 }
               }
             : undefined
@@ -140,7 +154,11 @@ Use this tool to:
   }
 
   /** Build a compact summary for post-consumption display */
-  private _buildTransientSummary(model: string, records: Record<string, unknown>[], page: number): string {
+  private _buildTransientSummary(
+    model: string,
+    records: Record<string, unknown>[],
+    page: number
+  ): string {
     const ids = records.slice(0, 3).map((r) => r.id)
     const idPreview = ids.join(', ') + (records.length > 3 ? '...' : '')
     return `${records.length} ${model} records (page ${page}, IDs: ${idPreview})`

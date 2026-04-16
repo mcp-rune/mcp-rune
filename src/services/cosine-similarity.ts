@@ -10,7 +10,10 @@
  *
  * Accepts Float32Array, number[], or JSON strings "[0.1,0.2,...]".
  */
-export function cosineSimilarity(a: Float32Array | number[] | string, b: Float32Array | number[] | string): number {
+export function cosineSimilarity(
+  a: Float32Array | number[] | string,
+  b: Float32Array | number[] | string
+): number {
   const vecA: number[] = typeof a === 'string' ? JSON.parse(a) : Array.from(a)
   const vecB: number[] = typeof b === 'string' ? JSON.parse(b) : Array.from(b)
 

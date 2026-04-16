@@ -1,8 +1,10 @@
-import { z } from 'zod'
-import { SaveModelBaseTool } from '../save-model-base-tool.js'
-import type { ToolResult, ModelConfig } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
+import { z } from 'zod'
+
 import { storeOperation } from '#src/services/vector-storage.js'
+
+import type { ModelConfig, ToolResult } from '../base-tool.js'
+import { SaveModelBaseTool } from '../save-model-base-tool.js'
 
 export const MAX_BATCH_SIZE = 25
 const MAX_CONCURRENCY = 5
@@ -187,7 +189,7 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
 
       // isError only when ALL records failed
       if (succeeded === 0) {
-        (response as unknown as Record<string, unknown>).isError = true
+        ;(response as unknown as Record<string, unknown>).isError = true
       }
 
       return response
@@ -257,7 +259,7 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
     validIndices: number[]
   } {
     const nestedOnly = modelConfig.api?.nested?.nestedOnly
-    const requiredFields = (modelConfig as Record<string, unknown>).required as string[] ?? []
+    const requiredFields = ((modelConfig as Record<string, unknown>).required as string[]) ?? []
     const results = new Array<BulkResult>(records.length)
     const endpoints = new Array<string>(records.length)
     const cleanRecords = new Array<Record<string, unknown>>(records.length)
@@ -272,7 +274,8 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
       if (effectiveParent) {
         endpoints[i] = effectiveParent
       } else if (nestedOnly) {
-        const parentModels = (modelConfig.api?.nested as Record<string, unknown>)?.parentModels as string[] ?? []
+        const parentModels =
+          ((modelConfig.api?.nested as Record<string, unknown>)?.parentModels as string[]) ?? []
         results[i] = {
           index: i,
           status: 'validation_error',
@@ -326,10 +329,13 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
 
     const tasks = validIndices.map(
       (i) => () =>
-        this._api
-          .post!(endpoints[i]!, this.buildRequestPayload(model, cleanRecords[i]!), options)
+        this._api.post!(endpoints[i]!, this.buildRequestPayload(model, cleanRecords[i]!), options)
           .then((data) => {
-            results[i] = { index: i, status: 'created', id: (data as Record<string, unknown>).id as string }
+            results[i] = {
+              index: i,
+              status: 'created',
+              id: (data as Record<string, unknown>).id as string
+            }
           })
           .catch((error: HttpError) => {
             results[i] = {
@@ -357,12 +363,11 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
 
     const tasks = recordIds.map(
       (id, i) => () =>
-        this._api
-          .patch!(
-            `${modelConfig.endpoint}/${id}`,
-            this.buildRequestPayload(model, attributes),
-            options
-          )
+        this._api.patch!(
+          `${modelConfig.endpoint}/${id}`,
+          this.buildRequestPayload(model, attributes),
+          options
+        )
           .then(() => {
             results[i] = { index: i, id, status: 'updated' }
           })
@@ -392,12 +397,11 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
 
     const tasks = records.map((record, i) => () => {
       const { record_id, ...attrs } = record
-      return this._api
-        .patch!(
-          `${modelConfig.endpoint}/${record_id}`,
-          this.buildRequestPayload(model, attrs),
-          options
-        )
+      return this._api.patch!(
+        `${modelConfig.endpoint}/${record_id}`,
+        this.buildRequestPayload(model, attrs),
+        options
+      )
         .then(() => {
           results[i] = { index: i, id: record_id as string, status: 'updated' }
         })
@@ -427,8 +431,7 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
 
     const tasks = recordIds.map(
       (id, i) => () =>
-        this._api
-          .delete!(`${modelConfig.endpoint}/${id}`, options)
+        this._api.delete!(`${modelConfig.endpoint}/${id}`, options)
           .then(() => {
             results[i] = { index: i, id, status: 'deleted' }
           })

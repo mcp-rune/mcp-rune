@@ -1,8 +1,10 @@
-import { z } from 'zod'
-import { SaveModelBaseTool } from '../save-model-base-tool.js'
-import type { ToolResult, ToolAnnotations } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
+import { z } from 'zod'
+
 import { storeOperation } from '#src/services/vector-storage.js'
+
+import type { ToolAnnotations, ToolResult } from '../base-tool.js'
+import { SaveModelBaseTool } from '../save-model-base-tool.js'
 
 /**
  * Tool for updating existing records
@@ -16,7 +18,12 @@ export class UpdateModelTool extends SaveModelBaseTool {
   }
 
   override get annotations(): ToolAnnotations {
-    return { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true }
+    return {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true
+    }
   }
 
   override get baseDescription(): string {
@@ -95,7 +102,10 @@ export class UpdateModelTool extends SaveModelBaseTool {
 
       // Build payload using convention adapter
       // Cast to allow server-specific options (e.g., userId impersonation)
-      const api = this.apiClient! as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>
+      const api = this.apiClient! as unknown as Record<
+        string,
+        (...args: unknown[]) => Promise<unknown>
+      >
       const data = (await api.patch!(
         `${modelConfig.endpoint}/${record_id}`,
         this.buildRequestPayload(model, attributes),

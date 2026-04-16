@@ -1,4 +1,3 @@
-
 vi.mock('winston', () => {
   const mockLogger = {
     debug: vi.fn(),

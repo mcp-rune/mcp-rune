@@ -15,9 +15,11 @@
  * @see https://modelcontextprotocol.io/specification/draft/basic/authorization
  */
 
-import { randomUUID } from 'crypto'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { randomUUID } from 'node:crypto'
+
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+
 import * as logger from '#src/services/logger.js'
 import { setSessionContext } from '#src/services/tracing.js'
 

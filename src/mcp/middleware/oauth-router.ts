@@ -26,13 +26,15 @@
  * - POST /mcp/m2m/token                             - Machine-to-machine token endpoint
  */
 
-import { Router } from 'express'
-import type { Request, Response, NextFunction } from 'express'
-import { URLSearchParams } from 'url'
-import axios from 'axios'
+import { URLSearchParams } from 'node:url'
+
 import type { AxiosError } from 'axios'
-import * as logger from '#src/services/logger.js'
+import axios from 'axios'
+import type { NextFunction, Request, Response } from 'express'
+import { Router } from 'express'
+
 import type { OAuthService } from '#src/oauth2/service.js'
+import * as logger from '#src/services/logger.js'
 
 /** Escape HTML special characters to prevent XSS attacks */
 function escapeHtml(str: string): string {
@@ -106,7 +108,8 @@ export function createOAuthRouter({ oauth, baseUrl, mcpName }: OAuthRouterConfig
   const origin = new URL(baseUrl).origin
 
   /** Wrap async route handlers to catch errors and forward to error middleware */
-  const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => Promise<void>) =>
+  const asyncHandler =
+    (fn: (req: Request, res: Response, next: NextFunction) => Promise<void>) =>
     (req: Request, res: Response, next: NextFunction): void => {
       Promise.resolve(fn(req, res, next)).catch(next)
     }

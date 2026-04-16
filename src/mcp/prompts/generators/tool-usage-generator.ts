@@ -8,7 +8,7 @@
  * Pure function -- no dependency on BasePrompt or PromptContentGenerator.
  */
 
-import type { PromptFieldDefinition, PromptClassLike } from '../base-prompt.js'
+import type { PromptClassLike, PromptFieldDefinition } from '../base-prompt.js'
 import { titleCase } from './helpers.js'
 
 export interface ToolUsageContext {

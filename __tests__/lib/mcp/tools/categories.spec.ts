@@ -1,8 +1,8 @@
 import {
-  TOOL_CATEGORIES,
   CATEGORY_CONFIG,
+  categoryRequiresAuth,
   getCategoryConfig,
-  categoryRequiresAuth
+  TOOL_CATEGORIES
 } from '../../../../src/mcp/tools/categories.js'
 
 describe('lib/mcp/tools/categories', () => {

@@ -9,18 +9,21 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+
 import { z } from 'zod'
+
+import { resolveDerivedFields } from '#src/mcp/apps/derived-fields.js'
+import { errorMeta } from '#src/mcp/apps/helpers.js'
 import {
-  generateListSchema,
   applyColumnSelection,
+  generateListSchema,
   getAvailableColumnNames
 } from '#src/mcp/apps/list-schema.js'
 import { createSelectionTools } from '#src/mcp/apps/selection-tools.js'
-import { resolveDerivedFields } from '#src/mcp/apps/derived-fields.js'
-import * as logger from '#src/services/logger.js'
-import { errorMeta } from '#src/mcp/apps/helpers.js'
-import type { AppModelClass, ToolResult, ListSchema } from './types.js'
 import type { SearchClient } from '#src/mcp/search/search-client.js'
+import * as logger from '#src/services/logger.js'
+
+import type { AppModelClass, ListSchema, ToolResult } from './types.js'
 
 const MAX_VIEW_PER_PAGE = 20
 const DIST_DIR = path.resolve(import.meta.dirname, 'dist')
@@ -125,7 +128,11 @@ export function createSearchViewApp({ modelClasses, namespace }: SearchViewOptio
 
       const ModelClass = eligible[model]!
       const fullSchema = generateListSchema(ModelClass)
-      const schema: ListSchema & { model?: string } = applyColumnSelection(fullSchema, args.columns as string[] | undefined, ModelClass)
+      const schema: ListSchema & { model?: string } = applyColumnSelection(
+        fullSchema,
+        args.columns as string[] | undefined,
+        ModelClass
+      )
       schema.model = model!
       const filterDefinitions = ModelClass.search?.filters || {}
 

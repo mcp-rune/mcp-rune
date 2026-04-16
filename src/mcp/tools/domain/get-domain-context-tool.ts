@@ -1,7 +1,8 @@
-import { z } from 'zod'
-import { BaseDomainTool } from './base-domain-tool.js'
-import type { ToolResult } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
+import { z } from 'zod'
+
+import type { ToolResult } from '../base-tool.js'
+import { BaseDomainTool } from './base-domain-tool.js'
 
 interface ConceptDetail {
   inheritance?: { from: string; to: string; fields: string[] }
@@ -112,7 +113,9 @@ Call this FIRST when asked to review, analyze, or explain rights, deals, rules, 
       if (exact) {
         parts.push(this._formatConcept(exact))
       } else {
-        const results = (await (registry.searchConcepts as (q: string) => Promise<Concept[]>)(concept))
+        const results = await (registry.searchConcepts as (q: string) => Promise<Concept[]>)(
+          concept
+        )
         if (results.length > 0) {
           parts.push(this._formatConceptSearch(concept, results))
         } else {

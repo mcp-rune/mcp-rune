@@ -122,7 +122,12 @@ describe('lib/mcp/tools/base-tool', () => {
     it('should allow per-tool overrides', () => {
       class ReadOnlyDataTool extends BaseTool {
         get annotations() {
-          return { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
+          return {
+            readOnlyHint: true,
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: true
+          }
         }
       }
       const tool = new ReadOnlyDataTool()

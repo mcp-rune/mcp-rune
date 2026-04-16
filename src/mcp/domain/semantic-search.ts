@@ -11,8 +11,8 @@
  * so callers can fall back to substring matching.
  */
 
-import { embed, embedBatch } from '#src/services/embeddings.js'
 import { cosineSimilarity } from '#src/services/cosine-similarity.js'
+import { embed, embedBatch } from '#src/services/embeddings.js'
 
 export interface SemanticSearchOptions {
   threshold?: number

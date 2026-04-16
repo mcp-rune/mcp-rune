@@ -1,8 +1,10 @@
-import { z } from 'zod'
-import { BaseOperationsTool } from './base-operations-tool.js'
-import type { ToolResult } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
+import { z } from 'zod'
+
 import { getOperationClusters } from '#src/services/vector-storage.js'
+
+import type { ToolResult } from '../base-tool.js'
+import { BaseOperationsTool } from './base-operations-tool.js'
 
 interface ClusterOperation {
   toolName: string

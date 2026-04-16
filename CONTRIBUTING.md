@@ -43,6 +43,7 @@ npm run format        # Prettier
 Tests use [Vitest](https://vitest.dev/) with `describe`/`it`/`expect` and `vi.mock`/`vi.hoisted` for mocking. Tests live in `__tests__/` mirroring the `src/` structure. Tests are TypeScript (`.spec.ts`) with vitest globals enabled — no need to import `describe`/`it`/`expect`/`vi` explicitly.
 
 Coverage thresholds are enforced:
+
 - Statements: 92%
 - Branches: 85%
 - Functions: 93%
@@ -60,40 +61,48 @@ Coverage thresholds are enforced:
 These are areas where contributions are particularly welcome:
 
 ### Search Adapters
+
 New adapters that transform mcp-kit's generic filter format into specific API shapes:
+
 - Elasticsearch / OpenSearch
 - Algolia
 - Typesense
 - PostgreSQL full-text search (pg_trgm, tsvector)
 
 ### Database Adapters
+
 Token store and memory storage adapters for:
+
 - SQLite (local dev, single-user)
 - MySQL
 - Turso / LibSQL
 
 ### API Conventions
+
 Payload shape conventions beyond HAL and JSON:API:
+
 - GraphQL
 - gRPC / Protobuf
 
 ### Examples
+
 Working example servers demonstrating different use cases.
 
 ## Architecture
 
 The `src/` directory is organized into modules:
 
-| Module | Description |
-|--------|-------------|
-| `core/` | Config loader, helpers, validators, BaseModel |
-| `db/` | PostgreSQL client |
-| `mcp/` | Server factory, transports, tools, prompts, apps, search, domain |
-| `oauth2/` | OAuth 2.1 service and token store |
-| `oauth2-ref/` | Educational reference implementation |
-| `services/` | Logger, tracing, error tracking, embeddings, memory |
+| Module        | Description                                                      |
+| ------------- | ---------------------------------------------------------------- |
+| `core/`       | Config loader, helpers, validators, BaseModel                    |
+| `db/`         | PostgreSQL client                                                |
+| `mcp/`        | Server factory, transports, tools, prompts, apps, search, domain |
+| `oauth2/`     | OAuth 2.1 service and token store                                |
+| `oauth2-ref/` | Educational reference implementation                             |
+| `services/`   | Logger, tracing, error tracking, embeddings, memory              |
 
 Key principles:
+
 - **src/ never reads env vars** — configuration is injected
 - **src/ has no domain knowledge** — your server adds the domain
 - **Category-driven auth** — tools declare category, framework infers auth

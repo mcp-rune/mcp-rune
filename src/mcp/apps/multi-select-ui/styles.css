@@ -1,11 +1,26 @@
 /* multi-select — app-specific styles (base.css provides reset, palette, buttons, status bar) */
 
 /* Inline selection info in header */
-.header-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: nowrap; }
-.header-row h1 { margin-bottom: 0; }
-.header-row .btn-primary { margin-left: auto; }
-.selection-info { font-size: 1.15em; color: var(--color-accent); white-space: nowrap; }
-#selection-count { font-weight: 500; }
+.header-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+.header-row h1 {
+  margin-bottom: 0;
+}
+.header-row .btn-primary {
+  margin-left: auto;
+}
+.selection-info {
+  font-size: 1.15em;
+  color: var(--color-accent);
+  white-space: nowrap;
+}
+#selection-count {
+  font-weight: 500;
+}
 
 /* Filter input + select-all */
 .filter-box {
@@ -15,7 +30,7 @@
   margin-bottom: 12px;
 }
 
-.filter-box input[type="text"] {
+.filter-box input[type='text'] {
   flex: 1;
   padding: 10px 14px;
   background: var(--input-bg);
@@ -28,11 +43,11 @@
   transition: border-color 0.2s;
 }
 
-.filter-box input[type="text"]:focus {
+.filter-box input[type='text']:focus {
   border-color: var(--color-accent);
 }
 
-.filter-box input[type="text"]::placeholder {
+.filter-box input[type='text']::placeholder {
   color: var(--color-text-info);
 }
 
@@ -46,7 +61,7 @@
   white-space: nowrap;
 }
 
-.select-all-toggle input[type="checkbox"] {
+.select-all-toggle input[type='checkbox'] {
   width: 16px;
   height: 16px;
   cursor: pointer;
@@ -81,7 +96,7 @@
   display: none;
 }
 
-.result-item input[type="checkbox"] {
+.result-item input[type='checkbox'] {
   width: 16px;
   height: 16px;
   cursor: pointer;

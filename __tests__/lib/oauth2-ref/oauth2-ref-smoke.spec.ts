@@ -4,7 +4,6 @@
  * Verifies that oauth2-ref can be imported and instantiated in this repo
  */
 
-
 describe('OAuth2 Reference Implementation - Smoke Test', () => {
   let OAuth2ReferenceService
 

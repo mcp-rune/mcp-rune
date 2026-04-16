@@ -108,7 +108,9 @@ export function setSessionContext(ctx: SessionContext): void {
  * Parses W3C traceparent from _meta to link server traces
  * to client-side traces (e.g., LangChain with Langfuse).
  */
-export function extractTraceContext(meta: Record<string, unknown> | null | undefined): TraceContext | null {
+export function extractTraceContext(
+  meta: Record<string, unknown> | null | undefined
+): TraceContext | null {
   return vendor.extractTraceContext(meta)
 }
 

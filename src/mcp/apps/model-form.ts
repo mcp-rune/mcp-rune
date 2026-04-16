@@ -16,16 +16,19 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+
 import { z } from 'zod'
-import { generateFormSchema } from '#src/mcp/apps/form-schema.js'
-import {
-  resolveFormAssociations,
-  buildAssociationInstructions
-} from '#src/mcp/apps/form-associations.js'
-import * as logger from '#src/services/logger.js'
-import { errorMeta } from '#src/mcp/apps/helpers.js'
+
 import { defaultConvention } from '#src/mcp/api-conventions/index.js'
-import type { AppModelClass, FormFieldDefinition, ToolResult, ApiClient } from './types.js'
+import {
+  buildAssociationInstructions,
+  resolveFormAssociations
+} from '#src/mcp/apps/form-associations.js'
+import { generateFormSchema } from '#src/mcp/apps/form-schema.js'
+import { errorMeta } from '#src/mcp/apps/helpers.js'
+import * as logger from '#src/services/logger.js'
+
+import type { ApiClient, AppModelClass, FormFieldDefinition, ToolResult } from './types.js'
 
 const DIST_DIR = path.resolve(import.meta.dirname, 'dist')
 const HTML_PATH = path.join(DIST_DIR, 'model-form.html')
@@ -41,8 +44,22 @@ function getHtml(): string {
 
 interface FormAppOptions {
   modelClasses: Record<string, AppModelClass>
-  formClasses: Record<string, { fields?: string[]; fieldsets?: Record<string, unknown>; associations?: Array<string | Record<string, unknown>>; [key: string]: unknown }>
-  promptClasses?: Record<string, { new (args: Record<string, unknown>): { getDefaultFormState(): Record<string, unknown> }; [key: string]: unknown }>
+  formClasses: Record<
+    string,
+    {
+      fields?: string[]
+      fieldsets?: Record<string, unknown>
+      associations?: Array<string | Record<string, unknown>>
+      [key: string]: unknown
+    }
+  >
+  promptClasses?: Record<
+    string,
+    {
+      new (args: Record<string, unknown>): { getDefaultFormState(): Record<string, unknown> }
+      [key: string]: unknown
+    }
+  >
   namespace: string
 }
 
@@ -54,7 +71,10 @@ interface AppDefinition {
   description: string
   toolDescription: string
   toolInputSchema: Record<string, z.ZodTypeAny>
-  handleToolCall(args: Record<string, unknown>, context: { apiClient?: ApiClient }): Promise<ToolResult>
+  handleToolCall(
+    args: Record<string, unknown>,
+    context: { apiClient?: ApiClient }
+  ): Promise<ToolResult>
   getHtml: () => string
 }
 
@@ -136,7 +156,10 @@ export function createCreateFormApp({
       const ModelClass = eligible[model as string]!
       const FormClass = formClasses[model as string]!
       const PromptClass = promptClasses[model as string]
-      const prefillArgs: Record<string, unknown> = { ...extraArgs, ...(prefill as Record<string, unknown>) }
+      const prefillArgs: Record<string, unknown> = {
+        ...extraArgs,
+        ...(prefill as Record<string, unknown>)
+      }
 
       // Check form associations before rendering
       if (FormClass?.associations && FormClass.associations.length > 0) {

@@ -42,7 +42,9 @@ const toolRegistry = {
         tool.inputSchema,
         tool.annotations,
         async (args: Record<string, unknown>) => {
-          const apiClient = { /* inject your API client here */ }
+          const apiClient = {
+            /* inject your API client here */
+          }
           tool.apiClient = apiClient as never
           return tool.execute(args)
         }

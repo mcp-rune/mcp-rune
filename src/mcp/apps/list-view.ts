@@ -9,20 +9,23 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+
 import { z } from 'zod'
+
+import { defaultConvention } from '#src/mcp/api-conventions/index.js'
+import { resolveDerivedFields } from '#src/mcp/apps/derived-fields.js'
+import { errorMeta } from '#src/mcp/apps/helpers.js'
 import {
-  generateListSchema,
   applyColumnSelection,
+  generateListSchema,
   getAvailableColumnNames
 } from '#src/mcp/apps/list-schema.js'
 import { createSelectionTools } from '#src/mcp/apps/selection-tools.js'
-import { resolveDerivedFields } from '#src/mcp/apps/derived-fields.js'
-import * as logger from '#src/services/logger.js'
-import { errorMeta } from '#src/mcp/apps/helpers.js'
-import { defaultConvention } from '#src/mcp/api-conventions/index.js'
-import type { AppModelClass, ToolResult, ListSchema } from './types.js'
 import type { ApiClient } from '#src/mcp/search/search-client.js'
 import type { SearchClient } from '#src/mcp/search/search-client.js'
+import * as logger from '#src/services/logger.js'
+
+import type { AppModelClass, ListSchema, ToolResult } from './types.js'
 
 const DIST_DIR = path.resolve(import.meta.dirname, 'dist')
 const HTML_PATH = path.join(DIST_DIR, 'list-view.html')
@@ -86,7 +89,11 @@ export function createListViewApp({ modelClasses, namespace }: ListViewOptions):
       args: Record<string, unknown> = {},
       { apiClient, searchClient }: { apiClient?: ApiClient; searchClient?: SearchClient } = {}
     ): Promise<ToolResult> {
-      const { model, filters = {}, page = 1 } = args as {
+      const {
+        model,
+        filters = {},
+        page = 1
+      } = args as {
         model?: string
         filters?: Record<string, unknown>
         page?: number
@@ -107,7 +114,11 @@ export function createListViewApp({ modelClasses, namespace }: ListViewOptions):
 
       const ModelClass = modelClasses[model]!
       const fullSchema = generateListSchema(ModelClass)
-      const schema: ListSchema & { model?: string } = applyColumnSelection(fullSchema, args.columns as string[] | undefined, ModelClass)
+      const schema: ListSchema & { model?: string } = applyColumnSelection(
+        fullSchema,
+        args.columns as string[] | undefined,
+        ModelClass
+      )
       schema.model = model as string
       const filterDefinitions = ModelClass.search?.filters || {}
 
@@ -144,7 +155,10 @@ export function createListViewApp({ modelClasses, namespace }: ListViewOptions):
           const queryParams = { page, per_page: 20, ...(filters as Record<string, unknown>) }
           const data = await apiClient.get(ModelClass.endpoint, queryParams)
           const convention = ModelClass.api?.convention ?? defaultConvention
-          const normalized = convention.normalizeListResponse(data, { page: page as number, perPage: 20 })
+          const normalized = convention.normalizeListResponse(data, {
+            page: page as number,
+            perPage: 20
+          })
           records = normalized.records
           pagination = { ...pagination, ...normalized.pagination }
         } catch (err) {

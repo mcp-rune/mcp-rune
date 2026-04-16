@@ -31,8 +31,9 @@ vi.mock('../../../../src/oauth2/token-store.js', () => ({
 }))
 
 import * as openidClient from 'openid-client'
-import * as tokenStore from '../../../../src/oauth2/token-store.js'
+
 import { OAuthService } from '../../../../src/oauth2/service.js'
+import * as tokenStore from '../../../../src/oauth2/token-store.js'
 
 describe('Refresh Token Properties (RFC 6749 Section 6)', () => {
   let oauth

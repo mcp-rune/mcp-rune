@@ -9,6 +9,7 @@
  */
 
 import * as fc from 'fast-check'
+
 import { OAuthService } from '../../../../src/oauth2/service.js'
 
 describe('Introspection Cache Properties', () => {

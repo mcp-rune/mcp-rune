@@ -8,12 +8,13 @@
  */
 
 import * as fc from 'fast-check'
+
 import {
-  storeTokens,
+  _setAdapter,
+  deleteTokens,
   getTokens,
   getTokensBySession,
-  deleteTokens,
-  _setAdapter
+  storeTokens
 } from '../../../../src/oauth2/token-store.js'
 
 describe('Token Store Properties', () => {

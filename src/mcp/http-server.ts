@@ -14,27 +14,33 @@
  * - RFC8707: Resource Indicators for OAuth 2.0 (OAuth mode only)
  */
 
-import { randomUUID, createHash } from 'crypto'
-import express from 'express'
-import type { Request, Response, NextFunction, Express } from 'express'
-import cors from 'cors'
-import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
+import { createHash, randomUUID } from 'node:crypto'
+
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
+import cors from 'cors'
+import type { Express, NextFunction, Request, Response } from 'express'
+import express from 'express'
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
+
+import type { OAuthService } from '#src/oauth2/service.js'
 import * as logger from '#src/services/logger.js'
-import { setSessionContext, flushTracing, closeTracing } from '#src/services/tracing.js'
-import { createRequestIdMiddleware } from './middleware/request-id.js'
-import { createRequestLoggerMiddleware } from './middleware/request-logger.js'
+import { closeTracing, flushTracing, setSessionContext } from '#src/services/tracing.js'
+
 import {
   createOAuthRouter,
   extractBearerToken,
   sendUnauthorized
 } from './middleware/oauth-router.js'
-import type { OAuthService } from '#src/oauth2/service.js'
+import { createRequestIdMiddleware } from './middleware/request-id.js'
+import { createRequestLoggerMiddleware } from './middleware/request-logger.js'
 
 interface McpConfig {
   name: string
-  createServer: (options: { sessionId: string; getAccessToken: () => Promise<string | null | undefined> }) => McpServer
+  createServer: (options: {
+    sessionId: string
+    getAccessToken: () => Promise<string | null | undefined>
+  }) => McpServer
   promptRegistry?: PromptRegistryWithStats
 }
 
@@ -78,7 +84,16 @@ export class HttpServer {
   app: Express
   private httpServer: ReturnType<Express['listen']> | null
 
-  constructor({ port, baseUrl, pathPrefix, oauth, accessToken, mcp, isProduction, corsOrigins }: HttpServerConfig) {
+  constructor({
+    port,
+    baseUrl,
+    pathPrefix,
+    oauth,
+    accessToken,
+    mcp,
+    isProduction,
+    corsOrigins
+  }: HttpServerConfig) {
     if (!oauth && !accessToken) {
       throw new Error('HttpServer requires either oauth (OAuth mode) or accessToken (token mode)')
     }
@@ -205,7 +220,9 @@ export class HttpServer {
   }
 
   /** Wrap async route handlers to catch errors and forward to error middleware */
-  private _asyncHandler(fn: (req: McpRequest, res: Response, next: NextFunction) => Promise<void>): (req: Request, res: Response, next: NextFunction) => void {
+  private _asyncHandler(
+    fn: (req: McpRequest, res: Response, next: NextFunction) => Promise<void>
+  ): (req: Request, res: Response, next: NextFunction) => void {
     return (req: Request, res: Response, next: NextFunction): void => {
       Promise.resolve(fn(req as McpRequest, res, next)).catch(next)
     }
@@ -371,7 +388,11 @@ export class HttpServer {
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: async (newSessionId: string) => {
           // Create a session object that will hold the mutable accessToken
-          const sessionEntry: SessionEntry = { transport, server: null, accessToken: requestAccessToken }
+          const sessionEntry: SessionEntry = {
+            transport,
+            server: null,
+            accessToken: requestAccessToken
+          }
 
           // getAccessToken: in OAuth mode reads from session (allows token updates),
           // in token mode returns the static token
@@ -465,8 +486,12 @@ export class HttpServer {
       })
     })
 
-    process.on('SIGTERM', () => { void this._shutdown() })
-    process.on('SIGINT', () => { void this._shutdown() })
+    process.on('SIGTERM', () => {
+      void this._shutdown()
+    })
+    process.on('SIGINT', () => {
+      void this._shutdown()
+    })
   }
 
   /** Graceful shutdown */
