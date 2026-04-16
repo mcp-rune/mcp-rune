@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { SaveModelBaseTool } from '../save-model-base-tool.js'
-import type { ToolResult } from '../base-tool.js'
+import type { ToolResult, ToolAnnotations } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
 import { storeOperation } from '#src/services/vector-storage.js'
 
@@ -13,6 +13,10 @@ import { storeOperation } from '#src/services/vector-storage.js'
 export class UpdateModelTool extends SaveModelBaseTool {
   override get name(): string {
     return 'update_model'
+  }
+
+  override get annotations(): ToolAnnotations {
+    return { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true }
   }
 
   override get baseDescription(): string {

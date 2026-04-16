@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { BaseAnalysisTool } from './base-analysis-tool.js'
-import type { ToolResult } from '../base-tool.js'
+import type { ToolResult, ToolAnnotations } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
 import { storeAnalysisMemory } from '#src/services/vector-storage.js'
 
@@ -25,6 +25,10 @@ interface Finding {
 export class AnalysisStoreTool extends BaseAnalysisTool {
   override get name(): string {
     return 'analysis_store'
+  }
+
+  override get annotations(): ToolAnnotations {
+    return { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }
   }
 
   override get baseDescription(): string {

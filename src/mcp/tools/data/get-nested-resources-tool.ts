@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { BaseTool } from '../base-tool.js'
-import type { ToolResult } from '../base-tool.js'
+import type { ToolResult, ToolAnnotations } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
 import type { NestedValidationError } from '../validators.js'
 import { validateNestedResource } from '../validators.js'
@@ -22,6 +22,10 @@ Examples:
 - Get books for an activity: parent_model="activity", child_resource="books"
 - Get categories for a theme: parent_model="theme", child_resource="categories"
 - Get tags for a book: parent_model="book", child_resource="tags"`
+  }
+
+  override get annotations(): ToolAnnotations {
+    return { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
   }
 
   override get inputSchema(): Record<string, ZodTypeAny> {

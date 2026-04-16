@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { BaseAnalysisTool } from './base-analysis-tool.js'
-import type { ToolResult } from '../base-tool.js'
+import type { ToolResult, ToolAnnotations } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
 import { clearAnalysisMemories, clearIngestedRecords } from '#src/services/vector-storage.js'
 
@@ -16,6 +16,10 @@ import { clearAnalysisMemories, clearIngestedRecords } from '#src/services/vecto
 export class AnalysisClearTool extends BaseAnalysisTool {
   override get name(): string {
     return 'analysis_clear'
+  }
+
+  override get annotations(): ToolAnnotations {
+    return { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false }
   }
 
   override get baseDescription(): string {

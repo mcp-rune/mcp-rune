@@ -1,5 +1,6 @@
 // mcp-kit/tools — base classes, categories, data, domain, analysis, operations
 export { BaseTool } from './mcp/tools/base-tool.js'
+export type { ToolAnnotations } from './mcp/tools/base-tool.js'
 export {
   TOOL_CATEGORIES,
   CATEGORY_CONFIG,
