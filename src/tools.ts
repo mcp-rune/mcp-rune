@@ -14,8 +14,8 @@ export * from './mcp/tools/operations/index.js'
 export { SaveModelBaseTool } from './mcp/tools/save-model-base-tool.js'
 export {
   normalizeFilterValues,
+  validateFilterParams,
   validateFilterValues,
   validateNestedResource,
-  validateSearchParams,
   validateToolSchema
 } from './mcp/tools/validators.js'

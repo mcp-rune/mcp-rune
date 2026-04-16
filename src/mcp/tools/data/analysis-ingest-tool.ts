@@ -12,7 +12,7 @@ import {
 import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
 import type { NestedValidationError, NestedValidationSuccess } from '../validators.js'
-import { validateNestedResource, validateSearchParams } from '../validators.js'
+import { validateFilterParams, validateNestedResource } from '../validators.js'
 
 /** Max pages allowed when ingest_all is true */
 const MAX_INGEST_PAGES = 50
@@ -81,7 +81,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       filters: z
         .record(z.string(), z.unknown())
         .describe(
-          'Search filters (call get_filters_guide to see available filters for the model). Used for filtered ingestion.'
+          'Filter criteria (call get_filters_guide to see available filters for the model). Used for filtered ingestion.'
         )
         .optional(),
       page: z
@@ -213,7 +213,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       // Validate filters if provided
       let normalizedFilters = filters
       if (filters && Object.keys(filters).length > 0) {
-        const validation = validateSearchParams(model, filters, this.models)
+        const validation = validateFilterParams(model, filters, this.models)
         if (!validation.valid) {
           return {
             content: [{ type: 'text', text: `${validation.error}\n\n${validation.suggestion}` }],
