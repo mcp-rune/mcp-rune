@@ -3,13 +3,13 @@
  */
 
 import {
-  storeTokens,
+  _setAdapter,
+  close,
+  deleteExpiredTokens,
+  deleteTokens,
   getTokens,
   getTokensBySession,
-  deleteTokens,
-  deleteExpiredTokens,
-  close,
-  _setAdapter
+  storeTokens
 } from '../../../src/oauth2/token-store.js'
 
 describe('Token Store', () => {

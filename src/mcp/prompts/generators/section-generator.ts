@@ -8,18 +8,18 @@
  * Pure functions -- no dependency on BasePrompt or PromptContentGenerator.
  */
 
-import type { PromptClassLike, Section, FieldGroup } from '../base-prompt.js'
-import {
-  titleCase,
-  renderFieldTable,
-  renderEnumTables,
-  renderExtractionExamples
-} from './helpers.js'
-import {
-  getTransformersForFields,
-  generateTransformerInstructions
-} from '../association-transformers.js'
 import type { TransformerConfig, TransformerEntry } from '../association-transformers.js'
+import {
+  generateTransformerInstructions,
+  getTransformersForFields
+} from '../association-transformers.js'
+import type { PromptClassLike, Section } from '../base-prompt.js'
+import {
+  renderEnumTables,
+  renderExtractionExamples,
+  renderFieldTable,
+  titleCase
+} from './helpers.js'
 
 export interface SectionContext {
   promptClass: PromptClassLike
@@ -283,11 +283,12 @@ ${groupValidations}
 /**
  * Detect transformers covering a section's fields and generate intro text.
  */
-export function generateTransformerIntro(
-  context: SectionContext,
-  section: Section
-): string | null {
-  const transformers = (context.promptClass as unknown as { associationTransformers?: Record<string, TransformerConfig> }).associationTransformers
+export function generateTransformerIntro(context: SectionContext, section: Section): string | null {
+  const transformers = (
+    context.promptClass as unknown as {
+      associationTransformers?: Record<string, TransformerConfig>
+    }
+  ).associationTransformers
   if (!transformers) return null
 
   // Collect all field names across the section's groups

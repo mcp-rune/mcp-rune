@@ -1,9 +1,9 @@
-import {
-  resolveFormAssociations,
-  isAssociationResolved,
-  buildAssociationInstructions
-} from '../../../../src/mcp/apps/form-associations.js'
 import { halConvention } from '../../../../src/mcp/api-conventions/hal.js'
+import {
+  buildAssociationInstructions,
+  isAssociationResolved,
+  resolveFormAssociations
+} from '../../../../src/mcp/apps/form-associations.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 

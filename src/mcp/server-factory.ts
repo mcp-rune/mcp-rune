@@ -17,9 +17,10 @@
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import * as logger from '#src/services/logger.js'
-import { SelectionStore } from '#src/mcp/apps/selection-store.js'
+
 import { FormDataStore } from '#src/mcp/apps/form-data-store.js'
+import { SelectionStore } from '#src/mcp/apps/selection-store.js'
+import * as logger from '#src/services/logger.js'
 
 // Dynamic import for request schemas needed for custom handlers
 let CompleteRequestSchema: unknown = null
@@ -37,7 +38,13 @@ try {
 /** Minimal interface for the tool registry */
 interface ToolRegistry {
   serverContext: Record<string, unknown>
-  registerTools(mcpServer: McpServer, options: { getAccessToken: () => Promise<string | null | undefined>; logContext: Record<string, unknown> }): void
+  registerTools(
+    mcpServer: McpServer,
+    options: {
+      getAccessToken: () => Promise<string | null | undefined>
+      logContext: Record<string, unknown>
+    }
+  ): void
 }
 
 /** Minimal interface for the prompt registry */
@@ -61,7 +68,14 @@ interface FieldDefinition {
 /** Minimal interface for the app registry */
 interface AppRegistry {
   getToolNames(): string[]
-  registerTools(mcpServer: McpServer, options: { getAccessToken: () => Promise<string | null | undefined>; selectionStore: SelectionStore; formDataStore: FormDataStore }): void
+  registerTools(
+    mcpServer: McpServer,
+    options: {
+      getAccessToken: () => Promise<string | null | undefined>
+      selectionStore: SelectionStore
+      formDataStore: FormDataStore
+    }
+  ): void
   registerResources(mcpServer: McpServer): void
 }
 
@@ -136,15 +150,18 @@ export function createServer({
     })
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SDK schema typing requires `any` cast for dynamic handler registration
-    ;(mcpServer.server.setRequestHandler as any)(GetPromptRequestSchema, async (request: { params: { name: string; arguments?: Record<string, unknown> } }) => {
-      const { name: promptName, arguments: args } = request.params
-      logger.info('GetPromptRequestSchema handler invoked', {
-        ...logContext,
-        handler: 'GetPromptRequestSchema',
-        prompt: promptName
-      })
-      return promptRegistry.getPrompt(promptName, args)
-    })
+    ;(mcpServer.server.setRequestHandler as any)(
+      GetPromptRequestSchema,
+      async (request: { params: { name: string; arguments?: Record<string, unknown> } }) => {
+        const { name: promptName, arguments: args } = request.params
+        logger.info('GetPromptRequestSchema handler invoked', {
+          ...logContext,
+          handler: 'GetPromptRequestSchema',
+          prompt: promptName
+        })
+        return promptRegistry.getPrompt(promptName, args)
+      }
+    )
   }
 
   // ============================================================================
@@ -153,45 +170,53 @@ export function createServer({
 
   if (CompleteRequestSchema && promptRegistry) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SDK schema typing requires `any` cast for dynamic handler registration
-    ;(mcpServer.server.setRequestHandler as any)(CompleteRequestSchema, async (request: { params: { ref?: { type?: string; name?: string }; argument?: { name?: string; value?: string } } }) => {
-      const { ref, argument } = request.params
-
-      logger.info('CompleteRequestSchema handler invoked', {
-        ...logContext,
-        handler: 'CompleteRequestSchema',
-        refType: ref?.type,
-        refName: ref?.name,
-        argumentName: argument?.name
-      })
-
-      // Only handle prompt references
-      if (ref?.type !== 'ref/prompt') {
-        return { completion: { values: [], hasMore: false } }
-      }
-
-      const promptClass = promptRegistry.getPromptClass(ref.name!)
-      if (!promptClass) {
-        return { completion: { values: [], hasMore: false } }
-      }
-
-      const fieldName = argument?.name
-      const fieldDef = fieldName ? promptClass.fieldDefinitions?.[fieldName] : undefined
-
-      if (!fieldDef?.completion?.enabled) {
-        return { completion: { values: [], hasMore: false } }
-      }
-
-      // Handle enum-based completion
-      if (fieldDef.enumValues && Array.isArray(fieldDef.enumValues)) {
-        const query = (argument?.value || '').toLowerCase()
-        const filtered = fieldDef.enumValues.filter((v) => v.toLowerCase().includes(query))
-        return {
-          completion: { values: filtered, total: filtered.length, hasMore: false }
+    ;(mcpServer.server.setRequestHandler as any)(
+      CompleteRequestSchema,
+      async (request: {
+        params: {
+          ref?: { type?: string; name?: string }
+          argument?: { name?: string; value?: string }
         }
-      }
+      }) => {
+        const { ref, argument } = request.params
 
-      return { completion: { values: [], hasMore: false } }
-    })
+        logger.info('CompleteRequestSchema handler invoked', {
+          ...logContext,
+          handler: 'CompleteRequestSchema',
+          refType: ref?.type,
+          refName: ref?.name,
+          argumentName: argument?.name
+        })
+
+        // Only handle prompt references
+        if (ref?.type !== 'ref/prompt') {
+          return { completion: { values: [], hasMore: false } }
+        }
+
+        const promptClass = promptRegistry.getPromptClass(ref.name!)
+        if (!promptClass) {
+          return { completion: { values: [], hasMore: false } }
+        }
+
+        const fieldName = argument?.name
+        const fieldDef = fieldName ? promptClass.fieldDefinitions?.[fieldName] : undefined
+
+        if (!fieldDef?.completion?.enabled) {
+          return { completion: { values: [], hasMore: false } }
+        }
+
+        // Handle enum-based completion
+        if (fieldDef.enumValues && Array.isArray(fieldDef.enumValues)) {
+          const query = (argument?.value || '').toLowerCase()
+          const filtered = fieldDef.enumValues.filter((v) => v.toLowerCase().includes(query))
+          return {
+            completion: { values: filtered, total: filtered.length, hasMore: false }
+          }
+        }
+
+        return { completion: { values: [], hasMore: false } }
+      }
+    )
   }
 
   return mcpServer

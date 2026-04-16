@@ -3,11 +3,11 @@
  */
 
 import {
+  clearSchemaCaches,
   deriveFieldDefinitions,
   derivePromptSchema,
-  clearSchemaCaches,
-  getSchemaCacheStats,
-  enhanceModelConfig
+  enhanceModelConfig,
+  getSchemaCacheStats
 } from '../../../../src/mcp/prompts/schema-derivation.js'
 
 describe('lib/mcp/prompts/schema-derivation - Memoization', () => {

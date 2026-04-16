@@ -10,7 +10,6 @@
  *   3. Route handlers (this file): handle OAuth proxy logic
  */
 
-
 // Define mocks using vi.hoisted()
 const { mockAxios, mockLogger } = vi.hoisted(() => ({
   mockAxios: {
@@ -34,11 +33,12 @@ vi.mock('axios', () => ({
 vi.mock('#src/services/logger.js', () => mockLogger)
 
 import * as logger from '#src/services/logger.js'
+
 import {
-  extractBearerToken,
   buildResourceMetadataUrl,
-  sendUnauthorized,
-  createOAuthRouter
+  createOAuthRouter,
+  extractBearerToken,
+  sendUnauthorized
 } from '../../../../src/mcp/middleware/oauth-router.js'
 
 describe('lib/mcp/middleware/oauth-router', () => {

@@ -10,10 +10,10 @@ During fetch-analyze workflow loops, each page of fetched data stays in the conv
 
 These are **complementary**, not competing:
 
-| Pattern              | LLM sees data? | Use case                                                      |
-| -------------------- | --------------- | ------------------------------------------------------------- |
-| **Lean mode**        | No              | LLM doesn't need data (counting, passing scratch_refs)        |
-| **Transient context** | Yes, temporarily | LLM needs data for analysis, then client collapses it         |
+| Pattern               | LLM sees data?   | Use case                                               |
+| --------------------- | ---------------- | ------------------------------------------------------ |
+| **Lean mode**         | No               | LLM doesn't need data (counting, passing scratch_refs) |
+| **Transient context** | Yes, temporarily | LLM needs data for analysis, then client collapses it  |
 
 Lean mode stores data server-side and returns only a summary. Transient context sends full data to the LLM but signals the client to collapse it after a consumer tool processes it.
 
@@ -125,6 +125,7 @@ contextHints → Map<consumedBy, tool>
 ### Step B: Track transient results
 
 When a tool result arrives with `_meta.context.lifecycle === 'transient'`:
+
 1. Check if the tool name matches a registered transient tool
 2. Store the message index and `summary` text
 3. Display the full result normally — the LLM needs it for analysis
@@ -132,6 +133,7 @@ When a tool result arrives with `_meta.context.lifecycle === 'transient'`:
 ### Step C: Collapse on consumption
 
 When a tool result arrives with `_meta.context.consumed === true`:
+
 1. Check if the tool name matches a registered `consumedBy`
 2. Find the most recent uncollapsed transient message for the paired tool
 3. Replace that message's `content` with the stored `summary` text
@@ -149,6 +151,7 @@ When a tool result arrives with `_meta.context.consumed === true`:
 **Settings > General > Display > Show context hints** (default: off)
 
 When enabled, display debug badges on tool results:
+
 - **`[transient]`** (amber) — result will be collapsed after consumption
 - **`[consumed]`** (green) — this tool triggered a collapse
 - **`[collapsed]`** (gray) — result has been collapsed, shows summary

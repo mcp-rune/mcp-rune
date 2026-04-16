@@ -1,11 +1,11 @@
-
 vi.mock('#src/services/vector-storage.js', () => ({
   findSimilarOperations: vi.fn()
 }))
 
-import { FindSimilarOperationsTool } from '../../../../../src/mcp/tools/operations/find-similar-operations-tool.js'
 import { findSimilarOperations } from '#src/services/vector-storage.js'
+
 import { TOOL_CATEGORIES } from '../../../../../src/mcp/tools/categories.js'
+import { FindSimilarOperationsTool } from '../../../../../src/mcp/tools/operations/find-similar-operations-tool.js'
 
 describe('FindSimilarOperationsTool', () => {
   let tool

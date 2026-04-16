@@ -21,7 +21,10 @@ import * as logger from '#src/services/logger.js'
 const MODEL_NAME = 'sentence-transformers/all-MiniLM-L6-v2'
 const EMBEDDING_DIMENSIONS = 384
 
-type FeatureExtractionPipeline = (text: string, options: { pooling: string; normalize: boolean }) => Promise<{ data: Float32Array }>
+type FeatureExtractionPipeline = (
+  text: string,
+  options: { pooling: string; normalize: boolean }
+) => Promise<{ data: Float32Array }>
 
 let pipeline: FeatureExtractionPipeline | null = null
 let initPromise: Promise<FeatureExtractionPipeline> | null = null
@@ -34,9 +37,13 @@ async function getOrCreatePipeline(): Promise<FeatureExtractionPipeline> {
 
   initPromise = (async () => {
     const { pipeline: createPipeline } = await import('@huggingface/transformers')
-    const p = await (createPipeline as Function)('feature-extraction', MODEL_NAME, {
-      quantized: true
-    }) as FeatureExtractionPipeline
+    const p = await (
+      createPipeline as unknown as (
+        task: string,
+        model: string,
+        options: { quantized: boolean }
+      ) => Promise<FeatureExtractionPipeline>
+    )('feature-extraction', MODEL_NAME, { quantized: true })
     pipeline = p
     logger.info('Embedding model loaded', {
       service: 'embeddings',

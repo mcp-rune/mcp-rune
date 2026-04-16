@@ -1,4 +1,3 @@
-
 // Mock logger to prevent console output during tests
 vi.mock('../../../../../src/services/logger.js', () => ({
   info: vi.fn(),

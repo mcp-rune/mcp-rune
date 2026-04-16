@@ -11,7 +11,8 @@
  */
 
 import { z } from 'zod'
-import type { ToolResult, AppToolContext } from './types.js'
+
+import type { AppToolContext, ToolResult } from './types.js'
 
 interface AppToolDefinition {
   resourceUri?: string
@@ -59,7 +60,10 @@ export function createSelectionTools(
       total: z.number().describe('Total number of selected records').optional()
     },
 
-    async handleToolCall(args: Record<string, unknown> = {}, { selectionStore }: AppToolContext = {}) {
+    async handleToolCall(
+      args: Record<string, unknown> = {},
+      { selectionStore }: AppToolContext = {}
+    ) {
       if (!selectionStore) {
         return {
           content: [
@@ -68,7 +72,15 @@ export function createSelectionTools(
         }
       }
 
-      const selection = selectionStore.set(args as { model: string; mode: string; ids?: string[]; filters?: Record<string, unknown>; total?: number })
+      const selection = selectionStore.set(
+        args as {
+          model: string
+          mode: string
+          ids?: string[]
+          filters?: Record<string, unknown>
+          total?: number
+        }
+      )
       const total = selection.total || (selection.ids ? selection.ids.length : 0)
       return {
         content: [
@@ -108,7 +120,10 @@ export function createSelectionTools(
         .optional()
     },
 
-    async handleToolCall(args: Record<string, unknown> = {}, { selectionStore }: AppToolContext = {}) {
+    async handleToolCall(
+      args: Record<string, unknown> = {},
+      { selectionStore }: AppToolContext = {}
+    ) {
       if (!selectionStore) {
         return {
           content: [

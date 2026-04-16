@@ -1,8 +1,8 @@
 import {
   buildFieldTransformerMap,
-  getSelectTransformers,
   getAutocompleteTransformers,
-  getMultiSelectTransformers
+  getMultiSelectTransformers,
+  getSelectTransformers
 } from '../../../../src/mcp/prompts/association-transformers.js'
 
 const transformers = {

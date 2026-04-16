@@ -1,9 +1,9 @@
 import {
-  validateRequired,
   validateEnum,
+  validateModel,
   validatePositiveInt,
-  validateUrl,
-  validateModel
+  validateRequired,
+  validateUrl
 } from '../../../src/core/validators.js'
 
 describe('lib/core/validators', () => {

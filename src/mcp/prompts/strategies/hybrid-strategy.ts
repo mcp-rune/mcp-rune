@@ -17,9 +17,10 @@
  * Example models: Series, Episode
  */
 
-import { BaseStrategy } from './base-strategy.js'
-import type { PromptFieldDefinition, FieldGroup } from '../base-prompt.js'
 import * as logger from '#src/services/logger.js'
+
+import type { FieldGroup, PromptFieldDefinition } from '../base-prompt.js'
+import { BaseStrategy } from './base-strategy.js'
 
 /** Validation error entry */
 interface ValidationError {
@@ -70,7 +71,10 @@ export class HybridStrategy extends BaseStrategy {
   }
 
   /** Get documentation for the prompt */
-  static override getDocumentation(promptInstance: { promptContent: string; constructor: { name: string } }): string {
+  static override getDocumentation(promptInstance: {
+    promptContent: string
+    constructor: { name: string }
+  }): string {
     const promptContent = promptInstance.promptContent
 
     logger.debug('getDocumentation called', {

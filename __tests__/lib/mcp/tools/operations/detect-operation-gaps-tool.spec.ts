@@ -1,11 +1,11 @@
-
 vi.mock('#src/services/vector-storage.js', () => ({
   detectOperationGaps: vi.fn()
 }))
 
-import { DetectOperationGapsTool } from '../../../../../src/mcp/tools/operations/detect-operation-gaps-tool.js'
 import { detectOperationGaps } from '#src/services/vector-storage.js'
+
 import { TOOL_CATEGORIES } from '../../../../../src/mcp/tools/categories.js'
+import { DetectOperationGapsTool } from '../../../../../src/mcp/tools/operations/detect-operation-gaps-tool.js'
 
 describe('DetectOperationGapsTool', () => {
   let tool

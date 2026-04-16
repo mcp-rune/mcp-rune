@@ -1,5 +1,5 @@
-import { SearchClient } from '../../../../src/mcp/search/search-client.js'
 import { halConvention } from '../../../../src/mcp/api-conventions/hal.js'
+import { SearchClient } from '../../../../src/mcp/search/search-client.js'
 
 // Mock model classes
 const DirectSearchModel = {

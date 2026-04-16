@@ -5,11 +5,16 @@
  * Includes request ID for distributed tracing correlation.
  */
 
+import type { NextFunction, Request, Response } from 'express'
+
 import * as logger from '#src/services/logger.js'
-import type { Request, Response, NextFunction } from 'express'
 
 /** Express middleware that logs request start/finish with timing */
-export function createRequestLoggerMiddleware(): (req: Request, res: Response, next: NextFunction) => void {
+export function createRequestLoggerMiddleware(): (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => void {
   return (req: Request, res: Response, next: NextFunction): void => {
     const start = Date.now()
     const { method, path } = req

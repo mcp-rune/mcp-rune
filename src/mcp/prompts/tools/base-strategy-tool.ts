@@ -9,13 +9,14 @@
  * Examples: get_prompt_guide, validate_form, get_form_summary, get_form_progress
  */
 
-import { BaseTool } from '#src/mcp/tools/base-tool.js'
 import type { ToolResult } from '#src/mcp/tools/base-tool.js'
-import { TOOL_CATEGORIES } from '#src/mcp/tools/categories.js'
+import { BaseTool } from '#src/mcp/tools/base-tool.js'
 import type { ToolCategory } from '#src/mcp/tools/categories.js'
-import { getStrategy } from '../strategies/index.js'
-import type { BaseStrategy } from '../strategies/base-strategy.js'
+import { TOOL_CATEGORIES } from '#src/mcp/tools/categories.js'
+
 import type { PromptClassLike, StrategyType } from '../base-prompt.js'
+import type { BaseStrategy } from '../strategies/base-strategy.js'
+import { getStrategy } from '../strategies/index.js'
 
 /** Error info returned by checkOperation */
 interface OperationCheckResult {
@@ -45,7 +46,11 @@ export class BaseStrategyTool extends BaseTool {
     if (!this.promptRegistry?.getPromptClassByModel) {
       throw new Error('Prompt registry not available')
     }
-    return (this.promptRegistry as Record<string, unknown> & { getPromptClassByModel: (m: string) => PromptClassLike | null }).getPromptClassByModel(model)
+    return (
+      this.promptRegistry as Record<string, unknown> & {
+        getPromptClassByModel: (m: string) => PromptClassLike | null
+      }
+    ).getPromptClassByModel(model)
   }
 
   /** Get prompt name by model name */

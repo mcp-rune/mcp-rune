@@ -25,8 +25,9 @@
  *   'list'         -- browse all scoped records (small sets)
  */
 
-import type { AppModelClass } from './types.js'
 import type { BaseConvention } from '#src/mcp/api-conventions/base-convention.js'
+
+import type { AppModelClass } from './types.js'
 
 interface NormalizedEntry {
   name: string

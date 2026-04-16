@@ -5,7 +5,7 @@
  */
 export {
   BaseConvention,
+  defaultConvention,
   halConvention,
-  jsonApiConvention,
-  defaultConvention
+  jsonApiConvention
 } from '../api-conventions/index.js'

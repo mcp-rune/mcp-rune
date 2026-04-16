@@ -1,13 +1,14 @@
-import { z } from 'zod'
-import { BaseDomainTool } from './base-domain-tool.js'
-import type { ToolResult } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
+import { z } from 'zod'
+
+import type { ToolResult } from '../base-tool.js'
+import { BaseDomainTool } from './base-domain-tool.js'
 import {
-  renderStepDetail,
+  findStepInfo,
   renderLoopGroup,
-  renderParallelGroup,
   renderNextStepHint,
-  findStepInfo
+  renderParallelGroup,
+  renderStepDetail
 } from './workflow-renderer.js'
 
 interface WorkflowStep {
@@ -73,11 +74,14 @@ export class GetWorkflowStepTool extends BaseDomainTool {
       )
     }
 
-    const appToolNames = ((this.serverContext as Record<string, unknown>)?.appToolNames as string[]) ?? []
+    const appToolNames =
+      ((this.serverContext as Record<string, unknown>)?.appToolNames as string[]) ?? []
     const parts: string[] = []
 
     if (info.groupType === 'loop') {
-      parts.push(renderLoopGroup(info.group, w as Parameters<typeof renderLoopGroup>[1], { appToolNames }))
+      parts.push(
+        renderLoopGroup(info.group, w as Parameters<typeof renderLoopGroup>[1], { appToolNames })
+      )
     } else if (info.groupType === 'parallel') {
       parts.push(renderParallelGroup(info.group, { appToolNames }))
       const lastOrder = info.group[info.group.length - 1]!.order
@@ -91,7 +95,11 @@ export class GetWorkflowStepTool extends BaseDomainTool {
     const stepsToCheck = info.group || [info.step]
     const contextHints = stepsToCheck
       .filter((s) => (s as WorkflowStep).contextHint)
-      .map((s) => ({ step: s.order, tool: (s as WorkflowStep).tool, ...(s as WorkflowStep).contextHint }))
+      .map((s) => ({
+        step: s.order,
+        tool: (s as WorkflowStep).tool,
+        ...(s as WorkflowStep).contextHint
+      }))
     const meta = contextHints.length > 0 ? { contextHints } : undefined
 
     return this.formatResponse(parts.join('\n'), { meta })

@@ -11,20 +11,22 @@
  * handleToolCall context, created from the session's access token.
  */
 
-import type { z } from 'zod'
 import {
-  registerAppTool,
   registerAppResource,
+  registerAppTool,
   RESOURCE_MIME_TYPE
 } from '@modelcontextprotocol/ext-apps/server'
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { z } from 'zod'
+
+import { errorMeta } from '#src/mcp/apps/helpers.js'
+import type { SearchGroup } from '#src/mcp/search/search-client.js'
 import { SearchClient } from '#src/mcp/search/search-client.js'
 import * as logger from '#src/services/logger.js'
-import { errorMeta } from '#src/mcp/apps/helpers.js'
-import type { ToolResult, ApiClient } from './types.js'
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { SelectionStore } from './selection-store.js'
+
 import type { FormDataStore } from './form-data-store.js'
-import type { SearchGroup } from '#src/mcp/search/search-client.js'
+import type { SelectionStore } from './selection-store.js'
+import type { ApiClient, ToolResult } from './types.js'
 
 interface AppDefinition {
   resourceUri?: string
@@ -35,7 +37,10 @@ interface AppDefinition {
   description: string
   toolDescription?: string
   toolInputSchema?: Record<string, unknown>
-  handleToolCall?(args: Record<string, unknown>, context: Record<string, unknown>): Promise<ToolResult>
+  handleToolCall?(
+    args: Record<string, unknown>,
+    context: Record<string, unknown>
+  ): Promise<ToolResult>
   getHtml?: () => string
 }
 
@@ -142,7 +147,12 @@ export class AppRegistry {
               ...errorMeta(err)
             })
             return {
-              content: [{ type: 'text' as const, text: `Error: ${app.toolName} failed -- ${(err as Error).message}` }],
+              content: [
+                {
+                  type: 'text' as const,
+                  text: `Error: ${app.toolName} failed -- ${(err as Error).message}`
+                }
+              ],
               isError: true
             }
           }

@@ -361,10 +361,7 @@ interface StepInfo {
 }
 
 /** Find the step group info for a given step order. */
-export function findStepInfo(
-  workflow: WorkflowDefinition,
-  stepOrder: number
-): StepInfo | null {
+export function findStepInfo(workflow: WorkflowDefinition, stepOrder: number): StepInfo | null {
   const stepIndex = workflow.steps.findIndex((s) => s.order === stepOrder)
   if (stepIndex === -1) return null
 
@@ -383,10 +380,7 @@ export function findStepInfo(
   // Check for parallel group
   if (step.parallelGroup) {
     let groupStart = stepIndex
-    while (
-      groupStart > 0 &&
-      workflow.steps[groupStart - 1]!.parallelGroup === step.parallelGroup
-    ) {
+    while (groupStart > 0 && workflow.steps[groupStart - 1]!.parallelGroup === step.parallelGroup) {
       groupStart--
     }
     const { group } = collectStepGroup(workflow.steps, groupStart, 'parallelGroup')

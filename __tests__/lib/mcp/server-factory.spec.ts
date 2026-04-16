@@ -1,4 +1,3 @@
-
 // Define mocks using vi.hoisted()
 const { mockUnderlyingServer, MockMcpServer, mockSchemas } = vi.hoisted(() => {
   const underlyingServer = {
@@ -43,6 +42,7 @@ vi.mock('#src/mcp/forms/form-handlers.js', () => ({
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { CompleteRequestSchema } from '@modelcontextprotocol/sdk/types.js'
+
 import { createServer } from '../../../src/mcp/server-factory.js'
 
 describe('lib/mcp/server-factory', () => {

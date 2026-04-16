@@ -5,6 +5,7 @@
 
 import { normalizeObjectSchema } from '@modelcontextprotocol/sdk/server/zod-compat.js'
 import { toJsonSchemaCompat } from '@modelcontextprotocol/sdk/server/zod-json-schema-compat.js'
+
 import type { ModelsRegistry } from './base-tool.js'
 
 // ============================================================================
@@ -214,9 +215,7 @@ export function validateNestedResource(
   }
 
   // Check in custom associations
-  const custom = (assoc as Record<string, unknown>).custom as
-    | Record<string, LinkInfo>
-    | undefined
+  const custom = (assoc as Record<string, unknown>).custom as Record<string, LinkInfo> | undefined
   if (custom?.[childResource]) {
     const linkInfo = custom[childResource]!
     return {
@@ -262,10 +261,7 @@ export function validateNestedResource(
  * the all-or-nothing tools/list response at registration time rather
  * than at first client request.
  */
-export function validateToolSchema(
-  toolName: string,
-  inputSchema: unknown
-): void {
+export function validateToolSchema(toolName: string, inputSchema: unknown): void {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const obj = normalizeObjectSchema(inputSchema as any)
@@ -273,8 +269,8 @@ export function validateToolSchema(
       toJsonSchemaCompat(obj, { strictUnions: true })
     }
   } catch (err) {
-    throw new Error(
-      `Tool "${toolName}" has an invalid inputSchema: ${(err as Error).message}`
-    )
+    throw new Error(`Tool "${toolName}" has an invalid inputSchema: ${(err as Error).message}`, {
+      cause: err
+    })
   }
 }

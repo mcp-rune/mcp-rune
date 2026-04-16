@@ -768,9 +768,9 @@ When an MCP App tool returns `{ content: [...] }`, the host delivers **all** con
 
 For tools where the LLM needs the data for follow-up (e.g., record lists, search results), return two blocks:
 
-| Block | Audience | Content |
-|-------|----------|---------|
-| 1st `text` block | UI app + LLM | Full JSON payload: schema, records, metadata |
+| Block            | Audience         | Content                                           |
+| ---------------- | ---------------- | ------------------------------------------------- |
+| 1st `text` block | UI app + LLM     | Full JSON payload: schema, records, metadata      |
 | 2nd `text` block | LLM context only | Minimal summary: count, status, interaction hints |
 
 ```javascript
@@ -788,7 +788,7 @@ return {
 The client-side app reads only the first text block via `.find()`:
 
 ```javascript
-const data = JSON.parse(result.content.find(c => c.type === 'text').text)
+const data = JSON.parse(result.content.find((c) => c.type === 'text').text)
 ```
 
 #### Strategy B: App-Initiated Data Fetch (display-only tools)
@@ -818,7 +818,7 @@ app.ontoolresult = async () => {
     name: 'my_panel',
     arguments: { action: 'fetch_data' }
   })
-  const data = JSON.parse(response.content.find(c => c.type === 'text').text)
+  const data = JSON.parse(response.content.find((c) => c.type === 'text').text)
   renderItems(data.items)
 }
 ```
@@ -832,8 +832,8 @@ app.ontoolresult = async () => {
 
 ### Apps by Strategy
 
-| Strategy | App | LLM Context |
-|----------|-----|-------------|
-| A (two-block) | `list_records_view` | JSON + record count + selection hint |
-| A (two-block) | `search_records_view` | JSON + record count + filter summary |
-| B (app-fetch) | `workflow_panel` | Summary only (N workflows, click to launch) |
+| Strategy      | App                   | LLM Context                                 |
+| ------------- | --------------------- | ------------------------------------------- |
+| A (two-block) | `list_records_view`   | JSON + record count + selection hint        |
+| A (two-block) | `search_records_view` | JSON + record count + filter summary        |
+| B (app-fetch) | `workflow_panel`      | Summary only (N workflows, click to launch) |

@@ -1,8 +1,8 @@
 import {
-  storeMemory,
-  recallMemories,
+  cleanupExpired,
   clearMemories,
-  cleanupExpired
+  recallMemories,
+  storeMemory
 } from '../../../../../src/services/vendor/pgvector/analysis-memories.js'
 
 describe('lib/services/vendor/pgvector/analysis-memories', () => {

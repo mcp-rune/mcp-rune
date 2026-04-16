@@ -1,8 +1,10 @@
-import { z } from 'zod'
-import { BaseAnalysisTool } from './base-analysis-tool.js'
-import type { ToolResult } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
-import { recallAnalysisMemories, queryIngestedData } from '#src/services/vector-storage.js'
+import { z } from 'zod'
+
+import { queryIngestedData, recallAnalysisMemories } from '#src/services/vector-storage.js'
+
+import type { ToolResult } from '../base-tool.js'
+import { BaseAnalysisTool } from './base-analysis-tool.js'
 
 interface AnalysisMemory {
   finding: string
@@ -53,10 +55,7 @@ Typical reasoning flow:
         ),
 
       // semantic mode params
-      query: z
-        .string()
-        .optional()
-        .describe('Semantic search query (required for semantic mode)'),
+      query: z.string().optional().describe('Semantic search query (required for semantic mode)'),
       category: z.string().optional().describe('Filter by finding category (semantic mode)'),
       top_k: z.number().optional().describe('Maximum results (semantic mode, default: 50)'),
 
@@ -81,27 +80,18 @@ Typical reasoning flow:
   }
 
   override async execute(args: Record<string, unknown>): Promise<ToolResult> {
-    const {
-      analysis_id,
-      mode,
-      query,
-      category,
-      top_k,
-      group_by,
-      where,
-      limit,
-      sample_size
-    } = args as {
-      analysis_id: string
-      mode: 'semantic' | 'aggregate' | 'filter' | 'sample'
-      query?: string
-      category?: string
-      top_k?: number
-      group_by?: string
-      where?: Record<string, unknown>
-      limit?: number
-      sample_size?: number
-    }
+    const { analysis_id, mode, query, category, top_k, group_by, where, limit, sample_size } =
+      args as {
+        analysis_id: string
+        mode: 'semantic' | 'aggregate' | 'filter' | 'sample'
+        query?: string
+        category?: string
+        top_k?: number
+        group_by?: string
+        where?: Record<string, unknown>
+        limit?: number
+        sample_size?: number
+      }
 
     switch (mode) {
       case 'semantic':
@@ -165,10 +155,7 @@ Typical reasoning flow:
   }
 
   /** Aggregate query on ingested_records */
-  private async _queryAggregate(
-    analysisId: string,
-    groupBy?: string
-  ): Promise<ToolResult> {
+  private async _queryAggregate(analysisId: string, groupBy?: string): Promise<ToolResult> {
     if (!groupBy) {
       return this.formatResponse(
         'Please provide a "group_by" parameter for aggregate mode (e.g., "status").'
@@ -233,10 +220,7 @@ Typical reasoning flow:
   }
 
   /** Sample random records from ingested_records */
-  private async _querySample(
-    analysisId: string,
-    sampleSize?: number
-  ): Promise<ToolResult> {
+  private async _querySample(analysisId: string, sampleSize?: number): Promise<ToolResult> {
     const results = await queryIngestedData(analysisId, {
       mode: 'sample',
       sampleSize

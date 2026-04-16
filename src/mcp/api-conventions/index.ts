@@ -1,4 +1,3 @@
-export { BaseConvention } from './base-convention.js'
 export type {
   AssociationConfig,
   BelongsToAssociation,
@@ -6,8 +5,9 @@ export type {
   FieldDefinition,
   HasManyAssociation,
   NormalizedListResponse,
-  PaginationInfo,
+  PaginationInfo
 } from './base-convention.js'
+export { BaseConvention } from './base-convention.js'
 export { halConvention } from './hal.js'
 export { jsonApiConvention } from './json-api.js'
 

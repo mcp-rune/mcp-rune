@@ -5,10 +5,10 @@
  * Dependency-injected like PromptRegistry. Gracefully absent like vector storage.
  */
 
+import type { EvaluationResult, RuleSet } from './business-rules.js'
 import type { DomainConcept, ModelContext } from './knowledge.js'
 import type { DomainKnowledge } from './knowledge.js'
-import type { RuleSet, EvaluationResult } from './business-rules.js'
-import type { WorkflowRegistry, WorkflowDefinition } from './workflows.js'
+import type { WorkflowDefinition, WorkflowRegistry } from './workflows.js'
 
 export interface DomainRegistryConfig {
   knowledge: DomainKnowledge

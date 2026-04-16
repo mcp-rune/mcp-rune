@@ -1,8 +1,8 @@
 import {
-  sanitizeObject,
+  beforeSendSanitizer,
   sanitizeHeaders,
-  sanitizeToolArgs,
-  beforeSendSanitizer
+  sanitizeObject,
+  sanitizeToolArgs
 } from '../../../../../src/services/vendor/sentry/sanitizers.js'
 
 describe('lib/services/vendor/sentry/sanitizers', () => {

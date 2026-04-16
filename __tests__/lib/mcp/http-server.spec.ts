@@ -1,4 +1,3 @@
-
 // Define mocks using vi.hoisted()
 const {
   mockTransport,
@@ -68,10 +67,11 @@ vi.mock('../../../src/mcp/middleware/oauth-router.js', () => ({
 }))
 
 import * as logger from '#src/services/logger.js'
+
+import { HttpServer } from '../../../src/mcp/http-server.js'
+import { createOAuthRouter, sendUnauthorized } from '../../../src/mcp/middleware/oauth-router.js'
 import { createRequestIdMiddleware } from '../../../src/mcp/middleware/request-id.js'
 import { createRequestLoggerMiddleware } from '../../../src/mcp/middleware/request-logger.js'
-import { createOAuthRouter, sendUnauthorized } from '../../../src/mcp/middleware/oauth-router.js'
-import { HttpServer } from '../../../src/mcp/http-server.js'
 
 describe('lib/mcp/http-server', () => {
   let server

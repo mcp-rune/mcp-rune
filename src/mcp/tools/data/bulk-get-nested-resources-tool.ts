@@ -1,10 +1,12 @@
-import { z } from 'zod'
-import { BaseTool } from '../base-tool.js'
-import type { ToolResult, ToolAnnotations } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
+import { z } from 'zod'
+
+import { pickFields, sanitizeResponseData } from '#src/core/helpers.js'
+
+import type { ToolAnnotations, ToolResult } from '../base-tool.js'
+import { BaseTool } from '../base-tool.js'
 import type { NestedValidationError, NestedValidationSuccess } from '../validators.js'
 import { validateNestedResource } from '../validators.js'
-import { sanitizeResponseData, pickFields } from '#src/core/helpers.js'
 
 export const MAX_BATCH_SIZE = 25
 const MAX_CONCURRENCY = 5
@@ -111,7 +113,9 @@ export class BulkGetNestedResourcesTool extends BaseTool {
       }
 
       const parentConfig = this.models[parent_model]!
-      const linkInfo = (validation as NestedValidationSuccess).linkInfo as Record<string, unknown> | undefined
+      const linkInfo = (validation as NestedValidationSuccess).linkInfo as
+        | Record<string, unknown>
+        | undefined
       const childPath = (linkInfo?.path as string) || child_resource
 
       // Resolve expand params (explicit or auto-expand from target model metadata)
@@ -129,8 +133,7 @@ export class BulkGetNestedResourcesTool extends BaseTool {
       const results = new Array<BulkNestedResult>(parent_ids.length)
       const tasks = parent_ids.map((parentId, i) => () => {
         const endpoint = `${parentConfig.endpoint}/${parentId}/${childPath}`
-        return this.apiClient!
-          .get(endpoint, params)
+        return this.apiClient!.get(endpoint, params)
           .then((data) => {
             results[i] = {
               parent_id: parentId,
@@ -168,7 +171,7 @@ export class BulkGetNestedResourcesTool extends BaseTool {
 
       // isError only when ALL failed
       if (succeeded === 0) {
-        (response as unknown as Record<string, unknown>).isError = true
+        ;(response as unknown as Record<string, unknown>).isError = true
       }
 
       return response

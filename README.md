@@ -1,8 +1,9 @@
 <p align="center">
+  <a href="https://github.com/dsaenztagarro/mcp-kit/actions/workflows/ci.yml"><img src="https://github.com/dsaenztagarro/mcp-kit/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <img src="https://img.shields.io/badge/MCP-2025--06--18-blue" alt="MCP Spec" />
   <img src="https://img.shields.io/badge/node-%3E%3D24-green" alt="Node.js" />
-  <img src="https://img.shields.io/badge/tests-1978%20passing-brightgreen" alt="Tests" />
-  <img src="https://img.shields.io/badge/coverage-%3E92%25-brightgreen" alt="Coverage" />
+  <img src="https://img.shields.io/badge/tests-2054%20passing-brightgreen" alt="Tests" />
+  <img src="https://img.shields.io/badge/coverage-81%25-yellow" alt="Coverage" />
   <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License" />
 </p>
 
@@ -19,7 +20,7 @@ import type { AttributeDefinition } from 'mcp-kit/core'
 export class Book extends BaseModel {
   static override endpoint = 'books'
   static override attributes: Record<string, AttributeDefinition> = {
-    title:  { type: 'string', required: true, description: 'Book title' },
+    title: { type: 'string', required: true, description: 'Book title' },
     author: { type: 'string', required: true, description: 'Author name' },
     status: { type: 'enum', enumValues: ['unread', 'reading', 'completed'], default: 'unread' },
     rating: { type: 'integer', description: 'Rating 1-5', validation: { min: 1, max: 5 } }
@@ -86,18 +87,18 @@ mcp-kit works at the **application** level. You describe your domain, the framew
 
 10 generic tools serve your entire domain. Register 10 models or 100 — the tool count stays constant:
 
-| Tool                         | Description                                  |
-| ---------------------------- | -------------------------------------------- |
-| `list_models`                | Paginated listing with field selection        |
-| `find_model`                 | Fetch a single record by ID                  |
-| `create_model`               | Create with attribute validation              |
-| `update_model`               | Partial update                               |
-| `delete_model`               | Destroy a record                             |
-| `search_records`             | Full-text and filtered search                |
-| `get_nested_resources`       | Fetch child resources                        |
-| `get_filters_guide`          | Describe available filters for a model       |
-| `bulk_action_models`         | Batch create/update/delete                   |
-| `bulk_get_nested_resources`  | Batch fetch nested resources                 |
+| Tool                        | Description                            |
+| --------------------------- | -------------------------------------- |
+| `list_models`               | Paginated listing with field selection |
+| `find_model`                | Fetch a single record by ID            |
+| `create_model`              | Create with attribute validation       |
+| `update_model`              | Partial update                         |
+| `delete_model`              | Destroy a record                       |
+| `search_records`            | Full-text and filtered search          |
+| `get_nested_resources`      | Fetch child resources                  |
+| `get_filters_guide`         | Describe available filters for a model |
+| `bulk_action_models`        | Batch create/update/delete             |
+| `bulk_get_nested_resources` | Batch fetch nested resources           |
 
 The LLM passes the model name as a parameter — `{ "model": "book", "attributes": {...} }`. Fewer tools = better LLM tool selection, smaller system prompts, more context window for actual work.
 
@@ -107,9 +108,13 @@ Tools declare a **category** and the framework infers auth requirements automati
 import { BaseTool, TOOL_CATEGORIES } from 'mcp-kit'
 
 export class ArchiveProjectTool extends BaseTool {
-  static override get category() { return TOOL_CATEGORIES.CUSTOM }
+  static override get category() {
+    return TOOL_CATEGORIES.CUSTOM
+  }
 
-  override get name() { return 'archive_project' }
+  override get name() {
+    return 'archive_project'
+  }
 
   override async execute({ project_id }: { project_id: string }) {
     return this.apiClient!.post(`/projects/${project_id}/archive`)
@@ -117,24 +122,24 @@ export class ArchiveProjectTool extends BaseTool {
 }
 ```
 
-| Category       | Auth | Description                                     |
-| -------------- | :--: | ----------------------------------------------- |
-| `CRUD`         | Yes  | Generic model operations                        |
-| `STRATEGY`     |  No  | Prompt guidance & form validation               |
-| `AUTOCOMPLETE` | Yes  | Field value suggestions                         |
-| `MEMORY`       |  No  | Operation analysis (requires memory storage)    |
-| `DOMAIN`       |  No  | Business rules, workflows, knowledge            |
-| `CUSTOM`       |  --  | Server-specific (you decide)                    |
+| Category       | Auth | Description                                  |
+| -------------- | :--: | -------------------------------------------- |
+| `CRUD`         | Yes  | Generic model operations                     |
+| `STRATEGY`     |  No  | Prompt guidance & form validation            |
+| `AUTOCOMPLETE` | Yes  | Field value suggestions                      |
+| `MEMORY`       |  No  | Operation analysis (requires memory storage) |
+| `DOMAIN`       |  No  | Business rules, workflows, knowledge         |
+| `CUSTOM`       |  --  | Server-specific (you decide)                 |
 
 ### Prompt Strategies
 
 How does an LLM correctly fill out a 25-field form? Most MCP servers don't try. mcp-kit provides three strategies that adapt validation UX to form complexity:
 
-| Strategy      | Fields | Operations                                            | Use Case          |
-| ------------- | ------ | ----------------------------------------------------- | ----------------- |
-| **Stateless** | < 10   | `getDocumentation`                                    | Simple forms      |
-| **Hybrid**    | 10-20  | `getDocumentation`, `validateFields`, `generateSummary` | Medium forms    |
-| **Stateful**  | 20+    | All above + `validateSection`, `getProgress`           | Complex forms    |
+| Strategy      | Fields | Operations                                              | Use Case      |
+| ------------- | ------ | ------------------------------------------------------- | ------------- |
+| **Stateless** | < 10   | `getDocumentation`                                      | Simple forms  |
+| **Hybrid**    | 10-20  | `getDocumentation`, `validateFields`, `generateSummary` | Medium forms  |
+| **Stateful**  | 20+    | All above + `validateSection`, `getProgress`            | Complex forms |
 
 ```typescript
 import { BasePrompt, derivePromptSchema, PromptContentGenerator } from 'mcp-kit/prompts'
@@ -146,7 +151,7 @@ export class BookPrompt extends BasePrompt {
 
   static override fieldGroups = {
     identity: { fields: ['title', 'author'], context: 'Book Identity', required: true },
-    status:   { fields: ['status', 'rating'], context: 'Reading Status' }
+    status: { fields: ['status', 'rating'], context: 'Reading Status' }
   }
 
   // Schema derived FROM model — model is the single source of truth
@@ -159,9 +164,9 @@ export class BookPrompt extends BasePrompt {
   override get promptContent(): PromptContent[] {
     return PromptContentGenerator.for(BookPrompt, 'book')
       .add('# Book Creation Guide\n\nCreate a new book in the library.')
-      .standard()              // flowDiagram → guidance → allSections → summary
-      .toolUsage()             // auto-generated from static config
-      .attributeReference()    // auto-generated field reference table
+      .standard() // flowDiagram → guidance → allSections → summary
+      .toolUsage() // auto-generated from static config
+      .attributeReference() // auto-generated field reference table
       .build()
   }
 }
@@ -173,10 +178,10 @@ The `PromptContentGenerator` pipeline assembles documentation from your model co
 
 mcp-kit connects to any REST API through pluggable **API conventions**:
 
-| Convention   | `belongsTo`                  | `hasMany`           |
-| ------------ | ---------------------------- | ------------------- |
-| **HAL**      | `{rel}_link` + `{rel}_id`   | `{singular}_ids[]`  |
-| **JSON:API** | `{rel}_id`                   | `{singular}_ids[]`  |
+| Convention   | `belongsTo`               | `hasMany`          |
+| ------------ | ------------------------- | ------------------ |
+| **HAL**      | `{rel}_link` + `{rel}_id` | `{singular}_ids[]` |
+| **JSON:API** | `{rel}_id`                | `{singular}_ids[]` |
 
 The convention handles payload wrapping, association resolution, and response normalization. Need a different API style? Implement a convention — the rest of the framework adapts.
 
@@ -207,14 +212,14 @@ export class ActivitySearchAdapter extends SearchAdapter {
 
 Six schema-driven app types render interactive UI in the MCP host (Claude Desktop, VS Code, Cursor) via [`@modelcontextprotocol/ext-apps`](https://github.com/anthropics/anthropic-cookbook/tree/main/misc/model-context-protocol-apps):
 
-| App                    | Description                              |
-| ---------------------- | ---------------------------------------- |
-| **Model Form**         | Create/update forms from model schema    |
-| **List View**          | Paginated browse with filters            |
-| **Record Detail**      | View/edit a single record                |
-| **Search View**        | Multi-model full-text search             |
-| **Autocomplete Picker**| Type-ahead for `belongsTo` associations  |
-| **Multi-Select**       | Checkbox picker for `hasMany` relations  |
+| App                     | Description                             |
+| ----------------------- | --------------------------------------- |
+| **Model Form**          | Create/update forms from model schema   |
+| **List View**           | Paginated browse with filters           |
+| **Record Detail**       | View/edit a single record               |
+| **Search View**         | Multi-model full-text search            |
+| **Autocomplete Picker** | Type-ahead for `belongsTo` associations |
+| **Multi-Select**        | Checkbox picker for `hasMany` relations |
 
 Generated from the same `attributesConfig` that drives the tools and prompts. Adding a new model form = one registry entry, zero new HTML. This turns your MCP server from a tool collection into a full application with UI.
 
@@ -230,10 +235,17 @@ export const onboardNewUser = new WorkflowDefinition({
   description: 'Complete onboarding for a new team member',
   steps: [
     { name: 'create_user', tool: 'create_model', model: 'user' },
-    { name: 'assign_role', tool: 'update_model', model: 'user',
-      description: 'Set the role based on department' },
-    { name: 'send_welcome', tool: 'send_notification',
-      description: 'Trigger the welcome email sequence' }
+    {
+      name: 'assign_role',
+      tool: 'update_model',
+      model: 'user',
+      description: 'Set the role based on department'
+    },
+    {
+      name: 'send_welcome',
+      tool: 'send_notification',
+      description: 'Trigger the welcome email sequence'
+    }
   ],
   tips: ['Always check existing users before creating duplicates']
 })
@@ -243,27 +255,27 @@ export const onboardNewUser = new WorkflowDefinition({
 
 Production-grade OAuth2 built on [openid-client](https://github.com/panva/openid-client):
 
-| RFC   | Standard                         |
-| ----- | -------------------------------- |
-| 7636  | PKCE                             |
-| 7591  | Dynamic Client Registration      |
-| 8414  | Authorization Server Metadata    |
-| 8707  | Resource Indicators              |
-| 9728  | Protected Resource Metadata      |
+| RFC  | Standard                      |
+| ---- | ----------------------------- |
+| 7636 | PKCE                          |
+| 7591 | Dynamic Client Registration   |
+| 8414 | Authorization Server Metadata |
+| 8707 | Resource Indicators           |
+| 9728 | Protected Resource Metadata   |
 
 ```typescript
 import { OAuthService } from 'mcp-kit/oauth2'
 
 const oauth = new OAuthService({
   identityUrl: process.env.IDENTITY_URL,
-  clientId:    process.env.OAUTH_CLIENT_ID,
+  clientId: process.env.OAUTH_CLIENT_ID,
   clientSecret: process.env.OAUTH_CLIENT_SECRET,
   redirectUri: `${BASE_URL}/oauth/callback`,
   scopes: 'read write'
 })
 
-await oauth.getValidAccessToken(sessionId)   // auto-refreshes
-await oauth.introspectToken(token)           // cached 60s
+await oauth.getValidAccessToken(sessionId) // auto-refreshes
+await oauth.introspectToken(token) // cached 60s
 await oauth.revokeToken(token)
 ```
 
@@ -365,28 +377,28 @@ mcp-kit/                              (the framework)
 
 ### Guides
 
-| Guide | Description |
-| ----- | ----------- |
-| [Tool Creation](docs/guides/tool-creation-guide.md) | Build custom tools with category-based auth |
-| [Prompt Creation](docs/guides/prompt-creation-guide.md) | Create prompts with the derivation framework |
-| [Prompt Derivation Framework](docs/guides/prompt-derivation-framework-guide.md) | Deep dive into the generator pipeline |
-| [MCP Apps](docs/guides/mcp-apps-guide.md) | Interactive UI forms and views |
-| [MCP Apps Architecture](docs/guides/mcp-apps-architecture.md) | Schema-driven app internals |
-| [Model Form Customization](docs/guides/model-form-customization-guide.md) | Customize form rendering |
-| [Search & Filters](docs/guides/search-filter-integration-guide.md) | Search adapters and filter transformation |
-| [Domain Knowledge](docs/guides/domain-knowledge-guide.md) | Business rules, knowledge, workflows |
-| [Workflow Creation](docs/guides/workflow-creation-guide.md) | Multi-step operational workflows |
-| [OAuth2 Discovery](docs/guides/oauth2-discovery-flow.md) | OAuth2 server discovery (RFC 8414/9728) |
-| [Memory Architecture](docs/guides/analysis-memory-architecture.md) | Operation memory and analysis caching |
-| [Transient Context](docs/guides/transient-context-protocol.md) | Stateless context handling protocol |
+| Guide                                                                           | Description                                  |
+| ------------------------------------------------------------------------------- | -------------------------------------------- |
+| [Tool Creation](docs/guides/tool-creation-guide.md)                             | Build custom tools with category-based auth  |
+| [Prompt Creation](docs/guides/prompt-creation-guide.md)                         | Create prompts with the derivation framework |
+| [Prompt Derivation Framework](docs/guides/prompt-derivation-framework-guide.md) | Deep dive into the generator pipeline        |
+| [MCP Apps](docs/guides/mcp-apps-guide.md)                                       | Interactive UI forms and views               |
+| [MCP Apps Architecture](docs/guides/mcp-apps-architecture.md)                   | Schema-driven app internals                  |
+| [Model Form Customization](docs/guides/model-form-customization-guide.md)       | Customize form rendering                     |
+| [Search & Filters](docs/guides/search-filter-integration-guide.md)              | Search adapters and filter transformation    |
+| [Domain Knowledge](docs/guides/domain-knowledge-guide.md)                       | Business rules, knowledge, workflows         |
+| [Workflow Creation](docs/guides/workflow-creation-guide.md)                     | Multi-step operational workflows             |
+| [OAuth2 Discovery](docs/guides/oauth2-discovery-flow.md)                        | OAuth2 server discovery (RFC 8414/9728)      |
+| [Memory Architecture](docs/guides/analysis-memory-architecture.md)              | Operation memory and analysis caching        |
+| [Transient Context](docs/guides/transient-context-protocol.md)                  | Stateless context handling protocol          |
 
 ### Operations
 
-| Guide | Description |
-| ----- | ----------- |
-| [Deployment](docs/operations/deployment.md) | Production deployment with Kamal |
+| Guide                                             | Description                      |
+| ------------------------------------------------- | -------------------------------- |
+| [Deployment](docs/operations/deployment.md)       | Production deployment with Kamal |
 | [Observability](docs/operations/observability.md) | Logging, tracing, and monitoring |
-| [Security](docs/operations/security.md) | Security practices and hardening |
+| [Security](docs/operations/security.md)           | Security practices and hardening |
 
 ---
 
@@ -453,13 +465,13 @@ npm run build
 # Full pipeline from scratch (Vite apps + tsc + copy)
 npm run build:full
 
-# Run all 1978 tests
+# Run all 2054 tests
 npm test
 
 # Watch mode (re-runs on file changes)
 npm run test:watch
 
-# Coverage report (thresholds: 92% statements, 85% branches)
+# Coverage report (thresholds: 80% statements, 73% branches)
 npm run test:coverage
 
 # Lint and format
@@ -505,7 +517,7 @@ Add to your `claude_desktop_config.json`:
 - **OAuth2:** openid-client (5 RFCs)
 - **Database:** PostgreSQL
 - **Apps:** Vite (build only)
-- **Testing:** Vitest (1978 tests, 92%+ coverage)
+- **Testing:** Vitest (2054 tests, 81%+ coverage)
 - **CI:** GitHub Actions
 
 ---

@@ -15,7 +15,8 @@
  */
 
 import { z } from 'zod'
-import type { ToolResult, AppToolContext } from './types.js'
+
+import type { AppToolContext, ToolResult } from './types.js'
 
 interface AppToolDefinition {
   resourceUri?: string
@@ -56,7 +57,10 @@ export function createFormDataTools(
       mode: z.enum(['create', 'update']).optional().describe('Form mode: create or update')
     },
 
-    async handleToolCall(args: Record<string, unknown> = {}, { formDataStore }: AppToolContext = {}) {
+    async handleToolCall(
+      args: Record<string, unknown> = {},
+      { formDataStore }: AppToolContext = {}
+    ) {
       if (!formDataStore) {
         return {
           content: [
@@ -65,7 +69,9 @@ export function createFormDataTools(
         }
       }
 
-      const entry = formDataStore.set(args as { model: string; fields?: Record<string, unknown>; mode?: string })
+      const entry = formDataStore.set(
+        args as { model: string; fields?: Record<string, unknown>; mode?: string }
+      )
       const fieldCount = Object.keys(entry.fields).length
       return {
         content: [
@@ -106,7 +112,10 @@ export function createFormDataTools(
         .optional()
     },
 
-    async handleToolCall(args: Record<string, unknown> = {}, { formDataStore }: AppToolContext = {}) {
+    async handleToolCall(
+      args: Record<string, unknown> = {},
+      { formDataStore }: AppToolContext = {}
+    ) {
       if (!formDataStore) {
         return {
           content: [

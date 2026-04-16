@@ -8,15 +8,13 @@
  *   - Response extraction: normalizeListResponse (.data, .meta)
  */
 
-import {
-  BaseConvention,
-} from './base-convention.js'
 import type {
   BelongsToAssociation,
   FieldDefinition,
   HasManyAssociation,
-  NormalizedListResponse,
+  NormalizedListResponse
 } from './base-convention.js'
+import { BaseConvention } from './base-convention.js'
 
 /**
  * JSON API convention.
@@ -128,15 +126,15 @@ class JsonApiConvention extends BaseConvention {
     { page, perPage }: { page: number; perPage: number }
   ): NormalizedListResponse {
     const records = Array.isArray(response)
-      ? response as Record<string, unknown>[]
-      : (response.data || []) as Record<string, unknown>[]
+      ? (response as Record<string, unknown>[])
+      : ((response.data || []) as Record<string, unknown>[])
     const pagination = (response as Record<string, unknown>).meta
-      ? { ...((response as Record<string, unknown>).meta as Record<string, unknown>) } as {
+      ? ({ ...((response as Record<string, unknown>).meta as Record<string, unknown>) } as {
           page: number
           per_page: number
           total: number
           total_pages?: number
-        }
+        })
       : { page, per_page: perPage, total: records.length }
     return { records, pagination }
   }

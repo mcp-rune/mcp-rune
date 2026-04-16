@@ -1,8 +1,11 @@
-import * as client from 'openid-client'
+import http from 'node:http'
+import { URL } from 'node:url'
+
 import open from 'open'
-import http from 'http'
-import { URL } from 'url'
+import * as client from 'openid-client'
+
 import * as logger from '#src/services/logger.js'
+
 import * as tokenStore from './token-store.js'
 
 interface IntrospectionCacheEntry {
@@ -91,7 +94,7 @@ export class OAuthService {
    * Get execute options for openid-client functions
    * Allows HTTP requests when identity URL is not HTTPS (local development)
    */
-  private _getExecuteOptions(): typeof client.allowInsecureRequests[] | undefined {
+  private _getExecuteOptions(): (typeof client.allowInsecureRequests)[] | undefined {
     return this._isInsecure ? [client.allowInsecureRequests] : undefined
   }
 
@@ -141,11 +144,7 @@ export class OAuthService {
    * The resource parameter binds the authorization request to a specific
    * resource server, enabling audience-restricted tokens.
    */
-  buildAuthorizationUrl(
-    config: client.Configuration,
-    codeChallenge: string,
-    state: string
-  ): URL {
+  buildAuthorizationUrl(config: client.Configuration, codeChallenge: string, state: string): URL {
     const parameters: Record<string, string> = {
       redirect_uri: this.redirectUri,
       scope: this.scopes,
@@ -249,7 +248,10 @@ export class OAuthService {
             server.close()
             resolve(userInfo as Record<string, unknown>)
           } catch (err) {
-            logger.error('Token exchange failed', { service: 'oauth2', error: (err as Error).message })
+            logger.error('Token exchange failed', {
+              service: 'oauth2',
+              error: (err as Error).message
+            })
             res.writeHead(500, { 'Content-Type': 'text/html' })
             res.end(
               '<html><body><h1>Authentication Failed</h1><p>Token exchange error</p></body></html>'
@@ -300,7 +302,11 @@ export class OAuthService {
    * Get authorization URL for remote/SSE flow
    * Returns URL and PKCE verifier that must be stored in session
    */
-  async getAuthorizationUrlForRemote(): Promise<{ authUrl: URL; codeVerifier: string; state: string }> {
+  async getAuthorizationUrlForRemote(): Promise<{
+    authUrl: URL
+    codeVerifier: string
+    state: string
+  }> {
     const config = await this.getConfig()
     const codeVerifier = client.randomPKCECodeVerifier()
     const state = client.randomState()
@@ -389,7 +395,9 @@ export class OAuthService {
   /** Get user info from Identity server */
   async getUserInfo(accessToken: string): Promise<Record<string, unknown>> {
     const config = await this.getConfig()
-    return client.fetchUserInfo(config, accessToken, client.skipSubjectCheck) as Promise<Record<string, unknown>>
+    return client.fetchUserInfo(config, accessToken, client.skipSubjectCheck) as Promise<
+      Record<string, unknown>
+    >
   }
 
   /**
@@ -419,7 +427,8 @@ export class OAuthService {
     return {
       access_token: tokenSet.access_token,
       expires_in: tokenSet.expires_in!,
-      token_type: (tokenSet as unknown as Record<string, unknown>).token_type as string || 'Bearer',
+      token_type:
+        ((tokenSet as unknown as Record<string, unknown>).token_type as string) || 'Bearer',
       scope: tokenSet.scope as string | undefined
     }
   }

@@ -1,13 +1,12 @@
-import { z } from 'zod'
-import { BaseTool } from '../base-tool.js'
-import type { ToolResult, ToolAnnotations } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
-import { validateSearchParams } from '../validators.js'
+import { z } from 'zod'
+
 import { pickFields } from '#src/core/helpers.js'
-import {
-  storeIngestedRecords,
-  storeAnalysisMemory
-} from '#src/services/vector-storage.js'
+import { storeAnalysisMemory, storeIngestedRecords } from '#src/services/vector-storage.js'
+
+import type { ToolAnnotations, ToolResult } from '../base-tool.js'
+import { BaseTool } from '../base-tool.js'
+import { validateSearchParams } from '../validators.js'
 
 /** Max pages allowed when ingest_all is true */
 const MAX_INGEST_PAGES = 50
@@ -28,7 +27,12 @@ export class AnalysisIngestTool extends BaseTool {
   }
 
   override get annotations(): ToolAnnotations {
-    return { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
+    return {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true
+    }
   }
 
   override get baseDescription(): string {
@@ -58,7 +62,10 @@ When NOT to use: For quick lookups of specific records by ID or small result set
           'Search parameters specific to the model. Use list_models to see which fields are searchable.'
         )
         .optional(),
-      page: z.number().describe('Page number to fetch (default: 1). Ignored when ingest_all is true.').optional(),
+      page: z
+        .number()
+        .describe('Page number to fetch (default: 1). Ignored when ingest_all is true.')
+        .optional(),
       per_page: z.number().describe('Records per page (default: 50)').optional(),
       fields: z
         .array(z.string())
@@ -72,10 +79,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         .describe(
           `When true, auto-paginates all pages (up to ${MAX_INGEST_PAGES} pages). Default: false (single page).`
         ),
-      user_id: z
-        .string()
-        .describe('User ID to impersonate (service accounts only).')
-        .optional()
+      user_id: z.string().describe('User ID to impersonate (service accounts only).').optional()
     }
   }
 
@@ -138,9 +142,28 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       >
 
       if (ingest_all) {
-        return await this._ingestAllPages(api, model, modelConfig, analysis_id, search, per_page, fields, options)
+        return await this._ingestAllPages(
+          api,
+          model,
+          modelConfig,
+          analysis_id,
+          search,
+          per_page,
+          fields,
+          options
+        )
       } else {
-        return await this._ingestPage(api, model, modelConfig, analysis_id, search, page ?? 1, per_page, fields, options)
+        return await this._ingestPage(
+          api,
+          model,
+          modelConfig,
+          analysis_id,
+          search,
+          page ?? 1,
+          per_page,
+          fields,
+          options
+        )
       }
     } catch (error) {
       return this.formatError(error as Error)
@@ -166,7 +189,9 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     >
 
     const rawRecords = this._extractRecords(data)
-    const records = fields ? (pickFields(rawRecords, fields) as Record<string, unknown>[]) : rawRecords
+    const records = fields
+      ? (pickFields(rawRecords, fields) as Record<string, unknown>[])
+      : rawRecords
     const totalPages = this._extractTotalPages(data, page, records.length, perPage)
 
     // Store records
@@ -243,7 +268,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
 
     const pagesIngested = currentPage
     const fieldsNote = fields ? ` (${fields.length} fields per record)` : ''
-    const capNote = pagesIngested >= MAX_INGEST_PAGES ? ` (capped at ${MAX_INGEST_PAGES} pages)` : ''
+    const capNote =
+      pagesIngested >= MAX_INGEST_PAGES ? ` (capped at ${MAX_INGEST_PAGES} pages)` : ''
 
     return this.formatResponse(
       `Stored ${totalStored} record(s)${fieldsNote} across ${pagesIngested} page(s)${capNote}.` +
@@ -256,7 +282,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
   /** Extract records array from API response (handles different response shapes) */
   private _extractRecords(data: Record<string, unknown>): Record<string, unknown>[] {
     if (Array.isArray(data)) return data as Record<string, unknown>[]
-    return ((data?.data ?? data?.records ?? []) as unknown[]) as Record<string, unknown>[]
+    return (data?.data ?? data?.records ?? []) as unknown[] as Record<string, unknown>[]
   }
 
   /** Try to extract total pages from API response metadata */

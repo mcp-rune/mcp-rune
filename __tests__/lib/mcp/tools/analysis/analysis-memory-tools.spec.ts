@@ -1,4 +1,3 @@
-
 // Mock memory storage
 vi.mock('#src/services/vector-storage.js', () => ({
   storeAnalysisMemory: vi.fn(() => Promise.resolve('uuid-123')),
@@ -20,18 +19,18 @@ vi.mock('#src/services/vector-storage.js', () => ({
   queryIngestedData: vi.fn(() => Promise.resolve([]))
 }))
 
-import { AnalysisStoreTool } from '../../../../../src/mcp/tools/analysis/analysis-store-tool.js'
-import { AnalysisQueryTool } from '../../../../../src/mcp/tools/analysis/analysis-query-tool.js'
-import { AnalysisClearTool } from '../../../../../src/mcp/tools/analysis/analysis-clear-tool.js'
 import {
-  storeAnalysisMemory,
-  recallAnalysisMemories,
   clearAnalysisMemories,
   clearIngestedRecords,
-  queryIngestedData
+  queryIngestedData,
+  recallAnalysisMemories,
+  storeAnalysisMemory
 } from '#src/services/vector-storage.js'
-import { TOOL_CATEGORIES } from '../../../../../src/mcp/tools/categories.js'
 
+import { AnalysisClearTool } from '../../../../../src/mcp/tools/analysis/analysis-clear-tool.js'
+import { AnalysisQueryTool } from '../../../../../src/mcp/tools/analysis/analysis-query-tool.js'
+import { AnalysisStoreTool } from '../../../../../src/mcp/tools/analysis/analysis-store-tool.js'
+import { TOOL_CATEGORIES } from '../../../../../src/mcp/tools/categories.js'
 
 describe('Analysis Memory Tools', () => {
   beforeEach(() => {

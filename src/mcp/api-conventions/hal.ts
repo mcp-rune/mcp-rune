@@ -8,15 +8,13 @@
  *   - Response extraction: normalizeListResponse (_embedded, model-keyed arrays)
  */
 
-import {
-  BaseConvention,
-} from './base-convention.js'
 import type {
   BelongsToAssociation,
   FieldDefinition,
   HasManyAssociation,
-  NormalizedListResponse,
+  NormalizedListResponse
 } from './base-convention.js'
+import { BaseConvention } from './base-convention.js'
 
 /**
  * HAL convention.
@@ -186,8 +184,8 @@ class HalConvention extends BaseConvention {
     }
 
     const pagination = {
-      page: (response as Record<string, unknown>).page as number || page,
-      per_page: (response as Record<string, unknown>).per_page as number || perPage,
+      page: ((response as Record<string, unknown>).page as number) || page,
+      per_page: ((response as Record<string, unknown>).per_page as number) || perPage,
       total: ((response as Record<string, unknown>).total_count ??
         (response as Record<string, unknown>).total_entries ??
         (response as Record<string, unknown>).total ??

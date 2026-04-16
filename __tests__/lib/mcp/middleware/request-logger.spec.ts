@@ -9,7 +9,6 @@
  * when queried in Loki/Grafana.
  */
 
-
 // Define mock logger using vi.hoisted()
 const { mockLogger } = vi.hoisted(() => ({
   mockLogger: {
@@ -24,6 +23,7 @@ const { mockLogger } = vi.hoisted(() => ({
 vi.mock('#src/services/logger.js', () => mockLogger)
 
 import * as logger from '#src/services/logger.js'
+
 import { createRequestLoggerMiddleware } from '../../../../src/mcp/middleware/request-logger.js'
 
 describe('lib/mcp/middleware/request-logger', () => {

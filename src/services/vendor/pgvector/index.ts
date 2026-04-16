@@ -9,6 +9,7 @@
  */
 
 import type { Pool } from 'pg'
+
 import * as logger from '../../logger.js'
 import * as operations from './tool-memories.js'
 

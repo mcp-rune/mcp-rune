@@ -1,10 +1,10 @@
-import { z } from 'zod'
-import type { ZodTypeAny } from 'zod'
 import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
+import type { ZodTypeAny } from 'zod'
+import { z } from 'zod'
 export type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
-import { TOOL_CATEGORIES, getCategoryConfig } from './categories.js'
-import type { ToolCategory } from './categories.js'
 import type { AssociationConfig, BaseConvention } from '../api-conventions/base-convention.js'
+import type { ToolCategory } from './categories.js'
+import { getCategoryConfig, TOOL_CATEGORIES } from './categories.js'
 
 // ============================================================================
 // Types

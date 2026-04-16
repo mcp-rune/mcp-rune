@@ -11,7 +11,10 @@
  * // => { id: '123', name: 'BBC Drama', right_type: 'catchup', status: 'draft' }
  */
 
-export type OutputAdapter = (rawOutput: Record<string, unknown>, toolArgs: Record<string, unknown>) => Record<string, unknown> | null
+export type OutputAdapter = (
+  rawOutput: Record<string, unknown>,
+  toolArgs: Record<string, unknown>
+) => Record<string, unknown> | null
 
 const adapters = new Map<string, OutputAdapter>()
 

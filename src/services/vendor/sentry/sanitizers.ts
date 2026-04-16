@@ -4,10 +4,10 @@
  * Re-exports shared sanitizers and adds Sentry-specific beforeSend hook.
  */
 
-import { sanitizeObject, sanitizeHeaders, sanitizeToolArgs } from '../../sanitizers.js'
+import { sanitizeHeaders, sanitizeObject, sanitizeToolArgs } from '../../sanitizers.js'
 
 // Re-export shared sanitizers (backward-compatible)
-export { sanitizeObject, sanitizeHeaders, sanitizeToolArgs }
+export { sanitizeHeaders, sanitizeObject, sanitizeToolArgs }
 
 interface SentryBreadcrumb {
   data?: Record<string, unknown>

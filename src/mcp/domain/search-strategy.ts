@@ -82,7 +82,10 @@ export class EmbeddingSearch implements DomainSearchStrategy {
 
   /** Compute embeddings for all items and store for substring fallback */
   async initialize(items: DomainItem[], textFn?: (item: DomainItem) => string): Promise<void> {
-    await Promise.all([this._semantic.initialize(items, textFn!), this._substring.initialize(items)])
+    await Promise.all([
+      this._semantic.initialize(items, textFn!),
+      this._substring.initialize(items)
+    ])
   }
 
   /** Search by embedding similarity, falling back to substring if no results */

@@ -14,17 +14,21 @@
  * app's handleToolCall can fetch options from the API separately.
  */
 
-import { humanize, pluralize } from './helpers.js'
-import { buildFieldTransformerMap } from '#src/mcp/prompts/association-transformers.js'
-import type { TransformerConfig, TransformerEntry } from '#src/mcp/prompts/association-transformers.js'
 import type {
-  AppModelClass,
-  AppAttributeDefinition,
-  FormFieldDefinition,
-  FieldsetDefinition,
-  FormSchema,
-} from './types.js'
+  TransformerConfig,
+  TransformerEntry
+} from '#src/mcp/prompts/association-transformers.js'
+import { buildFieldTransformerMap } from '#src/mcp/prompts/association-transformers.js'
 import type { FieldGroup, Section } from '#src/mcp/prompts/base-prompt.js'
+
+import { humanize, pluralize } from './helpers.js'
+import type {
+  AppAttributeDefinition,
+  AppModelClass,
+  FieldsetDefinition,
+  FormFieldDefinition,
+  FormSchema
+} from './types.js'
 
 /** Map model attribute types to HTML form field types */
 const TYPE_MAP: Record<string, string> = {
@@ -42,7 +46,10 @@ interface FormSchemaOptions {
 
 interface FormClassLike {
   fields?: string[]
-  fieldsets?: Record<string, { title?: string; description?: string; required?: boolean; fields?: string[] }>
+  fieldsets?: Record<
+    string,
+    { title?: string; description?: string; required?: boolean; fields?: string[] }
+  >
   [key: string]: unknown
 }
 
@@ -69,13 +76,14 @@ export function generateFormSchema(
     Array.isArray((FormOrPromptClass as FormClassLike)?.fields) &&
     (FormOrPromptClass as FormClassLike).fields!.length > 0
   ) {
-    return generateFromFormClass(ModelClass, FormOrPromptClass as FormClassLike, { allModelClasses })
+    return generateFromFormClass(ModelClass, FormOrPromptClass as FormClassLike, {
+      allModelClasses
+    })
   }
 
   // PromptClass path (legacy): has fieldGroups
   const asPrompt = FormOrPromptClass as PromptClassLike | undefined
-  const hasPromptLayout =
-    asPrompt?.fieldGroups && Object.keys(asPrompt.fieldGroups).length > 0
+  const hasPromptLayout = asPrompt?.fieldGroups && Object.keys(asPrompt.fieldGroups).length > 0
   if (hasPromptLayout) {
     return generateFromPrompt(ModelClass, asPrompt!, { allModelClasses })
   }
@@ -258,7 +266,7 @@ function buildSelectFromTransformer(
     type: 'select',
     association: {
       endpoint: pluralize(transformer.source.model!),
-      labelField: (transformer as Record<string, unknown>).labelField as string || 'name',
+      labelField: ((transformer as Record<string, unknown>).labelField as string) || 'name',
       valueField: transformer.valueField || 'id'
     }
   }

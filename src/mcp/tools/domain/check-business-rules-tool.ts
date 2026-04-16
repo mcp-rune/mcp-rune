@@ -1,7 +1,8 @@
-import { z } from 'zod'
-import { BaseDomainTool } from './base-domain-tool.js'
-import type { ToolResult } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
+import { z } from 'zod'
+
+import type { ToolResult } from '../base-tool.js'
+import { BaseDomainTool } from './base-domain-tool.js'
 
 interface RuleResult {
   rule: string
@@ -72,11 +73,13 @@ Accepts both proposed data (pre-submission) and existing entity data (post-fetch
     }
 
     // Evaluate rules
-    const result = (registry.checkRules as (
-      m: string,
-      d: Record<string, unknown>,
-      c: Record<string, unknown>
-    ) => CheckResult)(model, data, context ?? {})
+    const result = (
+      registry.checkRules as (
+        m: string,
+        d: Record<string, unknown>,
+        c: Record<string, unknown>
+      ) => CheckResult
+    )(model, data, context ?? {})
 
     return this.formatResponse(this._formatResult(model, result))
   }

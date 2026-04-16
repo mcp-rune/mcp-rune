@@ -1,6 +1,6 @@
+import type { ToolSuccessResponse } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
 import type { ToolCategory } from '../categories.js'
-import type { ToolSuccessResponse } from '../base-tool.js'
 import { TOOL_CATEGORIES } from '../categories.js'
 
 /**

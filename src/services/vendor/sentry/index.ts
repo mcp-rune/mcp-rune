@@ -8,22 +8,23 @@
  */
 
 import * as Sentry from '@sentry/node'
+
 import * as logger from '#src/services/logger.js'
+
 import { beforeSendSanitizer } from './sanitizers.js'
 
 // Re-export MCP-specific utilities
 export {
-  captureToolError,
+  addToolBreadcrumb,
   captureApiError,
   capturePromptError,
-  startToolTransaction,
-  addToolBreadcrumb,
-  setMcpClientContext,
+  captureToolError,
   categorizeError,
-  ErrorCategory
+  ErrorCategory,
+  setMcpClientContext,
+  startToolTransaction
 } from './mcp-integration.js'
-
-export { sanitizeToolArgs, sanitizeObject } from './sanitizers.js'
+export { sanitizeObject, sanitizeToolArgs } from './sanitizers.js'
 
 interface SentryOptions {
   dsn?: string

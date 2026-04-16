@@ -5,11 +5,13 @@
  * It generates human-readable and technical summaries using the appropriate strategy.
  */
 
-import { z } from 'zod'
 import type { ZodTypeAny } from 'zod'
-import { BaseStrategyTool } from './base-strategy-tool.js'
-import type { ToolResult } from '#src/mcp/tools/base-tool.js'
+import { z } from 'zod'
+
 import { coerceToObject } from '#src/core/helpers.js'
+import type { ToolResult } from '#src/mcp/tools/base-tool.js'
+
+import { BaseStrategyTool } from './base-strategy-tool.js'
 
 export class GetFormSummaryTool extends BaseStrategyTool {
   get name(): string {
@@ -61,7 +63,9 @@ Not supported by: Stateless strategy models`
     }
 
     // Get the strategy for this prompt
-    const strategy = this.getStrategy(promptClass as { strategy?: 'stateless' | 'hybrid' | 'stateful' })
+    const strategy = this.getStrategy(
+      promptClass as { strategy?: 'stateless' | 'hybrid' | 'stateful' }
+    )
 
     // Check if summary generation is supported
     const check = this.checkOperation(strategy, 'generateSummary', model)
@@ -70,7 +74,15 @@ Not supported by: Stateless strategy models`
     }
 
     // Generate summary
-    const generateSummary = (strategy as unknown as { generateSummary: (pc: unknown, f: Record<string, unknown>, ctx: Record<string, unknown>) => Record<string, unknown> }).generateSummary.bind(strategy)
+    const generateSummary = (
+      strategy as unknown as {
+        generateSummary: (
+          pc: unknown,
+          f: Record<string, unknown>,
+          ctx: Record<string, unknown>
+        ) => Record<string, unknown>
+      }
+    ).generateSummary.bind(strategy)
     const result = generateSummary(promptClass, fields || {}, { model })
 
     if (this.logger) {

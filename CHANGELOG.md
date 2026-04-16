@@ -4,12 +4,39 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] — 2026-04-16
+
+### Added
+
+- **ESLint plugins** aligned with the MCP TypeScript SDK — `simple-import-sort` (auto-sorted imports), `eslint-plugin-n` (`node:` protocol enforcement), `eslint-plugin-unicorn` (kebab-case filenames), `@typescript-eslint/consistent-type-imports`
+- **Pre-commit hooks** via husky + lint-staged — runs ESLint fix and Prettier on staged files before every commit
+- `prepare` script for automatic hook installation on `npm install`
+- `eslint-config-prettier` explicitly wired into ESLint flat config
+- CI `format:check` step in GitHub Actions workflow
+- CI status badge in README (linked to GitHub Actions)
+
+### Changed
+
+- Replaced manual Node.js globals block in ESLint config with `globals.node`
+- Coverage thresholds lowered to match actual coverage (80/73/82/80)
+- README badges and text updated to reflect current test count (2054) and coverage (81%)
+
+### Fixed
+
+- 6 ESLint errors — 4 unused imports, 1 `Function` type cast, 1 missing error cause
+- 119 Prettier formatting violations across the codebase
+- `src/oauth2-ref/` excluded from ESLint (legacy JS reference files with redundant global declarations)
+
+[0.6.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.5.1...v0.6.0
+
 ## [0.5.1] — 2026-04-16
 
 ### Fixed
+
 - `npm run build` fails on fresh clone — target directory `dist/mcp/apps/dist/` not created by `tsc`
 
 ### Added
+
 - `build:all-apps` script — builds all 6 Vite UI targets sequentially
 - `build:full` script — runs the complete pipeline (Vite apps + tsc + copy) for fresh clones
 - `prepublishOnly` now runs `build:full` to ensure `npm publish` produces a complete package
@@ -19,6 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [0.5.0] — 2026-04-16
 
 ### Added
+
 - **MCP tool annotations** for all 21 tools — `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` per the MCP spec, enabling clients (e.g., Claude Connectors UI) to properly categorize tools into permission groups
 - `defaultAnnotations` field on `CategoryConfig` — category-level annotation defaults so tools inherit correct hints automatically
 - `annotations` getter on `BaseTool` — returns category defaults, overridable per-tool
@@ -26,6 +54,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Enforcement test (`annotations.spec.ts`) ensuring every tool declares annotations with explicit `readOnlyHint`
 
 ### Changed
+
 - Bookshelf example updated to pass `tool.annotations` via the 5-arg `mcpServer.tool()` signature
 - 10 tools override category defaults with per-tool annotations (read-only DATA tools, non-destructive write tools, ANALYSIS write tools)
 
@@ -34,6 +63,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [0.4.0] — 2026-04-16
 
 ### Added
+
 - **ANALYSIS tool category** — independent category for qualitative data analysis sessions (`analysis_store`, `analysis_query`, `analysis_clear`). Requires vector storage.
 - **OPERATIONS tool category** — independent category for retrospective CRUD operation analysis (`find_similar_operations`, `detect_operation_gaps`, `cluster_operations`). Requires vector storage.
 - `BaseAnalysisTool` and `BaseOperationsTool` base classes in their own directories
@@ -41,6 +71,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - `"dev": "tsc --watch"` script for rapid development with npm link
 
 ### Changed
+
 - **Split `MEMORY` category into `ANALYSIS` + `OPERATIONS`** — two independent categories, each with its own base class, directory, and `*_TOOL_CLASSES` export
 - **Renamed `memory-storage.ts` → `vector-storage.ts`** — `initVectorStorage()`, `isVectorStorageEnabled()`, `flushVectorStorage()`, `closeVectorStorage()`, `VectorStorageOptions`
 - **Renamed service export** `memoryStorage` → `vectorStorage` from `mcp-kit/services`
@@ -49,9 +80,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - `tools/memory/` directory split into `tools/analysis/` and `tools/operations/`
 
 ### Fixed
+
 - `derivePromptSchema()` now copies `enumDescriptions` from model `attributesConfig`, restoring auto-generated enum tables in section documentation
 
 ### Removed
+
 - `TOOL_CATEGORIES.MEMORY` constant
 - `BaseMemoryTool` base class
 - `tools/memory/` directory
@@ -60,6 +93,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [0.3.0] — 2026-04-15
 
 ### Added
+
 - **Unified `analysis_*` tool family** for large-scale dataset analysis without polluting LLM context:
   - `analysis_ingest` — Fetches records from the API and stores them in structured storage (`ingested_records` table) with auto-generated page summaries. Supports `ingest_all: true` for zero-context-pollution bulk ingestion (up to 50 pages)
   - `analysis_query` — Unified query tool with four modes: `semantic` (embedding similarity on findings), `aggregate` (SQL GROUP BY for counts/distributions), `filter` (JSONB containment for exact matches), `sample` (random records for inspection)
@@ -70,6 +104,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - New public exports: `BaseForm`, `createFormDataTools`, `StartupTracker`, `PostgresqlAdapter`, `createPromptCache`, `BaseConvention`, `halConvention`, `jsonApiConvention`, `defaultConvention`, `toolOutputAdapters`
 
 ### Changed
+
 - **Renamed `src/mcp/tools/crud/` → `src/mcp/tools/data/`** — the directory contained CRUD, bulk, search, and discovery tools; "data" accurately reflects the broader scope
 - `CRUD_TOOL_CLASSES` → `DATA_TOOL_CLASSES` (deprecated alias preserved)
 - `TOOL_CATEGORIES.CRUD` → `TOOL_CATEGORIES.DATA` (deprecated alias preserved, value changed from `'crud'` to `'data'`)
@@ -80,6 +115,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - `MEMORY_TOOL_CLASSES` updated: `analysis_store`, `analysis_query`, `analysis_clear` replace old names
 
 ### Fixed
+
 - Silenced logging output during test runs: mocked logger in pgvector and embeddings tests, added `logger: false` to AJV instances in OAuth2 contract tests
 - Fixed unawaited `expect().rejects.toThrow()` in `get-filters-guide-tool.spec.ts`
 
@@ -90,6 +126,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 Full migration from JavaScript to TypeScript with strict type checking, `.d.ts` declaration generation, and CI pipeline.
 
 ### Added
+
 - TypeScript compilation with `tsc` (`src/` → `dist/`)
 - `tsconfig.json` with strict mode, `noUncheckedIndexedAccess`, `verbatimModuleSyntax`
 - `.d.ts` + `.d.ts.map` declaration files for all 11 subpath exports
@@ -103,6 +140,7 @@ Full migration from JavaScript to TypeScript with strict type checking, `.d.ts` 
 - `build`, `build:check`, `prepublishOnly` scripts
 
 ### Changed
+
 - Source directory: `lib/` → `src/` (131 files)
 - Root barrel files moved into `src/` as `.ts` entry points
 - Package exports: all 11 subpaths now have `types` + `import` conditions
@@ -117,6 +155,7 @@ Full migration from JavaScript to TypeScript with strict type checking, `.d.ts` 
 - Bookshelf example migrated to TypeScript
 
 ### Fixed
+
 - `form-data-store.ts` / `selection-store.ts`: `get()` parameter made optional (was required after TS conversion)
 - `validate-form-tool.ts` / `get-form-summary-tool.ts`: restored `this` binding for extracted static methods
 
@@ -125,6 +164,7 @@ Full migration from JavaScript to TypeScript with strict type checking, `.d.ts` 
 Initial public release. Extracted from production MCP servers.
 
 ### Framework
+
 - Model-driven architecture: define models, get tools/prompts/forms/docs automatically
 - `BaseModel` class with `attributesConfig` as single source of truth
 - Dual transport: `StdioServer` (local dev) + `HttpServer` (remote, multi-user, Streamable HTTP)
@@ -140,6 +180,7 @@ Initial public release. Extracted from production MCP servers.
 - API convention abstraction (HAL, JSON:API)
 
 ### Auth
+
 - OAuth 2.1 + PKCE via `openid-client`
 - RFC 7636 (PKCE), RFC 7591 (DCR), RFC 8414 (AS metadata), RFC 8707 (Resource Indicators), RFC 9728 (Protected Resource Metadata)
 - Token introspection with 60s caching
@@ -147,6 +188,7 @@ Initial public release. Extracted from production MCP servers.
 - Reference implementation for learning (`lib/oauth2-ref/`)
 
 ### Infrastructure
+
 - Structured logging (Winston, JSON/text formats, daily file rotation)
 - Distributed tracing facade (Langfuse adapter included)
 - Error tracking facade (Sentry adapter included)
@@ -155,4 +197,5 @@ Initial public release. Extracted from production MCP servers.
 - Request ID correlation (`X-Request-ID`) across services
 
 ### Packages
+
 - 11 subpath exports: `mcp-kit/server`, `mcp-kit/tools`, `mcp-kit/prompts`, `mcp-kit/apps`, `mcp-kit/search`, `mcp-kit/domain`, `mcp-kit/oauth2`, `mcp-kit/services`, `mcp-kit/db`, `mcp-kit/core`

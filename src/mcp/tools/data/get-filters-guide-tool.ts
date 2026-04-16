@@ -1,8 +1,9 @@
+import type { ZodTypeAny } from 'zod'
+
+import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
-import type { ToolResult, ModelConfig, ToolAnnotations } from '../base-tool.js'
 import type { ToolCategory } from '../categories.js'
 import { TOOL_CATEGORIES } from '../categories.js'
-import type { ZodTypeAny } from 'zod'
 
 interface FilterConfig {
   label?: string
@@ -30,7 +31,12 @@ export class GetFiltersGuideTool extends BaseTool {
   }
 
   override get annotations(): ToolAnnotations {
-    return { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+    return {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
   }
 
   override get baseDescription(): string {

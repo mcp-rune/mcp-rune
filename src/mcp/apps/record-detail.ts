@@ -14,13 +14,16 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+
 import { z } from 'zod'
+
 import { generateDetailSchema } from '#src/mcp/apps/detail-schema.js'
-import * as logger from '#src/services/logger.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
-import type { AppModelClass, DetailFieldDefinition, ToolResult } from './types.js'
 import type { ApiClient } from '#src/mcp/search/search-client.js'
+import * as logger from '#src/services/logger.js'
+
 import type { SelectionStore } from './selection-store.js'
+import type { AppModelClass, DetailFieldDefinition, ToolResult } from './types.js'
 
 const DIST_DIR = path.resolve(import.meta.dirname, 'dist')
 const HTML_PATH = path.join(DIST_DIR, 'record-detail.html')
@@ -109,7 +112,11 @@ interface RecordDetailOptions {
 }
 
 /** Create the record detail MCP App. */
-export function createRecordDetailApp({ modelClasses, promptClasses, namespace }: RecordDetailOptions): unknown {
+export function createRecordDetailApp({
+  modelClasses,
+  promptClasses,
+  namespace
+}: RecordDetailOptions): unknown {
   const modelNames = Object.keys(modelClasses) as [string, ...string[]]
 
   return {
@@ -178,7 +185,10 @@ export function createRecordDetailApp({ modelClasses, promptClasses, namespace }
 
       const ModelClass = modelClasses[model as string]!
       const PromptClass = (promptClasses as Record<string, unknown> | undefined)?.[model as string]
-      const schema = generateDetailSchema(ModelClass, PromptClass as Record<string, unknown> | undefined)
+      const schema = generateDetailSchema(
+        ModelClass,
+        PromptClass as Record<string, unknown> | undefined
+      )
 
       // Cap at MAX_RECORDS
       let cappedMessage: string | null = null

@@ -29,25 +29,25 @@ From a **30-line model definition**, the framework registers these tools automat
 
 ### Tools that work immediately (no API needed)
 
-| Tool | What it does |
-|------|-------------|
-| `list_models` | Discover available models and their schemas |
-| `get_prompt_guide` | Step-by-step creation guide with field documentation |
-| `validate_form` | Validate collected fields before submitting |
-| `get_form_summary` | Human-readable + technical summary of form state |
-| `get_filters_guide` | Filter documentation for search |
+| Tool                | What it does                                         |
+| ------------------- | ---------------------------------------------------- |
+| `list_models`       | Discover available models and their schemas          |
+| `get_prompt_guide`  | Step-by-step creation guide with field documentation |
+| `validate_form`     | Validate collected fields before submitting          |
+| `get_form_summary`  | Human-readable + technical summary of form state     |
+| `get_filters_guide` | Filter documentation for search                      |
 
 ### Tools that need an API backend
 
-| Tool | What it does |
-|------|-------------|
-| `create_model` | Create a book record |
-| `find_model` | Find a book by ID or search |
-| `update_model` | Update book attributes |
-| `delete_model` | Delete a book |
-| `search_records` | Search with filters |
-| `get_nested_resources` | Fetch child resources |
-| `bulk_action_models` | Batch create/update/delete |
+| Tool                        | What it does                 |
+| --------------------------- | ---------------------------- |
+| `create_model`              | Create a book record         |
+| `find_model`                | Find a book by ID or search  |
+| `update_model`              | Update book attributes       |
+| `delete_model`              | Delete a book                |
+| `search_records`            | Search with filters          |
+| `get_nested_resources`      | Fetch child resources        |
+| `bulk_action_models`        | Batch create/update/delete   |
 | `bulk_get_nested_resources` | Batch fetch nested resources |
 
 The strategy tools are the most interesting part — they showcase what mcp-kit does that other frameworks don't: **guided form filling with validation feedback, no API calls needed**.
@@ -102,15 +102,16 @@ Create a new book in your library.
 ## Workflow
 
 ● 1. Book Identity — title, author
-  ↳ Core information that identifies the book (required)
+↳ Core information that identifies the book (required)
 ○ 2. Reading Status — status, rating, notes
-  ↳ Your reading progress and impressions
+↳ Your reading progress and impressions
 
 ## Guidance
 
 This is a hybrid model (5 fields in 2 groups).
 
 Recommended approach:
+
 1. Collect all required fields (title, author)
 2. Ask about optional fields (status, rating, notes)
 3. Validate with validate_form before creating
@@ -120,31 +121,36 @@ Recommended approach:
 ## Section 1: Book Identity (required)
 
 ### title (string) — required
+
 Book title
 Examples: "Clean Code", "Design Patterns", "The Pragmatic Programmer"
 
 ### author (string) — required
+
 Author name
 Examples: "Robert C. Martin", "Kent Beck"
 
 ## Section 2: Reading Status
 
 ### status (enum)
+
 Current reading status
 Valid values: unread, reading, completed
 Default: unread
 
 ### rating (integer)
+
 Your rating from 1 to 5
 Validation: min=1, max=5
 
 ### notes (text)
+
 Personal notes about the book
 
 ## Attribute Reference
 
 | Attribute | Type    | Required | Valid Values               |
-|-----------|---------|----------|----------------------------|
+| --------- | ------- | -------- | -------------------------- |
 | title     | string  | Yes      |                            |
 | author    | string  | Yes      |                            |
 | status    | enum    | No       | unread, reading, completed |
@@ -154,14 +160,14 @@ Personal notes about the book
 ## Tool Usage
 
 create_model({
-  model: "book",
-  attributes: {
-    title: "...",      // required
-    author: "...",     // required
-    status: "unread",  // optional, default: unread
-    rating: 4,         // optional, 1-5
-    notes: "..."       // optional
-  }
+model: "book",
+attributes: {
+title: "...", // required
+author: "...", // required
+status: "unread", // optional, default: unread
+rating: 4, // optional, 1-5
+notes: "..." // optional
+}
 })
 ```
 
@@ -180,15 +186,13 @@ After collecting fields from the user, the LLM validates before calling the API.
 ```json
 {
   "valid": false,
-  "errors": [
-    "Field 'author' is required but missing"
-  ],
+  "errors": ["Field 'author' is required but missing"],
   "warnings": [],
   "ready_to_submit": false
 }
 ```
 
-The LLM tells the user: *"I still need the author name before I can create the book."*
+The LLM tells the user: _"I still need the author name before I can create the book."_
 
 After the user provides it:
 
@@ -231,13 +235,14 @@ Before calling the API, the LLM presents a summary for user confirmation.
 
 The LLM presents the human-readable summary:
 
-> *I'm about to create this book:*
+> _I'm about to create this book:_
+>
 > - **Title:** Clean Code
 > - **Author:** Robert C. Martin
 > - **Rating:** 5/5
 > - **Status:** unread (default)
 >
-> *Shall I go ahead?*
+> _Shall I go ahead?_
 
 ---
 
@@ -337,9 +342,7 @@ All tools return the same MCP format:
 
 ```json
 {
-  "content": [
-    { "type": "text", "text": "Markdown or JSON content" }
-  ]
+  "content": [{ "type": "text", "text": "Markdown or JSON content" }]
 }
 ```
 
@@ -347,9 +350,7 @@ Error responses include `isError: true`:
 
 ```json
 {
-  "content": [
-    { "type": "text", "text": "Error: Unknown model 'magazine'. Available: book" }
-  ],
+  "content": [{ "type": "text", "text": "Error: Unknown model 'magazine'. Available: book" }],
   "isError": true
 }
 ```
@@ -382,10 +383,10 @@ function createApiClient(token: string): ApiClient {
     headers: { Authorization: `Bearer ${token}` }
   })
   return {
-    get: (url, params) => http.get(url, { params }).then(r => r.data),
-    post: (url, data) => http.post(url, data).then(r => r.data),
-    patch: (url, data) => http.patch(url, data).then(r => r.data),
-    delete: (url) => http.delete(url).then(r => r.data)
+    get: (url, params) => http.get(url, { params }).then((r) => r.data),
+    post: (url, data) => http.post(url, data).then((r) => r.data),
+    patch: (url, data) => http.patch(url, data).then((r) => r.data),
+    delete: (url) => http.delete(url).then((r) => r.data)
   }
 }
 ```

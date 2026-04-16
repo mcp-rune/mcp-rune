@@ -1,7 +1,7 @@
-import { DATA_TOOL_CLASSES } from '../../../../src/mcp/tools/data/index.js'
 import { ANALYSIS_TOOL_CLASSES } from '../../../../src/mcp/tools/analysis/index.js'
-import { OPERATIONS_TOOL_CLASSES } from '../../../../src/mcp/tools/operations/index.js'
+import { DATA_TOOL_CLASSES } from '../../../../src/mcp/tools/data/index.js'
 import { DOMAIN_TOOL_CLASSES } from '../../../../src/mcp/tools/domain/index.js'
+import { OPERATIONS_TOOL_CLASSES } from '../../../../src/mcp/tools/operations/index.js'
 
 const ALL_TOOL_CLASSES = {
   ...DATA_TOOL_CLASSES,

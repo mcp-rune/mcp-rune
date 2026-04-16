@@ -1,8 +1,10 @@
-import { z } from 'zod'
-import { BaseTool } from '../base-tool.js'
-import type { ToolResult } from '../base-tool.js'
 import type { ZodTypeAny } from 'zod'
+import { z } from 'zod'
+
 import { storeOperation } from '#src/services/vector-storage.js'
+
+import type { ToolResult } from '../base-tool.js'
+import { BaseTool } from '../base-tool.js'
 
 /**
  * Tool for deleting records
@@ -83,7 +85,10 @@ export class DeleteModelTool extends BaseTool {
       }
 
       // Cast to allow server-specific options (e.g., userId impersonation)
-      const api = this.apiClient! as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>
+      const api = this.apiClient! as unknown as Record<
+        string,
+        (...args: unknown[]) => Promise<unknown>
+      >
       await api.delete!(`${modelConfig.endpoint}/${record_id}`, options)
 
       // Fire-and-forget: store operation embedding for retrospective analysis

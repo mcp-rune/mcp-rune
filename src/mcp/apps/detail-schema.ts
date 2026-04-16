@@ -12,9 +12,15 @@
  * app's handleToolCall can resolve IDs to labels from the API.
  */
 
-import { humanize, pluralize } from './helpers.js'
-import type { AppModelClass, AppAttributeDefinition, DetailFieldDefinition, DetailSchema } from './types.js'
 import type { FieldGroup } from '#src/mcp/prompts/base-prompt.js'
+
+import { humanize, pluralize } from './helpers.js'
+import type {
+  AppAttributeDefinition,
+  AppModelClass,
+  DetailFieldDefinition,
+  DetailSchema
+} from './types.js'
 
 interface PromptClassLike {
   fieldGroups?: Record<string, FieldGroup>
