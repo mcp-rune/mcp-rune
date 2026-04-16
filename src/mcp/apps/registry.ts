@@ -48,6 +48,8 @@ interface RegistryOptions {
   apiUrl?: string
   createApiClient?: (token: string, options: { apiUrl: string }) => ApiClient
   searchGroups?: Record<string, SearchGroup>
+  /** SVG data URI for the h1::before header icon (overrides --header-icon CSS variable) */
+  headerIcon?: string
 }
 
 interface RegisterToolsOptions {
@@ -62,14 +64,16 @@ export class AppRegistry {
   private _apiUrl?: string
   private _createApiClient?: (token: string, options: { apiUrl: string }) => ApiClient
   private _searchGroups: Record<string, SearchGroup>
+  private _headerIcon?: string
 
   constructor(
     apps: AppDefinition[] = [],
-    { apiUrl, createApiClient, searchGroups = {} }: RegistryOptions = {}
+    { apiUrl, createApiClient, searchGroups = {}, headerIcon }: RegistryOptions = {}
   ) {
     this._apiUrl = apiUrl
     this._createApiClient = createApiClient
     this._searchGroups = searchGroups
+    this._headerIcon = headerIcon
     for (const app of apps) {
       if (app.toolName) {
         this._apps.set(app.toolName, app)
@@ -177,12 +181,19 @@ export class AppRegistry {
         { description: app.description },
         () => {
           try {
+            let html = app.getHtml!()
+            if (this._headerIcon) {
+              html = html.replace(
+                '</head>',
+                `<style>:root{--header-icon:url("${this._headerIcon}");}</style></head>`
+              )
+            }
             return {
               contents: [
                 {
                   uri: app.resourceUri!,
                   mimeType: RESOURCE_MIME_TYPE,
-                  text: app.getHtml!()
+                  text: html
                 }
               ]
             }
