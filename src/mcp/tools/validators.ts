@@ -18,19 +18,19 @@ export interface FilterSchema {
   [key: string]: unknown
 }
 
-export interface SearchValidationSuccess {
+export interface FilterValidationSuccess {
   valid: true
   filters?: Record<string, unknown>
 }
 
-export interface SearchValidationError {
+export interface FilterValidationError {
   valid: false
   error: string
   availableFilters: string[]
   suggestion: string
 }
 
-export type SearchValidationResult = SearchValidationSuccess | SearchValidationError
+export type FilterValidationResult = FilterValidationSuccess | FilterValidationError
 
 interface LinkInfo {
   conditional?: string
@@ -163,15 +163,15 @@ export function validateFilterValues(
  *
  * Returns normalized filters on success for use by the caller.
  */
-export function validateSearchParams(
+export function validateFilterParams(
   model: string,
-  searchParams: Record<string, unknown> | undefined,
+  filterParams: Record<string, unknown> | undefined,
   models: ModelsRegistry
-): SearchValidationResult {
+): FilterValidationResult {
   const modelConfig = models[model]
   const filterSchema = (modelConfig?.search?.filters ?? {}) as Record<string, FilterSchema>
 
-  if (!searchParams || Object.keys(searchParams).length === 0) {
+  if (!filterParams || Object.keys(filterParams).length === 0) {
     return { valid: true }
   }
 
@@ -187,7 +187,7 @@ export function validateSearchParams(
   }
 
   // Normalize comma-separated enum strings into arrays
-  const normalizedFilters = normalizeFilterValues(searchParams, filterSchema)!
+  const normalizedFilters = normalizeFilterValues(filterParams, filterSchema)!
 
   // Phase 1: Reject unknown filter keys
   const unknownFilters = Object.keys(normalizedFilters).filter((f) => !filterSchema[f])

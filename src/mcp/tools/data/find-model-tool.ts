@@ -5,7 +5,7 @@ import { pickFields } from '#src/core/helpers.js'
 
 import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
-import { validateSearchParams } from '../validators.js'
+import { validateFilterParams } from '../validators.js'
 
 /**
  * Tool for finding records by ID or search criteria
@@ -17,11 +17,11 @@ export class FindModelTool extends BaseTool {
 
   override get baseDescription(): string {
     const scope = this.serverContext.name ? ` in the ${this.serverContext.name} API` : ''
-    return `Find records${scope} by ID or search criteria. Returns raw JSON data.
+    return `Find records${scope} by ID or filter criteria. Returns raw JSON data.
 
 Use this tool to:
 - Look up a specific record by ID
-- Query records with specific search filters
+- Query records with specific filters
 - Get raw record data for further processing`
   }
 
@@ -33,10 +33,10 @@ Use this tool to:
     return {
       model: this.zodEnum(this.getModelNames()).describe('Model name'),
       record_id: z.string().describe('Record ID to find a specific record').optional(),
-      search: z
+      filters: z
         .record(z.string(), z.unknown())
         .describe(
-          'Search parameters specific to the model. Use list_models to see which fields are searchable.'
+          'Filter parameters specific to the model (call get_filters_guide to see available filters).'
         )
         .optional(),
       page: z.number().describe('Page number for pagination (default: 1)').optional(),
@@ -66,10 +66,10 @@ Use this tool to:
     try {
       this.requireApiClient()
 
-      const { model, record_id, search, page, per_page, user_id, fields } = args as {
+      const { model, record_id, filters, page, per_page, user_id, fields } = args as {
         model: string
         record_id?: string
-        search?: Record<string, unknown>
+        filters?: Record<string, unknown>
         page?: number
         per_page?: number
         user_id?: string
@@ -81,9 +81,9 @@ Use this tool to:
       const modelConfig = this.getModelConfig(model)!
       const options = user_id ? { userId: user_id } : {}
 
-      // Validate search params against model's searchable fields
-      if (search) {
-        const validation = validateSearchParams(model, search, this.models)
+      // Validate filter params against model's filterable fields
+      if (filters) {
+        const validation = validateFilterParams(model, filters, this.models)
         if (!validation.valid) {
           return {
             content: [{ type: 'text', text: `${validation.error}\n\n${validation.suggestion}` }],
@@ -115,7 +115,7 @@ Use this tool to:
         // Search/list records
         const currentPage = page ?? 1
         const queryParams = {
-          ...search,
+          ...filters,
           page: currentPage,
           per_page: per_page ?? 20
         }
