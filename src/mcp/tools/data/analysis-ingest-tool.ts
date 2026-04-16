@@ -2,6 +2,7 @@ import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
 import { pickFields } from '#src/core/helpers.js'
+import { SearchClient } from '#src/mcp/search/search-client.js'
 import {
   getIngestedRecordIds,
   storeAnalysisMemory,
@@ -53,11 +54,11 @@ export class AnalysisIngestTool extends BaseTool {
 Use this tool instead of find_model when you need to analyze a large dataset (more than one page of results). Records are stored for querying via analysis_query — only a status summary is returned to context.
 
 Top-level ingestion:
-1. Call analysis_ingest with model + search + ingest_all: true to fetch and store all records
+1. Call analysis_ingest with model + filters + ingest_all: true to fetch and store all records
 2. Use analysis_query to reason about the data (aggregations, filters, semantic search)
 
 Nested resource ingestion (for child resources like metadata_errors, conflicts):
-1. Ingest parent records first: analysis_ingest({ model: "scheduling", search: {...}, ingest_all: true })
+1. Ingest parent records first: analysis_ingest({ model: "scheduling", filters: {...}, ingest_all: true })
 2. Ingest children: analysis_ingest({ parent_model: "scheduling", child_resource: "metadata_errors" })
    Parent IDs are auto-resolved from step 1's ingested records — no need to list them.
 3. Query children: analysis_query({ mode: "aggregate", group_by: "message" })
@@ -73,10 +74,14 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       analysis_id: z
         .string()
         .describe('Unique identifier for this analysis session (e.g., "q1-deal-audit")'),
-      search: z
+      query: z
+        .string()
+        .describe('Text search query (optional). Combined with filters for full-text search.')
+        .optional(),
+      filters: z
         .record(z.string(), z.unknown())
         .describe(
-          'Search parameters specific to the model. Use list_models to see which fields are searchable.'
+          'Search filters (call get_filters_guide to see available filters for the model). Used for filtered ingestion.'
         )
         .optional(),
       page: z
@@ -133,7 +138,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       const {
         model,
         analysis_id,
-        search,
+        query,
+        filters,
         page,
         per_page = 50,
         fields,
@@ -145,7 +151,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       } = args as {
         model?: string
         analysis_id: string
-        search?: Record<string, unknown>
+        query?: string
+        filters?: Record<string, unknown>
         page?: number
         per_page?: number
         fields?: string[]
@@ -201,16 +208,19 @@ When NOT to use: For quick lookups of specific records by ID or small result set
 
       this.validateModel(model)
       const modelConfig = this.getModelConfig(model)!
+      const ModelClass = this.models[model]!
 
-      // Validate search params
-      if (search) {
-        const validation = validateSearchParams(model, search, this.models)
+      // Validate filters if provided
+      let normalizedFilters = filters
+      if (filters && Object.keys(filters).length > 0) {
+        const validation = validateSearchParams(model, filters, this.models)
         if (!validation.valid) {
           return {
             content: [{ type: 'text', text: `${validation.error}\n\n${validation.suggestion}` }],
             isError: true
           }
         }
+        normalizedFilters = validation.filters
       }
 
       if (this.logger) {
@@ -219,7 +229,9 @@ When NOT to use: For quick lookups of specific records by ID or small result set
           tool: 'analysis_ingest',
           model,
           analysisId: analysis_id,
-          ingestAll: ingest_all
+          ingestAll: ingest_all,
+          hasQuery: !!query,
+          hasFilters: !!normalizedFilters
         })
       }
 
@@ -227,9 +239,11 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         return await this._ingestAllPages(
           api,
           model,
+          ModelClass,
           modelConfig,
           analysis_id,
-          search,
+          query,
+          normalizedFilters,
           per_page,
           fields,
           options
@@ -238,9 +252,11 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         return await this._ingestPage(
           api,
           model,
+          ModelClass,
           modelConfig,
           analysis_id,
-          search,
+          query,
+          normalizedFilters,
           page ?? 1,
           per_page,
           fields,
@@ -256,25 +272,53 @@ When NOT to use: For quick lookups of specific records by ID or small result set
   private async _ingestPage(
     api: Record<string, (...args: unknown[]) => Promise<unknown>>,
     model: string,
-    modelConfig: { endpoint: string },
+    ModelClass: Record<string, unknown>,
+    modelConfig: { endpoint: string; search?: { fullText?: Record<string, unknown> } },
     analysisId: string,
-    search: Record<string, unknown> | undefined,
+    query: string | undefined,
+    filters: Record<string, unknown> | undefined,
     page: number,
     perPage: number,
     fields: string[] | undefined,
     apiOptions: Record<string, unknown>
   ): Promise<ToolResult> {
-    const queryParams = { ...search, page, per_page: perPage }
-    const data = (await api.get!(modelConfig.endpoint, queryParams, apiOptions)) as Record<
-      string,
-      unknown
-    >
+    let rawRecords: Record<string, unknown>[]
+    let totalPages: number | null
 
-    const rawRecords = this._extractRecords(data)
+    // Use SearchClient if model supports fullText search and query/filters provided
+    const hasFullText = modelConfig.search?.fullText
+    const hasSearchParams = !!query || (filters && Object.keys(filters).length > 0)
+
+    if (hasFullText && hasSearchParams) {
+      // Use SearchClient for filtered/query-based ingestion
+      const searchClient = this._createSearchClient()
+      const { records, pagination } = (await searchClient.search(
+        ModelClass as Parameters<typeof searchClient.search>[0],
+        query ?? null,
+        {
+          page,
+          perPage,
+          filters
+        }
+      )) as { records: Record<string, unknown>[]; pagination: { total_pages?: number } }
+
+      rawRecords = records
+      totalPages = pagination.total_pages ?? null
+    } else {
+      // Use plain GET for simple listing (no filters/query)
+      const queryParams = { page, per_page: perPage }
+      const data = (await api.get!(modelConfig.endpoint, queryParams, apiOptions)) as Record<
+        string,
+        unknown
+      >
+
+      rawRecords = this._extractRecords(data)
+      totalPages = this._extractTotalPages(data, page, rawRecords.length, perPage)
+    }
+
     const records = fields
       ? (pickFields(rawRecords, fields) as Record<string, unknown>[])
       : rawRecords
-    const totalPages = this._extractTotalPages(data, page, records.length, perPage)
 
     // Store records
     const stored = await storeIngestedRecords({
@@ -299,9 +343,11 @@ When NOT to use: For quick lookups of specific records by ID or small result set
   private async _ingestAllPages(
     api: Record<string, (...args: unknown[]) => Promise<unknown>>,
     model: string,
-    modelConfig: { endpoint: string },
+    ModelClass: Record<string, unknown>,
+    modelConfig: { endpoint: string; search?: { fullText?: Record<string, unknown> } },
     analysisId: string,
-    search: Record<string, unknown> | undefined,
+    query: string | undefined,
+    filters: Record<string, unknown> | undefined,
     perPage: number,
     fields: string[] | undefined,
     apiOptions: Record<string, unknown>
@@ -310,23 +356,49 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     let totalStored = 0
     let totalPages: number | null = null
 
-    while (currentPage <= MAX_INGEST_PAGES) {
-      const queryParams = { ...search, page: currentPage, per_page: perPage }
-      const data = (await api.get!(modelConfig.endpoint, queryParams, apiOptions)) as Record<
-        string,
-        unknown
-      >
+    // Use SearchClient if model supports fullText search and query/filters provided
+    const hasFullText = modelConfig.search?.fullText
+    const hasSearchParams = !!query || (filters && Object.keys(filters).length > 0)
+    const searchClient = hasFullText && hasSearchParams ? this._createSearchClient() : null
 
-      const rawRecords = this._extractRecords(data)
+    while (currentPage <= MAX_INGEST_PAGES) {
+      let rawRecords: Record<string, unknown>[]
+
+      if (searchClient) {
+        // Use SearchClient for filtered/query-based ingestion
+        const { records, pagination } = (await searchClient.search(
+          ModelClass as Parameters<typeof searchClient.search>[0],
+          query ?? null,
+          {
+            page: currentPage,
+            perPage,
+            filters
+          }
+        )) as { records: Record<string, unknown>[]; pagination: { total_pages?: number } }
+
+        rawRecords = records
+        if (totalPages === null) {
+          totalPages = pagination.total_pages ?? null
+        }
+      } else {
+        // Use plain GET for simple listing
+        const queryParams = { page: currentPage, per_page: perPage }
+        const data = (await api.get!(modelConfig.endpoint, queryParams, apiOptions)) as Record<
+          string,
+          unknown
+        >
+
+        rawRecords = this._extractRecords(data)
+        if (totalPages === null) {
+          totalPages = this._extractTotalPages(data, currentPage, rawRecords.length, perPage)
+        }
+      }
+
       if (rawRecords.length === 0) break
 
       const records = fields
         ? (pickFields(rawRecords, fields) as Record<string, unknown>[])
         : rawRecords
-
-      if (totalPages === null) {
-        totalPages = this._extractTotalPages(data, currentPage, records.length, perPage)
-      }
 
       // Store records
       const stored = await storeIngestedRecords({
@@ -523,6 +595,16 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     }
 
     return response
+  }
+
+  /** Create a SearchClient from the tool's apiClient and serverContext */
+  private _createSearchClient(): SearchClient {
+    const searchGroups = ((this.serverContext as Record<string, unknown>)?.searchGroups ??
+      {}) as Record<string, unknown>
+    return new SearchClient(
+      this.apiClient! as unknown as ConstructorParameters<typeof SearchClient>[0],
+      { searchGroups } as unknown as ConstructorParameters<typeof SearchClient>[1]
+    )
   }
 
   /**
