@@ -15,6 +15,16 @@ describe('lib/mcp/api-conventions', () => {
       const records = [{ id: 1, title: { resource_type: 'title', id: 58, name: 'Pilot' } }]
       expect(base.flattenExpandedResources(records)).toBe(records)
     })
+
+    it('extractNestedRecords falls back to data/records keys by default', () => {
+      const base = new BaseConvention()
+      const records = [{ id: 1, message: 'error' }]
+      expect(base.extractNestedRecords({ data: records })).toEqual(records)
+      expect(base.extractNestedRecords({ records })).toEqual(records)
+      expect(base.extractNestedRecords(records)).toEqual(records)
+      // Unknown key returns empty
+      expect(base.extractNestedRecords({ entries: records })).toEqual([])
+    })
   })
 
   describe('JsonApiConvention', () => {
@@ -237,6 +247,95 @@ describe('lib/mcp/api-conventions', () => {
         expect(result[0].title_id).toBe(10)
         expect(result[1].title_name).toBe('Episode 2')
         expect(result[1].title_id).toBe(20)
+      })
+    })
+
+    describe('extractNestedRecords', () => {
+      const halResponse = {
+        entries: [
+          {
+            resource_type: 'metadata_error',
+            id: 591,
+            message: 'editorial version: metadata Editorial Version:Runtime is required',
+            self_link: 'http://localhost:4001/api/metadata_errors/591',
+            scheduling_link: 'http://localhost:4001/api/schedulings/37'
+          },
+          {
+            resource_type: 'metadata_error',
+            id: 592,
+            message: 'exhibition window: attribute platform name is required',
+            self_link: 'http://localhost:4001/api/metadata_errors/592',
+            scheduling_link: 'http://localhost:4001/api/schedulings/37'
+          }
+        ]
+      }
+
+      const metadataErrorAttributes = {
+        id: { type: 'string', description: 'Unique identifier' },
+        message: { type: 'string', description: 'Validation error message' }
+      }
+
+      it('extracts records from HAL entries key', () => {
+        const result = halConvention.extractNestedRecords(halResponse)
+        expect(result).toHaveLength(2)
+        expect(result[0].id).toBe(591)
+        expect(result[0].message).toContain('Editorial Version:Runtime')
+        // Without attributes, all fields pass through
+        expect(result[0].resource_type).toBe('metadata_error')
+        expect(result[0].self_link).toBeDefined()
+      })
+
+      it('filters to model attributes when provided', () => {
+        const result = halConvention.extractNestedRecords(halResponse, metadataErrorAttributes)
+        expect(result).toHaveLength(2)
+        expect(result[0]).toEqual({
+          id: 591,
+          message: 'editorial version: metadata Editorial Version:Runtime is required'
+        })
+        expect(result[1]).toEqual({
+          id: 592,
+          message: 'exhibition window: attribute platform name is required'
+        })
+        // HAL protocol fields stripped
+        expect(result[0]).not.toHaveProperty('resource_type')
+        expect(result[0]).not.toHaveProperty('self_link')
+        expect(result[0]).not.toHaveProperty('scheduling_link')
+      })
+
+      it('handles _embedded format', () => {
+        const embedded = {
+          _embedded: {
+            metadata_errors: halResponse.entries
+          }
+        }
+        const result = halConvention.extractNestedRecords(embedded, metadataErrorAttributes)
+        expect(result).toHaveLength(2)
+        expect(result[0]).toEqual({ id: 591, message: expect.any(String) })
+      })
+
+      it('handles plain array input', () => {
+        const result = halConvention.extractNestedRecords(
+          halResponse.entries,
+          metadataErrorAttributes
+        )
+        expect(result).toHaveLength(2)
+        expect(result[0]).toEqual({ id: 591, message: expect.any(String) })
+      })
+
+      it('returns empty array for empty entries', () => {
+        expect(halConvention.extractNestedRecords({ entries: [] })).toEqual([])
+        expect(
+          halConvention.extractNestedRecords({ entries: [] }, metadataErrorAttributes)
+        ).toEqual([])
+      })
+
+      it('id is always included even if not in attributes', () => {
+        const attrsWithoutId = { message: { type: 'string' } }
+        const result = halConvention.extractNestedRecords(halResponse, attrsWithoutId)
+        expect(result[0]).toEqual({
+          id: 591,
+          message: expect.any(String)
+        })
       })
     })
   })

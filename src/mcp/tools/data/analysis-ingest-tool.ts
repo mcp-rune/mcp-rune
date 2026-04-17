@@ -522,11 +522,19 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     const allRecords: Record<string, unknown>[] = []
     const errors: Array<{ parentId: string; error: string }> = []
 
+    // Resolve convention from child model (preferred) or parent model
+    const childConfig = this.models[childModelName]
+    const convention =
+      childConfig?.api?.convention ?? parentConfig.api?.convention ?? defaultConvention
+
     const tasks = parentIds.map((parentId) => async () => {
       try {
         const endpoint = `${parentConfig.endpoint}/${parentId}/${childPath}`
         const data = (await api.get!(endpoint, {}, apiOptions)) as Record<string, unknown>
-        const rawRecords = this._extractRecords(data)
+        const rawRecords = convention.extractNestedRecords(
+          data,
+          childConfig?.attributes as Record<string, unknown> | undefined
+        )
         const records = fields
           ? (pickFields(rawRecords, fields) as Record<string, unknown>[])
           : rawRecords
@@ -557,6 +565,17 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     // Store collected records
     let totalStored = 0
     if (allRecords.length > 0) {
+      if (this.logger) {
+        this.logger.debug('Storing nested records in vector storage', {
+          service: 'mcp-tools',
+          tool: 'analysis_ingest',
+          childModel: childModelName,
+          recordCount: allRecords.length,
+          sampleRecord: allRecords[0] ?? null,
+          fields: allRecords[0] ? Object.keys(allRecords[0]) : []
+        })
+      }
+
       totalStored = await storeIngestedRecords({
         analysisId,
         model: childModelName,

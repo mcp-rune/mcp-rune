@@ -156,6 +156,30 @@ export class BaseConvention {
   }
 
   /**
+   * Extract records from a nested resource API response.
+   *
+   * Convention-specific: each convention knows how to locate the records
+   * array in its response envelope (e.g., HAL uses `entries`, JSON API uses
+   * `data`, etc.) and which protocol metadata to strip from each record.
+   *
+   * @param response   - Raw API response from the nested endpoint
+   * @param attributes - The child model's attribute definitions. When provided,
+   *                     acts as a whitelist — only declared attribute keys (plus
+   *                     `id`) are retained per record. Protocol-specific fields
+   *                     are excluded. When omitted, all fields pass through.
+   * @returns Cleaned records array
+   */
+  extractNestedRecords(
+    response: Record<string, unknown> | unknown[],
+    _attributes?: Record<string, unknown>
+  ): Record<string, unknown>[] {
+    if (Array.isArray(response)) return response as Record<string, unknown>[]
+    return ((response as Record<string, unknown>)?.data ??
+      (response as Record<string, unknown>)?.records ??
+      []) as Record<string, unknown>[]
+  }
+
+  /**
    * Strip protocol-specific metadata from an API response.
    * Applied at the API client boundary so all consumers receive clean data.
    * Default: no-op. Override in subclasses.
