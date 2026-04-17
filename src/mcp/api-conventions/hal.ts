@@ -7,6 +7,7 @@
  *   - Request formatting: buildRequestPayload (flat -- Movida wraps server-side)
  *   - Response extraction: normalizeListResponse (_embedded, model-keyed arrays)
  *   - Expanded resource flattening: flattenExpandedResources (nested objects -> flat scalars)
+ *   - Nested record extraction: extractNestedRecords (entries/embedded -> clean records)
  */
 
 import type {
@@ -341,6 +342,54 @@ class HalConvention extends BaseConvention {
     }
 
     return result
+  }
+
+  // ---------------------------------------------------------------------------
+  // Nested record extraction
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Extract records from a HAL nested resource response.
+   *
+   * HAL nested endpoints (e.g., GET /schedulings/{id}/metadata_errors) return
+   * records under `entries`, `_embedded`, or a model-keyed array — the same
+   * shapes handled by normalizeListResponse.
+   *
+   * When `attributes` is provided (the child model's attribute definitions),
+   * only those keys are retained per record. This strips HAL protocol fields
+   * (resource_type, *_link) and any other noise, keeping only the data the
+   * LLM needs for analysis (e.g., {id, message} for metadata_error).
+   */
+  override extractNestedRecords(
+    response: Record<string, unknown> | unknown[],
+    attributes?: Record<string, unknown>
+  ): Record<string, unknown>[] {
+    // Locate the records array using the same heuristic as normalizeListResponse
+    let records: Record<string, unknown>[]
+    if (Array.isArray(response)) {
+      records = response as Record<string, unknown>[]
+    } else if (response._embedded) {
+      const embedded = response._embedded as Record<string, unknown>
+      const key = Object.keys(embedded).find((k) => Array.isArray(embedded[k]))
+      records = key ? (embedded[key] as Record<string, unknown>[]) : []
+    } else {
+      const key = Object.keys(response).find((k) => Array.isArray(response[k]) && k !== '_links')
+      records = key ? (response[key] as Record<string, unknown>[]) : []
+    }
+
+    // Without attributes, return all fields (no filtering)
+    if (!attributes) return records
+
+    // Whitelist: only retain declared attribute keys (+ id always)
+    const allowedKeys = new Set([...Object.keys(attributes), 'id'])
+
+    return records.map((record) => {
+      const clean: Record<string, unknown> = {}
+      for (const [k, v] of Object.entries(record)) {
+        if (allowedKeys.has(k)) clean[k] = v
+      }
+      return clean
+    })
   }
 }
 
