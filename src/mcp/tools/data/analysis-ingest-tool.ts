@@ -322,8 +322,13 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       fields
     )
 
-    const records = fields
-      ? (pickFields(flatRecords, fields) as Record<string, unknown>[])
+    // Ensure force-included {assoc}_id fields from flattenExpandedResources survive pickFields
+    const effectiveFields =
+      fields && flatRecords.length > 0
+        ? this._augmentFieldsWithAssocIds(fields, flatRecords[0]!)
+        : fields
+    const records = effectiveFields
+      ? (pickFields(flatRecords, effectiveFields) as Record<string, unknown>[])
       : flatRecords
 
     // Store records
@@ -334,7 +339,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     })
 
     // Store page summary as analysis memory
-    await this._storePageSummary(analysisId, model, page, totalPages, records, fields)
+    await this._storePageSummary(analysisId, model, page, totalPages, records, effectiveFields)
 
     const fieldsNote = fields ? ` (${fields.length} fields per record)` : ''
     return this.formatResponse(
@@ -413,8 +418,13 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         fields
       )
 
-      const records = fields
-        ? (pickFields(flatRecords, fields) as Record<string, unknown>[])
+      // Ensure force-included {assoc}_id fields from flattenExpandedResources survive pickFields
+      const effectiveFields =
+        fields && flatRecords.length > 0
+          ? this._augmentFieldsWithAssocIds(fields, flatRecords[0]!)
+          : fields
+      const records = effectiveFields
+        ? (pickFields(flatRecords, effectiveFields) as Record<string, unknown>[])
         : flatRecords
 
       // Store records
@@ -426,7 +436,14 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       totalStored += stored
 
       // Store page summary
-      await this._storePageSummary(analysisId, model, currentPage, totalPages, records, fields)
+      await this._storePageSummary(
+        analysisId,
+        model,
+        currentPage,
+        totalPages,
+        records,
+        effectiveFields
+      )
 
       // Stop if we got fewer records than requested (last page)
       if (rawRecords.length < perPage) break
@@ -631,6 +648,34 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     }
 
     return response
+  }
+
+  /**
+   * Augment a fields list with {assoc}_id keys that flattenExpandedResources
+   * force-added to the flat record.
+   *
+   * flattenExpandedResources always includes `{assoc}_id` for cross-referencing,
+   * but pickFields would strip them if they're not in the caller's fields list.
+   * This bridges the two by detecting force-added IDs and preserving them.
+   *
+   * Only adds `{assoc}_id` if the caller already requested another field from
+   * the same association (e.g., title_name → title_id), avoiding spurious IDs
+   * for associations the caller didn't ask about.
+   */
+  private _augmentFieldsWithAssocIds(
+    fields: string[],
+    flatSample: Record<string, unknown>
+  ): string[] {
+    const augmented = [...fields]
+    for (const key of Object.keys(flatSample)) {
+      if (key.endsWith('_id') && !augmented.includes(key)) {
+        const assocPrefix = key.slice(0, -3) // "title_id" -> "title"
+        if (augmented.some((f) => f.startsWith(assocPrefix + '_'))) {
+          augmented.push(key)
+        }
+      }
+    }
+    return augmented
   }
 
   /** Create a SearchClient from the tool's apiClient and serverContext */
