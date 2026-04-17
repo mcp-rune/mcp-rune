@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.12.0] — 2026-04-17
+
+### Removed
+
+- **HAL convention** — `halConvention` export removed from `mcp-kit/prompts`. The HAL convention is Movida-specific protocol behavior that only mcp-servers-mgx uses; it has been moved to local ownership in that repo for independent evolution. `BaseConvention`, `defaultConvention`, and `jsonApiConvention` remain available. Paired with dsaenztagarro/mcp-servers-mgx#391.
+
+[0.12.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.11.0...v0.12.0
+
 ## [0.11.0] — 2026-04-17
 
 ### Added
