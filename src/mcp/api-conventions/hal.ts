@@ -163,6 +163,32 @@ class HalConvention extends BaseConvention {
   }
 
   /**
+   * Locate the records array in a HAL response.
+   *
+   * HAL APIs return records in three different envelope shapes:
+   *
+   *   1. Plain array (rare, e.g. nested endpoints):
+   *      [{ id: 1, name: "A" }, { id: 2, name: "B" }]
+   *
+   *   2. _embedded (standard HAL):
+   *      { _embedded: { schedulings: [{ id: 1 }, { id: 2 }] }, _links: {...}, total_count: 42 }
+   *
+   *   3. Model-keyed top-level array (Movida-style):
+   *      { entries: [{ id: 1 }, { id: 2 }], total_count: 42, _links: {...} }
+   *      { platforms: [{ id: 1 }, { id: 2 }], page: 1, per_page: 50 }
+   */
+  private _locateRecords(response: Record<string, unknown> | unknown[]): Record<string, unknown>[] {
+    if (Array.isArray(response)) return response as Record<string, unknown>[]
+    if (response._embedded) {
+      const embedded = response._embedded as Record<string, unknown>
+      const key = Object.keys(embedded).find((k) => Array.isArray(embedded[k]))
+      return key ? (embedded[key] as Record<string, unknown>[]) : []
+    }
+    const key = Object.keys(response).find((k) => Array.isArray(response[k]) && k !== '_links')
+    return key ? (response[key] as Record<string, unknown>[]) : []
+  }
+
+  /**
    * Extract records + pagination from HAL responses.
    *
    * Handles:
@@ -174,17 +200,7 @@ class HalConvention extends BaseConvention {
     response: Record<string, unknown> | unknown[],
     { page, perPage }: { page: number; perPage: number }
   ): NormalizedListResponse {
-    let records: Record<string, unknown>[]
-    if (Array.isArray(response)) {
-      records = response as Record<string, unknown>[]
-    } else if (response._embedded) {
-      const embedded = response._embedded as Record<string, unknown>
-      const key = Object.keys(embedded).find((k) => Array.isArray(embedded[k]))
-      records = key ? (embedded[key] as Record<string, unknown>[]) : []
-    } else {
-      const key = Object.keys(response).find((k) => Array.isArray(response[k]) && k !== '_links')
-      records = key ? (response[key] as Record<string, unknown>[]) : []
-    }
+    const records = this._locateRecords(response)
 
     const pagination = {
       page: ((response as Record<string, unknown>).page as number) || page,
@@ -364,18 +380,7 @@ class HalConvention extends BaseConvention {
     response: Record<string, unknown> | unknown[],
     attributes?: Record<string, unknown>
   ): Record<string, unknown>[] {
-    // Locate the records array using the same heuristic as normalizeListResponse
-    let records: Record<string, unknown>[]
-    if (Array.isArray(response)) {
-      records = response as Record<string, unknown>[]
-    } else if (response._embedded) {
-      const embedded = response._embedded as Record<string, unknown>
-      const key = Object.keys(embedded).find((k) => Array.isArray(embedded[k]))
-      records = key ? (embedded[key] as Record<string, unknown>[]) : []
-    } else {
-      const key = Object.keys(response).find((k) => Array.isArray(response[k]) && k !== '_links')
-      records = key ? (response[key] as Record<string, unknown>[]) : []
-    }
+    const records = this._locateRecords(response)
 
     // Without attributes, return all fields (no filtering)
     if (!attributes) return records
