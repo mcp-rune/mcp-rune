@@ -8,7 +8,6 @@ export type {
   PaginationInfo
 } from './base-convention.js'
 export { BaseConvention } from './base-convention.js'
-export { halConvention } from './hal.js'
 export { jsonApiConvention } from './json-api.js'
 
 import type { BaseConvention } from './base-convention.js'

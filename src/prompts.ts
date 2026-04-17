@@ -2,7 +2,6 @@
 export {
   BaseConvention,
   defaultConvention,
-  halConvention,
   jsonApiConvention
 } from './mcp/api-conventions/index.js'
 export { BasePrompt } from './mcp/prompts/base-prompt.js'
