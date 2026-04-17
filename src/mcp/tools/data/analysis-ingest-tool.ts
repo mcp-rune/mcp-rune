@@ -2,6 +2,7 @@ import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
 import { pickFields } from '#src/core/helpers.js'
+import { defaultConvention } from '#src/mcp/api-conventions/index.js'
 import { SearchClient } from '#src/mcp/search/search-client.js'
 import {
   getIngestedRecordIds,
@@ -310,9 +311,17 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       totalPages = this._extractTotalPages(data, page, rawRecords.length, perPage)
     }
 
+    // Flatten expanded associations (e.g., title.name -> title_name) before field selection
+    const convention = modelConfig.api?.convention ?? defaultConvention
+    const flatRecords = convention.flattenExpandedResources(
+      rawRecords,
+      modelConfig.associations,
+      fields
+    )
+
     const records = fields
-      ? (pickFields(rawRecords, fields) as Record<string, unknown>[])
-      : rawRecords
+      ? (pickFields(flatRecords, fields) as Record<string, unknown>[])
+      : flatRecords
 
     // Store records
     const stored = await storeIngestedRecords({
@@ -348,6 +357,9 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     let currentPage = 1
     let totalStored = 0
     let totalPages: number | null = null
+
+    // Resolve convention once for all pages
+    const convention = modelConfig.api?.convention ?? defaultConvention
 
     // Use SearchClient if model supports fullText search and filters provided
     const hasFullText = modelConfig.search?.fullText
@@ -390,9 +402,16 @@ When NOT to use: For quick lookups of specific records by ID or small result set
 
       if (rawRecords.length === 0) break
 
+      // Flatten expanded associations (e.g., title.name -> title_name) before field selection
+      const flatRecords = convention.flattenExpandedResources(
+        rawRecords,
+        modelConfig.associations,
+        fields
+      )
+
       const records = fields
-        ? (pickFields(rawRecords, fields) as Record<string, unknown>[])
-        : rawRecords
+        ? (pickFields(flatRecords, fields) as Record<string, unknown>[])
+        : flatRecords
 
       // Store records
       const stored = await storeIngestedRecords({

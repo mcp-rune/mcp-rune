@@ -128,6 +128,34 @@ export class BaseConvention {
   }
 
   /**
+   * Flatten inline/expanded association objects into top-level scalar fields.
+   *
+   * When an API response includes expanded (inlined) associated resources,
+   * this method promotes their scalar child fields to the top level using
+   * the naming pattern `{association}_{childField}`.
+   *
+   * Convention-specific: each convention knows what "expanded" looks like
+   * in its wire format and which fields to skip (protocol metadata).
+   *
+   * @param records        - Raw API response records (post-cleanResponse)
+   * @param associations   - The model's association config, used to identify
+   *                         which top-level keys are expandable associations
+   * @param requestedFields - When provided, only flatten child fields whose
+   *                         derived name (`{assoc}_{child}`) matches a
+   *                         requested field. Association IDs (`{assoc}_id`)
+   *                         are always included regardless of this filter.
+   *                         When omitted, all scalar child fields are flattened.
+   * @returns New records with expanded objects replaced by flat scalar fields.
+   */
+  flattenExpandedResources(
+    _records: Record<string, unknown>[],
+    _associations?: AssociationConfig,
+    _requestedFields?: string[]
+  ): Record<string, unknown>[] {
+    return _records
+  }
+
+  /**
    * Strip protocol-specific metadata from an API response.
    * Applied at the API client boundary so all consumers receive clean data.
    * Default: no-op. Override in subclasses.

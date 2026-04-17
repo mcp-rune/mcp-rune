@@ -6,9 +6,11 @@
  *   - Association resolution: resolveAssociationValues (_id -> _link URL)
  *   - Request formatting: buildRequestPayload (flat -- Movida wraps server-side)
  *   - Response extraction: normalizeListResponse (_embedded, model-keyed arrays)
+ *   - Expanded resource flattening: flattenExpandedResources (nested objects -> flat scalars)
  */
 
 import type {
+  AssociationConfig,
   BelongsToAssociation,
   FieldDefinition,
   HasManyAssociation,
@@ -194,6 +196,151 @@ class HalConvention extends BaseConvention {
     }
 
     return { records, pagination }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Expanded resource flattening
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Flatten inline/expanded HAL association objects into top-level scalar fields.
+   *
+   * When a HAL API responds with `?expand=title,platform`, each record contains
+   * nested objects like `title: { resource_type: "title", id: 58, name: "Pilot" }`.
+   * This method promotes their scalar child fields using the `{assoc}_{child}`
+   * naming pattern (e.g., `title_name`, `platform_name`).
+   *
+   * Association IDs (`{assoc}_id`) are always included — they serve as stable
+   * foreign keys the LLM can use for cross-referencing and follow-up queries.
+   *
+   * HAL protocol metadata (`resource_type`, `*_link`) is excluded from flattening.
+   */
+  override flattenExpandedResources(
+    records: Record<string, unknown>[],
+    associations?: AssociationConfig,
+    requestedFields?: string[]
+  ): Record<string, unknown>[] {
+    if (records.length === 0) return records
+
+    // Identify which top-level keys are expanded belongsTo associations
+    const expandableKeys = this._getExpandableKeys(records[0]!, associations)
+    if (expandableKeys.length === 0) return records
+
+    // Build flatten map constrained by requestedFields (with {assoc}_id always included)
+    const flattenMap = this._buildFlattenMap(expandableKeys, records[0]!, requestedFields)
+    if (Object.keys(flattenMap).length === 0) return records
+
+    return records.map((record) => this._flattenRecord(record, flattenMap))
+  }
+
+  /**
+   * Identify which top-level keys in a record are expanded associations.
+   *
+   * Strategy (ordered by reliability):
+   * 1. If associations.belongsTo is available, use its keys as the canonical
+   *    set — only those whose value is a non-null object in the actual record
+   *    are considered expanded (the API may not expand all associations).
+   * 2. Fallback (no associations config): detect objects with a `resource_type`
+   *    field, which is the HAL convention marker for embedded resources.
+   */
+  private _getExpandableKeys(
+    sample: Record<string, unknown>,
+    associations?: AssociationConfig
+  ): string[] {
+    const belongsTo = associations?.belongsTo
+    if (belongsTo) {
+      return Object.keys(belongsTo).filter((key) => {
+        const val = sample[key]
+        return val !== null && typeof val === 'object' && !Array.isArray(val)
+      })
+    }
+
+    // Heuristic fallback: detect HAL expanded resources by resource_type
+    return Object.entries(sample)
+      .filter(
+        ([, val]) =>
+          val !== null &&
+          typeof val === 'object' &&
+          !Array.isArray(val) &&
+          typeof (val as Record<string, unknown>).resource_type === 'string'
+      )
+      .map(([key]) => key)
+  }
+
+  /**
+   * Build a mapping from expanded keys to their flattened child fields.
+   *
+   * When requestedFields is provided, only includes mappings where the derived
+   * flat name (`{key}_{childKey}`) is in the requested set. The `{assoc}_id`
+   * mapping is always included regardless of the filter — association IDs are
+   * stable foreign keys that should always be available.
+   *
+   * HAL protocol fields (`resource_type`, `*_link`) are always excluded.
+   */
+  private _buildFlattenMap(
+    expandableKeys: string[],
+    sample: Record<string, unknown>,
+    requestedFields?: string[]
+  ): Record<string, Array<{ childKey: string; flatKey: string }>> {
+    const requestedSet = requestedFields ? new Set(requestedFields) : null
+    const map: Record<string, Array<{ childKey: string; flatKey: string }>> = {}
+
+    for (const key of expandableKeys) {
+      const nested = sample[key] as Record<string, unknown>
+      const mappings: Array<{ childKey: string; flatKey: string }> = []
+
+      for (const [childKey, childVal] of Object.entries(nested)) {
+        // Skip HAL protocol metadata
+        if (childKey === 'resource_type' || childKey.endsWith('_link')) continue
+        // Only flatten scalars (string, number, boolean, null)
+        if (childVal !== null && typeof childVal === 'object') continue
+
+        const flatKey = `${key}_${childKey}`
+        if (requestedSet === null || requestedSet.has(flatKey)) {
+          mappings.push({ childKey, flatKey })
+        }
+      }
+
+      // Always include {assoc}_id if present in the nested object — stable
+      // foreign key for cross-referencing, regardless of requestedFields
+      const idFlatKey = `${key}_id`
+      const hasId = mappings.some((m) => m.flatKey === idFlatKey)
+      if (!hasId && 'id' in nested) {
+        mappings.push({ childKey: 'id', flatKey: idFlatKey })
+      }
+
+      if (mappings.length > 0) {
+        map[key] = mappings
+      }
+    }
+
+    return map
+  }
+
+  /**
+   * Apply the flatten map to a single record.
+   *
+   * Expanded keys are replaced by their flattened children;
+   * all other keys pass through unchanged.
+   */
+  private _flattenRecord(
+    record: Record<string, unknown>,
+    flattenMap: Record<string, Array<{ childKey: string; flatKey: string }>>
+  ): Record<string, unknown> {
+    const result: Record<string, unknown> = {}
+
+    for (const [key, val] of Object.entries(record)) {
+      if (key in flattenMap) {
+        const nested = val as Record<string, unknown> | null
+        for (const { childKey, flatKey } of flattenMap[key]!) {
+          result[flatKey] = nested ? (nested[childKey] ?? null) : null
+        }
+      } else {
+        result[key] = val
+      }
+    }
+
+    return result
   }
 }
 
