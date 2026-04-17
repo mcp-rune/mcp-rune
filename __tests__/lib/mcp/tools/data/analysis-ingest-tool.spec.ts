@@ -11,6 +11,7 @@ import {
   storeIngestedRecords
 } from '#src/services/vector-storage.js'
 
+import { halConvention } from '../../../../../src/mcp/api-conventions/hal.js'
 import { AnalysisIngestTool } from '../../../../../src/mcp/tools/data/analysis-ingest-tool.js'
 
 const mockModels = {
@@ -422,5 +423,223 @@ describe('AnalysisIngestTool — nested resource ingestion', () => {
       childResource: 'metadata_errors',
       error: 'timeout'
     })
+  })
+})
+
+// ============================================================================
+// Association ID preservation through field projection
+// ============================================================================
+
+describe('AnalysisIngestTool — association ID preservation', () => {
+  const halModels = {
+    scheduling: {
+      endpoint: 'schedulings',
+      attributes: {
+        id: { type: 'string' },
+        name: { type: 'string' },
+        metadata_status: { type: 'enum', enumValues: ['valid', 'invalid'] },
+        put_up: { type: 'string' },
+        take_down: { type: 'string' }
+      },
+      associations: {
+        belongsTo: {
+          title: { target_model: 'title' },
+          platform: { target_model: 'platform' }
+        },
+        hasMany: {
+          metadata_errors: {
+            rel: 'metadata_errors',
+            target_model: 'metadata_error',
+            path: 'metadata_errors'
+          }
+        }
+      },
+      api: { convention: halConvention }
+    }
+  }
+
+  // Simulates what the Movida HAL API returns with expanded associations
+  const halApiResponse = {
+    _embedded: {
+      schedulings: [
+        {
+          id: 63,
+          name: 'Sched-63',
+          metadata_status: 'invalid',
+          put_up: '2026-08-06T23:00:00+02:00',
+          take_down: '2026-12-31T23:00:00+02:00',
+          title: {
+            resource_type: 'title',
+            id: 58,
+            name: 'Pilot',
+            title_type: 'episode',
+            self_link: 'http://localhost:4001/api/titles/58'
+          },
+          platform: {
+            resource_type: 'platform',
+            id: 151,
+            name: 'Spain > AVOD > Website',
+            self_link: 'http://localhost:4001/api/platforms/151'
+          },
+          title_link: 'http://localhost:4001/api/titles/58',
+          platform_link: 'http://localhost:4001/api/platforms/151'
+        },
+        {
+          id: 64,
+          name: 'Sched-64',
+          metadata_status: 'invalid',
+          put_up: '2026-09-01T00:00:00+02:00',
+          take_down: '2027-01-01T00:00:00+02:00',
+          title: {
+            resource_type: 'title',
+            id: 72,
+            name: 'The Heist',
+            title_type: 'movie',
+            self_link: 'http://localhost:4001/api/titles/72'
+          },
+          platform: {
+            resource_type: 'platform',
+            id: 151,
+            name: 'Spain > AVOD > Website',
+            self_link: 'http://localhost:4001/api/platforms/151'
+          },
+          title_link: 'http://localhost:4001/api/titles/72',
+          platform_link: 'http://localhost:4001/api/platforms/151'
+        }
+      ]
+    },
+    total_count: 2,
+    total_pages: 1,
+    page: 1,
+    per_page: 50
+  }
+
+  let tool: AnalysisIngestTool
+  let mockApi
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    mockApi = {
+      get: vi.fn().mockResolvedValue(halApiResponse)
+    }
+
+    tool = new AnalysisIngestTool({
+      models: halModels,
+      apiClient: mockApi,
+      logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    })
+  })
+
+  it('should preserve {assoc}_id fields even when not in requested fields list', async () => {
+    await tool.execute({
+      analysis_id: 'test-assoc-ids',
+      model: 'scheduling',
+      fields: ['name', 'title_name', 'platform_name', 'metadata_status', 'put_up', 'take_down']
+    })
+
+    const storedCall = (storeIngestedRecords as ReturnType<typeof vi.fn>).mock.calls[0][0]
+    expect(storedCall.records).toHaveLength(2)
+
+    const rec1 = storedCall.records[0].data
+    const rec2 = storedCall.records[1].data
+
+    // Explicitly requested fields are present
+    expect(rec1.name).toBe('Sched-63')
+    expect(rec1.title_name).toBe('Pilot')
+    expect(rec1.platform_name).toBe('Spain > AVOD > Website')
+    expect(rec1.metadata_status).toBe('invalid')
+
+    // {assoc}_id fields are preserved even though they were NOT in the fields list
+    expect(rec1.title_id).toBe(58)
+    expect(rec1.platform_id).toBe(151)
+    expect(rec2.title_id).toBe(72)
+    expect(rec2.platform_id).toBe(151)
+  })
+
+  it('should not add {assoc}_id when no fields from that association are requested', async () => {
+    // Only request title_name, not platform_name — so platform_id should NOT be added
+    await tool.execute({
+      analysis_id: 'test-selective-ids',
+      model: 'scheduling',
+      fields: ['name', 'title_name', 'metadata_status']
+    })
+
+    const storedCall = (storeIngestedRecords as ReturnType<typeof vi.fn>).mock.calls[0][0]
+    const rec = storedCall.records[0].data
+
+    // title_id preserved because title_name was requested
+    expect(rec.title_id).toBe(58)
+    expect(rec.title_name).toBe('Pilot')
+
+    // platform_id NOT added because no platform_* field was requested
+    expect(rec.platform_id).toBeUndefined()
+    expect(rec.platform_name).toBeUndefined()
+  })
+
+  it('should work correctly when fields list already includes {assoc}_id', async () => {
+    await tool.execute({
+      analysis_id: 'test-explicit-id',
+      model: 'scheduling',
+      fields: ['name', 'title_name', 'title_id']
+    })
+
+    const storedCall = (storeIngestedRecords as ReturnType<typeof vi.fn>).mock.calls[0][0]
+    const rec = storedCall.records[0].data
+
+    expect(rec.title_id).toBe(58)
+    expect(rec.title_name).toBe('Pilot')
+  })
+
+  it('should preserve {assoc}_id when ingesting all pages', async () => {
+    await tool.execute({
+      analysis_id: 'test-all-pages',
+      model: 'scheduling',
+      ingest_all: true,
+      fields: ['name', 'title_name', 'platform_name']
+    })
+
+    const storedCall = (storeIngestedRecords as ReturnType<typeof vi.fn>).mock.calls[0][0]
+    const rec = storedCall.records[0].data
+
+    // {assoc}_id fields preserved in ingest_all mode too
+    expect(rec.title_id).toBe(58)
+    expect(rec.platform_id).toBe(151)
+    expect(rec.title_name).toBe('Pilot')
+    expect(rec.platform_name).toBe('Spain > AVOD > Website')
+  })
+
+  it('should not alter behavior when no fields are specified', async () => {
+    await tool.execute({
+      analysis_id: 'test-no-fields',
+      model: 'scheduling'
+    })
+
+    const storedCall = (storeIngestedRecords as ReturnType<typeof vi.fn>).mock.calls[0][0]
+    const rec = storedCall.records[0].data
+
+    // All flattened fields present (no field projection)
+    expect(rec.title_id).toBe(58)
+    expect(rec.title_name).toBe('Pilot')
+    expect(rec.platform_id).toBe(151)
+    expect(rec.platform_name).toBe('Spain > AVOD > Website')
+    expect(rec.id).toBe(63)
+  })
+
+  it('should not include protocol metadata fields in stored records', async () => {
+    await tool.execute({
+      analysis_id: 'test-no-protocol',
+      model: 'scheduling',
+      fields: ['name', 'title_name']
+    })
+
+    const storedCall = (storeIngestedRecords as ReturnType<typeof vi.fn>).mock.calls[0][0]
+    const rec = storedCall.records[0].data
+
+    // HAL protocol fields must never leak through
+    expect(rec.title_resource_type).toBeUndefined()
+    expect(rec.title_self_link).toBeUndefined()
+    expect(rec.title_link).toBeUndefined()
+    expect(rec.platform_resource_type).toBeUndefined()
   })
 })
