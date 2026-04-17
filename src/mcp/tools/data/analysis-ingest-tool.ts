@@ -9,8 +9,9 @@ import {
   storeIngestedRecords
 } from '#src/services/vector-storage.js'
 
-import type { ModelConfig, ToolAnnotations, ToolResult } from '../base-tool.js'
+import type { ApiClient, ModelConfig, ToolAnnotations, ToolResult } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
+import { LoggingApiClient } from '../logging-api-client.js'
 import type { NestedValidationError, NestedValidationSuccess } from '../validators.js'
 import { validateFilterParams, validateNestedResource } from '../validators.js'
 
@@ -157,7 +158,10 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         child_resource?: string
       }
 
-      const api = this.apiClient! as unknown as Record<
+      const wrappedClient = this.logger
+        ? new LoggingApiClient(this.apiClient!, this.logger)
+        : this.apiClient!
+      const api = wrappedClient as unknown as Record<
         string,
         (...args: unknown[]) => Promise<unknown>
       >
@@ -281,7 +285,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
 
     if (hasFullText && hasSearchParams) {
       // Use SearchClient for filtered ingestion
-      const searchClient = this._createSearchClient()
+      const searchClient = this._createSearchClient(api as unknown as ApiClient)
       const { records, pagination } = (await searchClient.search(
         ModelClass as Parameters<typeof searchClient.search>[0],
         '',
@@ -348,7 +352,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     // Use SearchClient if model supports fullText search and filters provided
     const hasFullText = modelConfig.search?.fullText
     const hasSearchParams = filters && Object.keys(filters).length > 0
-    const searchClient = hasFullText && hasSearchParams ? this._createSearchClient() : null
+    const searchClient =
+      hasFullText && hasSearchParams ? this._createSearchClient(api as unknown as ApiClient) : null
 
     while (currentPage <= MAX_INGEST_PAGES) {
       let rawRecords: Record<string, unknown>[]
@@ -587,11 +592,12 @@ When NOT to use: For quick lookups of specific records by ID or small result set
   }
 
   /** Create a SearchClient from the tool's apiClient and serverContext */
-  private _createSearchClient(): SearchClient {
+  private _createSearchClient(apiClient?: ApiClient): SearchClient {
+    const client = apiClient ?? this.apiClient!
     const searchGroups = ((this.serverContext as Record<string, unknown>)?.searchGroups ??
       {}) as Record<string, unknown>
     return new SearchClient(
-      this.apiClient! as unknown as ConstructorParameters<typeof SearchClient>[0],
+      client as unknown as ConstructorParameters<typeof SearchClient>[0],
       { searchGroups } as unknown as ConstructorParameters<typeof SearchClient>[1]
     )
   }

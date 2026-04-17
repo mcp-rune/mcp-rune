@@ -364,6 +364,37 @@ describe('AnalysisIngestTool — nested resource ingestion', () => {
     })
   })
 
+  it('should debug-log API request and response for nested resource fetches', async () => {
+    mockApi.get.mockResolvedValueOnce([{ id: 'err-1', message: 'test' }])
+
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const loggedTool = new AnalysisIngestTool({
+      models: mockModels,
+      apiClient: mockApi,
+      logger
+    })
+
+    await loggedTool.execute({
+      analysis_id: 'test-session',
+      parent_model: 'scheduling',
+      parent_ids: ['sched-1'],
+      child_resource: 'metadata_errors'
+    })
+
+    // Should have logged the API request
+    const reqLog = logger.debug.mock.calls.find(
+      (c) => c[0] === '[API Request] GET' && c[1]?.url === 'schedulings/sched-1/metadata_errors'
+    )
+    expect(reqLog).toBeDefined()
+
+    // Should have logged the API response
+    const resLog = logger.debug.mock.calls.find(
+      (c) => c[0] === '[API Response] GET' && c[1]?.url === 'schedulings/sched-1/metadata_errors'
+    )
+    expect(resLog).toBeDefined()
+    expect(resLog[1].body).toContain('err-1')
+  })
+
   it('should log warnings for individual parent failures', async () => {
     mockApi.get.mockRejectedValueOnce(new Error('timeout'))
 
