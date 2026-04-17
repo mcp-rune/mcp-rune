@@ -11,8 +11,8 @@ import {
   storeIngestedRecords
 } from '#src/services/vector-storage.js'
 
-import { halConvention } from '../../../../../src/mcp/api-conventions/hal.js'
 import { AnalysisIngestTool } from '../../../../../src/mcp/tools/data/analysis-ingest-tool.js'
+import { flatConvention } from '../../../../__fixtures__/flat-convention.js'
 
 const mockModels = {
   scheduling: {
@@ -454,7 +454,7 @@ describe('AnalysisIngestTool — association ID preservation', () => {
           }
         }
       },
-      api: { convention: halConvention }
+      api: { convention: flatConvention }
     }
   }
 
