@@ -280,6 +280,9 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     let rawRecords: Record<string, unknown>[]
     let totalPages: number | null
 
+    // Resolve convention for extraction and flattening
+    const convention = modelConfig.api?.convention ?? defaultConvention
+
     // Use SearchClient if model supports fullText search and filters provided
     const hasFullText = modelConfig.search?.fullText
     const hasSearchParams = filters && Object.keys(filters).length > 0
@@ -307,12 +310,12 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         unknown
       >
 
-      rawRecords = this._extractRecords(data)
-      totalPages = this._extractTotalPages(data, page, rawRecords.length, perPage)
+      const normalized = convention.normalizeListResponse(data, { page, perPage })
+      rawRecords = normalized.records
+      totalPages = normalized.pagination.total_pages ?? null
     }
 
     // Flatten expanded associations (e.g., title.name -> title_name) before field selection
-    const convention = modelConfig.api?.convention ?? defaultConvention
     const flatRecords = convention.flattenExpandedResources(
       rawRecords,
       modelConfig.associations,
@@ -394,9 +397,10 @@ When NOT to use: For quick lookups of specific records by ID or small result set
           unknown
         >
 
-        rawRecords = this._extractRecords(data)
+        const normalized = convention.normalizeListResponse(data, { page: currentPage, perPage })
+        rawRecords = normalized.records
         if (totalPages === null) {
-          totalPages = this._extractTotalPages(data, currentPage, rawRecords.length, perPage)
+          totalPages = normalized.pagination.total_pages ?? null
         }
       }
 
@@ -658,27 +662,6 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     await Promise.allSettled(
       Array.from({ length: Math.min(MAX_NESTED_CONCURRENCY, tasks.length) }, () => worker())
     )
-  }
-
-  /** Extract records array from API response (handles different response shapes) */
-  private _extractRecords(data: Record<string, unknown>): Record<string, unknown>[] {
-    if (Array.isArray(data)) return data as Record<string, unknown>[]
-    return (data?.data ?? data?.records ?? []) as unknown[] as Record<string, unknown>[]
-  }
-
-  /** Try to extract total pages from API response metadata */
-  private _extractTotalPages(
-    data: Record<string, unknown>,
-    currentPage: number,
-    recordCount: number,
-    perPage: number
-  ): number | null {
-    // Common pagination shapes
-    const meta = (data?.meta ?? data?.pagination ?? data) as Record<string, unknown>
-    if (meta?.total_pages) return meta.total_pages as number
-    if (meta?.totalPages) return meta.totalPages as number
-    if (meta?.total && perPage > 0) return Math.ceil((meta.total as number) / perPage)
-    return null
   }
 
   /** Store a compact page summary as an analysis memory finding */
