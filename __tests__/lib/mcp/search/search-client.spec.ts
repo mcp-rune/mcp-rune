@@ -1,5 +1,5 @@
-import { halConvention } from '../../../../src/mcp/api-conventions/hal.js'
 import { SearchClient } from '../../../../src/mcp/search/search-client.js'
+import { flatConvention } from '../../../__fixtures__/flat-convention.js'
 
 // Mock model classes
 const DirectSearchModel = {
@@ -502,7 +502,7 @@ describe('SearchClient', () => {
       const HalModel = {
         endpoint: 'platforms',
         singularName: 'platform',
-        api: { convention: halConvention }
+        api: { convention: flatConvention }
       }
 
       mockApiClient.get.mockResolvedValue({

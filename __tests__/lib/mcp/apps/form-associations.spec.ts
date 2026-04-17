@@ -1,14 +1,14 @@
-import { halConvention } from '../../../../src/mcp/api-conventions/hal.js'
 import {
   buildAssociationInstructions,
   isAssociationResolved,
   resolveFormAssociations
 } from '../../../../src/mcp/apps/form-associations.js'
+import { flatConvention } from '../../../__fixtures__/flat-convention.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 
 const MockModel = {
-  api: { convention: halConvention },
+  api: { convention: flatConvention },
   associations: {
     belongsTo: {
       linear_channel: { rel: 'linear_channel', target_model: 'linear_channel', required: true },
@@ -107,17 +107,17 @@ describe('lib/mcp/apps/form-associations', () => {
 
   describe('isAssociationResolved', () => {
     it('detects _link field in prefill (HAL)', () => {
-      expect(isAssociationResolved('title', halConvention, { title_link: 'https://...' })).toBe(
+      expect(isAssociationResolved('title', flatConvention, { title_link: 'https://...' })).toBe(
         true
       )
     })
 
     it('detects _id field in prefill (HAL)', () => {
-      expect(isAssociationResolved('title', halConvention, { title_id: 123 })).toBe(true)
+      expect(isAssociationResolved('title', flatConvention, { title_id: 123 })).toBe(true)
     })
 
     it('returns false when neither _link nor _id present', () => {
-      expect(isAssociationResolved('title', halConvention, { other_field: 'x' })).toBe(false)
+      expect(isAssociationResolved('title', flatConvention, { other_field: 'x' })).toBe(false)
     })
 
     it('falls back to pattern matching without convention', () => {
@@ -222,7 +222,7 @@ describe('lib/mcp/apps/form-associations', () => {
 
   describe('navigation associations (not in belongsTo)', () => {
     const RenditionModel = {
-      api: { convention: halConvention },
+      api: { convention: flatConvention },
       associations: {
         belongsTo: {
           asset: { rel: 'asset', target_model: 'asset' }

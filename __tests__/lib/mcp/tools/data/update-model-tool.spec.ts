@@ -1,5 +1,5 @@
-import { halConvention } from '../../../../../src/mcp/api-conventions/hal.js'
 import { UpdateModelTool } from '../../../../../src/mcp/tools/data/update-model-tool.js'
+import { flatConvention } from '../../../../__fixtures__/flat-convention.js'
 
 vi.mock('#src/services/vector-storage.js', () => ({
   storeOperation: vi.fn().mockResolvedValue(null)
@@ -284,9 +284,9 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
     })
   })
 
-  // ─── FLAT PAYLOAD via HAL convention ─────────────────────────────────────────
+  // ─── FLAT PAYLOAD via flat convention ─────────────────────────────────────────
 
-  describe('execute — flat payload via HAL convention', () => {
+  describe('execute — flat payload via flat convention', () => {
     let mockApiClient
     let mockLogger
 
@@ -303,7 +303,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
       const mockModels = {
         activity: {
           endpoint: 'activities',
-          api: { convention: halConvention }
+          api: { convention: flatConvention }
         }
       }
 
@@ -331,7 +331,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should return error when record_id is missing', async () => {
       const mockModels = {
-        activity: { endpoint: 'activities', api: { convention: halConvention } }
+        activity: { endpoint: 'activities', api: { convention: flatConvention } }
       }
 
       const tool = new UpdateModelTool({
@@ -351,7 +351,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
     it('should return error for unknown model', async () => {
       const tool = new UpdateModelTool({
         apiClient: mockApiClient,
-        models: { book: { endpoint: 'books', api: { convention: halConvention } } }
+        models: { book: { endpoint: 'books', api: { convention: flatConvention } } }
       })
 
       const result = await tool.execute({
@@ -381,7 +381,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should handle API errors', async () => {
       const mockModels = {
-        activity: { endpoint: 'activities', api: { convention: halConvention } }
+        activity: { endpoint: 'activities', api: { convention: flatConvention } }
       }
 
       const error = new Error('API Error')
@@ -405,7 +405,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should log update when logger is available', async () => {
       const mockModels = {
-        book: { endpoint: 'books', api: { convention: halConvention } }
+        book: { endpoint: 'books', api: { convention: flatConvention } }
       }
 
       mockApiClient.patch.mockResolvedValue({ id: 5, title: 'Updated Book' })
@@ -434,7 +434,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should support user_id impersonation with flat payload', async () => {
       const mockModels = {
-        book: { endpoint: 'books', api: { convention: halConvention } }
+        book: { endpoint: 'books', api: { convention: flatConvention } }
       }
 
       mockApiClient.patch.mockResolvedValue({ id: 5, title: 'Updated' })
@@ -460,7 +460,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should call storeOperation after successful update', async () => {
       const mockModels = {
-        book: { endpoint: 'books', api: { convention: halConvention } }
+        book: { endpoint: 'books', api: { convention: flatConvention } }
       }
 
       mockApiClient.patch.mockResolvedValue({ id: 5, title: 'Updated Book' })
@@ -489,7 +489,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should not fail if storeOperation rejects', async () => {
       const mockModels = {
-        book: { endpoint: 'books', api: { convention: halConvention } }
+        book: { endpoint: 'books', api: { convention: flatConvention } }
       }
 
       mockApiClient.patch.mockResolvedValue({ id: 5, title: 'Updated' })

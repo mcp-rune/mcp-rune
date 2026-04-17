@@ -1,8 +1,8 @@
-import { halConvention } from '../../../../../src/mcp/api-conventions/hal.js'
 import {
   BulkActionModelsTool,
   MAX_BATCH_SIZE
 } from '../../../../../src/mcp/tools/data/bulk-action-models-tool.js'
+import { flatConvention } from '../../../../__fixtures__/flat-convention.js'
 
 vi.mock('#src/services/vector-storage.js', () => ({
   storeOperation: vi.fn().mockResolvedValue(null)
@@ -972,13 +972,13 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
     })
   })
 
-  // ─── FLAT PAYLOAD ADAPTER ─────────────────────────────────────────
+  // ─── FLAT PAYLOAD via flat convention ─────────────────────────────────────────
 
-  describe('flat payload via HAL convention', () => {
+  describe('flat payload via flat convention', () => {
     const halMockModels = Object.fromEntries(
       Object.entries(mockModels).map(([name, config]) => [
         name,
-        { ...config, api: { ...config.api, convention: halConvention } }
+        { ...config, api: { ...config.api, convention: flatConvention } }
       ])
     )
 

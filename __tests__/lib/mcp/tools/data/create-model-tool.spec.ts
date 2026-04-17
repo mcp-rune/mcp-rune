@@ -1,5 +1,5 @@
-import { halConvention } from '../../../../../src/mcp/api-conventions/hal.js'
 import { CreateModelTool } from '../../../../../src/mcp/tools/data/create-model-tool.js'
+import { flatConvention } from '../../../../__fixtures__/flat-convention.js'
 
 vi.mock('#src/services/vector-storage.js', () => ({
   storeOperation: vi.fn().mockResolvedValue(null)
@@ -340,9 +340,9 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
     })
   })
 
-  // ─── FLAT PAYLOAD via HAL convention ─────────────────────────────────────────
+  // ─── FLAT PAYLOAD via flat convention ─────────────────────────────────────────
 
-  describe('execute — flat payload via HAL convention', () => {
+  describe('execute — flat payload via flat convention', () => {
     let mockApiClient
     let mockLogger
 
@@ -360,7 +360,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
         activity: {
           endpoint: 'activities',
           required: ['title'],
-          api: { convention: halConvention }
+          api: { convention: flatConvention }
         }
       }
 
@@ -386,7 +386,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
         activity: {
           endpoint: 'activities',
           required: ['title', 'duration'],
-          api: { convention: halConvention }
+          api: { convention: flatConvention }
         }
       }
 
@@ -408,7 +408,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
     it('should return error for unknown model', async () => {
       const tool = new CreateModelTool({
         apiClient: mockApiClient,
-        models: { book: { endpoint: 'books', api: { convention: halConvention } } }
+        models: { book: { endpoint: 'books', api: { convention: flatConvention } } }
       })
 
       const result = await tool.execute({
@@ -439,7 +439,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
         activity: {
           endpoint: 'activities',
           required: ['title'],
-          api: { convention: halConvention }
+          api: { convention: flatConvention }
         }
       }
 
@@ -466,7 +466,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
         book: {
           endpoint: 'books',
           required: ['title'],
-          api: { convention: halConvention }
+          api: { convention: flatConvention }
         }
       }
 
@@ -498,7 +498,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
         book: {
           endpoint: 'books',
           required: ['title'],
-          api: { convention: halConvention }
+          api: { convention: flatConvention }
         }
       }
 
@@ -523,7 +523,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
         activity: {
           endpoint: 'activities',
           required: ['title'],
-          api: { convention: halConvention }
+          api: { convention: flatConvention }
         }
       }
 
@@ -555,7 +555,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
         activity: {
           endpoint: 'activities',
           required: ['title'],
-          api: { convention: halConvention }
+          api: { convention: flatConvention }
         }
       }
 
