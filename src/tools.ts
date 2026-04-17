@@ -10,6 +10,7 @@ export {
 } from './mcp/tools/categories.js'
 export * from './mcp/tools/data/index.js'
 export * from './mcp/tools/domain/index.js'
+export { LoggingApiClient } from './mcp/tools/logging-api-client.js'
 export * from './mcp/tools/operations/index.js'
 export { SaveModelBaseTool } from './mcp/tools/save-model-base-tool.js'
 export {
