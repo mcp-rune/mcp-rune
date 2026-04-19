@@ -6,7 +6,7 @@ const modelClasses = {
   book: {
     endpoint: 'books',
     singularName: 'book',
-    search: { autocompleteFields: ['title'] },
+    search: { lookup: { fields: ['title'] } },
     attributes: {
       title: { type: 'string', required: true },
       author: { type: 'string' }

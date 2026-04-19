@@ -417,9 +417,32 @@ describe('Analysis Memory Tools', () => {
 
         expect(queryIngestedData).toHaveBeenCalledWith('test', {
           mode: 'sample',
-          sampleSize: 2
+          sampleSize: 2,
+          stratifyBy: undefined
         })
         expect(result.content[0].text).toContain('Sample A')
+      })
+
+      it('should pass stratify_by for stratified sampling', async () => {
+        queryIngestedData.mockResolvedValueOnce([
+          { id: '1', name: 'Active Record', status: 'active' },
+          { id: '2', name: 'Draft Record', status: 'draft' }
+        ])
+
+        const result = await tool.execute({
+          analysis_id: 'test',
+          mode: 'sample',
+          sample_size: 4,
+          stratify_by: 'status'
+        })
+
+        expect(queryIngestedData).toHaveBeenCalledWith('test', {
+          mode: 'sample',
+          sampleSize: 4,
+          stratifyBy: 'status'
+        })
+        expect(result.content[0].text).toContain('Active Record')
+        expect(result.content[0].text).toContain('Draft Record')
       })
 
       it('should handle no data', async () => {
@@ -445,6 +468,7 @@ describe('Analysis Memory Tools', () => {
       expect(schema.where).toBeDefined()
       expect(schema.limit).toBeDefined()
       expect(schema.sample_size).toBeDefined()
+      expect(schema.stratify_by).toBeDefined()
     })
 
     it('should have baseDescription mentioning all four modes', () => {

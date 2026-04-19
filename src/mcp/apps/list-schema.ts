@@ -74,7 +74,7 @@ export function applyColumnSelection(
 export function generateListSchema(ModelClass: AppModelClass): ListSchema {
   const model = ModelClass.singularName
   const columns = inferColumns(ModelClass)
-  const searchFields = ModelClass.search?.autocompleteFields || []
+  const searchFields = ModelClass.search?.lookup?.fields || []
 
   return {
     model,

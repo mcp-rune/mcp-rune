@@ -4,7 +4,7 @@ export const MOCK_MODELS = {
     attributes: ['id', 'name', 'external_id', 'title_type', 'episode_number', 'tags'],
     required: ['name'],
     search: {
-      autocompleteFields: ['external_id', 'external_id_type'],
+      lookup: { fields: ['external_id', 'external_id_type'] },
       filters: {
         external_id: { type: 'text', label: 'External ID' },
         title_type: { type: 'enum', label: 'Title Type', enumValues: ['feature', 'episode'] },
@@ -30,7 +30,7 @@ export const MOCK_MODELS = {
     attributes: ['id', 'encoding', 'width', 'height', 'type', 'is_cover'],
     required: ['encoding'],
     search: {
-      autocompleteFields: ['external_id'],
+      lookup: { fields: ['external_id'] },
       filters: {
         type: { type: 'enum', label: 'Image Type', enumValues: ['poster', 'thumbnail'] }
       }

@@ -30,6 +30,7 @@ export interface FilterQuery {
 export interface SampleQuery {
   mode: 'sample'
   sampleSize?: number
+  stratifyBy?: string
 }
 
 export type IngestedQuery = AggregateQuery | FilterQuery | SampleQuery
@@ -228,17 +229,85 @@ async function queryFilter(
   return (result.rows as IngestedRow[]).map((row) => row.data)
 }
 
-/** Random sample */
+/** Random sample — supports optional stratified sampling by a JSONB field */
 async function querySample(
   pool: Pool,
   analysisId: string,
   query: SampleQuery
 ): Promise<Record<string, unknown>[]> {
   const sampleSize = Math.min(query.sampleSize || 5, 50)
+
+  if (query.stratifyBy) {
+    return querySampleStratified(pool, analysisId, sampleSize, query.stratifyBy)
+  }
+
   const result = await pool.query(
     `SELECT data
      FROM ingested_records
      WHERE analysis_id = $1 AND (expires_at IS NULL OR expires_at > NOW())
+     ORDER BY RANDOM()
+     LIMIT $2`,
+    [analysisId, sampleSize]
+  )
+
+  return (result.rows as IngestedRow[]).map((row) => row.data)
+}
+
+/**
+ * Stratified sampling: distributes sample slots evenly across distinct values
+ * of the given JSONB field, ensuring minority groups are always represented.
+ *
+ * Without stratification, ORDER BY RANDOM() heavily favors the majority group.
+ * E.g., 85 "active" + 10 "draft" + 5 "archived" with sampleSize=6 would almost
+ * always return 6 "active" records.
+ *
+ * The query works in three stages:
+ *
+ * 1. CTE `ranked` — assigns a random rank within each group using
+ *    ROW_NUMBER() OVER (PARTITION BY field ORDER BY RANDOM()).
+ *    Each group's rows are independently shuffled and numbered 1, 2, 3...
+ *
+ * 2. CTE `group_count` — counts distinct values of the stratification field
+ *    to calculate the per-group budget: CEIL(sampleSize / numGroups).
+ *    With sampleSize=6 and 3 groups, each group gets 2 slots.
+ *
+ * 3. Final SELECT — keeps only rows where rn <= per-group budget, ensuring
+ *    equal representation. A final ORDER BY RANDOM() shuffles the output so
+ *    groups aren't clustered, and LIMIT caps the total to sampleSize.
+ *
+ * Edge cases:
+ * - GREATEST(1, num_groups) prevents division by zero
+ * - GREATEST(1, CEIL(...)) ensures at least 1 record per group
+ * - When sampleSize doesn't divide evenly (e.g., 5 slots / 3 groups = CEIL 2),
+ *   the per-group budget over-allocates (2 x 3 = 6), and LIMIT 5 trims one
+ * - sanitizeFieldName() validates the field against /^[a-zA-Z_][a-zA-Z0-9_]*$/
+ *   since column identifiers can't use $N parameterization in PostgreSQL
+ */
+async function querySampleStratified(
+  pool: Pool,
+  analysisId: string,
+  sampleSize: number,
+  stratifyBy: string
+): Promise<Record<string, unknown>[]> {
+  const safeField = sanitizeFieldName(stratifyBy)
+
+  const result = await pool.query(
+    `WITH ranked AS (
+       SELECT data,
+         ROW_NUMBER() OVER (
+           PARTITION BY data->>'${safeField}' ORDER BY RANDOM()
+         ) AS rn
+       FROM ingested_records
+       WHERE analysis_id = $1 AND (expires_at IS NULL OR expires_at > NOW())
+     ),
+     group_count AS (
+       SELECT COUNT(DISTINCT data->>'${safeField}') AS num_groups
+       FROM ingested_records
+       WHERE analysis_id = $1 AND (expires_at IS NULL OR expires_at > NOW())
+     )
+     SELECT ranked.data
+     FROM ranked, group_count
+     WHERE ranked.rn <= GREATEST(1, CEIL($2::numeric / GREATEST(1, group_count.num_groups)))
      ORDER BY RANDOM()
      LIMIT $2`,
     [analysisId, sampleSize]

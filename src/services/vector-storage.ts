@@ -247,7 +247,7 @@ export interface IngestRecordsParams {
 export type IngestedDataQuery =
   | { mode: 'aggregate'; groupBy: string }
   | { mode: 'filter'; where: Record<string, unknown>; limit?: number }
-  | { mode: 'sample'; sampleSize?: number }
+  | { mode: 'sample'; sampleSize?: number; stratifyBy?: string }
 
 /** Store ingested records for analysis */
 export async function storeIngestedRecords(params: IngestRecordsParams): Promise<number> {
