@@ -42,7 +42,7 @@ export class AnalysisQueryTool extends BaseAnalysisTool {
 - semantic: Search findings and page summaries by meaning. Use when asking qualitative questions ("what issues were found?", "any patterns related to missing data?").
 - aggregate: Get counts and distributions by field. Use for quantitative questions ("how many records per status?", "what's the distribution of types?").
 - filter: Find specific records matching criteria. Supports exact match and range operators ($gt, $gte, $lt, $lte) for numeric and date fields.
-- sample: Get a random sample of records. Use to get a representative overview before diving deeper.
+- sample: Get a sample of records. Use stratify_by to ensure minority groups are represented — distributes sample slots evenly across distinct values of a field. Without stratify_by, returns a uniform random sample.
 
 Typical reasoning flow:
 1. Start with describe to discover available fields and query syntax
@@ -85,23 +85,40 @@ Typical reasoning flow:
       limit: z.number().optional().describe('Max records to return (filter mode, default: 20)'),
 
       // sample mode params
-      sample_size: z.number().optional().describe('Random sample size (sample mode, default: 5)')
+      sample_size: z.number().optional().describe('Sample size (sample mode, default: 5)'),
+      stratify_by: z
+        .string()
+        .optional()
+        .describe(
+          'Field to stratify by (sample mode). Distributes sample slots evenly across distinct values of this field, ensuring minority groups are represented. E.g., "status" ensures each status value appears in the sample.'
+        )
     }
   }
 
   override async execute(args: Record<string, unknown>): Promise<ToolResult> {
-    const { analysis_id, mode, query, category, top_k, group_by, where, limit, sample_size } =
-      args as {
-        analysis_id: string
-        mode: 'describe' | 'semantic' | 'aggregate' | 'filter' | 'sample'
-        query?: string
-        category?: string
-        top_k?: number
-        group_by?: string
-        where?: Record<string, unknown>
-        limit?: number
-        sample_size?: number
-      }
+    const {
+      analysis_id,
+      mode,
+      query,
+      category,
+      top_k,
+      group_by,
+      where,
+      limit,
+      sample_size,
+      stratify_by
+    } = args as {
+      analysis_id: string
+      mode: 'describe' | 'semantic' | 'aggregate' | 'filter' | 'sample'
+      query?: string
+      category?: string
+      top_k?: number
+      group_by?: string
+      where?: Record<string, unknown>
+      limit?: number
+      sample_size?: number
+      stratify_by?: string
+    }
 
     switch (mode) {
       case 'describe':
@@ -113,7 +130,7 @@ Typical reasoning flow:
       case 'filter':
         return this._queryFilter(analysis_id, where, limit)
       case 'sample':
-        return this._querySample(analysis_id, sample_size)
+        return this._querySample(analysis_id, sample_size, stratify_by)
     }
   }
 
@@ -340,11 +357,16 @@ Typical reasoning flow:
     return this.formatResponse(results as unknown as Record<string, unknown>)
   }
 
-  /** Sample random records from ingested_records */
-  private async _querySample(analysisId: string, sampleSize?: number): Promise<ToolResult> {
+  /** Sample records from ingested_records — supports stratified sampling */
+  private async _querySample(
+    analysisId: string,
+    sampleSize?: number,
+    stratifyBy?: string
+  ): Promise<ToolResult> {
     const results = await queryIngestedData(analysisId, {
       mode: 'sample',
-      sampleSize
+      sampleSize,
+      stratifyBy
     })
 
     if (results.length === 0) {

@@ -34,14 +34,14 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
           endpoint: 'activities',
           attributes: { title: { type: 'string', required: true }, duration: { type: 'integer' } },
           required: ['title'],
-          search: { autocompleteFields: ['title'] },
+          search: { lookup: { fields: ['title'] } },
           description: 'Study session model'
         },
         book: {
           endpoint: 'books',
           attributes: { title: { type: 'string', required: true }, author: { type: 'string' } },
           required: ['title'],
-          search: { autocompleteFields: ['title'] },
+          search: { lookup: { fields: ['title'] } },
           description: 'Book model'
         }
       }
@@ -64,7 +64,7 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
           endpoint: 'categories',
           attributes: { name: { type: 'string', required: true } },
           required: ['name'],
-          search: { autocompleteFields: ['name'] },
+          search: { lookup: { fields: ['name'] } },
           description: 'Category model',
           associations: {
             belongsTo: { theme: { rel: 'theme', target_model: 'theme' } },
@@ -87,7 +87,7 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
           endpoint: 'tags',
           attributes: { name: { type: 'string', required: true } },
           required: ['name'],
-          search: { autocompleteFields: ['name'] },
+          search: { lookup: { fields: ['name'] } },
           description: 'Tag model'
         }
       }
@@ -107,7 +107,7 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
           attributes: { name: { type: 'string' } },
           required: ['name'],
           search: {
-            autocompleteFields: ['name'],
+            lookup: { fields: ['name'] },
             filters: {
               name: { type: 'text', label: 'Name' },
               status: { type: 'enum', label: 'Status', enumValues: ['draft', 'active'] }
@@ -157,7 +157,7 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
           endpoint: 'books',
           attributes: { title: { type: 'string' } },
           required: ['title'],
-          search: { autocompleteFields: ['title'] },
+          search: { lookup: { fields: ['title'] } },
           description: 'Book model'
         }
       }
