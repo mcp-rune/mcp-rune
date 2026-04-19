@@ -16,8 +16,8 @@ import { z } from 'zod'
 import { defaultConvention } from '#src/mcp/api-conventions/index.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
 import { createSelectionTools } from '#src/mcp/apps/selection-tools.js'
-import type { ApiClient } from '#src/mcp/search/search-client.js'
 import type { SearchClient } from '#src/mcp/search/search-client.js'
+import type { SearchApiClient } from '#src/mcp/search/types.js'
 import * as logger from '#src/services/logger.js'
 
 import type { AppModelClass, ToolResult } from './types.js'
@@ -42,9 +42,9 @@ interface MultiSelectOptions {
 
 /** Create the multi-select picker MCP App. */
 export function createMultiSelectApp({ modelClasses, namespace }: MultiSelectOptions): unknown[] {
-  // Convention: only models with autocomplete support are eligible
+  // Convention: only models with lookup support are eligible
   const eligible = Object.fromEntries(
-    Object.entries(modelClasses).filter(([, MC]) => MC.supportsAutocomplete)
+    Object.entries(modelClasses).filter(([, MC]) => MC.supportsLookup)
   )
   const modelNames = Object.keys(eligible)
 
@@ -73,7 +73,7 @@ export function createMultiSelectApp({ modelClasses, namespace }: MultiSelectOpt
 
     async handleToolCall(
       args: Record<string, unknown> = {},
-      { apiClient, searchClient }: { apiClient?: ApiClient; searchClient?: SearchClient } = {}
+      { apiClient, searchClient }: { apiClient?: SearchApiClient; searchClient?: SearchClient } = {}
     ): Promise<ToolResult> {
       const { model } = args as { model?: string }
 
@@ -101,7 +101,7 @@ export function createMultiSelectApp({ modelClasses, namespace }: MultiSelectOpt
             return {
               id: record.id,
               display: instance.displayValue,
-              ...instance.autocompleteFields
+              ...instance.lookupFields
             }
           })
         } catch (err) {
@@ -125,7 +125,7 @@ export function createMultiSelectApp({ modelClasses, namespace }: MultiSelectOpt
             return {
               id: record.id,
               display: instance.displayValue,
-              ...instance.autocompleteFields
+              ...instance.lookupFields
             }
           })
         } catch (err) {

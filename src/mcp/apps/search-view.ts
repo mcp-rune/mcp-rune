@@ -45,9 +45,9 @@ interface SearchViewOptions {
 
 /** Create the search view MCP App. */
 export function createSearchViewApp({ modelClasses, namespace }: SearchViewOptions): unknown[] {
-  // Convention: only models with fullText search are eligible
+  // Convention: only models with query search are eligible
   const eligible = Object.fromEntries(
-    Object.entries(modelClasses).filter(([, MC]) => MC.search?.fullText)
+    Object.entries(modelClasses).filter(([, MC]) => MC.search?.query)
   )
   const modelNames = Object.keys(eligible)
   const resourceUri = `ui://${namespace}/search-view`

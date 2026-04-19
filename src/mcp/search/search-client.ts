@@ -5,100 +5,93 @@
  * whether a model has its own search endpoint, delegates to a group
  * search endpoint, or only supports listing.
  *
- *   MCP App/Tool -> SearchClient -> apiClient -> Rails API
+ *   MCP App/Tool -> SearchClient -> apiClient -> API
+ *
+ * Three entry points:
+ * - search()  — structured query with filters (POST or group-based)
+ * - lookup()  — typeahead/autocomplete for finding records by name
+ * - list()    — paginated GET listing (always available)
  *
  * For both direct and group search endpoints, the request body is built by a
- * SearchAdapter. Models can declare a custom adapter (e.g., ActivitySearchAdapter)
- * in their `search.fullText.adapter` config, and groups can declare one in
- * their search group config. When no adapter is declared, the default
- * SearchAdapter passes filters through unchanged.
+ * SearchAdapter. The adapter can be set at three levels (highest priority first):
+ * 1. Per-model: `search.query.adapter`
+ * 2. Per-group: `searchGroup.adapter`
+ * 3. Server-wide: `defaultAdapter` in the SearchClient constructor
+ *
+ * The base SearchAdapter spreads filters flat into the body. For Rails-style
+ * nesting (e.g., `{ filters: { ... } }`), use RailsSearchAdapter.
  *
  * CRUD operations still use apiClient directly via Model.endpoint.
  */
 
 import { defaultConvention } from '../api-conventions/index.js'
-import type { SearchConfig } from './search-adapter.js'
 import { SearchAdapter } from './search-adapter.js'
-
-const defaultAdapter = new SearchAdapter()
-
-export interface ApiClient {
-  get(endpoint: string, params?: Record<string, unknown>): Promise<Record<string, unknown>>
-  post(endpoint: string, body: Record<string, unknown>): Promise<Record<string, unknown>>
-}
-
-export interface FullTextSearchConfig {
-  endpoint?: string
-  group?: string
-  method?: string
-  queryParam?: string
-  filtersParam?: string
-  adapter?: SearchAdapter
-  modelName?: string | string[]
-  expand?: string[]
-  [key: string]: unknown
-}
-
-export interface SearchModelClass {
-  endpoint: string
-  singularName?: string
-  search?: {
-    fullText?: FullTextSearchConfig
-    autocompleteFields?: string[]
-    filters?: Record<string, unknown>
-    [key: string]: unknown
-  }
-  api?: {
-    convention?: typeof defaultConvention
-    readOnly?: boolean
-    [key: string]: unknown
-  }
-  [key: string]: unknown
-}
-
-export interface SearchGroup {
-  endpoint: string
-  modelsParam: string
-  adapter?: SearchAdapter
-  queryParam?: string
-  filtersParam?: string
-  expand?: string[]
-  [key: string]: unknown
-}
-
-export interface PaginationInfo {
-  page: number
-  per_page: number
-  total: number
-  total_pages?: number
-}
-
-export interface SearchResult {
-  records: Record<string, unknown>[]
-  pagination: PaginationInfo
-}
+import type {
+  PaginationInfo,
+  SearchApiClient,
+  SearchConfig,
+  SearchGroup,
+  SearchModelClass,
+  SearchResult
+} from './types.js'
 
 export class SearchClient {
-  private _apiClient: ApiClient
+  private _apiClient: SearchApiClient
   private _searchGroups: Record<string, SearchGroup>
+  private _defaultAdapter: SearchAdapter
 
   constructor(
-    apiClient: ApiClient,
-    { searchGroups = {} }: { searchGroups?: Record<string, SearchGroup> } = {}
+    apiClient: SearchApiClient,
+    {
+      searchGroups = {},
+      defaultAdapter = new SearchAdapter()
+    }: {
+      searchGroups?: Record<string, SearchGroup>
+      defaultAdapter?: SearchAdapter
+    } = {}
   ) {
     this._apiClient = apiClient
     this._searchGroups = searchGroups
+    this._defaultAdapter = defaultAdapter
   }
 
   /**
-   * Full-text search for a single model.
+   * Structured search for a single model.
+   *
+   * @param ModelClass - A model class (or plain object) conforming to SearchModelClass.
+   *   Must provide `endpoint` and optionally `search` config to control routing.
+   * @param query - Text query string passed to the search endpoint.
+   * @param options - Pagination and filter options.
    *
    * Resolution order:
-   * 1. model.search.endpoint -> direct endpoint (POST or GET)
-   * 2. model.search.group -> group search filtered to this model type
-   *    Uses fullText.modelName if set, otherwise falls back to singularName.
+   * 1. model.search.query.endpoint -> direct endpoint (POST or GET)
+   * 2. model.search.query.group -> group search filtered to this model type
+   *    Uses query.modelName if set, otherwise falls back to singularName.
    *    modelName can be a string or array (e.g., ['episode', 'feature']).
-   * 3. Neither -> field-based search on first searchable field via list()
+   * 3. Neither -> field-based search on first lookup field via list()
+   *
+   * @example Path 1 — Direct endpoint (POST with flat filters)
+   * static search = {
+   *   query: {
+   *     endpoint: 'activities/search',
+   *     method: 'POST',
+   *     queryParam: 'q'
+   *   },
+   *   filters: { theme_id: { type: 'relation' }, duration_minutes: { type: 'integer_range' } },
+   *   lookup: { fields: ['title', 'description'] }
+   * }
+   * // → POST /activities/search { q: "Haskell", theme_id: 1, page: 1, per_page: 20 }
+   *
+   * @example Path 2 — Group search (delegates to shared catalogue endpoint)
+   * static search = {
+   *   query: { group: 'catalogue', modelName: ['episode', 'feature'] },
+   *   lookup: { fields: ['external_id', 'external_id_type'] }
+   * }
+   * // → POST /catalogue/search { q: "drama", models: ['episode', 'feature'], page: 1, per_page: 20 }
+   *
+   * @example Path 3 — List fallback (no query config, only lookup fields)
+   * static search = { lookup: { fields: ['name'] } }
+   * // → GET /platforms?name=Netflix&page=1&per_page=20
    */
   async search(
     ModelClass: SearchModelClass,
@@ -109,11 +102,11 @@ export class SearchClient {
       filters
     }: { page?: number; perPage?: number; filters?: Record<string, unknown> } = {}
   ): Promise<SearchResult> {
-    const fullText = ModelClass.search?.fullText
+    const queryConfig = ModelClass.search?.query
 
-    if (!fullText) {
-      // Fallback: field-based search on first autocomplete field
-      const searchField = ModelClass.search?.autocompleteFields?.[0]
+    if (!queryConfig) {
+      // Fallback: field-based search on first lookup field
+      const searchField = ModelClass.search?.lookup?.fields?.[0]
       if (searchField && query) {
         return this.list(ModelClass, { page, perPage, [searchField]: query })
       }
@@ -121,14 +114,14 @@ export class SearchClient {
     }
 
     // Direct search endpoint
-    if (fullText.endpoint) {
+    if (queryConfig.endpoint) {
       return this._directSearch(ModelClass, query, { page, perPage, filters })
     }
 
     // Group search filtered to this model type
-    if (fullText.group) {
-      const groupName = fullText.group
-      const modelName = fullText.modelName ?? ModelClass.singularName
+    if (queryConfig.group) {
+      const groupName = queryConfig.group
+      const modelName = queryConfig.modelName ?? ModelClass.singularName
       const models = Array.isArray(modelName) ? modelName : [modelName!]
       const result = await this.groupSearch(groupName, query, {
         page,
@@ -141,6 +134,62 @@ export class SearchClient {
 
     // Should not reach here, but fallback to list
     return this.list(ModelClass, { page, perPage })
+  }
+
+  /**
+   * Typeahead/autocomplete lookup for finding records by name.
+   *
+   * Resolution chain:
+   * 1. search.lookup.endpoint -> dedicated lookup endpoint (GET)
+   * 2. search.query exists -> delegate to search() with text query
+   * 3. Neither -> list() with first lookup field as query param filter
+   *
+   * @example Path 1 — Dedicated lookup endpoint
+   * static search = {
+   *   query: { group: 'catalogue' },
+   *   lookup: { endpoint: 'brands/autocomplete', fields: ['external_id', 'external_id_type'] }
+   * }
+   * // → GET /brands/autocomplete?external_id=BBC&per_page=10
+   *
+   * @example Path 2 — Falls through to search()
+   * static search = {
+   *   query: { endpoint: 'activities/search', method: 'POST', queryParam: 'q' },
+   *   lookup: { fields: ['title', 'description'] }
+   * }
+   * // → POST /activities/search { q: "Haskell", page: 1, per_page: 10 }
+   *
+   * @example Path 3 — List fallback (no query config, no lookup endpoint)
+   * static search = { lookup: { fields: ['external_id', 'name'] } }
+   * // → GET /platforms?external_id=BBC&per_page=10
+   */
+  async lookup(
+    ModelClass: SearchModelClass,
+    query: string,
+    { perPage = 10 }: { perPage?: number } = {}
+  ): Promise<SearchResult> {
+    const lookupConfig = ModelClass.search?.lookup
+    const queryConfig = ModelClass.search?.query
+
+    // 1. Dedicated lookup endpoint
+    if (lookupConfig?.endpoint) {
+      const paramName = lookupConfig.queryParam || lookupConfig.fields?.[0] || 'q'
+      const params: Record<string, unknown> = { per_page: perPage }
+      if (query) params[paramName] = query
+      const data = await this._apiClient.get(lookupConfig.endpoint, params)
+      return this._normalizeResponse(data, { page: 1, perPage })
+    }
+
+    // 2. Delegate to structured search
+    if (queryConfig) {
+      return this.search(ModelClass, query, { perPage })
+    }
+
+    // 3. List fallback with first lookup field
+    const searchField = lookupConfig?.fields?.[0]
+    if (searchField && query) {
+      return this.list(ModelClass, { perPage, [searchField]: query })
+    }
+    return this.list(ModelClass, { perPage })
   }
 
   /** Multi-model search across a named group. */
@@ -166,9 +215,9 @@ export class SearchClient {
       )
     }
 
-    const adapter = group.adapter || defaultAdapter
+    const adapter = group.adapter || this._defaultAdapter
     const body = adapter.buildBody(query, filters, { page, perPage }, {
-      fullText: group
+      query: group
     } as SearchConfig)
 
     // Model scoping is separate from filters -- stays at top level
@@ -182,6 +231,15 @@ export class SearchClient {
 
   /**
    * Paginated listing (always available -- uses GET Model.endpoint).
+   *
+   * Always available regardless of search config.
+   *
+   * @example
+   * searchClient.list(BookModel, { page: 2, perPage: 50 })
+   * // → GET /books?page=2&per_page=50
+   *
+   * searchClient.list(BookModel, { status: 'reading', sort: 'title' })
+   * // → GET /books?page=1&per_page=20&status=reading&sort=title
    */
   async list(
     ModelClass: SearchModelClass,
@@ -203,16 +261,25 @@ export class SearchClient {
 
   /** Get the search capability of a model. */
   static getSearchCapability(ModelClass: SearchModelClass): 'direct' | 'group' | 'list-only' {
-    const fullText = ModelClass.search?.fullText
-    if (!fullText) return 'list-only'
-    if (fullText.endpoint) return 'direct'
-    if (fullText.group) return 'group'
+    const queryConfig = ModelClass.search?.query
+    if (!queryConfig) return 'list-only'
+    if (queryConfig.endpoint) return 'direct'
+    if (queryConfig.group) return 'group'
     return 'list-only'
+  }
+
+  /** Get the lookup capability of a model. */
+  static getLookupCapability(
+    ModelClass: SearchModelClass
+  ): 'dedicated' | 'search-fallback' | 'list-fallback' {
+    if (ModelClass.search?.lookup?.endpoint) return 'dedicated'
+    if (ModelClass.search?.query) return 'search-fallback'
+    return 'list-fallback'
   }
 
   /** Get the search group name for a model, if any. */
   static getSearchGroup(ModelClass: SearchModelClass): string | null {
-    return ModelClass.search?.fullText?.group || null
+    return ModelClass.search?.query?.group || null
   }
 
   // ============================================================================
@@ -232,11 +299,11 @@ export class SearchClient {
       perPage: 20
     }
   ): Promise<SearchResult> {
-    const fullText = ModelClass.search?.fullText
-    const method = (fullText!.method || 'POST').toUpperCase()
+    const queryConfig = ModelClass.search?.query
+    const method = (queryConfig!.method || 'POST').toUpperCase()
 
     if (method === 'POST') {
-      const adapter = fullText!.adapter || defaultAdapter
+      const adapter = (queryConfig!.adapter as SearchAdapter) || this._defaultAdapter
       const { body, queryParams } = adapter.buildRequest(
         query,
         filters,
@@ -244,19 +311,21 @@ export class SearchClient {
         ModelClass.search as SearchConfig
       )
 
-      const endpoint = queryParams ? `${fullText!.endpoint}?${queryParams}` : fullText!.endpoint!
+      const endpoint = queryParams
+        ? `${queryConfig!.endpoint}?${queryParams}`
+        : queryConfig!.endpoint!
       const response = await this._apiClient.post(endpoint, body)
       return this._normalizeResponse(response, { page, perPage })
     }
 
     // GET request
     const params: Record<string, unknown> = {
-      [fullText!.queryParam!]: query,
+      [queryConfig!.queryParam!]: query,
       page,
       per_page: perPage
     }
 
-    const data = await this._apiClient.get(fullText!.endpoint!, params)
+    const data = await this._apiClient.get(queryConfig!.endpoint!, params)
     return this._normalizeResponse(data, { page, perPage })
   }
 

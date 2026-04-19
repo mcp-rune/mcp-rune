@@ -13,11 +13,10 @@ import path from 'node:path'
 
 import { z } from 'zod'
 
-import { defaultConvention } from '#src/mcp/api-conventions/index.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
 import { createSelectionTools } from '#src/mcp/apps/selection-tools.js'
-import type { ApiClient } from '#src/mcp/search/search-client.js'
-import { SearchClient } from '#src/mcp/search/search-client.js'
+import type { SearchClient } from '#src/mcp/search/search-client.js'
+import type { SearchApiClient } from '#src/mcp/search/types.js'
 import * as logger from '#src/services/logger.js'
 
 import type { AppModelClass, ToolResult } from './types.js'
@@ -37,14 +36,14 @@ function getHtml(): string {
 /**
  * Build a typeToModel mapping from modelClasses.
  *
- * Inverts each model's `search.fullText.modelName` to map entity type -> model registry key.
+ * Inverts each model's `search.query.modelName` to map entity type -> model registry key.
  * For models with array modelName (e.g. TitleModel: ['episode', 'feature']),
  * each value maps to the same registry key.
  */
 function buildTypeToModelMap(modelClasses: Record<string, AppModelClass>): Record<string, string> {
   const typeToModel: Record<string, string> = {}
   for (const [key, ModelClass] of Object.entries(modelClasses)) {
-    const modelName = ModelClass.search?.fullText?.modelName
+    const modelName = ModelClass.search?.query?.modelName
     if (modelName) {
       const names = Array.isArray(modelName) ? modelName : [modelName]
       for (const name of names) {
@@ -78,9 +77,9 @@ export function createAutocompletePickerApp({
   searchGroups = {},
   namespace
 }: AutocompletePickerOptions): unknown[] {
-  // Convention: only models with autocomplete support are eligible
+  // Convention: only models with lookup support are eligible
   const eligible = Object.fromEntries(
-    Object.entries(modelClasses).filter(([, MC]) => MC.supportsAutocomplete)
+    Object.entries(modelClasses).filter(([, MC]) => MC.supportsLookup)
   )
   const modelNames = Object.keys(eligible)
   const groupNames = Object.keys(searchGroups)
@@ -148,7 +147,7 @@ export function createAutocompletePickerApp({
 
     async handleToolCall(
       args: Record<string, unknown> = {},
-      { apiClient, searchClient }: { apiClient?: ApiClient; searchClient?: SearchClient } = {}
+      { searchClient }: { apiClient?: SearchApiClient; searchClient?: SearchClient } = {}
     ): Promise<ToolResult> {
       const {
         model,
@@ -249,7 +248,7 @@ export function createAutocompletePickerApp({
         }
       }
 
-      // --- Single-model search path ---
+      // --- Single-model search path (uses SearchClient.lookup) ---
       if (!eligible[model!]) {
         return {
           content: [
@@ -264,13 +263,12 @@ export function createAutocompletePickerApp({
       }
 
       const ModelClass = eligible[model!]!
-      const searchFields = ModelClass.search?.autocompleteFields || []
-      const searchCapability = SearchClient.getSearchCapability(ModelClass as never)
+      const searchFields = ModelClass.search?.lookup?.fields || []
       let results: Array<{ id: unknown; display: string; [key: string]: unknown }> = []
 
       if (searchClient && query) {
         try {
-          const { records } = await searchClient.search(ModelClass as never, query, {
+          const { records } = await searchClient.lookup(ModelClass as never, query, {
             perPage: limit
           })
           results = records.map((record) => {
@@ -278,37 +276,11 @@ export function createAutocompletePickerApp({
             return {
               id: record.id,
               display: instance.displayValue,
-              ...instance.autocompleteFields
+              ...instance.lookupFields
             }
           })
         } catch (err) {
-          logger.warn('Failed to search for autocomplete', {
-            service: 'mcp-app',
-            model,
-            query,
-            ...errorMeta(err)
-          })
-          results = []
-        }
-      } else if (apiClient && query && searchCapability === 'list-only') {
-        // Fallback for models without search config -- use direct GET with q param
-        try {
-          const data = await apiClient.get(ModelClass.endpoint, {
-            q: query,
-            per_page: limit
-          })
-          const convention = ModelClass.api?.convention ?? defaultConvention
-          const { records } = convention.normalizeListResponse(data, { page: 1, perPage: limit! })
-          results = records.map((record) => {
-            const instance = new ModelClass(record)
-            return {
-              id: record.id,
-              display: instance.displayValue,
-              ...instance.autocompleteFields
-            }
-          })
-        } catch (err) {
-          logger.warn('Failed to fetch autocomplete fallback', {
+          logger.warn('Failed to lookup for autocomplete', {
             service: 'mcp-app',
             model,
             query,

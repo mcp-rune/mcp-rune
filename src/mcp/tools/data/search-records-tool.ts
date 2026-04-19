@@ -4,17 +4,12 @@ import { z } from 'zod'
 import { pickFields } from '#src/core/helpers.js'
 import { resolveDerivedFields } from '#src/mcp/apps/derived-fields.js'
 import { SearchClient } from '#src/mcp/search/search-client.js'
+import type { PaginationInfo } from '#src/mcp/search/types.js'
 import { normalizeFilterValues, validateFilterValues } from '#src/mcp/tools/validators.js'
 
 import type { ModelConfig, ToolAnnotations, ToolResult } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
 import type { FilterSchema } from '../validators.js'
-
-interface PaginationInfo {
-  page: number
-  total_pages: number
-  [key: string]: unknown
-}
 
 /**
  * Stateless search tool
@@ -173,11 +168,14 @@ export class SearchRecordsTool extends BaseTool {
 
   /** Create a SearchClient from the tool's apiClient and serverContext */
   private _createSearchClient(): SearchClient {
-    const searchGroups = ((this.serverContext as Record<string, unknown>)?.searchGroups ??
-      {}) as Record<string, unknown>
+    const ctx = this.serverContext as Record<string, unknown>
+    const searchGroups = (ctx?.searchGroups ?? {}) as Record<string, unknown>
+    const defaultAdapter = ctx?.defaultAdapter as
+      | NonNullable<ConstructorParameters<typeof SearchClient>[1]>['defaultAdapter']
+      | undefined
     return new SearchClient(
       this.apiClient! as unknown as ConstructorParameters<typeof SearchClient>[0],
-      { searchGroups } as unknown as ConstructorParameters<typeof SearchClient>[1]
+      { searchGroups, defaultAdapter } as unknown as ConstructorParameters<typeof SearchClient>[1]
     )
   }
 
