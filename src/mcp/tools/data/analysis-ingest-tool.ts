@@ -283,8 +283,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     // Resolve convention for extraction and flattening
     const convention = modelConfig.api?.convention ?? defaultConvention
 
-    // Use SearchClient if model supports fullText search and filters provided
-    const hasFullText = modelConfig.search?.fullText
+    // Use SearchClient if model supports query search and filters provided
+    const hasFullText = modelConfig.search?.query
     const hasSearchParams = filters && Object.keys(filters).length > 0
 
     if (hasFullText && hasSearchParams) {
@@ -369,8 +369,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     // Resolve convention once for all pages
     const convention = modelConfig.api?.convention ?? defaultConvention
 
-    // Use SearchClient if model supports fullText search and filters provided
-    const hasFullText = modelConfig.search?.fullText
+    // Use SearchClient if model supports query search and filters provided
+    const hasFullText = modelConfig.search?.query
     const hasSearchParams = filters && Object.keys(filters).length > 0
     const searchClient =
       hasFullText && hasSearchParams ? this._createSearchClient(api as unknown as ApiClient) : null

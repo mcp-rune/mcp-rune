@@ -2,6 +2,8 @@ import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 export type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
+import type { ApiClient } from '#src/mcp/search/types.js'
+
 import type { AssociationConfig, BaseConvention } from '../api-conventions/base-convention.js'
 import type { ToolCategory } from './categories.js'
 import { getCategoryConfig, TOOL_CATEGORIES } from './categories.js'
@@ -10,15 +12,7 @@ import { getCategoryConfig, TOOL_CATEGORIES } from './categories.js'
 // Types
 // ============================================================================
 
-/** Minimal API client interface expected by tools */
-export interface ApiClient {
-  baseUrl?: string
-  get(url: string, params?: Record<string, unknown>): Promise<unknown>
-  post(url: string, data?: unknown): Promise<unknown>
-  put(url: string, data?: unknown): Promise<unknown>
-  patch(url: string, data?: unknown): Promise<unknown>
-  delete(url: string): Promise<unknown>
-}
+export type { ApiClient }
 
 /** Logger interface expected by tools */
 export interface ToolLogger {
@@ -73,9 +67,9 @@ export interface ModelConfig {
     }
   }
   search?: {
-    fullText?: Record<string, unknown>
+    lookup?: { endpoint?: string; fields: string[]; queryParam?: string }
+    query?: Record<string, unknown>
     filters?: Record<string, FilterSchema>
-    autocompleteFields?: string[]
   } | null
   associations?: AssociationConfig & {
     custom?: Record<string, Record<string, unknown>>

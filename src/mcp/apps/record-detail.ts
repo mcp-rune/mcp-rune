@@ -19,7 +19,7 @@ import { z } from 'zod'
 
 import { generateDetailSchema } from '#src/mcp/apps/detail-schema.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
-import type { ApiClient } from '#src/mcp/search/search-client.js'
+import type { SearchApiClient } from '#src/mcp/search/types.js'
 import * as logger from '#src/services/logger.js'
 
 import type { SelectionStore } from './selection-store.js'
@@ -40,7 +40,7 @@ let _cachedHtml: string | null = null
 async function resolveAssociationLabelsBatch(
   fields: DetailFieldDefinition[],
   records: Record<string, unknown>[],
-  apiClient: ApiClient
+  apiClient: SearchApiClient
 ): Promise<void> {
   const assocFields = fields.filter((f) => f.association)
   if (assocFields.length === 0) return
@@ -144,7 +144,10 @@ export function createRecordDetailApp({
 
     async handleToolCall(
       args: Record<string, unknown> = {},
-      { apiClient, selectionStore }: { apiClient?: ApiClient; selectionStore?: SelectionStore } = {}
+      {
+        apiClient,
+        selectionStore
+      }: { apiClient?: SearchApiClient; selectionStore?: SelectionStore } = {}
     ): Promise<ToolResult> {
       const { model } = args
       let ids = args.ids as string[] | undefined

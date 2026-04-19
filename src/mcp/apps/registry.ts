@@ -20,8 +20,9 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { z } from 'zod'
 
 import { errorMeta } from '#src/mcp/apps/helpers.js'
-import type { SearchGroup } from '#src/mcp/search/search-client.js'
+import type { SearchAdapter } from '#src/mcp/search/search-adapter.js'
 import { SearchClient } from '#src/mcp/search/search-client.js'
+import type { SearchGroup } from '#src/mcp/search/types.js'
 import * as logger from '#src/services/logger.js'
 
 import type { FormDataStore } from './form-data-store.js'
@@ -48,6 +49,7 @@ interface RegistryOptions {
   apiUrl?: string
   createApiClient?: (token: string, options: { apiUrl: string }) => ApiClient
   searchGroups?: Record<string, SearchGroup>
+  defaultAdapter?: SearchAdapter
   /** SVG data URI for the h1::before header icon (overrides --header-icon CSS variable) */
   headerIcon?: string
 }
@@ -64,15 +66,17 @@ export class AppRegistry {
   private _apiUrl?: string
   private _createApiClient?: (token: string, options: { apiUrl: string }) => ApiClient
   private _searchGroups: Record<string, SearchGroup>
+  private _defaultAdapter?: SearchAdapter
   private _headerIcon?: string
 
   constructor(
     apps: AppDefinition[] = [],
-    { apiUrl, createApiClient, searchGroups = {}, headerIcon }: RegistryOptions = {}
+    { apiUrl, createApiClient, searchGroups = {}, defaultAdapter, headerIcon }: RegistryOptions = {}
   ) {
     this._apiUrl = apiUrl
     this._createApiClient = createApiClient
     this._searchGroups = searchGroups
+    this._defaultAdapter = defaultAdapter
     this._headerIcon = headerIcon
     for (const app of apps) {
       if (app.toolName) {
@@ -131,7 +135,8 @@ export class AppRegistry {
               const apiClient = this._createApiClient(token, { apiUrl: this._apiUrl })
               context.apiClient = apiClient
               context.searchClient = new SearchClient(apiClient, {
-                searchGroups: this._searchGroups
+                searchGroups: this._searchGroups,
+                defaultAdapter: this._defaultAdapter
               })
             }
 

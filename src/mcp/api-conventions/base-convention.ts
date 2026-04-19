@@ -58,17 +58,8 @@ export interface AssociationConfig {
   hasMany?: Record<string, HasManyAssociation>
 }
 
-export interface PaginationInfo {
-  page: number
-  per_page: number
-  total: number
-  total_pages?: number
-}
-
-export interface NormalizedListResponse {
-  records: Record<string, unknown>[]
-  pagination: PaginationInfo
-}
+import type { NormalizedListResponse } from '#src/mcp/search/types.js'
+export type { NormalizedListResponse, PaginationInfo } from '#src/mcp/search/types.js'
 
 export class BaseConvention {
   get name(): string {

@@ -1,3 +1,4 @@
+import { RailsSearchAdapter } from '../../../../src/mcp/search/rails-search-adapter.js'
 import { SearchClient } from '../../../../src/mcp/search/search-client.js'
 import { flatConvention } from '../../../__fixtures__/flat-convention.js'
 
@@ -6,13 +7,12 @@ const DirectSearchModel = {
   endpoint: 'activities',
   singularName: 'activity',
   search: {
-    fullText: {
+    query: {
       endpoint: 'activities/search',
-      method: 'POST',
-      queryParam: 'q',
-      filtersParam: 'filters'
+      method: 'POST' as const,
+      queryParam: 'q'
     },
-    autocompleteFields: ['title', 'description']
+    lookup: { fields: ['title', 'description'] }
   }
 }
 
@@ -20,15 +20,15 @@ const GroupSearchModel = {
   endpoint: 'books',
   singularName: 'book',
   search: {
-    fullText: { group: 'library' },
-    autocompleteFields: ['title', 'author']
+    query: { group: 'library' },
+    lookup: { fields: ['title', 'author'] }
   }
 }
 
 const ListOnlyModel = {
   endpoint: 'brands',
   singularName: 'brand',
-  search: { autocompleteFields: ['name'] }
+  search: { lookup: { fields: ['name'] } }
 }
 
 const NoSearchableModel = {
@@ -44,7 +44,6 @@ const searchGroups = {
     method: 'POST',
     queryParam: 'q',
     modelsParam: 'models',
-    filtersParam: 'filters',
     typeField: 'searchable_type',
     models: ['book', 'category', 'tag']
   }
@@ -83,7 +82,7 @@ describe('SearchClient', () => {
       })
     })
 
-    it('should pass filters when filtersParam is defined', async () => {
+    it('should spread filters flat into the body by default', async () => {
       await client.search(DirectSearchModel, 'test', {
         filters: { theme_id: 1, status: 'active' }
       })
@@ -92,7 +91,8 @@ describe('SearchClient', () => {
         q: 'test',
         page: 1,
         per_page: 20,
-        filters: { theme_id: 1, status: 'active' }
+        theme_id: 1,
+        status: 'active'
       })
     })
 
@@ -117,7 +117,7 @@ describe('SearchClient', () => {
       const getSearchModel = {
         ...DirectSearchModel,
         search: {
-          fullText: { endpoint: 'items/search', method: 'GET', queryParam: 'q' }
+          query: { endpoint: 'items/search', method: 'GET' as const, queryParam: 'q' }
         }
       }
 
@@ -146,8 +146,8 @@ describe('SearchClient', () => {
         ...DirectSearchModel,
         search: {
           ...DirectSearchModel.search,
-          fullText: {
-            ...DirectSearchModel.search.fullText,
+          query: {
+            ...DirectSearchModel.search.query,
             adapter: customAdapter
           }
         }
@@ -171,17 +171,16 @@ describe('SearchClient', () => {
       })
     })
 
-    it('should use custom adapter when no custom adapter is declared', async () => {
+    it('should spread filters flat when using default adapter', async () => {
       await client.search(DirectSearchModel, 'test', {
         filters: { category_id: 4 }
       })
 
-      // Default adapter passes filters through unchanged
       expect(mockApiClient.post).toHaveBeenCalledWith('activities/search', {
         q: 'test',
         page: 1,
         per_page: 20,
-        filters: { category_id: 4 }
+        category_id: 4
       })
     })
 
@@ -190,8 +189,8 @@ describe('SearchClient', () => {
         ...DirectSearchModel,
         search: {
           ...DirectSearchModel.search,
-          fullText: {
-            ...DirectSearchModel.search.fullText,
+          query: {
+            ...DirectSearchModel.search.query,
             expand: ['title', 'platform']
           }
         }
@@ -213,6 +212,110 @@ describe('SearchClient', () => {
         q: 'test',
         page: 1,
         per_page: 20
+      })
+    })
+  })
+
+  // ============================================================================
+  // defaultAdapter
+  // ============================================================================
+
+  describe('defaultAdapter', () => {
+    it('should use the provided defaultAdapter for direct search', async () => {
+      const railsClient = new SearchClient(mockApiClient, {
+        searchGroups,
+        defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
+      })
+
+      await railsClient.search(DirectSearchModel, 'test', {
+        filters: { theme_id: 1 }
+      })
+
+      expect(mockApiClient.post).toHaveBeenCalledWith('activities/search', {
+        q: 'test',
+        page: 1,
+        per_page: 20,
+        filters: { theme_id: 1 }
+      })
+    })
+
+    it('should use the provided defaultAdapter for group search', async () => {
+      const railsClient = new SearchClient(mockApiClient, {
+        searchGroups,
+        defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
+      })
+
+      await railsClient.groupSearch('library', 'ruby', {
+        filters: { tag_id: 5 }
+      })
+
+      expect(mockApiClient.post).toHaveBeenCalledWith('library/search', {
+        q: 'ruby',
+        page: 1,
+        per_page: 20,
+        filters: { tag_id: 5 }
+      })
+    })
+
+    it('should allow per-model adapter to override defaultAdapter', async () => {
+      const customAdapter = {
+        buildRequest: vi.fn().mockReturnValue({
+          body: { q: 'test', page: 1, per_page: 20, custom: true },
+          queryParams: null
+        })
+      }
+      const modelWithAdapter = {
+        ...DirectSearchModel,
+        search: {
+          ...DirectSearchModel.search,
+          query: { ...DirectSearchModel.search.query, adapter: customAdapter }
+        }
+      }
+
+      const railsClient = new SearchClient(mockApiClient, {
+        defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
+      })
+
+      await railsClient.search(modelWithAdapter, 'test')
+
+      expect(customAdapter.buildRequest).toHaveBeenCalled()
+    })
+
+    it('should allow per-group adapter to override defaultAdapter', async () => {
+      const customAdapter = {
+        buildBody: vi.fn().mockReturnValue({
+          q: 'test',
+          page: 1,
+          per_page: 20,
+          criteria: { custom: true }
+        })
+      }
+      const customGroups = {
+        library: { ...searchGroups.library, adapter: customAdapter }
+      }
+      const railsClient = new SearchClient(mockApiClient, {
+        searchGroups: customGroups,
+        defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
+      })
+
+      await railsClient.groupSearch('library', 'test')
+
+      expect(customAdapter.buildBody).toHaveBeenCalled()
+    })
+
+    it('should default to base SearchAdapter when no defaultAdapter provided', async () => {
+      const plainClient = new SearchClient(mockApiClient, { searchGroups })
+
+      await plainClient.search(DirectSearchModel, 'test', {
+        filters: { status: 'active' }
+      })
+
+      // Base adapter spreads flat
+      expect(mockApiClient.post).toHaveBeenCalledWith('activities/search', {
+        q: 'test',
+        page: 1,
+        per_page: 20,
+        status: 'active'
       })
     })
   })
@@ -244,12 +347,12 @@ describe('SearchClient', () => {
       })
     })
 
-    it('should use fullText.modelName when set (string)', async () => {
+    it('should use query.modelName when set (string)', async () => {
       const ModelWithModelName = {
         endpoint: 'title_groups',
         singularName: 'title_group',
         search: {
-          fullText: { group: 'library', modelName: 'series' }
+          query: { group: 'library', modelName: 'series' }
         }
       }
 
@@ -263,12 +366,12 @@ describe('SearchClient', () => {
       })
     })
 
-    it('should use fullText.modelName when set (array)', async () => {
+    it('should use query.modelName when set (array)', async () => {
       const ModelWithMultipleNames = {
         endpoint: 'titles',
         singularName: 'title',
         search: {
-          fullText: { group: 'library', modelName: ['episode', 'feature'] }
+          query: { group: 'library', modelName: ['episode', 'feature'] }
         }
       }
 
@@ -282,7 +385,7 @@ describe('SearchClient', () => {
       })
     })
 
-    it('should fall back to singularName when fullText.modelName is not set', async () => {
+    it('should fall back to singularName when query.modelName is not set', async () => {
       // GroupSearchModel has no modelName — should use singularName 'book'
       await client.search(GroupSearchModel, 'test')
 
@@ -325,6 +428,86 @@ describe('SearchClient', () => {
       expect(mockApiClient.get).toHaveBeenCalledWith('brands', {
         page: 1,
         per_page: 20
+      })
+    })
+  })
+
+  // ============================================================================
+  // lookup()
+  // ============================================================================
+
+  describe('lookup()', () => {
+    it('should use dedicated lookup endpoint when configured', async () => {
+      const modelWithLookupEndpoint = {
+        endpoint: 'brands',
+        singularName: 'brand',
+        search: {
+          query: { group: 'catalogue' },
+          lookup: { endpoint: 'brands/autocomplete', fields: ['name'] }
+        }
+      }
+
+      await client.lookup(modelWithLookupEndpoint, 'Breaking')
+
+      expect(mockApiClient.get).toHaveBeenCalledWith('brands/autocomplete', {
+        per_page: 10,
+        name: 'Breaking'
+      })
+    })
+
+    it('should use custom queryParam for dedicated lookup endpoint', async () => {
+      const modelWithQueryParam = {
+        endpoint: 'brands',
+        singularName: 'brand',
+        search: {
+          lookup: { endpoint: 'brands/autocomplete', fields: ['name'], queryParam: 'q' }
+        }
+      }
+
+      await client.lookup(modelWithQueryParam, 'test')
+
+      expect(mockApiClient.get).toHaveBeenCalledWith('brands/autocomplete', {
+        per_page: 10,
+        q: 'test'
+      })
+    })
+
+    it('should fall back to search() when query config exists but no lookup endpoint', async () => {
+      await client.lookup(DirectSearchModel, 'test')
+
+      expect(mockApiClient.post).toHaveBeenCalledWith('activities/search', {
+        q: 'test',
+        page: 1,
+        per_page: 10
+      })
+    })
+
+    it('should fall back to list() with field filter when no query or lookup endpoint', async () => {
+      await client.lookup(ListOnlyModel, 'test')
+
+      expect(mockApiClient.get).toHaveBeenCalledWith('brands', {
+        page: 1,
+        per_page: 10,
+        name: 'test'
+      })
+    })
+
+    it('should fall back to plain list when no lookup fields and no query config', async () => {
+      await client.lookup(NoSearchableModel, 'test')
+
+      expect(mockApiClient.get).toHaveBeenCalledWith('settings', {
+        page: 1,
+        per_page: 10
+      })
+    })
+
+    it('should respect custom perPage', async () => {
+      await client.lookup(DirectSearchModel, 'test', { perPage: 5 })
+
+      expect(mockApiClient.post).toHaveBeenCalledWith('activities/search', {
+        q: 'test',
+        page: 1,
+        per_page: 5
       })
     })
   })
@@ -387,7 +570,7 @@ describe('SearchClient', () => {
       expect(callArgs).not.toHaveProperty('models')
     })
 
-    it('should nest filters under filtersParam key', async () => {
+    it('should spread filters flat with default adapter', async () => {
       await client.groupSearch('library', 'ruby', {
         filters: { tag_id: 5 }
       })
@@ -396,15 +579,16 @@ describe('SearchClient', () => {
         q: 'ruby',
         page: 1,
         per_page: 20,
-        filters: { tag_id: 5 }
+        tag_id: 5
       })
     })
 
-    it('should omit filters key when no filters provided', async () => {
+    it('should omit filters when no filters provided', async () => {
       await client.groupSearch('library', 'test')
 
       const callArgs = mockApiClient.post.mock.calls[0][1]
       expect(callArgs).not.toHaveProperty('filters')
+      expect(callArgs).not.toHaveProperty('tag_id')
     })
 
     it('should use custom adapter when declared on group config', async () => {
@@ -429,7 +613,7 @@ describe('SearchClient', () => {
         'test',
         { tag_id: 3 },
         { page: 1, perPage: 20 },
-        { fullText: customGroups.library }
+        { query: customGroups.library }
       )
     })
   })
@@ -439,7 +623,7 @@ describe('SearchClient', () => {
   // ============================================================================
 
   describe('search() with group model passes filters through', () => {
-    it('should forward filters to groupSearch', async () => {
+    it('should forward filters to groupSearch (flat spread)', async () => {
       await client.search(GroupSearchModel, 'Haskell', {
         filters: { tag_id: 5 }
       })
@@ -449,7 +633,7 @@ describe('SearchClient', () => {
         page: 1,
         per_page: 20,
         models: ['book'],
-        filters: { tag_id: 5 }
+        tag_id: 5
       })
     })
   })
@@ -547,6 +731,28 @@ describe('SearchClient', () => {
 
     it('should return "list-only" when search is null', () => {
       expect(SearchClient.getSearchCapability(NoSearchableModel)).toBe('list-only')
+    })
+  })
+
+  describe('getLookupCapability()', () => {
+    it('should return "dedicated" for models with lookup endpoint', () => {
+      const model = {
+        endpoint: 'brands',
+        search: { lookup: { endpoint: 'brands/autocomplete', fields: ['name'] } }
+      }
+      expect(SearchClient.getLookupCapability(model)).toBe('dedicated')
+    })
+
+    it('should return "search-fallback" for models with query config but no lookup endpoint', () => {
+      expect(SearchClient.getLookupCapability(DirectSearchModel)).toBe('search-fallback')
+    })
+
+    it('should return "list-fallback" for models with only lookup fields', () => {
+      expect(SearchClient.getLookupCapability(ListOnlyModel)).toBe('list-fallback')
+    })
+
+    it('should return "list-fallback" when search is null', () => {
+      expect(SearchClient.getLookupCapability(NoSearchableModel)).toBe('list-fallback')
     })
   })
 

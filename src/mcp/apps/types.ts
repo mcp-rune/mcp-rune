@@ -7,14 +7,14 @@
  */
 
 import type { AssociationConfig, BaseConvention } from '#src/mcp/api-conventions/base-convention.js'
-import type { ApiClient } from '#src/mcp/search/search-client.js'
 import type { SearchClient } from '#src/mcp/search/search-client.js'
+import type { SearchApiClient } from '#src/mcp/search/types.js'
 
 import type { FormDataStore } from './form-data-store.js'
 import type { SelectionStore } from './selection-store.js'
 
-// Re-export for convenience
-export type { ApiClient }
+// Re-export for convenience — apps only need get/post
+export type { SearchApiClient as ApiClient } from '#src/mcp/search/types.js'
 
 /**
  * Extended attribute definition used in app schema generators.
@@ -54,7 +54,12 @@ export interface AppModelClass {
   attributes: Record<string, AppAttributeDefinition>
   associations?: AssociationConfig
   search?: {
-    fullText?: {
+    lookup?: {
+      endpoint?: string
+      fields: string[]
+      queryParam?: string
+    }
+    query?: {
       endpoint?: string
       group?: string
       modelName?: string | string[]
@@ -62,7 +67,6 @@ export interface AppModelClass {
       [key: string]: unknown
     }
     filters?: Record<string, unknown>
-    autocompleteFields?: string[]
     [key: string]: unknown
   }
   api?: {
@@ -76,7 +80,7 @@ export interface AppModelClass {
     }
     [key: string]: unknown
   }
-  supportsAutocomplete: boolean
+  supportsLookup: boolean
   defaultColumns?: string[]
   description?: string
   [key: string]: unknown
@@ -86,7 +90,7 @@ export interface AppModelInstance {
   data: Record<string, unknown>
   id?: string | number
   displayValue: string
-  autocompleteFields: Record<string, unknown>
+  lookupFields: Record<string, unknown>
 }
 
 /** Tool call result shape from MCP SDK */
@@ -97,7 +101,7 @@ export interface ToolResult {
 
 /** Context passed to handleToolCall by AppRegistry */
 export interface AppToolContext {
-  apiClient?: ApiClient
+  apiClient?: SearchApiClient
   searchClient?: SearchClient
   selectionStore?: SelectionStore
   formDataStore?: FormDataStore

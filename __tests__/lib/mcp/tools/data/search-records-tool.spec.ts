@@ -1,6 +1,6 @@
 import { SearchRecordsTool } from '../../../../../src/mcp/tools/data/search-records-tool.js'
 
-// Mock model classes with search.filters and search.fullText config
+// Mock model classes with search.filters and search.query config
 const mockModels = {
   title: {
     endpoint: 'titles',
@@ -10,11 +10,10 @@ const mockModels = {
       status: { label: 'Status', type: 'enum' }
     },
     search: {
-      fullText: {
+      query: {
         endpoint: 'titles/search',
         method: 'POST',
-        queryParam: 'q',
-        filtersParam: 'filters'
+        queryParam: 'q'
       },
       filters: {
         name: { type: 'text', label: 'Name', description: 'Search by name' },
@@ -68,7 +67,8 @@ describe('SearchRecordsTool', () => {
     })
 
     expect(mockApiClient.post).toHaveBeenCalledWith('titles/search', {
-      filters: { name: 'Breaking Bad', status: 'active' },
+      name: 'Breaking Bad',
+      status: 'active',
       page: 1,
       per_page: 50
     })
@@ -110,7 +110,7 @@ describe('SearchRecordsTool', () => {
     })
 
     expect(mockApiClient.post).toHaveBeenCalledWith('titles/search', {
-      filters: { name: 'test' },
+      name: 'test',
       page: 1,
       per_page: 200
     })
@@ -256,7 +256,7 @@ describe('SearchRecordsTool', () => {
     })
 
     expect(mockApiClient.post).toHaveBeenCalledWith('titles/search', {
-      filters: { name: 'test' },
+      name: 'test',
       page: 1,
       per_page: 50
     })
@@ -280,11 +280,10 @@ describe('SearchRecordsTool', () => {
           raw_attr: { type: 'string' }
         },
         search: {
-          fullText: {
+          query: {
             endpoint: 'titles/search',
             method: 'POST',
-            queryParam: 'q',
-            filtersParam: 'filters'
+            queryParam: 'q'
           },
           filters: { name: { type: 'text' } }
         }
@@ -314,11 +313,10 @@ describe('SearchRecordsTool', () => {
           no_type: { label: 'No Type' }
         },
         search: {
-          fullText: {
+          query: {
             endpoint: 'titles/search',
             method: 'POST',
-            queryParam: 'q',
-            filtersParam: 'filters'
+            queryParam: 'q'
           },
           filters: { name: { type: 'text' } }
         }
@@ -442,7 +440,7 @@ describe('SearchRecordsTool', () => {
 
       // The normalized array should be sent to the API
       expect(mockApiClient.post).toHaveBeenCalledWith('titles/search', {
-        filters: { status: ['draft', 'active'] },
+        status: ['draft', 'active'],
         page: 1,
         per_page: 50
       })
@@ -467,7 +465,7 @@ describe('SearchRecordsTool', () => {
       })
 
       expect(mockApiClient.post).toHaveBeenCalledWith('titles/search', {
-        filters: { name: 'Breaking Bad, The Wire' },
+        name: 'Breaking Bad, The Wire',
         page: 1,
         per_page: 50
       })
@@ -522,11 +520,10 @@ describe('SearchRecordsTool', () => {
             }
           },
           search: {
-            fullText: {
+            query: {
               endpoint: 'schedulings/search',
               method: 'POST',
-              queryParam: 'q',
-              filtersParam: 'filters'
+              queryParam: 'q'
             },
             filters: {
               put_up: { type: 'text', label: 'Put Up' }
@@ -575,11 +572,10 @@ describe('SearchRecordsTool', () => {
             }
           },
           search: {
-            fullText: {
+            query: {
               endpoint: 'schedulings/search',
               method: 'POST',
-              queryParam: 'q',
-              filtersParam: 'filters'
+              queryParam: 'q'
             },
             filters: {
               put_up: { type: 'text', label: 'Put Up' }
