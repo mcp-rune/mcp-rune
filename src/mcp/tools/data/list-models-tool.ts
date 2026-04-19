@@ -46,7 +46,7 @@ export class ListModelsTool extends BaseTool {
         attributes: Object.keys(attrs),
         required_attributes: (config as Record<string, unknown>).required,
         read_only: config.api?.readOnly ?? false,
-        searchable_by: config.search?.autocompleteFields,
+        searchable_by: config.search?.lookup?.fields,
         enum_fields: enumFields.length > 0 ? enumFields : undefined,
         belongs_to: config.associations?.belongsTo
           ? Object.keys(config.associations.belongsTo)

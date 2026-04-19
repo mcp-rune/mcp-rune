@@ -23,7 +23,7 @@ describe('FindModelTool', () => {
       brand: {
         endpoint: 'brands',
         attributes: { id: {}, name: {}, status: {}, extra: {} },
-        search: { autocompleteFields: ['name'] }
+        search: { lookup: { fields: ['name'] } }
       }
     }
 

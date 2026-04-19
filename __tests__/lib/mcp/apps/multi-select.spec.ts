@@ -6,14 +6,14 @@ class FakeModel {
   static endpoint = '/fakes'
   static attributes = ['id', 'name']
   static attributesConfig = { id: { type: 'integer' }, name: { type: 'string' } }
-  static supportsAutocomplete = true
+  static supportsLookup = true
   constructor(data) {
     this.data = data
   }
   get displayValue() {
     return this.data.name
   }
-  get autocompleteFields() {
+  get lookupFields() {
     return {}
   }
 }
