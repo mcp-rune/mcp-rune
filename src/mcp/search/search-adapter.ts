@@ -1,7 +1,7 @@
 /**
  * SearchAdapter — Default adapter for building search request bodies.
  *
- * Adapters sit between the MCP SearchClient and the Rails API, transforming
+ * Adapters sit between the MCP SearchClient and the API, transforming
  * the MCP-generic filter format into the shape each API endpoint expects.
  *
  * ## Data Flow Pipeline
@@ -9,55 +9,40 @@
  * Model filter config (Model.search.filters)
  *   → get_filters_guide tells LLM the available filter shapes
  *   → LLM calls search tool with MCP-generic format:
- *       { query, filters: { category_id: 4, duration_minutes: { from: 40 } } }
- *   → SearchAdapter.buildBody() transforms to API-specific body
+ *       { query, filters: { category_id: 4, status: "active" } }
+ *   → SearchAdapter.buildBody() builds the request body
  *   → SearchClient POSTs the body to the API endpoint
  *
  * ## Default Behavior
  *
- * The default adapter passes filters through unchanged. Override `buildBody()`
- * in a subclass when the API expects a different shape (e.g., flat range keys
- * instead of nested `{ from, to }` objects).
+ * The base SearchAdapter spreads filters flat into the request body alongside
+ * pagination and query params. This is the most generic behavior and works
+ * with APIs that accept filters as top-level POST body params.
+ *
+ * @example Default flat spread
+ * // Input:  query = "Haskell", filters = { category_id: 4, status: "active" }
+ * // Output: { q: "Haskell", page: 1, per_page: 20, category_id: 4, status: "active" }
+ *
+ * For APIs that require filters nested under a key (e.g., Rails conventions),
+ * use a subclass like RailsSearchAdapter.
+ *
+ * Override `buildBody()` in a subclass for more complex transformations.
  */
 
-export interface Pagination {
-  page: number
-  perPage: number
-}
-
-export interface FullTextConfig {
-  queryParam?: string
-  filtersParam?: string
-  expand?: string[]
-}
-
-export interface SearchConfig {
-  fullText?: FullTextConfig
-  [key: string]: unknown
-}
-
-export interface SearchRequest {
-  body: Record<string, unknown>
-  queryParams: string | null
-}
+import type { Pagination, QueryConfig, SearchConfig, SearchRequest } from './types.js'
 
 export class SearchAdapter {
   /**
    * Build the request body for a search API call.
    *
-   * @example Default pass-through
+   * Spreads filters flat into the body alongside pagination and query text.
+   *
+   * @example
    * // Input:
    * //   query = "Haskell"
    * //   filters = { category_id: 4 }
    * // Output:
-   * //   { q: "Haskell", page: 1, per_page: 20, filters: { category_id: 4 } }
-   *
-   * @example No query, filters only
-   * // Input:
-   * //   query = null
-   * //   filters = { theme_id: 1 }
-   * // Output:
-   * //   { page: 1, per_page: 20, filters: { theme_id: 1 } }
+   * //   { q: "Haskell", page: 1, per_page: 20, category_id: 4 }
    */
   buildBody(
     query: string | null,
@@ -65,18 +50,18 @@ export class SearchAdapter {
     { page, perPage }: Pagination,
     searchConfig: SearchConfig
   ): Record<string, unknown> {
-    const fullText = searchConfig?.fullText || {}
+    const queryConfig = searchConfig?.query || ({} as QueryConfig)
     const body: Record<string, unknown> = {
       page,
       per_page: perPage
     }
 
     if (query) {
-      body[fullText.queryParam || 'q'] = query
+      body[queryConfig.queryParam || 'q'] = query
     }
 
-    if (filters && Object.keys(filters).length > 0 && fullText.filtersParam) {
-      body[fullText.filtersParam] = filters
+    if (filters && Object.keys(filters).length > 0) {
+      Object.assign(body, filters)
     }
 
     return body
@@ -90,7 +75,7 @@ export class SearchAdapter {
    * (e.g., `?expand=title,platform`) that are separate from the POST body.
    *
    * @example With expand
-   * // searchConfig.fullText.expand = ['title', 'platform']
+   * // searchConfig.query.expand = ['title', 'platform']
    * // Returns:
    * //   { body: { q: "test", page: 1, per_page: 20 }, queryParams: "expand=title,platform" }
    */
@@ -112,7 +97,7 @@ export class SearchAdapter {
    * associated resources in the response (e.g., `?expand=title,platform`).
    */
   protected _buildQueryParams(searchConfig: SearchConfig): string | null {
-    const expand = searchConfig?.fullText?.expand
+    const expand = searchConfig?.query?.expand
     if (!expand || expand.length === 0) return null
 
     return `expand=${expand.join(',')}`

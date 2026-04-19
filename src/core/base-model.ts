@@ -11,6 +11,7 @@
 
 import type { AssociationConfig, BaseConvention } from '#src/mcp/api-conventions/base-convention.js'
 import { jsonApiConvention } from '#src/mcp/api-conventions/index.js'
+import type { SearchConfig } from '#src/mcp/search/types.js'
 
 // ============================================================================
 // Types
@@ -29,17 +30,6 @@ export interface AttributeDefinition {
   label?: string
   validation?: Record<string, unknown>
   readOnly?: boolean
-}
-
-export interface SearchConfig {
-  fullText?: {
-    endpoint?: string
-    group?: string
-    modelName?: string | string[]
-    adapter?: unknown
-  }
-  filters?: Record<string, unknown>
-  autocompleteFields?: string[]
 }
 
 export interface NestedConfig {
@@ -103,11 +93,10 @@ export class BaseModel {
     return this.endpoint.replace(/s$/, '')
   }
 
-  /** Check if this model supports autocomplete */
-  static get supportsAutocomplete(): boolean {
-    return (
-      Array.isArray(this.search?.autocompleteFields) && this.search!.autocompleteFields!.length > 0
-    )
+  /** Check if this model supports lookup (typeahead/autocomplete) */
+  static get supportsLookup(): boolean {
+    const fields = this.search?.lookup?.fields
+    return Array.isArray(fields) && fields.length > 0
   }
 
   // --- Static methods ---
@@ -153,8 +142,8 @@ export class BaseModel {
     return this.data.name || this.data.title || `ID: ${this.data.id}`
   }
 
-  /** Autocomplete result fields. Override in subclasses. */
-  get autocompleteFields(): Record<string, unknown> {
+  /** Lookup result fields for display. Override in subclasses. */
+  get lookupFields(): Record<string, unknown> {
     return {}
   }
 
