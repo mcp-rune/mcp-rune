@@ -418,7 +418,9 @@ describe('Analysis Memory Tools', () => {
         expect(queryIngestedData).toHaveBeenCalledWith('test', {
           mode: 'sample',
           sampleSize: 2,
-          stratifyBy: undefined
+          stratifyBy: undefined,
+          where: undefined,
+          proximity: undefined
         })
         expect(result.content[0].text).toContain('Sample A')
       })
@@ -439,10 +441,97 @@ describe('Analysis Memory Tools', () => {
         expect(queryIngestedData).toHaveBeenCalledWith('test', {
           mode: 'sample',
           sampleSize: 4,
-          stratifyBy: 'status'
+          stratifyBy: 'status',
+          where: undefined,
+          proximity: undefined
         })
         expect(result.content[0].text).toContain('Active Record')
         expect(result.content[0].text).toContain('Draft Record')
+      })
+
+      it('should pass where for pre-filtered sampling', async () => {
+        queryIngestedData.mockResolvedValueOnce([
+          { id: '1', name: 'Null Status Record', status: null }
+        ])
+
+        const where = { status: null }
+        const result = await tool.execute({
+          analysis_id: 'test',
+          mode: 'sample',
+          sample_size: 5,
+          where
+        })
+
+        expect(queryIngestedData).toHaveBeenCalledWith('test', {
+          mode: 'sample',
+          sampleSize: 5,
+          stratifyBy: undefined,
+          where,
+          proximity: undefined
+        })
+        expect(result.content[0].text).toContain('Null Status Record')
+      })
+
+      it('should pass proximity for date-windowed sampling', async () => {
+        queryIngestedData.mockResolvedValueOnce([
+          { id: '1', created_at: '2026-03-14', name: 'Day Before' },
+          { id: '2', created_at: '2026-03-16', name: 'Day After' }
+        ])
+
+        const proximity = {
+          field: 'created_at',
+          origin: '2026-03-15',
+          window: '7 days',
+          bucket: '1 day'
+        }
+
+        const result = await tool.execute({
+          analysis_id: 'test',
+          mode: 'sample',
+          sample_size: 10,
+          proximity
+        })
+
+        expect(queryIngestedData).toHaveBeenCalledWith('test', {
+          mode: 'sample',
+          sampleSize: 10,
+          stratifyBy: undefined,
+          where: undefined,
+          proximity
+        })
+        expect(result.content[0].text).toContain('Day Before')
+        expect(result.content[0].text).toContain('Day After')
+      })
+
+      it('should compose where + proximity + stratify_by', async () => {
+        queryIngestedData.mockResolvedValueOnce([
+          { id: '1', status: 'active', created_at: '2026-03-14' }
+        ])
+
+        const where = { category: 'episode' }
+        const proximity = {
+          field: 'created_at',
+          origin: '2026-03-15',
+          window: '14 days',
+          bucket: '1 week'
+        }
+
+        await tool.execute({
+          analysis_id: 'test',
+          mode: 'sample',
+          sample_size: 8,
+          stratify_by: 'status',
+          where,
+          proximity
+        })
+
+        expect(queryIngestedData).toHaveBeenCalledWith('test', {
+          mode: 'sample',
+          sampleSize: 8,
+          stratifyBy: 'status',
+          where,
+          proximity
+        })
       })
 
       it('should handle no data', async () => {
@@ -469,6 +558,7 @@ describe('Analysis Memory Tools', () => {
       expect(schema.limit).toBeDefined()
       expect(schema.sample_size).toBeDefined()
       expect(schema.stratify_by).toBeDefined()
+      expect(schema.proximity).toBeDefined()
     })
 
     it('should have baseDescription mentioning all four modes', () => {

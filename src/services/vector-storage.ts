@@ -247,7 +247,13 @@ export interface IngestRecordsParams {
 export type IngestedDataQuery =
   | { mode: 'aggregate'; groupBy: string }
   | { mode: 'filter'; where: Record<string, unknown>; limit?: number }
-  | { mode: 'sample'; sampleSize?: number; stratifyBy?: string }
+  | {
+      mode: 'sample'
+      sampleSize?: number
+      stratifyBy?: string
+      where?: Record<string, unknown>
+      proximity?: ingestedRecords.ProximityParams
+    }
 
 /** Store ingested records for analysis */
 export async function storeIngestedRecords(params: IngestRecordsParams): Promise<number> {

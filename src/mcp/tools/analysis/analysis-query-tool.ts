@@ -42,13 +42,13 @@ export class AnalysisQueryTool extends BaseAnalysisTool {
 - semantic: Search findings and page summaries by meaning. Use when asking qualitative questions ("what issues were found?", "any patterns related to missing data?").
 - aggregate: Get counts and distributions by field. Use for quantitative questions ("how many records per status?", "what's the distribution of types?").
 - filter: Find specific records matching criteria. Supports exact match and range operators ($gt, $gte, $lt, $lte) for numeric and date fields.
-- sample: Get a sample of records. Use stratify_by to ensure minority groups are represented — distributes sample slots evenly across distinct values of a field. Without stratify_by, returns a uniform random sample.
+- sample: Get a sample of records. Supports stratify_by for discrete field stratification, "where" for pre-filtering, and "proximity" for date-windowed sampling with temporal bucket stratification. All three compose freely.
 
 Typical reasoning flow:
 1. Start with describe to discover available fields and query syntax
 2. Use aggregate to understand distributions
 3. Use filter (with range operators) to inspect specific subsets
-4. Use sample to spot-check representative records
+4. Use sample to spot-check representative records — use proximity to focus around a date
 5. Use semantic to recall your own stored findings or search page summaries`
   }
 
@@ -72,12 +72,13 @@ Typical reasoning flow:
         .optional()
         .describe('Field to group by, e.g., "status" (required for aggregate mode)'),
 
-      // filter mode params
+      // filter mode params (where also applies to sample mode)
       where: z
         .record(z.string(), z.unknown())
         .optional()
         .describe(
-          'Filter criteria. Exact match: {"status": "active"}. ' +
+          'Filter criteria (filter mode, also accepted in sample mode for pre-filtering). ' +
+            'Exact match: {"status": "active"}. ' +
             'Range: {"duration_minutes": {"$gte": 40, "$lte": 120}}. ' +
             'Date range: {"started_at": {"$gte": "2026-01-01"}}. ' +
             'Operators: $gt, $gte, $lt, $lte.'
@@ -91,6 +92,28 @@ Typical reasoning flow:
         .optional()
         .describe(
           'Field to stratify by (sample mode). Distributes sample slots evenly across distinct values of this field, ensuring minority groups are represented. E.g., "status" ensures each status value appears in the sample.'
+        ),
+      proximity: z
+        .object({
+          field: z.string().describe('Date/datetime field to center the window on'),
+          origin: z.string().describe('Center date in ISO 8601 format (e.g., "2026-03-15")'),
+          window: z
+            .string()
+            .describe('Time window around origin, e.g., "7 days", "2 weeks", "1 month"'),
+          bucket: z
+            .string()
+            .optional()
+            .describe(
+              'Bucket interval for temporal stratification within the window (e.g., "1 day", "1 week"). ' +
+                'When set, samples are distributed evenly across time buckets. ' +
+                'When omitted, uniform random sampling within the window.'
+            )
+        })
+        .optional()
+        .describe(
+          'Proximity window for date-based sampling (sample mode). Centers on a date and samples within a time window. ' +
+            'Combine with "where" to filter first, then sample around a date. ' +
+            'E.g., {"field": "created_at", "origin": "2026-03-15", "window": "7 days", "bucket": "1 day"}'
         )
     }
   }
@@ -106,7 +129,8 @@ Typical reasoning flow:
       where,
       limit,
       sample_size,
-      stratify_by
+      stratify_by,
+      proximity
     } = args as {
       analysis_id: string
       mode: 'describe' | 'semantic' | 'aggregate' | 'filter' | 'sample'
@@ -118,6 +142,7 @@ Typical reasoning flow:
       limit?: number
       sample_size?: number
       stratify_by?: string
+      proximity?: { field: string; origin: string; window: string; bucket?: string }
     }
 
     switch (mode) {
@@ -130,7 +155,7 @@ Typical reasoning flow:
       case 'filter':
         return this._queryFilter(analysis_id, where, limit)
       case 'sample':
-        return this._querySample(analysis_id, sample_size, stratify_by)
+        return this._querySample(analysis_id, sample_size, stratify_by, where, proximity)
     }
   }
 
@@ -234,6 +259,26 @@ Typical reasoning flow:
       }
       parts.push('')
       parts.push('Operators: `$gt` (>), `$gte` (>=), `$lt` (<), `$lte` (<=)')
+
+      // Proximity sampling section when date fields exist
+      if (dateFields.length > 0) {
+        const dateField = dateFields[0]!
+        parts.push('')
+        parts.push('### Proximity sampling')
+        parts.push(
+          'Use sample mode with `proximity` to get representative records around a date. ' +
+            'Combine with `where` to pre-filter and `stratify_by` for discrete field stratification.'
+        )
+        parts.push('')
+        parts.push(
+          `\`mode: "sample", proximity: {"field": "${dateField}", "origin": "2026-03-15", "window": "7 days", "bucket": "1 day"}\``
+        )
+        parts.push('')
+        parts.push(
+          'Distributes sample slots evenly across time buckets within the window. ' +
+            'Without `bucket`, returns uniform random within the window.'
+        )
+      }
     } else {
       parts.push(
         `Model "${model}" has no attribute metadata. Use sample mode to inspect record shape.`
@@ -357,16 +402,20 @@ Typical reasoning flow:
     return this.formatResponse(results as unknown as Record<string, unknown>)
   }
 
-  /** Sample records from ingested_records — supports stratified sampling */
+  /** Sample records — supports stratification, pre-filtering, and proximity windowing */
   private async _querySample(
     analysisId: string,
     sampleSize?: number,
-    stratifyBy?: string
+    stratifyBy?: string,
+    where?: Record<string, unknown>,
+    proximity?: { field: string; origin: string; window: string; bucket?: string }
   ): Promise<ToolResult> {
     const results = await queryIngestedData(analysisId, {
       mode: 'sample',
       sampleSize,
-      stratifyBy
+      stratifyBy,
+      where,
+      proximity
     })
 
     if (results.length === 0) {
