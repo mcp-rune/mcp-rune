@@ -215,7 +215,7 @@ function renderAlternativeCreation(modelName: string, alt: AlternativeCreation):
   if (alt.linkAttribute) {
     attrs[alt.linkAttribute] =
       attrs[alt.linkAttribute] ||
-      `https://movida.bebanjo.net/api/${alt.linkAttribute.replace('_link', 's')}/123`
+      `https://api.example.com/${alt.linkAttribute.replace('_link', 's')}/123`
   }
 
   const attrLines = Object.entries(attrs)

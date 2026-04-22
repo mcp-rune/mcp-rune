@@ -73,8 +73,8 @@ describe('lib/services/logger', () => {
 
   describe('setApp', () => {
     it('updates the app label in defaultMeta', () => {
-      logger.setApp('engineer-mcp')
-      expect(mockWinstonLogger.defaultMeta.app).toBe('engineer-mcp')
+      logger.setApp('my-mcp-server')
+      expect(mockWinstonLogger.defaultMeta.app).toBe('my-mcp-server')
     })
   })
 

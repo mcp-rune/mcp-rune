@@ -34,7 +34,7 @@ describe('Token Mode Contract (Health Response)', () => {
     it('should validate a complete health response', () => {
       const response = {
         status: 'ok',
-        service: 'engineer-mcp',
+        service: 'my-mcp-server',
         transport: 'streamable-http',
         activeSessions: 3
       }
@@ -47,7 +47,7 @@ describe('Token Mode Contract (Health Response)', () => {
     it('should validate health response with zero active sessions', () => {
       const response = {
         status: 'ok',
-        service: 'engineer-mcp',
+        service: 'my-mcp-server',
         transport: 'streamable-http',
         activeSessions: 0
       }
@@ -60,7 +60,7 @@ describe('Token Mode Contract (Health Response)', () => {
     it('should validate health response with prompt cache stats', () => {
       const response = {
         status: 'ok',
-        service: 'engineer-mcp',
+        service: 'my-mcp-server',
         transport: 'streamable-http',
         activeSessions: 1,
         promptCache: {
@@ -77,7 +77,7 @@ describe('Token Mode Contract (Health Response)', () => {
 
     it('should reject response missing required status field', () => {
       const response = {
-        service: 'engineer-mcp',
+        service: 'my-mcp-server',
         transport: 'streamable-http',
         activeSessions: 0
       }
@@ -110,7 +110,7 @@ describe('Token Mode Contract (Health Response)', () => {
     it('should reject response with wrong transport value', () => {
       const response = {
         status: 'ok',
-        service: 'engineer-mcp',
+        service: 'my-mcp-server',
         transport: 'sse',
         activeSessions: 0
       }
@@ -122,7 +122,7 @@ describe('Token Mode Contract (Health Response)', () => {
     it('should reject response with negative activeSessions', () => {
       const response = {
         status: 'ok',
-        service: 'engineer-mcp',
+        service: 'my-mcp-server',
         transport: 'streamable-http',
         activeSessions: -1
       }
@@ -134,7 +134,7 @@ describe('Token Mode Contract (Health Response)', () => {
     it('should allow additional properties (forward-compatible)', () => {
       const response = {
         status: 'ok',
-        service: 'engineer-mcp',
+        service: 'my-mcp-server',
         transport: 'streamable-http',
         activeSessions: 0,
         version: '1.0.0'
@@ -151,7 +151,7 @@ describe('Token Mode Contract (Health Response)', () => {
       // Same shape produced by HttpServer in OAuth mode
       const response = {
         status: 'ok',
-        service: 'engineer-mcp',
+        service: 'my-mcp-server',
         transport: 'streamable-http',
         activeSessions: 5
       }
@@ -165,7 +165,7 @@ describe('Token Mode Contract (Health Response)', () => {
       // Same shape produced by HttpServer in Token mode
       const response = {
         status: 'ok',
-        service: 'engineer-mcp',
+        service: 'my-mcp-server',
         transport: 'streamable-http',
         activeSessions: 2
       }

@@ -158,7 +158,7 @@ The response shape `{ records: [...], pagination: { page, per_page, total } }` i
 
 ## Step 3: Elasticsearch Variant
 
-For servers backed by Elasticsearch (e.g., mcp-servers-mgx), the Rails search endpoint delegates to ES instead of chaining ActiveRecord scopes.
+For servers backed by Elasticsearch (e.g., a downstream MCP server), the Rails search endpoint delegates to ES instead of chaining ActiveRecord scopes.
 
 ### Controller Pattern
 
@@ -238,7 +238,7 @@ end
 
 ### Key Differences from ActiveRecord Variant
 
-| Aspect          | ActiveRecord (Engineer)                         | Elasticsearch (Mgx)      |
+| Aspect          | ActiveRecord                                    | Elasticsearch            |
 | --------------- | ----------------------------------------------- | ------------------------ |
 | Query execution | Scope chaining                                  | ES bool query            |
 | Text search     | `LIKE` / SQL                                    | `match` query (analyzed) |

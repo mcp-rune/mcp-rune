@@ -63,7 +63,7 @@ export class OAuth2ClientRegistrationService {
     // Build registration request per RFC7591
     const registrationRequest = {
       redirect_uris: redirectUris,
-      client_name: options.clientName || 'Movida MCP Server (OAuth2)',
+      client_name: options.clientName || 'MCP Server (OAuth2)',
       grant_types: options.grantTypes || ['authorization_code', 'refresh_token'],
       response_types: options.responseTypes || ['code'],
       token_endpoint_auth_method: options.tokenEndpointAuthMethod || 'client_secret_basic',

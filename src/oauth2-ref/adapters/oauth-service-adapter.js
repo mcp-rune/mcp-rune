@@ -11,7 +11,7 @@
  * - The interface expected by StdioServer and HttpServer
  *
  * Interface contract (required by MCP servers):
- * - identityUrl: string
+ * - authServerUrl: string
  * - getValidAccessToken(sessionId): Promise<string|null>
  * - startLocalAuthFlow(sessionId): Promise<UserInfo>
  * - getAuthorizationUrlForRemote(): Promise<{ authUrl, codeVerifier, state }>
@@ -27,7 +27,7 @@ export class OAuth2ReferenceService {
    * Create a new OAuth2 Reference Service
    *
    * @param {Object} options - OAuth2 client configuration
-   * @param {string} options.identityUrl - OAuth2/OIDC issuer URL
+   * @param {string} options.authServerUrl - OAuth2/OIDC issuer URL
    * @param {string} options.clientId - OAuth2 client ID
    * @param {string} options.clientSecret - OAuth2 client secret
    * @param {string} options.redirectUri - OAuth2 redirect URI
@@ -36,7 +36,7 @@ export class OAuth2ReferenceService {
    * @param {Object} [options.db] - Database configuration for token storage (optional, uses global pg-client)
    */
   constructor(options) {
-    this.identityUrl = options.identityUrl
+    this.authServerUrl = options.authServerUrl
     this.clientId = options.clientId
     this.clientSecret = options.clientSecret
     this.redirectUri = options.redirectUri
@@ -49,7 +49,7 @@ export class OAuth2ReferenceService {
     // Initialize core orchestrator
     this.orchestrator = new OAuth2Orchestrator({
       oauth2: {
-        authServerUrl: options.identityUrl,
+        authServerUrl: options.authServerUrl,
         clientId: options.clientId,
         clientSecret: options.clientSecret,
         scopes: this.scopes,

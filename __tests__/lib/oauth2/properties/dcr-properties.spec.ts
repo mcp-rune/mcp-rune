@@ -166,7 +166,7 @@ describe('Dynamic Client Registration Properties (RFC 7591)', () => {
       }
 
       // Schema validates structure, not URI safety — but empty/malformed may fail
-      // The important invariant is that Identity server rejects these
+      // The important invariant is that authorization server rejects these
       const valid = validateRequest(request)
       // For non-URI-format strings, the schema should still validate structurally
       // (URI format validation is advisory in JSON Schema)

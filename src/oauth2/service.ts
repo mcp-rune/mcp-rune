@@ -14,7 +14,7 @@ interface IntrospectionCacheEntry {
 }
 
 interface OAuthServiceOptions {
-  identityUrl: string
+  authServerUrl: string
   clientId: string
   clientSecret: string
   redirectUri: string
@@ -44,7 +44,7 @@ interface TokenResponse {
  * - RFC9728: OAuth 2.0 Protected Resource Metadata
  */
 export class OAuthService {
-  identityUrl: string
+  authServerUrl: string
   clientId: string
   clientSecret: string
   redirectUri: string
@@ -58,7 +58,7 @@ export class OAuthService {
   private _introspectionCacheMaxSize: number
 
   constructor(options: OAuthServiceOptions) {
-    this.identityUrl = options.identityUrl
+    this.authServerUrl = options.authServerUrl
     this.clientId = options.clientId
     this.clientSecret = options.clientSecret
     this.redirectUri = options.redirectUri
@@ -69,15 +69,15 @@ export class OAuthService {
     this.config = null
 
     // Security: HTTP is only allowed for local development
-    // In production, HTTPS is required for the Identity server
+    // In production, HTTPS is required for the authorization server
     // to prevent token interception via MITM attacks
-    const isHttpUrl = this.identityUrl.startsWith('http://')
+    const isHttpUrl = this.authServerUrl.startsWith('http://')
     const isProduction = options.isProduction ?? false
 
     if (isHttpUrl && isProduction) {
       throw new Error(
-        `Security Error: HTTPS is required for Identity server in production. ` +
-          `Got: ${this.identityUrl}. Set IDENTITY_URL to an https:// URL.`
+        `Security Error: HTTPS is required for authorization server in production. ` +
+          `Got: ${this.authServerUrl}. Set AUTH_SERVER_URL to an https:// URL.`
       )
     }
 
@@ -109,13 +109,13 @@ export class OAuthService {
 
     logger.info('Discovering OpenID Connect configuration', {
       service: 'oauth2',
-      issuer: this.identityUrl,
+      issuer: this.authServerUrl,
       allowInsecure: this._isInsecure
     })
 
     try {
       this.config = await client.discovery(
-        new URL(this.identityUrl),
+        new URL(this.authServerUrl),
         this.clientId,
         this.clientSecret,
         undefined, // Use default client authentication method
@@ -124,7 +124,7 @@ export class OAuthService {
 
       logger.info('OpenID Connect configuration discovered', {
         service: 'oauth2',
-        issuer: this.identityUrl
+        issuer: this.authServerUrl
       })
 
       return this.config
@@ -392,7 +392,7 @@ export class OAuthService {
     }
   }
 
-  /** Get user info from Identity server */
+  /** Get user info from authorization server */
   async getUserInfo(accessToken: string): Promise<Record<string, unknown>> {
     const config = await this.getConfig()
     return client.fetchUserInfo(config, accessToken, client.skipSubjectCheck) as Promise<

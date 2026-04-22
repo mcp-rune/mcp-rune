@@ -55,7 +55,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Removed
 
-- **HAL convention** — `halConvention` export removed from `mcp-kit/prompts`. The HAL convention is Movida-specific protocol behavior that only mcp-servers-mgx uses; it has been moved to local ownership in that repo for independent evolution. `BaseConvention`, `defaultConvention`, and `jsonApiConvention` remain available. Paired with dsaenztagarro/mcp-servers-mgx#391.
+- **HAL convention** — `halConvention` export removed from `mcp-kit/prompts`. The HAL convention was application-specific protocol behavior; it has been moved to its downstream consumer for independent evolution. `BaseConvention`, `defaultConvention`, and `jsonApiConvention` remain available.
 
 [0.12.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.11.0...v0.12.0
 
@@ -73,7 +73,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
-- **Metadata error ingestion returning 0 records** — nested metadata_errors endpoints return `{"entries": [...]}` which the old `_extractRecords` method didn't recognize. Now uses convention-aware extraction that handles all HAL response envelopes. Related: mcp-servers-mgx#382.
+- **Metadata error ingestion returning 0 records** — nested metadata_errors endpoints return `{"entries": [...]}` which the old `_extractRecords` method didn't recognize. Now uses convention-aware extraction that handles all HAL response envelopes.
 
 [0.11.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.10.0...v0.11.0
 

@@ -110,7 +110,7 @@ export class HttpServer {
     this.pathPrefix = pathPrefix || ''
 
     // Base URL for this server (used for well-known endpoints)
-    // In production, this should be the public URL (e.g., 'https://dsaenz.dev/mcp')
+    // In production, this should be the public URL (e.g., 'https://example.com/mcp')
     this.baseUrl = baseUrl || `http://localhost:${this.port}`
 
     // Session storage: sessionId -> { transport, server, accessToken }

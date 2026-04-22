@@ -160,10 +160,10 @@ describe('SearchRecordsTool', () => {
   it('should include server context in description when available', () => {
     const scopedTool = new SearchRecordsTool({
       models: mockModels,
-      serverContext: { name: 'MGX MOD (Movida)' }
+      serverContext: { name: 'Test Server' }
     })
 
-    expect(scopedTool.baseDescription).toContain('MGX MOD (Movida)')
+    expect(scopedTool.baseDescription).toContain('Test Server')
   })
 
   it('should handle response with data instead of records', async () => {

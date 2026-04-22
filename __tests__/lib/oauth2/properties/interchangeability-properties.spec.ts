@@ -13,7 +13,7 @@ import * as fc from 'fast-check'
 describe('Implementation Interchangeability Properties', () => {
   // Arbitrary for valid OAuth config
   const oauthConfigArb = fc.record({
-    identityUrl: fc
+    authServerUrl: fc
       .tuple(fc.stringMatching(/^[a-z]{3,8}$/), fc.integer({ min: 3000, max: 9999 }))
       .map(([host, port]) => `http://${host}:${port}`),
     clientId: fc.stringMatching(/^[a-zA-Z0-9_-]{8,32}$/),
@@ -45,8 +45,8 @@ describe('Implementation Interchangeability Properties', () => {
 
         expect(prodService).toBeDefined()
         expect(refService).toBeDefined()
-        expect(prodService.identityUrl).toBe(config.identityUrl)
-        expect(refService.identityUrl).toBe(config.identityUrl)
+        expect(prodService.authServerUrl).toBe(config.authServerUrl)
+        expect(refService.authServerUrl).toBe(config.authServerUrl)
       }),
       { numRuns: 50 }
     )

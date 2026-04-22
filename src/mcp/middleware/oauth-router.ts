@@ -4,7 +4,7 @@
  * Express router that handles all OAuth-related routes for MCP servers.
  * The MCP server acts as an OAuth 2.0 Resource Server and proxies
  * Authorization Server metadata + Dynamic Client Registration to an upstream
- * Identity server. See `docs/oauth2-discovery-flow.md` for the full flow.
+ * authorization server. See `docs/oauth2-discovery-flow.md` for the full flow.
  *
  * RFC map:
  * - RFC 6749  OAuth 2.0 Authorization Framework     -> /oauth/authorize, /oauth/token
@@ -20,7 +20,7 @@
  * - GET  /.well-known/oauth-authorization-server    - Authorization server metadata (proxy, RFC 8414)
  * - GET  /.well-known/openid-configuration          - OpenID configuration (alias)
  * - GET  /oauth/callback                            - OAuth callback landing page
- * - GET  /oauth/authorize                           - Redirect to Identity server (RFC 6749)
+ * - GET  /oauth/authorize                           - Redirect to authorization server (RFC 6749)
  * - POST /oauth/token                               - Proxy token requests (RFC 6749)
  * - POST /oauth/register                            - Proxy DCR (RFC 7591)
  * - POST /mcp/m2m/token                             - Machine-to-machine token endpoint
@@ -63,8 +63,8 @@ export function extractBearerToken(req: Request): string | null {
  * the resource path. This enables multiple resources per host.
  *
  * Example:
- *   Resource: https://dsaenz.dev/engineer-mcp/mcp
- *   Metadata: https://dsaenz.dev/.well-known/oauth-protected-resource/engineer-mcp/mcp
+ *   Resource: https://example.com/my-mcp-server/mcp
+ *   Metadata: https://example.com/.well-known/oauth-protected-resource/my-mcp-server/mcp
  */
 export function buildResourceMetadataUrl(resourceUrl: string): string {
   const url = new URL(resourceUrl)
@@ -136,7 +136,7 @@ export function createOAuthRouter({ oauth, baseUrl, mcpName }: OAuthRouterConfig
   /**
    * Proxy for OAuth 2.0 Authorization Server Metadata
    *
-   * Fetches metadata from Identity server and rewrites OAuth endpoint URLs
+   * Fetches metadata from authorization server and rewrites OAuth endpoint URLs
    * to point to this MCP server.
    */
   router.get(
@@ -144,7 +144,7 @@ export function createOAuthRouter({ oauth, baseUrl, mcpName }: OAuthRouterConfig
     asyncHandler(async (_req: Request, res: Response) => {
       try {
         const response = await axios.get(
-          `${oauth.identityUrl}/.well-known/oauth-authorization-server`
+          `${oauth.authServerUrl}/.well-known/oauth-authorization-server`
         )
 
         // Rewrite OAuth endpoint URLs to point to this MCP server
@@ -155,12 +155,12 @@ export function createOAuthRouter({ oauth, baseUrl, mcpName }: OAuthRouterConfig
         metadata.token_endpoint = `${mcpOAuthBase}/token`
         metadata.registration_endpoint = `${mcpOAuthBase}/register`
 
-        // Keep other endpoints pointing to Identity if they exist
+        // Keep other endpoints pointing to authorization server if they exist
         if (metadata.revocation_endpoint) {
-          metadata.revocation_endpoint = `${oauth.identityUrl}/oauth/revoke`
+          metadata.revocation_endpoint = `${oauth.authServerUrl}/oauth/revoke`
         }
         if (metadata.introspection_endpoint) {
-          metadata.introspection_endpoint = `${oauth.identityUrl}/oauth/introspect`
+          metadata.introspection_endpoint = `${oauth.authServerUrl}/oauth/introspect`
         }
 
         logger.info('Authorization server metadata proxied', {
@@ -187,7 +187,7 @@ export function createOAuthRouter({ oauth, baseUrl, mcpName }: OAuthRouterConfig
     asyncHandler(async (_req: Request, res: Response) => {
       try {
         const response = await axios.get(
-          `${oauth.identityUrl}/.well-known/oauth-authorization-server`
+          `${oauth.authServerUrl}/.well-known/oauth-authorization-server`
         )
 
         const metadata = { ...response.data } as Record<string, unknown>
@@ -198,10 +198,10 @@ export function createOAuthRouter({ oauth, baseUrl, mcpName }: OAuthRouterConfig
         metadata.registration_endpoint = `${mcpOAuthBase}/register`
 
         if (metadata.revocation_endpoint) {
-          metadata.revocation_endpoint = `${oauth.identityUrl}/oauth/revoke`
+          metadata.revocation_endpoint = `${oauth.authServerUrl}/oauth/revoke`
         }
         if (metadata.introspection_endpoint) {
-          metadata.introspection_endpoint = `${oauth.identityUrl}/oauth/introspect`
+          metadata.introspection_endpoint = `${oauth.authServerUrl}/oauth/introspect`
         }
 
         logger.info('OpenID configuration proxied', {
@@ -258,16 +258,16 @@ export function createOAuthRouter({ oauth, baseUrl, mcpName }: OAuthRouterConfig
     })
   )
 
-  /** OAuth2 Authorization Endpoint - Redirect to Identity server */
+  /** OAuth2 Authorization Endpoint - Redirect to authorization server */
   router.get('/oauth/authorize', (req: Request, res: Response) => {
-    const targetUrl = new URL(`${oauth.identityUrl}/oauth/authorize`)
+    const targetUrl = new URL(`${oauth.authServerUrl}/oauth/authorize`)
 
-    // Forward all query parameters to the Identity server
+    // Forward all query parameters to the authorization server
     Object.entries(req.query).forEach(([key, value]) => {
       targetUrl.searchParams.set(key, value as string)
     })
 
-    logger.info('Redirecting OAuth authorize to Identity server', {
+    logger.info('Redirecting OAuth authorize to authorization server', {
       service: mcpName,
       clientId: req.query.client_id
     })
@@ -275,12 +275,12 @@ export function createOAuthRouter({ oauth, baseUrl, mcpName }: OAuthRouterConfig
     res.redirect(targetUrl.toString())
   })
 
-  /** OAuth2 Token Endpoint - Proxy to Identity server */
+  /** OAuth2 Token Endpoint - Proxy to authorization server */
   router.post(
     '/oauth/token',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const response = await axios.post(`${oauth.identityUrl}/oauth/token`, req.body, {
+        const response = await axios.post(`${oauth.authServerUrl}/oauth/token`, req.body, {
           headers: {
             'Content-Type': req.headers['content-type'] || 'application/x-www-form-urlencoded',
             ...(req.headers.authorization && {
@@ -320,14 +320,14 @@ export function createOAuthRouter({ oauth, baseUrl, mcpName }: OAuthRouterConfig
   )
 
   /**
-   * OAuth2 Dynamic Client Registration (DCR) - Proxy to Identity server
+   * OAuth2 Dynamic Client Registration (DCR) - Proxy to authorization server
    * RFC 7591: OAuth 2.0 Dynamic Client Registration Protocol
    */
   router.post(
     '/oauth/register',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const response = await axios.post(`${oauth.identityUrl}/oauth/register`, req.body, {
+        const response = await axios.post(`${oauth.authServerUrl}/oauth/register`, req.body, {
           headers: {
             'Content-Type': 'application/json',
             ...(req.headers.authorization && {
@@ -391,7 +391,7 @@ export function createOAuthRouter({ oauth, baseUrl, mcpName }: OAuthRouterConfig
           res.status(403).json({
             error: 'unauthorized_client',
             error_description:
-              'Client is not authorized for Client Credentials grant. Enable this grant type in Identity server.'
+              'Client is not authorized for Client Credentials grant. Enable this grant type in authorization server.'
           })
           return
         }

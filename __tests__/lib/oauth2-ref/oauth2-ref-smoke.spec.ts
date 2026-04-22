@@ -19,7 +19,7 @@ describe('OAuth2 Reference Implementation - Smoke Test', () => {
 
   it('should be instantiable with required config', () => {
     const config = {
-      identityUrl: 'https://auth.example.com',
+      authServerUrl: 'https://auth.example.com',
       clientId: 'test-client',
       clientSecret: 'test-secret',
       redirectUri: 'http://localhost:3456/callback',
@@ -29,7 +29,7 @@ describe('OAuth2 Reference Implementation - Smoke Test', () => {
     const service = new OAuth2ReferenceService(config)
 
     expect(service).toBeDefined()
-    expect(service.identityUrl).toBe('https://auth.example.com')
+    expect(service.authServerUrl).toBe('https://auth.example.com')
   })
 
   it('should export core modules', async () => {
@@ -62,7 +62,7 @@ describe('OAuth2 Reference Implementation - Smoke Test', () => {
 
   it('should have interface compatibility with production OAuth2', async () => {
     const config = {
-      identityUrl: 'https://auth.example.com',
+      authServerUrl: 'https://auth.example.com',
       clientId: 'test-client',
       clientSecret: 'test-secret',
       redirectUri: 'http://localhost:3456/callback',

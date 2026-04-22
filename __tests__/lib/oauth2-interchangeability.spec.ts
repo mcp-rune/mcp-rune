@@ -7,7 +7,7 @@
 
 describe('OAuth2 Interchangeability', () => {
   const mockConfig = {
-    identityUrl: 'http://localhost:4000',
+    authServerUrl: 'http://localhost:4000',
     clientId: 'test-client-id',
     clientSecret: 'test-client-secret',
     redirectUri: 'http://localhost:3456/callback',
@@ -41,8 +41,8 @@ describe('OAuth2 Interchangeability', () => {
         })
 
         test('has required properties', () => {
-          expect(service).toHaveProperty('identityUrl')
-          expect(service.identityUrl).toBe(mockConfig.identityUrl)
+          expect(service).toHaveProperty('authServerUrl')
+          expect(service.authServerUrl).toBe(mockConfig.authServerUrl)
         })
 
         test('has required methods with correct signatures', () => {
@@ -82,13 +82,13 @@ describe('OAuth2 Interchangeability', () => {
 
         test('can be instantiated with minimal config', () => {
           const minimalService = new ServiceClass({
-            identityUrl: 'http://localhost:4000',
+            authServerUrl: 'http://localhost:4000',
             clientId: 'test',
             clientSecret: 'test',
             redirectUri: 'http://localhost:3456/callback'
           })
 
-          expect(minimalService.identityUrl).toBe('http://localhost:4000')
+          expect(minimalService.authServerUrl).toBe('http://localhost:4000')
         })
 
         test('accepts optional parameters', () => {
@@ -163,7 +163,7 @@ describe('OAuth2 Interchangeability', () => {
 
     test('validates required configuration', async () => {
       const invalidConfigs = [
-        { identityUrl: 'http://localhost:4000' } // Missing clientId
+        { authServerUrl: 'http://localhost:4000' } // Missing clientId
       ]
 
       for (const config of invalidConfigs) {
@@ -193,7 +193,7 @@ describe('OAuth2 Interchangeability', () => {
         const oauth = new OAuthServiceClass(mockConfig)
 
         // Code that uses the service
-        expect(oauth.identityUrl).toBeDefined()
+        expect(oauth.authServerUrl).toBeDefined()
         expect(typeof oauth.getValidAccessToken).toBe('function')
         expect(typeof oauth.startLocalAuthFlow).toBe('function')
 
@@ -244,11 +244,11 @@ describe('OAuth2 Interchangeability', () => {
 
       const prodService = await getOAuthService('production')
       expect(prodService).toBeDefined()
-      expect(prodService.identityUrl).toBe(mockConfig.identityUrl)
+      expect(prodService.authServerUrl).toBe(mockConfig.authServerUrl)
 
       const refService = await getOAuthService('reference')
       expect(refService).toBeDefined()
-      expect(refService.identityUrl).toBe(mockConfig.identityUrl)
+      expect(refService.authServerUrl).toBe(mockConfig.authServerUrl)
     })
   })
 })

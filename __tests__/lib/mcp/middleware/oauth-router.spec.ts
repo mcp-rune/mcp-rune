@@ -98,9 +98,9 @@ describe('lib/mcp/middleware/oauth-router', () => {
     })
 
     it('should build RFC 9728 compliant URL with path prefix', () => {
-      const result = buildResourceMetadataUrl('https://dsaenz.dev/engineer-mcp/mcp')
+      const result = buildResourceMetadataUrl('https://example.com/my-mcp-server/mcp')
       expect(result).toBe(
-        'https://dsaenz.dev/.well-known/oauth-protected-resource/engineer-mcp/mcp'
+        'https://example.com/.well-known/oauth-protected-resource/my-mcp-server/mcp'
       )
     })
 
@@ -173,13 +173,13 @@ describe('lib/mcp/middleware/oauth-router', () => {
     })
 
     it('should handle path prefix in baseUrl', () => {
-      mockReq.path = '/engineer-mcp/mcp'
+      mockReq.path = '/my-mcp-server/mcp'
 
-      sendUnauthorized(mockReq, mockRes, 'https://dsaenz.dev/engineer-mcp')
+      sendUnauthorized(mockReq, mockRes, 'https://example.com/my-mcp-server')
 
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'WWW-Authenticate',
-        'Bearer resource_metadata="https://dsaenz.dev/.well-known/oauth-protected-resource/engineer-mcp/mcp"'
+        'Bearer resource_metadata="https://example.com/.well-known/oauth-protected-resource/my-mcp-server/mcp"'
       )
     })
   })
@@ -193,7 +193,7 @@ describe('lib/mcp/middleware/oauth-router', () => {
 
     beforeEach(() => {
       mockOauth = {
-        identityUrl: 'https://identity.example.com',
+        authServerUrl: 'https://identity.example.com',
         getClientCredentialsToken: vi.fn()
       }
 
@@ -280,7 +280,7 @@ describe('lib/mcp/middleware/oauth-router', () => {
         })
       })
 
-      it('should return 502 when Identity server is unreachable', async () => {
+      it('should return 502 when authorization server is unreachable', async () => {
         mockAxios.get.mockRejectedValue(new Error('Connection refused'))
 
         const handler = findRouteHandler(router, 'get', '/.well-known/oauth-authorization-server')
@@ -366,7 +366,7 @@ describe('lib/mcp/middleware/oauth-router', () => {
     })
 
     describe('GET /oauth/authorize', () => {
-      it('should redirect to Identity server with query params', () => {
+      it('should redirect to authorization server with query params', () => {
         const handler = findRouteHandler(router, 'get', '/oauth/authorize')
         mockReq = {
           query: {
@@ -387,14 +387,14 @@ describe('lib/mcp/middleware/oauth-router', () => {
         )
         expect(mockRes.redirect).toHaveBeenCalledWith(expect.stringContaining('response_type=code'))
         expect(logger.info).toHaveBeenCalledWith(
-          'Redirecting OAuth authorize to Identity server',
+          'Redirecting OAuth authorize to authorization server',
           expect.objectContaining({ clientId: 'my-client' })
         )
       })
     })
 
     describe('POST /oauth/token', () => {
-      it('should proxy token request to Identity server', async () => {
+      it('should proxy token request to authorization server', async () => {
         mockAxios.post.mockResolvedValue({
           data: {
             access_token: 'new-token',
@@ -458,7 +458,7 @@ describe('lib/mcp/middleware/oauth-router', () => {
         )
       })
 
-      it('should forward error status from Identity server', async () => {
+      it('should forward error status from authorization server', async () => {
         mockAxios.post.mockRejectedValue({
           response: {
             status: 400,
@@ -498,7 +498,7 @@ describe('lib/mcp/middleware/oauth-router', () => {
     })
 
     describe('POST /oauth/register', () => {
-      it('should proxy DCR request to Identity server', async () => {
+      it('should proxy DCR request to authorization server', async () => {
         mockAxios.post.mockResolvedValue({
           status: 201,
           data: {
@@ -555,7 +555,7 @@ describe('lib/mcp/middleware/oauth-router', () => {
         )
       })
 
-      it('should forward error status from Identity server', async () => {
+      it('should forward error status from authorization server', async () => {
         mockAxios.post.mockRejectedValue({
           response: {
             status: 400,
@@ -632,7 +632,7 @@ describe('lib/mcp/middleware/oauth-router', () => {
         expect(mockRes.json).toHaveBeenCalledWith({
           error: 'unauthorized_client',
           error_description:
-            'Client is not authorized for Client Credentials grant. Enable this grant type in Identity server.'
+            'Client is not authorized for Client Credentials grant. Enable this grant type in authorization server.'
         })
       })
 

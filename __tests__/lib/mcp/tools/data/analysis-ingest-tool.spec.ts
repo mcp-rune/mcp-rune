@@ -458,7 +458,7 @@ describe('AnalysisIngestTool — association ID preservation', () => {
     }
   }
 
-  // Simulates what the Movida HAL API returns with expanded associations
+  // Simulates what a HAL API returns with expanded associations
   const halApiResponse = {
     _embedded: {
       schedulings: [
