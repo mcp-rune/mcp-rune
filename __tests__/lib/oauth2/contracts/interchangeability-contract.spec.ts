@@ -23,7 +23,7 @@ function loadSchema(filename) {
 }
 
 const mockConfig = {
-  identityUrl: 'http://localhost:4000',
+  authServerUrl: 'http://localhost:4000',
   clientId: 'test-client-id',
   clientSecret: 'test-client-secret',
   redirectUri: 'http://localhost:3456/callback',
@@ -57,7 +57,7 @@ describe('OAuthService Interface Contract', () => {
 
     it('should conform to interface schema for required properties', () => {
       const props = {
-        identityUrl: service.identityUrl,
+        authServerUrl: service.authServerUrl,
         clientId: service.clientId,
         clientSecret: service.clientSecret,
         redirectUri: service.redirectUri,
@@ -84,7 +84,7 @@ describe('OAuthService Interface Contract', () => {
       })
 
       const props = {
-        identityUrl: serviceWithResource.identityUrl,
+        authServerUrl: serviceWithResource.authServerUrl,
         clientId: serviceWithResource.clientId,
         clientSecret: serviceWithResource.clientSecret,
         redirectUri: serviceWithResource.redirectUri,
@@ -108,7 +108,7 @@ describe('OAuthService Interface Contract', () => {
 
     it('should conform to interface schema for required properties', () => {
       const props = {
-        identityUrl: service.identityUrl,
+        authServerUrl: service.authServerUrl,
         clientId: service.clientId,
         clientSecret: service.clientSecret,
         redirectUri: service.redirectUri,
@@ -135,7 +135,7 @@ describe('OAuthService Interface Contract', () => {
       })
 
       const props = {
-        identityUrl: serviceWithResource.identityUrl,
+        authServerUrl: serviceWithResource.authServerUrl,
         clientId: serviceWithResource.clientId,
         clientSecret: serviceWithResource.clientSecret,
         redirectUri: serviceWithResource.redirectUri,
@@ -158,7 +158,7 @@ describe('OAuthService Interface Contract', () => {
       const refService = new refModule.OAuth2ReferenceService(mockConfig)
 
       const prodProps = {
-        identityUrl: prodService.identityUrl,
+        authServerUrl: prodService.authServerUrl,
         clientId: prodService.clientId,
         clientSecret: prodService.clientSecret,
         redirectUri: prodService.redirectUri,
@@ -167,7 +167,7 @@ describe('OAuthService Interface Contract', () => {
       }
 
       const refProps = {
-        identityUrl: refService.identityUrl,
+        authServerUrl: refService.authServerUrl,
         clientId: refService.clientId,
         clientSecret: refService.clientSecret,
         redirectUri: refService.redirectUri,
@@ -179,7 +179,7 @@ describe('OAuthService Interface Contract', () => {
       expect(validate(refProps)).toBe(true)
 
       // Both should have identical property values for same config
-      expect(prodProps.identityUrl).toBe(refProps.identityUrl)
+      expect(prodProps.authServerUrl).toBe(refProps.authServerUrl)
       expect(prodProps.clientId).toBe(refProps.clientId)
       expect(prodProps.scopes).toBe(refProps.scopes)
     })

@@ -149,12 +149,12 @@ describe('Authorization Request Parameters Contract (RFC 6749 + RFC 7636 + RFC 8
   it('should validate request matching actual OAuthService output', () => {
     // Matches the shape produced by OAuthService.buildAuthorizationUrl()
     const params = {
-      redirect_uri: 'https://dsaenz.dev/engineer-mcp/oauth/callback',
+      redirect_uri: 'https://example.com/my-mcp-server/oauth/callback',
       scope: 'read write',
       code_challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
       code_challenge_method: 'S256',
       state: 'Kz~C4Wd-V.wHf~MbyRsL9ZrAk.1E06b1',
-      resource: 'https://dsaenz.dev/engineer-mcp'
+      resource: 'https://example.com/my-mcp-server'
     }
 
     const valid = validate(params)

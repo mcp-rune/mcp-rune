@@ -44,7 +44,7 @@ import { OAuthService } from '../../../src/oauth2/service.js'
 import * as tokenStore from '../../../src/oauth2/token-store.js'
 
 const defaultOptions = {
-  identityUrl: 'http://localhost:4000',
+  authServerUrl: 'http://localhost:4000',
   clientId: 'test-client',
   clientSecret: 'test-secret',
   redirectUri: 'http://localhost:3456/callback',
@@ -61,7 +61,7 @@ describe('lib/oauth2/service', () => {
 
   describe('constructor', () => {
     it('stores configuration', () => {
-      expect(oauth.identityUrl).toBe(defaultOptions.identityUrl)
+      expect(oauth.authServerUrl).toBe(defaultOptions.authServerUrl)
       expect(oauth.clientId).toBe(defaultOptions.clientId)
       expect(oauth.clientSecret).toBe(defaultOptions.clientSecret)
       expect(oauth.redirectUri).toBe(defaultOptions.redirectUri)
@@ -92,7 +92,7 @@ describe('lib/oauth2/service', () => {
     it('allows HTTPS in production', () => {
       const svc = new OAuthService({
         ...defaultOptions,
-        identityUrl: 'https://identity.example.com',
+        authServerUrl: 'https://identity.example.com',
         isProduction: true
       })
       expect(svc._isInsecure).toBe(false)
@@ -112,7 +112,7 @@ describe('lib/oauth2/service', () => {
     it('returns undefined for HTTPS URLs', () => {
       const svc = new OAuthService({
         ...defaultOptions,
-        identityUrl: 'https://identity.example.com'
+        authServerUrl: 'https://identity.example.com'
       })
       expect(svc._getExecuteOptions()).toBeUndefined()
     })

@@ -79,7 +79,7 @@ describe('Pattern A: Simple standalone', () => {
     const config = {
       exampleAttributes: {
         name: 'Custom Name',
-        licensor_link: 'https://movida.bebanjo.net/api/licensors/123'
+        licensor_link: 'https://api.example.com/licensors/123'
       }
     }
     const result = generateToolUsage(makeContext(config, baseFieldDefs))

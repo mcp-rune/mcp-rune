@@ -91,7 +91,7 @@ describe('lib/mcp/http-server', () => {
     }
 
     mockOauth = {
-      identityUrl: 'https://identity.example.com',
+      authServerUrl: 'https://identity.example.com',
       introspectToken: vi.fn()
     }
 
@@ -132,11 +132,11 @@ describe('lib/mcp/http-server', () => {
     it('should set path prefix', () => {
       const s = new HttpServer({
         port: 3000,
-        pathPrefix: '/engineer-mcp',
+        pathPrefix: '/my-mcp-server',
         oauth: mockOauth,
         mcp: mockMcp
       })
-      expect(s.pathPrefix).toBe('/engineer-mcp')
+      expect(s.pathPrefix).toBe('/my-mcp-server')
     })
 
     it('should default path prefix to empty string', () => {

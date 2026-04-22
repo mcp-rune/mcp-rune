@@ -121,8 +121,8 @@ describe('Protected Resource Metadata Contract (RFC 9728)', () => {
   it('should validate response matching actual oauth-router output', () => {
     // Matches the shape produced by oauth-router.js GET /.well-known/oauth-protected-resource
     const response = {
-      resource: 'https://dsaenz.dev/engineer-mcp/mcp',
-      authorization_servers: ['https://dsaenz.dev']
+      resource: 'https://example.com/my-mcp-server/mcp',
+      authorization_servers: ['https://example.com']
     }
 
     const valid = validate(response)

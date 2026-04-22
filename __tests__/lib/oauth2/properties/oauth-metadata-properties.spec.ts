@@ -4,7 +4,7 @@
  * Validates OAuth metadata rewriting invariants:
  * - Rewritten metadata always preserves issuer (never rewritten)
  * - authorization_endpoint, token_endpoint, registration_endpoint always point to MCP server
- * - revocation_endpoint and introspection_endpoint always point to Identity server
+ * - revocation_endpoint and introspection_endpoint always point to authorization server
  * - Rewritten metadata still conforms to RFC 8414 required fields
  */
 
@@ -16,7 +16,7 @@ import * as fc from 'fast-check'
  * Input:  Identity's raw metadata
  * Output: Rewritten metadata with MCP server endpoints
  */
-function rewriteMetadata(identityMetadata, mcpBaseUrl, identityUrl) {
+function rewriteMetadata(identityMetadata, mcpBaseUrl, authServerUrl) {
   const metadata = { ...identityMetadata }
   const mcpOAuthBase = `${mcpBaseUrl}/oauth`
 
@@ -25,10 +25,10 @@ function rewriteMetadata(identityMetadata, mcpBaseUrl, identityUrl) {
   metadata.registration_endpoint = `${mcpOAuthBase}/register`
 
   if (metadata.revocation_endpoint) {
-    metadata.revocation_endpoint = `${identityUrl}/oauth/revoke`
+    metadata.revocation_endpoint = `${authServerUrl}/oauth/revoke`
   }
   if (metadata.introspection_endpoint) {
-    metadata.introspection_endpoint = `${identityUrl}/oauth/introspect`
+    metadata.introspection_endpoint = `${authServerUrl}/oauth/introspect`
   }
 
   return metadata
@@ -104,7 +104,7 @@ describe('OAuth Metadata Rewriting Properties (RFC 8414)', () => {
     )
   })
 
-  it('revocation_endpoint always points to Identity server (never rewritten to MCP)', () => {
+  it('revocation_endpoint always points to authorization server (never rewritten to MCP)', () => {
     fc.assert(
       fc.property(identityMetadataArb, httpsOriginArb, (identityMetadata, mcpBaseUrl) => {
         const rewritten = rewriteMetadata(identityMetadata, mcpBaseUrl, identityMetadata.issuer)
@@ -116,7 +116,7 @@ describe('OAuth Metadata Rewriting Properties (RFC 8414)', () => {
     )
   })
 
-  it('introspection_endpoint always points to Identity server (never rewritten to MCP)', () => {
+  it('introspection_endpoint always points to authorization server (never rewritten to MCP)', () => {
     fc.assert(
       fc.property(identityMetadataArb, httpsOriginArb, (identityMetadata, mcpBaseUrl) => {
         const rewritten = rewriteMetadata(identityMetadata, mcpBaseUrl, identityMetadata.issuer)

@@ -4,7 +4,7 @@
  * Validates that token introspection responses conform to the shared
  * JSON Schema contracts (RFC 7662). Also validates DCR request/response
  * contracts (RFC 7591). These contracts ensure compatibility between
- * the MCP server and Identity server.
+ * the MCP server and authorization server.
  */
 
 import { readFileSync } from 'node:fs'

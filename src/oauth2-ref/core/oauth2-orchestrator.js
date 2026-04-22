@@ -88,7 +88,7 @@ export class OAuth2Orchestrator {
         redirectUris: [redirectUri],
         preConfiguredClientId: this.config.oauth2.clientId,
         preConfiguredClientSecret: this.config.oauth2.clientSecret,
-        clientName: 'Movida MCP Server (OAuth2)',
+        clientName: 'MCP Server (OAuth2)',
         scope: '' // Empty scope as requested
       })
 

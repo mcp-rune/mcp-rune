@@ -267,7 +267,7 @@ Production-grade OAuth2 built on [openid-client](https://github.com/panva/openid
 import { OAuthService } from 'mcp-kit/oauth2'
 
 const oauth = new OAuthService({
-  identityUrl: process.env.IDENTITY_URL,
+  authServerUrl: process.env.AUTH_SERVER_URL,
   clientId: process.env.OAUTH_CLIENT_ID,
   clientSecret: process.env.OAUTH_CLIENT_SECRET,
   redirectUri: `${BASE_URL}/oauth/callback`,

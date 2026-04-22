@@ -4,13 +4,13 @@ This document describes the OAuth 2.0 flow implemented by the MCP servers in thi
 
 ## Overview
 
-Engineer MCP (and any other server in this monorepo that enables OAuth via `lib/mcp/http-server.js`) acts as an **OAuth 2.0 Resource Server**. It:
+Any MCP server that enables OAuth via `lib/mcp/http-server.js` acts as an **OAuth 2.0 Resource Server**. It:
 
 - Exposes RFC 9728 Protected Resource Metadata so clients can discover the authorization server.
-- **Proxies** authorization-server metadata (RFC 8414), Dynamic Client Registration (RFC 7591), authorize/token endpoints (RFC 6749), and forwards PKCE (RFC 7636) and resource indicators (RFC 8707) parameters transparently to an upstream Identity server.
-- Validates bearer tokens on `/mcp` via token introspection against the Identity server.
+- **Proxies** authorization-server metadata (RFC 8414), Dynamic Client Registration (RFC 7591), authorize/token endpoints (RFC 6749), and forwards PKCE (RFC 7636) and resource indicators (RFC 8707) parameters transparently to an upstream authorization server.
+- Validates bearer tokens on `/mcp` via token introspection against the authorization server.
 
-The MCP server never issues tokens itself (except via the M2M `/mcp/m2m/token` convenience endpoint, which is a thin wrapper around the Identity server's Client Credentials grant). All user authentication and token issuance happens on the Identity server; the MCP server is a thin, spec-compliant façade.
+The MCP server never issues tokens itself (except via the M2M `/mcp/m2m/token` convenience endpoint, which is a thin wrapper around the authorization server's Client Credentials grant). All user authentication and token issuance happens on the authorization server; the MCP server is a thin, spec-compliant façade.
 
 ## RFC Map
 
@@ -27,8 +27,8 @@ The MCP server never issues tokens itself (except via the M2M `/mcp/m2m/token` c
 ## End-to-End Discovery Flow
 
 ```
-Client                                    MCP Server                         Identity
-──────                                    ──────────                         ────────
+Client                                    MCP Server                         Auth Server
+──────                                    ──────────                         ───────────
   │  POST /mcp (no token)                    │                                  │
   │ ───────────────────────────────────────▶ │                                  │
   │                  401 Unauthorized        │                                  │
@@ -58,7 +58,7 @@ Client                                    MCP Server                         Ide
   │  GET /oauth/authorize         (RFC 6749 + RFC 7636 PKCE + RFC 8707 resource)│
   │ ───────────────────────────────────────▶ │ ─── 302 redirect ──────────────▶ │
   │                                          │                                  │
-  │  (user authenticates on Identity; Identity redirects back to                │
+  │  (user authenticates on auth server; auth server redirects back to          │
   │   MCP server's /oauth/callback with auth code)                              │
   │                                          │                                  │
   │  POST /oauth/token            (RFC 6749 + PKCE + resource indicator)        │
@@ -79,10 +79,10 @@ RFC 9728 §3.1 defines how to build the Protected Resource Metadata URL for a re
 
 Example for this repo:
 
-| Resource URL (the `/mcp` endpoint)    | Canonical metadata URL (RFC 9728 §3.1)                                     |
-| ------------------------------------- | -------------------------------------------------------------------------- |
-| `http://localhost:4100/mcp`           | `http://localhost:4100/.well-known/oauth-protected-resource/mcp`           |
-| `https://dsaenz.dev/engineer-mcp/mcp` | `https://dsaenz.dev/.well-known/oauth-protected-resource/engineer-mcp/mcp` |
+| Resource URL (the `/mcp` endpoint)      | Canonical metadata URL (RFC 9728 §3.1)                                       |
+| --------------------------------------- | ---------------------------------------------------------------------------- |
+| `http://localhost:4100/mcp`             | `http://localhost:4100/.well-known/oauth-protected-resource/mcp`             |
+| `https://example.com/my-mcp-server/mcp` | `https://example.com/.well-known/oauth-protected-resource/my-mcp-server/mcp` |
 
 `buildResourceMetadataUrl()` in `lib/mcp/middleware/oauth-router.js` constructs this form, and `sendUnauthorized()` advertises it in the `WWW-Authenticate: Bearer resource_metadata="…"` header whenever `/mcp` is hit without a token.
 

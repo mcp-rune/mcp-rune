@@ -27,10 +27,23 @@ export interface FilterQuery {
   limit?: number
 }
 
+export interface ProximityParams {
+  /** Date/datetime field to center the proximity window on */
+  field: string
+  /** Center date in ISO 8601 format (e.g., "2026-03-15") */
+  origin: string
+  /** Time window around origin, e.g., "7 days", "2 weeks", "1 month" */
+  window: string
+  /** Bucket interval for stratification within the window (e.g., "1 day", "1 week") */
+  bucket?: string
+}
+
 export interface SampleQuery {
   mode: 'sample'
   sampleSize?: number
   stratifyBy?: string
+  where?: Record<string, unknown>
+  proximity?: ProximityParams
 }
 
 export type IngestedQuery = AggregateQuery | FilterQuery | SampleQuery
@@ -87,6 +100,69 @@ function inferCast(value: unknown): string {
   if (typeof value === 'number') return '::numeric'
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) return '::timestamptz'
   return ''
+}
+
+const INTERVAL_RE = /^\d+\s+(day|days|week|weeks|month|months|hour|hours|minute|minutes)$/i
+
+/** Validate interval string to prevent SQL injection (only safe PostgreSQL intervals) */
+function validateInterval(interval: string): string {
+  if (!INTERVAL_RE.test(interval.trim())) {
+    throw new Error(
+      `Invalid interval: "${interval}". Use format like "7 days", "2 weeks", "1 month".`
+    )
+  }
+  return interval.trim()
+}
+
+/**
+ * Build WHERE conditions from a filter object.
+ *
+ * Shared between queryFilter and querySample (when pre-filtering).
+ * Returns additional SQL conditions and updates params/paramIdx in place.
+ */
+function buildWhereConditions(
+  where: Record<string, unknown>,
+  params: unknown[],
+  paramIdx: number
+): { conditions: string[]; paramIdx: number } {
+  const exactFields: Record<string, unknown> = {}
+  const rangeConditions: { field: string; op: string; value: unknown }[] = []
+
+  for (const [field, value] of Object.entries(where)) {
+    if (isOperatorObject(value)) {
+      const safeField = sanitizeFieldName(field)
+      for (const [opKey, opValue] of Object.entries(value)) {
+        if (opKey in COMPARISON_OPS) {
+          rangeConditions.push({
+            field: safeField,
+            op: COMPARISON_OPS[opKey as ComparisonOp],
+            value: opValue
+          })
+        }
+      }
+    } else {
+      exactFields[field] = value
+    }
+  }
+
+  const conditions: string[] = []
+
+  // Exact match via JSONB containment
+  if (Object.keys(exactFields).length > 0) {
+    conditions.push(`data @> $${paramIdx}`)
+    params.push(JSON.stringify(exactFields))
+    paramIdx++
+  }
+
+  // Range conditions via ->> extraction with type casting
+  for (const { field, op, value } of rangeConditions) {
+    const cast = inferCast(value)
+    conditions.push(`(data->>'${field}')${cast} ${op} $${paramIdx}`)
+    params.push(value)
+    paramIdx++
+  }
+
+  return { conditions, paramIdx }
 }
 
 /** Store a batch of ingested records */
@@ -177,44 +253,11 @@ async function queryFilter(
 ): Promise<Record<string, unknown>[]> {
   const limit = Math.min(query.limit || 20, 200)
 
-  const exactFields: Record<string, unknown> = {}
-  const rangeConditions: { field: string; op: string; value: unknown }[] = []
-
-  for (const [field, value] of Object.entries(query.where)) {
-    if (isOperatorObject(value)) {
-      const safeField = sanitizeFieldName(field)
-      for (const [opKey, opValue] of Object.entries(value)) {
-        if (opKey in COMPARISON_OPS) {
-          rangeConditions.push({
-            field: safeField,
-            op: COMPARISON_OPS[opKey as ComparisonOp],
-            value: opValue
-          })
-        }
-      }
-    } else {
-      exactFields[field] = value
-    }
-  }
-
   const conditions = ['analysis_id = $1', '(expires_at IS NULL OR expires_at > NOW())']
   const params: unknown[] = [analysisId]
-  let paramIdx = 2
 
-  // Exact match via JSONB containment
-  if (Object.keys(exactFields).length > 0) {
-    conditions.push(`data @> $${paramIdx}`)
-    params.push(JSON.stringify(exactFields))
-    paramIdx++
-  }
-
-  // Range conditions via ->> extraction with type casting
-  for (const { field, op, value } of rangeConditions) {
-    const cast = inferCast(value)
-    conditions.push(`(data->>'${field}')${cast} ${op} $${paramIdx}`)
-    params.push(value)
-    paramIdx++
-  }
+  const where = buildWhereConditions(query.where, params, 2)
+  conditions.push(...where.conditions)
 
   params.push(limit)
 
@@ -222,20 +265,25 @@ async function queryFilter(
     `SELECT data
      FROM ingested_records
      WHERE ${conditions.join(' AND ')}
-     LIMIT $${paramIdx}`,
+     LIMIT $${where.paramIdx}`,
     params
   )
 
   return (result.rows as IngestedRow[]).map((row) => row.data)
 }
 
-/** Random sample — supports optional stratified sampling by a JSONB field */
+/** Random sample — supports optional pre-filtering, proximity windowing, and stratification */
 async function querySample(
   pool: Pool,
   analysisId: string,
   query: SampleQuery
 ): Promise<Record<string, unknown>[]> {
   const sampleSize = Math.min(query.sampleSize || 5, 50)
+
+  // Delegate to proximity-aware path when where or proximity are provided
+  if (query.where || query.proximity) {
+    return querySampleFiltered(pool, analysisId, sampleSize, query)
+  }
 
   if (query.stratifyBy) {
     return querySampleStratified(pool, analysisId, sampleSize, query.stratifyBy)
@@ -248,6 +296,130 @@ async function querySample(
      ORDER BY RANDOM()
      LIMIT $2`,
     [analysisId, sampleSize]
+  )
+
+  return (result.rows as IngestedRow[]).map((row) => row.data)
+}
+
+/**
+ * Pre-filtered sample with optional proximity windowing and bucket stratification.
+ *
+ * Builds a `filtered` CTE from the base conditions + where clauses + proximity
+ * date window, then applies stratification on top (by date bucket, discrete field,
+ * or both).
+ *
+ * Proximity uses PostgreSQL date_bin() to create origin-anchored time buckets,
+ * then applies the same ROW_NUMBER() OVER (PARTITION BY) budget allocation as
+ * querySampleStratified.
+ */
+async function querySampleFiltered(
+  pool: Pool,
+  analysisId: string,
+  sampleSize: number,
+  query: SampleQuery
+): Promise<Record<string, unknown>[]> {
+  const baseConditions = ['analysis_id = $1', '(expires_at IS NULL OR expires_at > NOW())']
+  const params: unknown[] = [analysisId]
+  let paramIdx = 2
+
+  // Apply where conditions
+  if (query.where) {
+    const where = buildWhereConditions(query.where, params, paramIdx)
+    baseConditions.push(...where.conditions)
+    paramIdx = where.paramIdx
+  }
+
+  // Apply proximity date window
+  if (query.proximity) {
+    const safeField = sanitizeFieldName(query.proximity.field)
+    const validWindow = validateInterval(query.proximity.window)
+
+    baseConditions.push(
+      `(data->>'${safeField}')::timestamptz >= ($${paramIdx}::timestamptz - '${validWindow}'::interval)`
+    )
+    params.push(query.proximity.origin)
+    paramIdx++
+
+    baseConditions.push(
+      `(data->>'${safeField}')::timestamptz <= ($${paramIdx}::timestamptz + '${validWindow}'::interval)`
+    )
+    params.push(query.proximity.origin)
+    paramIdx++
+  }
+
+  const filteredCte = `filtered AS (
+    SELECT data FROM ingested_records
+    WHERE ${baseConditions.join(' AND ')}
+  )`
+
+  // Determine stratification strategy
+  const hasBucket = query.proximity?.bucket
+  const hasStratify = query.stratifyBy
+
+  if (!hasBucket && !hasStratify) {
+    // Simple filtered random sample
+    params.push(sampleSize)
+    const result = await pool.query(
+      `WITH ${filteredCte}
+       SELECT data FROM filtered
+       ORDER BY RANDOM()
+       LIMIT $${paramIdx}`,
+      params
+    )
+    return (result.rows as IngestedRow[]).map((row) => row.data)
+  }
+
+  // Build PARTITION BY expression for stratification
+  const partitionParts: string[] = []
+
+  if (hasBucket) {
+    const safeField = sanitizeFieldName(query.proximity!.field)
+    const validBucket = validateInterval(query.proximity!.bucket!)
+
+    // date_bin(bucket_interval, timestamp, origin) — origin-anchored buckets
+    const binExpr = `date_bin('${validBucket}'::interval, (data->>'${safeField}')::timestamptz, $${paramIdx}::timestamptz)`
+    params.push(query.proximity!.origin)
+    paramIdx++
+
+    partitionParts.push(binExpr)
+  }
+
+  if (hasStratify) {
+    const safeStratify = sanitizeFieldName(query.stratifyBy!)
+    partitionParts.push(`data->>'${safeStratify}'`)
+  }
+
+  const partitionBy = partitionParts.join(', ')
+
+  // Build the count expression to match the partition
+  // We need DISTINCT on the same composite key
+  const countExpr =
+    partitionParts.length === 1
+      ? `COUNT(DISTINCT ${partitionParts[0]}) AS num_groups`
+      : `COUNT(DISTINCT ROW(${partitionParts.join(', ')})) AS num_groups`
+
+  params.push(sampleSize)
+  const sampleParamIdx = paramIdx
+
+  const result = await pool.query(
+    `WITH ${filteredCte},
+     ranked AS (
+       SELECT data,
+         ROW_NUMBER() OVER (
+           PARTITION BY ${partitionBy} ORDER BY RANDOM()
+         ) AS rn
+       FROM filtered
+     ),
+     group_count AS (
+       SELECT ${countExpr}
+       FROM filtered
+     )
+     SELECT ranked.data
+     FROM ranked, group_count
+     WHERE ranked.rn <= GREATEST(1, CEIL($${sampleParamIdx}::numeric / GREATEST(1, group_count.num_groups)))
+     ORDER BY RANDOM()
+     LIMIT $${sampleParamIdx}`,
+    params
   )
 
   return (result.rows as IngestedRow[]).map((row) => row.data)

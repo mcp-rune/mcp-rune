@@ -11,7 +11,7 @@
  * import { initTracing, traceToolCall } from '#src/services/tracing.js'
  *
  * // Initialize once at startup
- * initTracing({ serviceName: 'engineer-mcp' })
+ * initTracing({ serviceName: 'my-mcp-server' })
  *
  * // Trace tool calls
  * const result = await traceToolCall('find_model', args, () => handler(args))

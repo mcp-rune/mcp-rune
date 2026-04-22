@@ -33,7 +33,7 @@ describe('Client Credentials Properties (RFC 6749 Section 4.4)', () => {
 
   beforeEach(() => {
     oauth = new OAuthService({
-      identityUrl: 'http://localhost:4000',
+      authServerUrl: 'http://localhost:4000',
       clientId: 'test-client',
       clientSecret: 'test-secret',
       redirectUri: 'http://localhost:3456/callback',

@@ -43,7 +43,7 @@ describe('Resource Indicators Properties (RFC 8707)', () => {
       fc.constantFrom('https'),
       fc.stringMatching(/^[a-z]{3,10}$/),
       fc.stringMatching(/^[a-z]{3,10}$/),
-      fc.constantFrom('/mcp', '/engineer-mcp/mcp', '/api')
+      fc.constantFrom('/mcp', '/my-mcp-server/mcp', '/api')
     )
     .map(([scheme, sub, domain, path]) => `${scheme}://${sub}.${domain}.com${path}`)
 
@@ -61,7 +61,7 @@ describe('Resource Indicators Properties (RFC 8707)', () => {
         stateArb,
         (resourceUri, codeChallenge, state) => {
           const oauth = new OAuthService({
-            identityUrl: 'http://localhost:4000',
+            authServerUrl: 'http://localhost:4000',
             clientId: 'test-client',
             clientSecret: 'test-secret',
             redirectUri: 'http://localhost:3456/callback',
@@ -83,7 +83,7 @@ describe('Resource Indicators Properties (RFC 8707)', () => {
     fc.assert(
       fc.property(codeChallengeArb, stateArb, (codeChallenge, state) => {
         const oauth = new OAuthService({
-          identityUrl: 'http://localhost:4000',
+          authServerUrl: 'http://localhost:4000',
           clientId: 'test-client',
           clientSecret: 'test-secret',
           redirectUri: 'http://localhost:3456/callback',
@@ -108,7 +108,7 @@ describe('Resource Indicators Properties (RFC 8707)', () => {
         stateArb,
         (resourceUri, codeChallenge, state) => {
           const oauth = new OAuthService({
-            identityUrl: 'http://localhost:4000',
+            authServerUrl: 'http://localhost:4000',
             clientId: 'test-client',
             clientSecret: 'test-secret',
             redirectUri: 'http://localhost:3456/callback',
@@ -136,7 +136,7 @@ describe('Resource Indicators Properties (RFC 8707)', () => {
         fc.constantFrom('read', 'write', 'read write', 'openid read write'),
         (codeChallenge, state, scopes) => {
           const oauth = new OAuthService({
-            identityUrl: 'http://localhost:4000',
+            authServerUrl: 'http://localhost:4000',
             clientId: 'test-client',
             clientSecret: 'test-secret',
             redirectUri: 'http://localhost:3456/callback',
