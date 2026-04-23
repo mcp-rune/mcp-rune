@@ -211,11 +211,11 @@ export class BasePrompt {
   /** Generate compact tool usage example. */
   static generateToolExample(
     model: string,
-    parentResource: string | undefined,
+    parentPath: string | undefined,
     attributes: Record<string, unknown>
   ): string {
-    const params = parentResource
-      ? `model: "${model}", parent_resource: "${parentResource}"`
+    const params = parentPath
+      ? `model: "${model}", parent_path: "${parentPath}"`
       : `model: "${model}"`
     return `\`\`\`\ncreate_model(${params}, attributes: ${JSON.stringify(attributes, null, 2)})\n\`\`\``
   }

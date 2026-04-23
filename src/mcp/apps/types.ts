@@ -72,12 +72,8 @@ export interface AppModelClass {
   api?: {
     convention?: BaseConvention
     readOnly?: boolean
-    nested?: {
-      parent?: string | string[]
-      nestedOnly?: boolean
-      pathTemplate?: string
-      parentKey?: string
-    }
+    parent?: string | string[]
+    standalone?: boolean
     [key: string]: unknown
   }
   supportsLookup: boolean
@@ -134,7 +130,7 @@ export interface FormFieldDefinition {
     labelField: string
     valueField?: string
     convention?: BaseConvention
-    nested?: { pathTemplate: string; parentKey: string }
+    nested?: { parentModel: string; childEndpoint: string }
   }
   validation?: Record<string, unknown>
   visibleWhen?: Record<string, unknown>

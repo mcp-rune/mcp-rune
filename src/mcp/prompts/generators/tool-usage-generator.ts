@@ -29,7 +29,7 @@ export interface PostCreateStep {
 export interface ToolUsageVariant {
   title: string
   description?: string
-  parentResource?: string
+  parentPath?: string
   fixedAttributes?: Record<string, unknown>
   exampleAttributes?: Record<string, unknown>
 }
@@ -42,7 +42,7 @@ export interface AlternativeCreation {
 
 export interface ToolUsageConfig {
   description?: string
-  parentResource?: string
+  parentPath?: string
   fixedAttributes?: Record<string, unknown>
   exampleAttributes?: Record<string, unknown>
   excludeFromAttributes?: string[]
@@ -150,7 +150,7 @@ function renderVariantsMode(
     }
     const variantConfig: ToolUsageConfig = {
       ...config,
-      parentResource: variant.parentResource,
+      parentPath: variant.parentPath,
       fixedAttributes: { ...config.fixedAttributes, ...variant.fixedAttributes },
       exampleAttributes: { ...config.exampleAttributes, ...variant.exampleAttributes }
     }
@@ -201,8 +201,8 @@ function renderCreateBlock(
 
   let block = '```\nTool: create_model\nParameters:\n'
   block += `  model: "${modelName}"\n`
-  if (config.parentResource) {
-    block += `  parent_resource: "${config.parentResource}"\n`
+  if (config.parentPath) {
+    block += `  parent_path: "${config.parentPath}"\n`
   }
   block += `  attributes: {\n${attrLines}\n  }\n\`\`\``
   return block
@@ -350,7 +350,7 @@ function renderPostCreateStep(step: PostCreateStep, stepNum: number, modelName: 
 Tool: create_model
 Parameters:
   model: "${step.model}"
-  parent_resource: "${step.parentTemplate}"
+  parent_path: "${step.parentTemplate}"
   attributes: {
 ${attrLines}
   }

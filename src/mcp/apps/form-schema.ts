@@ -298,11 +298,19 @@ function buildField(
 
       // Detect nested associations (e.g., categories nested under themes)
       const targetModel = allModelClasses?.[assoc.target_model]
-      const nested = targetModel?.api?.nested
-      if (nested?.nestedOnly) {
-        field.association.nested = {
-          pathTemplate: nested.pathTemplate!,
-          parentKey: nested.parentKey!
+      if (targetModel?.api?.standalone === false && targetModel.api?.parent) {
+        const parentNames = Array.isArray(targetModel.api.parent)
+          ? targetModel.api.parent
+          : [targetModel.api.parent]
+        const parentName = parentNames[0]!
+        const parentModelClass = allModelClasses?.[parentName]
+        if (parentModelClass) {
+          field.association.nested = {
+            parentModel: parentName,
+            childEndpoint: targetModel.endpoint
+          }
+          // Override endpoint to be the parent's endpoint (used for path construction)
+          field.association.endpoint = parentModelClass.endpoint
         }
       }
     } else {

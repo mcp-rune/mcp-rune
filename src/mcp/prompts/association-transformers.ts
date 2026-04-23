@@ -286,7 +286,7 @@ After the main record is created, for EACH selected ${model}:
 \`\`\`
 create_model(
   model: "${pc.model}",
-  parent_resource: "${pc.parentPath}",
+  parent_path: "${pc.parentPath}",
   attributes: ${JSON.stringify(pc.attributeMap).replace(/\$/g, '{selected_')}
 )
 \`\`\``
