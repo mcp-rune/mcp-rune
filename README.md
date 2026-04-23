@@ -2,7 +2,7 @@
   <a href="https://github.com/dsaenztagarro/mcp-kit/actions/workflows/ci.yml"><img src="https://github.com/dsaenztagarro/mcp-kit/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <img src="https://img.shields.io/badge/MCP-2025--06--18-blue" alt="MCP Spec" />
   <img src="https://img.shields.io/badge/node-%3E%3D24-green" alt="Node.js" />
-  <img src="https://img.shields.io/badge/tests-2054%20passing-brightgreen" alt="Tests" />
+  <img src="https://img.shields.io/badge/tests-2177%20passing-brightgreen" alt="Tests" />
   <img src="https://img.shields.io/badge/coverage-81%25-yellow" alt="Coverage" />
   <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License" />
 </p>
@@ -261,6 +261,14 @@ mcp-kit connects to any REST API through pluggable **API conventions**:
 
 The convention handles payload wrapping, association resolution, and response normalization. Need a different API style? Implement a convention — the rest of the framework adapts.
 
+**The service layer** (`ModelService` + `EndpointResolver`) sits between tools and the API client, providing a layered endpoint resolution chain inspired by Ember Data's Adapter pattern:
+
+```
+Per-action override → Collection override → Nested routing → Namespace → Base endpoint
+```
+
+Configure per-model namespaces, per-action endpoint overrides, or subclass `EndpointResolver` for full URL control — without changing model definitions or tool code.
+
 **Search adapters** bridge mcp-kit's generic filter format to whatever the backend expects:
 
 ```typescript
@@ -504,7 +512,8 @@ import { BaseModel } from 'mcp-kit/core'
 import type { AttributeDefinition } from 'mcp-kit/core'
 import { StdioServer, HttpServer, createServer } from 'mcp-kit/server'
 import { BaseTool, TOOL_CATEGORIES, CRUD_TOOL_CLASSES } from 'mcp-kit/tools'
-import type { ApiClient, ToolDependencies } from 'mcp-kit/tools'
+import type { ApiClient, RequestOptions, ToolDependencies } from 'mcp-kit/tools'
+import { ModelService, EndpointResolver } from 'mcp-kit/lib/mcp/services/index.js'
 import { BasePrompt, PromptContentGenerator, derivePromptSchema } from 'mcp-kit/prompts'
 import { AppRegistry, createCreateFormApp } from 'mcp-kit/apps'
 import { SearchClient, SearchAdapter } from 'mcp-kit/search'
@@ -522,6 +531,7 @@ import { migrations } from 'mcp-kit/db/migrations'
 import { BaseModel } from 'mcp-kit/core'
 import { StdioServer, HttpServer, createServer } from 'mcp-kit/server'
 import { BaseTool, TOOL_CATEGORIES, CRUD_TOOL_CLASSES } from 'mcp-kit/tools'
+import { ModelService, EndpointResolver } from 'mcp-kit/lib/mcp/services/index.js'
 import { BasePrompt, PromptContentGenerator, derivePromptSchema } from 'mcp-kit/prompts'
 import { AppRegistry, createCreateFormApp } from 'mcp-kit/apps'
 import { SearchClient, SearchAdapter } from 'mcp-kit/search'
@@ -551,9 +561,10 @@ your-server/                          (you write this)
 
 mcp-kit/                              (the framework)
     │
-    ├─ core                            BaseModel, config, helpers, validators
+    ├─ core                            BaseModel, ApiConfig, helpers, validators
     ├─ server                          StdioServer, HttpServer, createServer
     ├─ tools                           BaseTool, CRUD tools, categories
+    ├─ mcp/services                    ModelService, EndpointResolver
     ├─ prompts                         BasePrompt, strategies, pipeline
     ├─ apps                            AppRegistry, 6 generic app factories
     ├─ domain                          Workflows, knowledge, business rules
@@ -577,6 +588,7 @@ mcp-kit/                              (the framework)
 | [MCP Apps](docs/guides/mcp-apps-guide.md)                                       | Interactive UI forms and views               |
 | [MCP Apps Architecture](docs/guides/mcp-apps-architecture.md)                   | Schema-driven app internals                  |
 | [Model Form Customization](docs/guides/model-form-customization-guide.md)       | Customize form rendering                     |
+| [Service Layer](docs/guides/service-layer-guide.md)                             | ModelService, EndpointResolver, namespaces   |
 | [Search & Filters](docs/guides/search-filter-integration-guide.md)              | Search adapters and filter transformation    |
 | [Domain Knowledge](docs/guides/domain-knowledge-guide.md)                       | Business rules, knowledge, workflows         |
 | [Workflow Creation](docs/guides/workflow-creation-guide.md)                     | Multi-step operational workflows             |

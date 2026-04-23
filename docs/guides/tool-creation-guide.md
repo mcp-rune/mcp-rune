@@ -60,6 +60,47 @@ The following CRUD tools are provided in `lib/mcp/tools/crud/` and shared across
 
 These tools are completely generic — they have zero server-specific logic. They receive their configuration (models, serverContext) via constructor dependency injection.
 
+### Service Layer
+
+CRUD tools delegate to `ModelService` when injected, which composes `EndpointResolver` + `Convention` + `ApiClient`. This separates concerns:
+
+```
+┌─────────────────────────────────────────────────┐
+│  MCP Tool Layer                                  │
+│  (input validation, response formatting,         │
+│   vector storage, usage rules)                   │
+└──────────────┬──────────────────┬───────────────┘
+               │                  │
+    ┌──────────▼──────┐  ┌───────▼────────┐
+    │  ModelService    │  │  SearchClient   │
+    │  (CRUD ops)      │  │  (search/lookup)│
+    └──────┬───┬──────┘  └───────┬────────┘
+           │   │                 │
+    ┌──────▼┐ ┌▼──────────┐ ┌───▼──────────┐
+    │Endpoint│ │Convention │ │SearchAdapter  │
+    │Resolver│ │(payload/  │ │(query body   │
+    │(URLs)  │ │ response) │ │ building)    │
+    └──────┬┘ └─────┬─────┘ └───┬──────────┘
+           │        │            │
+           └────────┼────────────┘
+                    │
+              ┌─────▼─────┐
+              │ ApiClient  │
+              │ (HTTP)     │
+              └────────────┘
+```
+
+To inject ModelService in your tool registry:
+
+```typescript
+import { ModelService } from 'mcp-kit/lib/mcp/services/index.js'
+
+const modelService = new ModelService({ apiClient, models, namespace: 'api/v1' })
+const tool = new CreateModelTool({ apiClient, modelService, models, logger })
+```
+
+See the [Service Layer Guide](service-layer-guide.md) for full details.
+
 ## Tool Categories
 
 Tools are organized by category which determines authentication requirements:
@@ -216,16 +257,17 @@ export class MyGenericTool extends BaseTool {
 
 ### Available Helpers
 
-| Method                       | Description                   |
-| ---------------------------- | ----------------------------- |
-| `requireApiClient()`         | Throws if not authenticated   |
-| `formatResponse(data)`       | Wrap successful response      |
-| `formatError(error)`         | Wrap error response           |
-| `validateModel(name)`        | Check model exists in config  |
-| `getModelConfig(name)`       | Get model configuration       |
-| `getModelEnum()`             | Get list of available models  |
-| `truncateString(s, n)`       | Truncate string to max length |
-| `sanitizeResponseData(data)` | JSON stringify for display    |
+| Method                       | Description                                |
+| ---------------------------- | ------------------------------------------ |
+| `requireApiClient()`         | Throws if not authenticated                |
+| `this.modelService`          | ModelService instance (optional, for CRUD) |
+| `formatResponse(data)`       | Wrap successful response                   |
+| `formatError(error)`         | Wrap error response                        |
+| `validateModel(name)`        | Check model exists in config               |
+| `getModelConfig(name)`       | Get model configuration                    |
+| `getModelEnum()`             | Get list of available models               |
+| `truncateString(s, n)`       | Truncate string to max length              |
+| `sanitizeResponseData(data)` | JSON stringify for display                 |
 
 ### Optional Overrides
 
