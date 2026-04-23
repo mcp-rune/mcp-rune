@@ -38,6 +38,25 @@ export class Book extends BaseModel {
 // 10 models, still 10 tools. The LLM's context stays clean.
 ```
 
+<details>
+<summary>JavaScript version</summary>
+
+```javascript
+import { BaseModel } from 'mcp-kit/core'
+
+export class Book extends BaseModel {
+  static endpoint = 'books'
+  static attributes = {
+    title: { type: 'string', required: true, description: 'Book title' },
+    author: { type: 'string', required: true, description: 'Author name' },
+    status: { type: 'enum', enumValues: ['unread', 'reading', 'completed'], default: 'unread' },
+    rating: { type: 'integer', description: 'Rating 1-5', validation: { min: 1, max: 5 } }
+  }
+}
+```
+
+</details>
+
 ---
 
 ## Why mcp-kit?
@@ -122,6 +141,29 @@ export class ArchiveProjectTool extends BaseTool {
 }
 ```
 
+<details>
+<summary>JavaScript version</summary>
+
+```javascript
+import { BaseTool, TOOL_CATEGORIES } from 'mcp-kit'
+
+export class ArchiveProjectTool extends BaseTool {
+  static get category() {
+    return TOOL_CATEGORIES.CUSTOM
+  }
+
+  get name() {
+    return 'archive_project'
+  }
+
+  async execute({ project_id }) {
+    return this.apiClient.post(`/projects/${project_id}/archive`)
+  }
+}
+```
+
+</details>
+
 | Category       | Auth | Description                                  |
 | -------------- | :--: | -------------------------------------------- |
 | `CRUD`         | Yes  | Generic model operations                     |
@@ -172,6 +214,40 @@ export class BookPrompt extends BasePrompt {
 }
 ```
 
+<details>
+<summary>JavaScript version</summary>
+
+```javascript
+import { BasePrompt, derivePromptSchema, PromptContentGenerator } from 'mcp-kit/prompts'
+import { Book } from '../models/book.js'
+
+export class BookPrompt extends BasePrompt {
+  static strategy = 'hybrid'
+
+  static fieldGroups = {
+    identity: { fields: ['title', 'author'], context: 'Book Identity', required: true },
+    status: { fields: ['status', 'rating'], context: 'Reading Status' }
+  }
+
+  static {
+    const schema = derivePromptSchema(Book, { fieldGroups: this.fieldGroups })
+    this.fieldGroups = schema.fieldGroups
+    this.fieldDefinitions = schema.fieldDefinitions
+  }
+
+  get promptContent() {
+    return PromptContentGenerator.for(BookPrompt, 'book')
+      .add('# Book Creation Guide\n\nCreate a new book in the library.')
+      .standard()
+      .toolUsage()
+      .attributeReference()
+      .build()
+  }
+}
+```
+
+</details>
+
 The `PromptContentGenerator` pipeline assembles documentation from your model config — field tables, enum options, validation rules, workflow diagrams. Change the model, the docs update automatically.
 
 ### API-Agnostic Integration
@@ -207,6 +283,32 @@ export class ActivitySearchAdapter extends SearchAdapter {
   }
 }
 ```
+
+<details>
+<summary>JavaScript version</summary>
+
+```javascript
+import { SearchAdapter } from 'mcp-kit/search'
+
+export class ActivitySearchAdapter extends SearchAdapter {
+  buildBody(query, filters) {
+    const body = super.buildBody(query, filters)
+
+    // Transform: { duration_minutes: { from: 40, to: 120 } }
+    //        →   { min_duration: 40, max_duration: 120 }
+    const duration = filters?.duration_minutes
+    if (duration) {
+      body.min_duration = duration.from
+      body.max_duration = duration.to
+      delete body.filters?.duration_minutes
+    }
+
+    return body
+  }
+}
+```
+
+</details>
 
 ### Interactive MCP Apps
 
@@ -412,6 +514,25 @@ import { logger, tracing, errorTracking } from 'mcp-kit/services'
 import { setPool, query } from 'mcp-kit/db'
 import { migrations } from 'mcp-kit/db/migrations'
 ```
+
+<details>
+<summary>JavaScript version</summary>
+
+```javascript
+import { BaseModel } from 'mcp-kit/core'
+import { StdioServer, HttpServer, createServer } from 'mcp-kit/server'
+import { BaseTool, TOOL_CATEGORIES, CRUD_TOOL_CLASSES } from 'mcp-kit/tools'
+import { BasePrompt, PromptContentGenerator, derivePromptSchema } from 'mcp-kit/prompts'
+import { AppRegistry, createCreateFormApp } from 'mcp-kit/apps'
+import { SearchClient, SearchAdapter } from 'mcp-kit/search'
+import { DomainRegistry, WorkflowDefinition } from 'mcp-kit/domain'
+import { OAuthService } from 'mcp-kit/oauth2'
+import { logger, tracing, errorTracking } from 'mcp-kit/services'
+import { setPool, query } from 'mcp-kit/db'
+import { migrations } from 'mcp-kit/db/migrations'
+```
+
+</details>
 
 ---
 
