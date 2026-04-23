@@ -190,14 +190,15 @@ export class ArchiveProjectTool extends BaseTool {
 
 </details>
 
-| Category       | Auth | Description                                  |
-| -------------- | :--: | -------------------------------------------- |
-| `CRUD`         | Yes  | Generic model operations                     |
-| `STRATEGY`     |  No  | Prompt guidance & form validation            |
-| `AUTOCOMPLETE` | Yes  | Field value suggestions                      |
-| `MEMORY`       |  No  | Operation analysis (requires memory storage) |
-| `DOMAIN`       |  No  | Business rules, workflows, knowledge         |
-| `CUSTOM`       |  --  | Server-specific (you decide)                 |
+| Category       | Auth | Description                                            |
+| -------------- | :--: | ------------------------------------------------------ |
+| `DATA`         | Yes  | CRUD, bulk, search, and discovery on models            |
+| `STRATEGY`     |  No  | Prompt guidance & form validation                      |
+| `AUTOCOMPLETE` | Yes  | Field value suggestions from API                       |
+| `ANALYSIS`     |  No  | Qualitative data analysis sessions (vector storage)    |
+| `OPERATIONS`   |  No  | Retrospective CRUD operation analysis (vector storage) |
+| `DOMAIN`       |  No  | Domain intelligence (knowledge, rules, workflows)      |
+| `CUSTOM`       |  --  | Server-specific (you decide)                           |
 
 ### Prompt Strategies
 
