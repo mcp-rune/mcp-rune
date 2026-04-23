@@ -29,11 +29,8 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       endpoint: 'renditions',
       required: [],
       api: {
-        nested: {
-          nestedOnly: true,
-          parentModels: ['asset'],
-          pathTemplate: '{parent_endpoint}/{parent_id}/renditions'
-        }
+        parent: 'asset',
+        standalone: false
       }
     }
   }
@@ -71,7 +68,7 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       expect(MAX_BATCH_SIZE).toBe(25)
     })
 
-    it('should have model, action, records, record_ids, attributes, parent_resource, and user_id in inputSchema', () => {
+    it('should have model, action, records, record_ids, attributes, parent_path, and user_id in inputSchema', () => {
       const tool = new BulkActionModelsTool({ models: mockModels })
       const schema = tool.inputSchema
       expect(schema.model).toBeDefined()
@@ -79,7 +76,7 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       expect(schema.records).toBeDefined()
       expect(schema.record_ids).toBeDefined()
       expect(schema.attributes).toBeDefined()
-      expect(schema.parent_resource).toBeDefined()
+      expect(schema.parent_path).toBeDefined()
       expect(schema.user_id).toBeDefined()
     })
 
@@ -237,8 +234,8 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
 
   // ─── CREATE — NESTED-ONLY MODELS ─────────────────────────────────
 
-  describe('create — nested-only with parent_resource', () => {
-    it('should POST all records to the parent_resource endpoint', async () => {
+  describe('create — nested-only with parent_path', () => {
+    it('should POST all records to the parent_path endpoint', async () => {
       mockApiClient.post.mockResolvedValueOnce({ id: 10 }).mockResolvedValueOnce({ id: 11 })
 
       const tool = new BulkActionModelsTool({
@@ -251,7 +248,7 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
         model: 'rendition',
         action: 'create',
         records: [{ format: 'mp4' }, { format: 'hls' }],
-        parent_resource: 'assets/123/renditions'
+        parent_path: 'assets/123/renditions'
       })
 
       expect(result.isError).toBeFalsy()
@@ -275,7 +272,7 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
     })
   })
 
-  describe('create — nested-only without parent_resource', () => {
+  describe('create — nested-only without parent_path', () => {
     it('should fail fast with error listing valid parents', async () => {
       const tool = new BulkActionModelsTool({
         apiClient: mockApiClient,
@@ -294,13 +291,13 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
 
       const text = result.content[0].text
       expect(text).toContain('nested-only')
-      expect(text).toContain('parent_resource')
+      expect(text).toContain('parent_path')
       expect(text).toContain('asset')
     })
   })
 
-  describe('create — parent_resource on non-nested model', () => {
-    it('should use parent_resource as endpoint override', async () => {
+  describe('create — parent_path on non-nested model', () => {
+    it('should use parent_path as endpoint override', async () => {
       mockApiClient.post.mockResolvedValueOnce({ id: 99, name: 'Override' })
 
       const tool = new BulkActionModelsTool({
@@ -313,7 +310,7 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
         model: 'asset',
         action: 'create',
         records: [{ name: 'Override' }],
-        parent_resource: 'custom/path/assets'
+        parent_path: 'custom/path/assets'
       })
 
       expect(result.isError).toBeFalsy()
@@ -331,7 +328,7 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
 
   // ─── CREATE — PER-RECORD PARENT_RESOURCE ─────────────────────────
 
-  describe('create — per-record parent_resource with different parents', () => {
+  describe('create — per-record parent_path with different parents', () => {
     it('should POST each record to its own parent endpoint', async () => {
       mockApiClient.post.mockResolvedValueOnce({ id: 10 }).mockResolvedValueOnce({ id: 11 })
 
@@ -345,8 +342,8 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
         model: 'rendition',
         action: 'create',
         records: [
-          { parent_resource: 'assets/100/renditions', format: 'mp4' },
-          { parent_resource: 'assets/200/renditions', format: 'hls' }
+          { parent_path: 'assets/100/renditions', format: 'mp4' },
+          { parent_path: 'assets/200/renditions', format: 'hls' }
         ]
       })
 
@@ -369,8 +366,8 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
     })
   })
 
-  describe('create — mutual exclusivity of tool-level and per-record parent_resource', () => {
-    it('should throw when both tool-level and per-record parent_resource are provided', async () => {
+  describe('create — mutual exclusivity of tool-level and per-record parent_path', () => {
+    it('should throw when both tool-level and per-record parent_path are provided', async () => {
       const tool = new BulkActionModelsTool({
         apiClient: mockApiClient,
         models: mockModels,
@@ -380,19 +377,19 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       const result = await tool.execute({
         model: 'rendition',
         action: 'create',
-        records: [{ parent_resource: 'assets/100/renditions', format: 'mp4' }],
-        parent_resource: 'assets/200/renditions'
+        records: [{ parent_path: 'assets/100/renditions', format: 'mp4' }],
+        parent_path: 'assets/200/renditions'
       })
 
       expect(result.isError).toBe(true)
       const text = result.content[0].text
       expect(text).toContain('Cannot combine')
-      expect(text).toContain('parent_resource')
+      expect(text).toContain('parent_path')
     })
   })
 
-  describe('create — non-nested model with per-record parent_resource', () => {
-    it('should use per-record parent_resource as endpoint, fall back to model endpoint', async () => {
+  describe('create — non-nested model with per-record parent_path', () => {
+    it('should use per-record parent_path as endpoint, fall back to model endpoint', async () => {
       mockApiClient.post
         .mockResolvedValueOnce({ id: 1, name: 'A' })
         .mockResolvedValueOnce({ id: 2, name: 'B' })
@@ -406,7 +403,7 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       const result = await tool.execute({
         model: 'asset',
         action: 'create',
-        records: [{ parent_resource: 'custom/path/assets', name: 'A' }, { name: 'B' }]
+        records: [{ parent_path: 'custom/path/assets', name: 'A' }, { name: 'B' }]
       })
 
       expect(result.isError).toBeFalsy()
@@ -423,8 +420,8 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
     })
   })
 
-  describe('create — nested-only, some records missing parent_resource', () => {
-    it('should validation_error records without parent_resource and succeed others', async () => {
+  describe('create — nested-only, some records missing parent_path', () => {
+    it('should validation_error records without parent_path and succeed others', async () => {
       mockApiClient.post.mockResolvedValueOnce({ id: 10 })
 
       const tool = new BulkActionModelsTool({
@@ -436,7 +433,7 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       const result = await tool.execute({
         model: 'rendition',
         action: 'create',
-        records: [{ parent_resource: 'assets/100/renditions', format: 'mp4' }, { format: 'hls' }]
+        records: [{ parent_path: 'assets/100/renditions', format: 'mp4' }, { format: 'hls' }]
       })
 
       expect(result.isError).toBeFalsy()
@@ -446,7 +443,7 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       expect(body.results[0]).toMatchObject({ index: 0, status: 'created', id: 10 })
       expect(body.results[1]).toMatchObject({ index: 1, status: 'validation_error' })
       expect(body.results[1].errors[0]).toContain('nested-only')
-      expect(body.results[1].errors[0]).toContain('parent_resource')
+      expect(body.results[1].errors[0]).toContain('parent_path')
 
       expect(mockApiClient.post).toHaveBeenCalledTimes(1)
       expect(mockApiClient.post).toHaveBeenCalledWith(

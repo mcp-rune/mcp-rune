@@ -73,7 +73,10 @@ export class CreateModelTool extends SaveModelBaseTool {
       }
 
       this.validateModel(model)
-      const options = { userId: user_id, parentPath: parent_path }
+      const options =
+        user_id || parent_path
+          ? { ...(user_id && { userId: user_id }), ...(parent_path && { parentPath: parent_path }) }
+          : undefined
 
       const data = await service.create(model, attributes, options)
 
