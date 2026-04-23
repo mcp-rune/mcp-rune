@@ -2,7 +2,7 @@ import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 export type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
-import type { ApiClient } from '#src/mcp/search/types.js'
+import type { ApiClient, RequestOptions } from '#src/mcp/search/types.js'
 
 import type { AssociationConfig, BaseConvention } from '../api-conventions/base-convention.js'
 import type { ToolCategory } from './categories.js'
@@ -12,7 +12,7 @@ import { getCategoryConfig, TOOL_CATEGORIES } from './categories.js'
 // Types
 // ============================================================================
 
-export type { ApiClient }
+export type { ApiClient, RequestOptions }
 
 /** Logger interface expected by tools */
 export interface ToolLogger {

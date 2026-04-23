@@ -84,12 +84,7 @@ export class DeleteModelTool extends BaseTool {
         })
       }
 
-      // Cast to allow server-specific options (e.g., userId impersonation)
-      const api = this.apiClient! as unknown as Record<
-        string,
-        (...args: unknown[]) => Promise<unknown>
-      >
-      await api.delete!(`${modelConfig.endpoint}/${record_id}`, options)
+      await this.apiClient!.delete(`${modelConfig.endpoint}/${record_id}`, options)
 
       // Fire-and-forget: store operation embedding for retrospective analysis
       storeOperation({

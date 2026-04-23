@@ -102,14 +102,8 @@ Use this tool to:
         })
       }
 
-      // Cast to allow server-specific options (e.g., userId impersonation)
-      const api = this.apiClient! as unknown as Record<
-        string,
-        (...args: unknown[]) => Promise<unknown>
-      >
-
       if (record_id) {
-        const data = await api.get!(`${modelConfig.endpoint}/${record_id}`, {}, options)
+        const data = await this.apiClient!.get(`${modelConfig.endpoint}/${record_id}`, {}, options)
         return this.formatResponse(pickFields(data, fields) as Record<string, unknown>)
       } else {
         // Search/list records
@@ -119,10 +113,7 @@ Use this tool to:
           page: currentPage,
           per_page: per_page ?? 20
         }
-        const data = (await api.get!(modelConfig.endpoint, queryParams, options)) as Record<
-          string,
-          unknown
-        >
+        const data = await this.apiClient!.get(modelConfig.endpoint, queryParams, options)
 
         // Transient context: emit _meta hint for large results so the client
         // can collapse this response after a consumer tool processes it

@@ -101,16 +101,11 @@ export class UpdateModelTool extends SaveModelBaseTool {
       }
 
       // Build payload using convention adapter
-      // Cast to allow server-specific options (e.g., userId impersonation)
-      const api = this.apiClient! as unknown as Record<
-        string,
-        (...args: unknown[]) => Promise<unknown>
-      >
-      const data = (await api.patch!(
+      const data = await this.apiClient!.patch(
         `${modelConfig.endpoint}/${record_id}`,
         this.buildRequestPayload(model, attributes),
         options
-      )) as Record<string, unknown>
+      )
 
       if (this.logger) {
         this.logger.info('Model updated successfully', {

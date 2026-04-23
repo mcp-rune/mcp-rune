@@ -173,10 +173,10 @@ export class SearchRecordsTool extends BaseTool {
     const defaultAdapter = ctx?.defaultAdapter as
       | NonNullable<ConstructorParameters<typeof SearchClient>[1]>['defaultAdapter']
       | undefined
-    return new SearchClient(
-      this.apiClient! as unknown as ConstructorParameters<typeof SearchClient>[0],
-      { searchGroups, defaultAdapter } as unknown as ConstructorParameters<typeof SearchClient>[1]
-    )
+    return new SearchClient(this.apiClient!, {
+      searchGroups,
+      defaultAdapter
+    } as ConstructorParameters<typeof SearchClient>[1])
   }
 
   /**

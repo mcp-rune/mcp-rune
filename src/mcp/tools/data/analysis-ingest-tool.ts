@@ -159,13 +159,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         child_resource?: string
       }
 
-      const wrappedClient = this.logger
-        ? new LoggingApiClient(this.apiClient!, this.logger)
-        : this.apiClient!
-      const api = wrappedClient as unknown as Record<
-        string,
-        (...args: unknown[]) => Promise<unknown>
-      >
+      const api = this.logger ? new LoggingApiClient(this.apiClient!, this.logger) : this.apiClient!
       const options = user_id ? { userId: user_id } : {}
 
       // --- Nested resource ingestion mode ---
@@ -266,7 +260,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
 
   /** Fetch and store a single page */
   private async _ingestPage(
-    api: Record<string, (...args: unknown[]) => Promise<unknown>>,
+    api: ApiClient,
     model: string,
     ModelClass: Record<string, unknown>,
     modelConfig: ModelConfig,
@@ -305,7 +299,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     } else {
       // Use plain GET for simple listing (no filters)
       const queryParams = { page, per_page: perPage }
-      const data = (await api.get!(modelConfig.endpoint, queryParams, apiOptions)) as Record<
+      const data = (await api.get(modelConfig.endpoint, queryParams, apiOptions)) as Record<
         string,
         unknown
       >
@@ -352,7 +346,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
 
   /** Auto-paginate and ingest all pages */
   private async _ingestAllPages(
-    api: Record<string, (...args: unknown[]) => Promise<unknown>>,
+    api: ApiClient,
     model: string,
     ModelClass: Record<string, unknown>,
     modelConfig: ModelConfig,
@@ -397,7 +391,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       } else {
         // Use plain GET for simple listing
         const queryParams = { page: currentPage, per_page: perPage }
-        const data = (await api.get!(modelConfig.endpoint, queryParams, apiOptions)) as Record<
+        const data = (await api.get(modelConfig.endpoint, queryParams, apiOptions)) as Record<
           string,
           unknown
         >
@@ -469,7 +463,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
 
   /** Ingest nested resources for parent records */
   private async _ingestNestedResources(
-    api: Record<string, (...args: unknown[]) => Promise<unknown>>,
+    api: ApiClient,
     analysisId: string,
     parentModel: string,
     childResource: string,
@@ -551,7 +545,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     const tasks = parentIds.map((parentId) => async () => {
       try {
         const endpoint = `${parentConfig.endpoint}/${parentId}/${childPath}`
-        const data = (await api.get!(endpoint, {}, apiOptions)) as Record<string, unknown>
+        const data = (await api.get(endpoint, {}, apiOptions)) as Record<string, unknown>
         const rawRecords = convention.extractNestedRecords(
           data,
           childConfig?.attributes as Record<string, unknown> | undefined

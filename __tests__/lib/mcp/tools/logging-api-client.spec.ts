@@ -24,31 +24,31 @@ describe('LoggingApiClient', () => {
 
   it('should delegate get() and return the result unchanged', async () => {
     const result = await client.get('/users', { page: 1 })
-    expect(inner.get).toHaveBeenCalledWith('/users', { page: 1 })
+    expect(inner.get).toHaveBeenCalledWith('/users', { page: 1 }, undefined)
     expect(result).toEqual({ id: 1, name: 'test' })
   })
 
   it('should delegate post() and return the result unchanged', async () => {
     const result = await client.post('/users', { name: 'new' })
-    expect(inner.post).toHaveBeenCalledWith('/users', { name: 'new' })
+    expect(inner.post).toHaveBeenCalledWith('/users', { name: 'new' }, undefined)
     expect(result).toEqual({ created: true })
   })
 
   it('should delegate put() and return the result unchanged', async () => {
     const result = await client.put('/users/1', { name: 'updated' })
-    expect(inner.put).toHaveBeenCalledWith('/users/1', { name: 'updated' })
+    expect(inner.put).toHaveBeenCalledWith('/users/1', { name: 'updated' }, undefined)
     expect(result).toEqual({ updated: true })
   })
 
   it('should delegate patch() and return the result unchanged', async () => {
     const result = await client.patch('/users/1', { name: 'patched' })
-    expect(inner.patch).toHaveBeenCalledWith('/users/1', { name: 'patched' })
+    expect(inner.patch).toHaveBeenCalledWith('/users/1', { name: 'patched' }, undefined)
     expect(result).toEqual({ patched: true })
   })
 
   it('should delegate delete() and return the result unchanged', async () => {
     const result = await client.delete('/users/1')
-    expect(inner.delete).toHaveBeenCalledWith('/users/1')
+    expect(inner.delete).toHaveBeenCalledWith('/users/1', undefined)
     expect(result).toEqual({ deleted: true })
   })
 
