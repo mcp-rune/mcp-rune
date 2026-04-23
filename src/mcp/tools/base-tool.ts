@@ -3,6 +3,7 @@ import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 export type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 import type { ApiClient, RequestOptions } from '#src/mcp/search/types.js'
+import type { ModelService } from '#src/mcp/services/model-service.js'
 
 import type { AssociationConfig, BaseConvention } from '../api-conventions/base-convention.js'
 import type { ToolCategory } from './categories.js'
@@ -83,6 +84,7 @@ export type ModelsRegistry = Record<string, ModelConfig>
 /** Dependencies injected into tool constructors */
 export interface ToolDependencies {
   apiClient?: ApiClient
+  modelService?: ModelService
   logger?: ToolLogger
   models?: ModelsRegistry
   promptRegistry?: PromptRegistry
@@ -161,6 +163,7 @@ export class BaseTool {
   }
 
   apiClient: ApiClient | undefined
+  modelService: ModelService | undefined
   logger: ToolLogger | undefined
   models: ModelsRegistry
   promptRegistry: PromptRegistry | undefined
@@ -169,6 +172,7 @@ export class BaseTool {
 
   constructor(dependencies: ToolDependencies = {}) {
     this.apiClient = dependencies.apiClient
+    this.modelService = dependencies.modelService
     this.logger = dependencies.logger
     this.models = dependencies.models ?? {}
     this.promptRegistry = dependencies.promptRegistry
