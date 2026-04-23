@@ -3,7 +3,7 @@ import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 export type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 import type { ApiClient, RequestOptions } from '#src/mcp/search/types.js'
-import type { ModelService } from '#src/mcp/services/model-service.js'
+import { ModelService } from '#src/mcp/services/model-service.js'
 
 import type { AssociationConfig, BaseConvention } from '../api-conventions/base-convention.js'
 import type { ToolCategory } from './categories.js'
@@ -173,21 +173,38 @@ export class BaseTool {
   }
 
   apiClient: ApiClient | undefined
-  modelService: ModelService | undefined
   logger: ToolLogger | undefined
   models: ModelsRegistry
   promptRegistry: PromptRegistry | undefined
   serverContext: ServerContext
   domainRegistry: DomainRegistry | undefined
 
+  private _modelService: ModelService | undefined
+
   constructor(dependencies: ToolDependencies = {}) {
     this.apiClient = dependencies.apiClient
-    this.modelService = dependencies.modelService
+    this._modelService = dependencies.modelService
     this.logger = dependencies.logger
     this.models = dependencies.models ?? {}
     this.promptRegistry = dependencies.promptRegistry
     this.serverContext = dependencies.serverContext ?? {}
     this.domainRegistry = dependencies.domainRegistry
+  }
+
+  /**
+   * ModelService instance for CRUD operations.
+   * Lazily constructed from apiClient + models when not explicitly injected.
+   */
+  get modelService(): ModelService | undefined {
+    if (this._modelService) return this._modelService
+    if (this.apiClient) {
+      this._modelService = new ModelService({
+        apiClient: this.apiClient,
+        models: this.models,
+        logger: this.logger
+      })
+    }
+    return this._modelService
   }
 
   /** Tool name (override in subclasses) */
@@ -355,5 +372,11 @@ export class BaseTool {
     if (!this.apiClient) {
       throw new Error('Not authenticated. Please authenticate first.')
     }
+  }
+
+  /** Check that ModelService is available (requires apiClient). Returns the instance. */
+  requireModelService(): ModelService {
+    this.requireApiClient()
+    return this.modelService!
   }
 }

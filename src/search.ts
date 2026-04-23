@@ -11,6 +11,3 @@ export type {
   SearchModelClass,
   SearchResult
 } from './mcp/search/types.js'
-
-/** @deprecated Use SearchService instead. */
-export { SearchService as SearchClient } from './mcp/search/search-service.js'

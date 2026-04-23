@@ -8,7 +8,7 @@ import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { SaveModelBaseTool } from '../save-model-base-tool.js'
 
 /**
- * Tool for creating new records
+ * Tool for creating new records.
  *
  * Delegates CRUD to ModelService. Owns MCP concerns:
  * input schema, response formatting, vector storage, usage rules.
@@ -53,7 +53,7 @@ export class CreateModelTool extends SaveModelBaseTool {
 
   override async execute(args: Record<string, unknown>): Promise<ToolResult> {
     try {
-      this.requireApiClient()
+      const service = this.requireModelService()
 
       const { model, attributes, user_id } = args as {
         model: string
@@ -64,77 +64,7 @@ export class CreateModelTool extends SaveModelBaseTool {
       this.validateModel(model)
       const options = user_id ? { userId: user_id } : undefined
 
-      let data: Record<string, unknown>
-
-      if (this.modelService) {
-        data = await this.modelService.create(model, attributes, options)
-      } else {
-        // Fallback: direct API call (backward compatibility)
-        const modelConfig = this.getModelConfig(model)!
-
-        if (modelConfig.api?.readOnly) {
-          throw new Error(
-            `The '${model}' model is read-only and cannot be created. ` +
-              `${modelConfig.description ? modelConfig.description + ' ' : ''}` +
-              'Use find_model to look up existing records.'
-          )
-        }
-
-        let endpoint = modelConfig.endpoint
-        const nested = modelConfig.api?.nested
-        if (nested?.nestedOnly) {
-          const parentId = attributes[nested.parentKey!] as string | undefined
-          if (parentId) {
-            endpoint = nested.pathTemplate!.replace(`:${nested.parentKey}`, parentId)
-          } else {
-            throw new Error(
-              `'${model}' requires parent. Provide '${nested.parentKey}' in attributes.`
-            )
-          }
-        } else if (nested?.pathTemplate) {
-          const parentId = attributes[nested.parentKey!] as string | undefined
-          if (parentId) {
-            endpoint = nested.pathTemplate.replace(`:${nested.parentKey}`, parentId)
-          }
-        }
-
-        const missingFields = (
-          ((modelConfig as Record<string, unknown>).required as string[]) ?? []
-        ).filter((field: string) => !attributes || attributes[field] === undefined)
-
-        if (missingFields.length > 0) {
-          return {
-            content: [
-              { type: 'text', text: `Missing required fields: ${missingFields.join(', ')}` }
-            ],
-            isError: true
-          }
-        }
-
-        if (this.logger) {
-          this.logger.info('Creating model', {
-            service: 'mcp-tools',
-            tool: 'create_model',
-            model,
-            impersonating: user_id ?? null
-          })
-        }
-
-        data = await this.apiClient!.post(
-          endpoint,
-          this.buildRequestPayload(model, attributes),
-          options
-        )
-
-        if (this.logger) {
-          this.logger.info('Model created successfully', {
-            service: 'mcp-tools',
-            tool: 'create_model',
-            model,
-            id: data.id
-          })
-        }
-      }
+      const data = await service.create(model, attributes, options)
 
       // Fire-and-forget: store operation embedding for retrospective analysis
       storeOperation({

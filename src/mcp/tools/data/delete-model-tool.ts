@@ -7,7 +7,7 @@ import type { ToolResult } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
 
 /**
- * Tool for deleting records
+ * Tool for deleting records.
  *
  * Delegates CRUD to ModelService. Owns MCP concerns:
  * input schema, response formatting, vector storage.
@@ -41,7 +41,7 @@ export class DeleteModelTool extends BaseTool {
 
   override async execute(args: Record<string, unknown>): Promise<ToolResult> {
     try {
-      this.requireApiClient()
+      const service = this.requireModelService()
 
       const { model, record_id, user_id } = args as {
         model: string
@@ -59,33 +59,7 @@ export class DeleteModelTool extends BaseTool {
       }
 
       const options = user_id ? { userId: user_id } : undefined
-
-      if (this.modelService) {
-        await this.modelService.delete(model, record_id, options)
-      } else {
-        // Fallback: direct API call (backward compatibility)
-        const modelConfig = this.getModelConfig(model)!
-
-        if (modelConfig.api?.readOnly) {
-          throw new Error(
-            `The '${model}' model is read-only and cannot be deleted. ` +
-              `${modelConfig.description ? modelConfig.description + ' ' : ''}` +
-              'Use find_model to look up existing records.'
-          )
-        }
-
-        if (this.logger) {
-          this.logger.info('Deleting model', {
-            service: 'mcp-tools',
-            tool: 'delete_model',
-            model,
-            record_id,
-            impersonating: user_id ?? null
-          })
-        }
-
-        await this.apiClient!.delete(`${modelConfig.endpoint}/${record_id}`, options)
-      }
+      await service.delete(model, record_id, options)
 
       // Fire-and-forget: store operation embedding for retrospective analysis
       storeOperation({

@@ -13,14 +13,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **`RequestOptions` on `ApiClient`** — optional third parameter on all ApiClient methods for typed request options (e.g., `userId` impersonation). Eliminates the `as unknown as Record<string, (...args) => Promise>` cast that was duplicated across 8+ tool files.
 - **`namespace` on `ApiConfig`** — server-wide default with per-model override, like Ember Data's namespace property. Prefix all model endpoints with an API namespace (e.g., `api/v1`).
 - **`endpoints` on `ApiConfig`** — per-action endpoint overrides (`collection`, `record`, `create`, `update`, `delete`) for models with non-standard API paths.
-- **`modelService` on `ToolDependencies`** — optional dependency for incremental adoption. CRUD tools delegate to ModelService when available, falling back to direct ApiClient calls.
+- **`modelService` on `ToolDependencies`** — optional dependency. `BaseTool` lazily constructs a `ModelService` from `apiClient` + `models` when not explicitly injected.
+- **`requireModelService()`** — helper on `BaseTool` that ensures `ModelService` is available (calls `requireApiClient()` first).
 - **Service layer guide** — new documentation at `docs/guides/service-layer-guide.md`.
+- **`AGENTS.md`** — project-level agent instructions per [agents.md](https://agents.md) convention.
 
 ### Changed
 
-- **CRUD tools refactored** — `CreateModelTool`, `FindModelTool`, `UpdateModelTool`, `DeleteModelTool` now delegate to `ModelService` when injected, retaining backward-compatible fallback path.
+- **CRUD tools refactored** — `CreateModelTool`, `FindModelTool`, `UpdateModelTool`, `DeleteModelTool` now delegate all CRUD operations to `ModelService`. No fallback code paths.
 - **`LoggingApiClient`** — uses typed `RequestOptions` signatures instead of `...rest: unknown[]` spread params.
-- **`SearchClient` renamed to `SearchService`** — for consistency with `ModelService` naming. `SearchClient` remains available as a deprecated re-export alias for backward compatibility.
+- **`SearchClient` renamed to `SearchService`** — for consistency with `ModelService` naming.
 
 [0.16.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.15.0...v0.16.0
 

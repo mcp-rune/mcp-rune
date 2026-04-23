@@ -195,7 +195,7 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
 
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Deleting model',
-        expect.objectContaining({ model: 'book', record_id: '42' })
+        expect.objectContaining({ model: 'book', recordId: '42' })
       )
     })
 

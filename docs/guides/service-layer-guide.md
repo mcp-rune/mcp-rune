@@ -492,16 +492,13 @@ async _createAuthenticatedInstance(ToolClass, getAccessToken) {
 | `analysis_ingest`                     | SearchService         | Filtered multi-page ingestion            |
 | MCP Apps (list, search, autocomplete) | SearchService         | Listing, search, lookup for UI rendering |
 
-### Backward Compatibility
+### How ModelService is resolved
 
-Both `modelService` and `searchService` are **optional**. When not provided:
+CRUD tools access `ModelService` via `this.requireModelService()`. `BaseTool` lazily constructs a `ModelService` from `apiClient` + `models` when one wasn't explicitly injected. This means:
 
-- CRUD tools fall back to direct `apiClient` calls (pre-service-layer behavior)
-- Search tools create a `SearchService` instance ad-hoc from `apiClient` + `serverContext`
-- No code changes required in existing tool registries
-- Adopt incrementally by adding services when ready
-
-Custom tools that call `this.apiClient.get()` directly for non-model endpoints (e.g., `users/me`) continue to work unchanged — services are for model-driven operations only.
+- If you inject `modelService` explicitly, tools use that instance (with your custom namespace, resolver, etc.)
+- If you only inject `apiClient` + `models`, tools auto-construct a default `ModelService`
+- Custom tools that call `this.apiClient.get()` directly for non-model endpoints (e.g., `users/me`) are unaffected — `ModelService` is for model CRUD operations only
 
 ---
 
