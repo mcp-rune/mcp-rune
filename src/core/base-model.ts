@@ -39,10 +39,26 @@ export interface NestedConfig {
   parentKey?: string
 }
 
+/** Per-action endpoint overrides for models with non-standard API paths. */
+export interface EndpointOverrides {
+  /** Override for collection operations (list, create). */
+  collection?: string
+  /** Override for record operations (find, update, delete) — use :id for record ID. */
+  record?: string
+  /** Action-specific overrides — take highest priority. */
+  create?: string
+  update?: string
+  delete?: string
+}
+
 export interface ApiConfig {
   convention?: BaseConvention
   readOnly?: boolean
   nested?: NestedConfig
+  /** API namespace prefix (e.g., 'api/v1'). Overrides server-wide default. */
+  namespace?: string
+  /** Per-action endpoint overrides for non-standard API paths. */
+  endpoints?: EndpointOverrides
 }
 
 export interface ModelData {

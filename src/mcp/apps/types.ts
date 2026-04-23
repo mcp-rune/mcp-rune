@@ -7,7 +7,7 @@
  */
 
 import type { AssociationConfig, BaseConvention } from '#src/mcp/api-conventions/base-convention.js'
-import type { SearchClient } from '#src/mcp/search/search-client.js'
+import type { SearchService } from '#src/mcp/search/search-service.js'
 import type { SearchApiClient } from '#src/mcp/search/types.js'
 
 import type { FormDataStore } from './form-data-store.js'
@@ -102,7 +102,7 @@ export interface ToolResult {
 /** Context passed to handleToolCall by AppRegistry */
 export interface AppToolContext {
   apiClient?: SearchApiClient
-  searchClient?: SearchClient
+  searchClient?: SearchService
   selectionStore?: SelectionStore
   formDataStore?: FormDataStore
 }

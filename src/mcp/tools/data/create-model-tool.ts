@@ -1,16 +1,17 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
+import { MissingRequiredFieldsError } from '#src/mcp/services/model-service.js'
 import { storeOperation } from '#src/services/vector-storage.js'
 
 import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { SaveModelBaseTool } from '../save-model-base-tool.js'
 
 /**
- * Tool for creating new records
+ * Tool for creating new records.
  *
- * Uses convention-based payload wrapping.
- * Supports user_id impersonation for service accounts.
+ * Delegates CRUD to ModelService. Owns MCP concerns:
+ * input schema, response formatting, vector storage, usage rules.
  */
 export class CreateModelTool extends SaveModelBaseTool {
   override get name(): string {
@@ -52,7 +53,7 @@ export class CreateModelTool extends SaveModelBaseTool {
 
   override async execute(args: Record<string, unknown>): Promise<ToolResult> {
     try {
-      this.requireApiClient()
+      const service = this.requireModelService()
 
       const { model, attributes, user_id } = args as {
         model: string
@@ -61,84 +62,9 @@ export class CreateModelTool extends SaveModelBaseTool {
       }
 
       this.validateModel(model)
+      const options = user_id ? { userId: user_id } : undefined
 
-      const modelConfig = this.getModelConfig(model)!
-
-      if (modelConfig.api?.readOnly) {
-        throw new Error(
-          `The '${model}' model is read-only and cannot be created. ` +
-            `${modelConfig.description ? modelConfig.description + ' ' : ''}` +
-            'Use find_model to look up existing records.'
-        )
-      }
-
-      const options = user_id ? { userId: user_id } : {}
-
-      // Resolve nested path template when model has nested routing
-      let endpoint = modelConfig.endpoint
-      const nested = modelConfig.api?.nested
-      if (nested?.nestedOnly) {
-        const parentId = attributes[nested.parentKey!] as string | undefined
-        if (parentId) {
-          endpoint = nested.pathTemplate!.replace(`:${nested.parentKey}`, parentId)
-        } else {
-          throw new Error(
-            `'${model}' requires parent. Provide '${nested.parentKey}' in attributes.`
-          )
-        }
-      } else if (nested?.pathTemplate) {
-        const parentId = attributes[nested.parentKey!] as string | undefined
-        if (parentId) {
-          endpoint = nested.pathTemplate.replace(`:${nested.parentKey}`, parentId)
-        }
-      }
-
-      // Validate required fields
-      const missingFields = (
-        ((modelConfig as Record<string, unknown>).required as string[]) ?? []
-      ).filter((field: string) => !attributes || attributes[field] === undefined)
-
-      if (missingFields.length > 0) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Missing required fields: ${missingFields.join(', ')}`
-            }
-          ],
-          isError: true
-        }
-      }
-
-      if (this.logger) {
-        this.logger.info('Creating model', {
-          service: 'mcp-tools',
-          tool: 'create_model',
-          model,
-          impersonating: user_id ?? null
-        })
-      }
-
-      // Build payload using convention adapter
-      // Cast to allow server-specific options (e.g., userId impersonation)
-      const api = this.apiClient! as unknown as Record<
-        string,
-        (...args: unknown[]) => Promise<unknown>
-      >
-      const data = (await api.post!(
-        endpoint,
-        this.buildRequestPayload(model, attributes),
-        options
-      )) as Record<string, unknown>
-
-      if (this.logger) {
-        this.logger.info('Model created successfully', {
-          service: 'mcp-tools',
-          tool: 'create_model',
-          model,
-          id: data.id
-        })
-      }
+      const data = await service.create(model, attributes, options)
 
       // Fire-and-forget: store operation embedding for retrospective analysis
       storeOperation({
@@ -155,6 +81,12 @@ export class CreateModelTool extends SaveModelBaseTool {
 
       return this.formatResponse({ status: 'created', model, id: data.id })
     } catch (error) {
+      if (error instanceof MissingRequiredFieldsError) {
+        return {
+          content: [{ type: 'text', text: error.message }],
+          isError: true
+        }
+      }
       return this.formatError(error as Error)
     }
   }

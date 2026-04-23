@@ -83,7 +83,7 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
         record_id: '42'
       })
 
-      expect(mockApiClient.delete).toHaveBeenCalledWith('books/42', {})
+      expect(mockApiClient.delete).toHaveBeenCalledWith('books/42', undefined)
       expect(result.isError).toBeFalsy()
       expect(result.content[0].text).toContain('success')
     })
@@ -195,7 +195,7 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
 
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Deleting model',
-        expect.objectContaining({ model: 'book', record_id: '42' })
+        expect.objectContaining({ model: 'book', recordId: '42' })
       )
     })
 

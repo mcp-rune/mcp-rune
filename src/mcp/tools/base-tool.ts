@@ -2,7 +2,8 @@ import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 export type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
-import type { ApiClient } from '#src/mcp/search/types.js'
+import type { ApiClient, RequestOptions } from '#src/mcp/search/types.js'
+import { ModelService } from '#src/mcp/services/model-service.js'
 
 import type { AssociationConfig, BaseConvention } from '../api-conventions/base-convention.js'
 import type { ToolCategory } from './categories.js'
@@ -12,7 +13,7 @@ import { getCategoryConfig, TOOL_CATEGORIES } from './categories.js'
 // Types
 // ============================================================================
 
-export type { ApiClient }
+export type { ApiClient, RequestOptions }
 
 /** Logger interface expected by tools */
 export interface ToolLogger {
@@ -65,6 +66,16 @@ export interface ModelConfig {
       pathTemplate?: string
       parentKey?: string
     }
+    /** API namespace prefix (e.g., 'api/v1'). Overrides server-wide default. */
+    namespace?: string
+    /** Per-action endpoint overrides for non-standard API paths. */
+    endpoints?: {
+      collection?: string
+      record?: string
+      create?: string
+      update?: string
+      delete?: string
+    }
   }
   search?: {
     lookup?: { endpoint?: string; fields: string[]; queryParam?: string }
@@ -83,6 +94,7 @@ export type ModelsRegistry = Record<string, ModelConfig>
 /** Dependencies injected into tool constructors */
 export interface ToolDependencies {
   apiClient?: ApiClient
+  modelService?: ModelService
   logger?: ToolLogger
   models?: ModelsRegistry
   promptRegistry?: PromptRegistry
@@ -167,13 +179,32 @@ export class BaseTool {
   serverContext: ServerContext
   domainRegistry: DomainRegistry | undefined
 
+  private _modelService: ModelService | undefined
+
   constructor(dependencies: ToolDependencies = {}) {
     this.apiClient = dependencies.apiClient
+    this._modelService = dependencies.modelService
     this.logger = dependencies.logger
     this.models = dependencies.models ?? {}
     this.promptRegistry = dependencies.promptRegistry
     this.serverContext = dependencies.serverContext ?? {}
     this.domainRegistry = dependencies.domainRegistry
+  }
+
+  /**
+   * ModelService instance for CRUD operations.
+   * Lazily constructed from apiClient + models when not explicitly injected.
+   */
+  get modelService(): ModelService | undefined {
+    if (this._modelService) return this._modelService
+    if (this.apiClient) {
+      this._modelService = new ModelService({
+        apiClient: this.apiClient,
+        models: this.models,
+        logger: this.logger
+      })
+    }
+    return this._modelService
   }
 
   /** Tool name (override in subclasses) */
@@ -341,5 +372,11 @@ export class BaseTool {
     if (!this.apiClient) {
       throw new Error('Not authenticated. Please authenticate first.')
     }
+  }
+
+  /** Check that ModelService is available (requires apiClient). Returns the instance. */
+  requireModelService(): ModelService {
+    this.requireApiClient()
+    return this.modelService!
   }
 }

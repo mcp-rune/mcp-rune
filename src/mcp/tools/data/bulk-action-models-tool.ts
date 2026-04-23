@@ -307,11 +307,6 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
     return { records: cleanRecords, endpoints, results, validIndices }
   }
 
-  /** Loosely-typed API client to allow server-specific extra args (e.g., userId impersonation) */
-  private get _api(): Record<string, (...args: unknown[]) => Promise<unknown>> {
-    return this.apiClient! as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>
-  }
-
   /** Execute create: prepare records then run parallel API calls. */
   private async _executeCreate(
     modelConfig: ModelConfig,
@@ -329,7 +324,11 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
 
     const tasks = validIndices.map(
       (i) => () =>
-        this._api.post!(endpoints[i]!, this.buildRequestPayload(model, cleanRecords[i]!), options)
+        this.apiClient!.post(
+          endpoints[i]!,
+          this.buildRequestPayload(model, cleanRecords[i]!),
+          options
+        )
           .then((data) => {
             results[i] = {
               index: i,
@@ -363,7 +362,7 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
 
     const tasks = recordIds.map(
       (id, i) => () =>
-        this._api.patch!(
+        this.apiClient!.patch(
           `${modelConfig.endpoint}/${id}`,
           this.buildRequestPayload(model, attributes),
           options
@@ -397,7 +396,7 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
 
     const tasks = records.map((record, i) => () => {
       const { record_id, ...attrs } = record
-      return this._api.patch!(
+      return this.apiClient!.patch(
         `${modelConfig.endpoint}/${record_id}`,
         this.buildRequestPayload(model, attrs),
         options
@@ -431,7 +430,7 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
 
     const tasks = recordIds.map(
       (id, i) => () =>
-        this._api.delete!(`${modelConfig.endpoint}/${id}`, options)
+        this.apiClient!.delete(`${modelConfig.endpoint}/${id}`, options)
           .then(() => {
             results[i] = { index: i, id, status: 'deleted' }
           })

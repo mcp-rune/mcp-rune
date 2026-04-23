@@ -7,9 +7,10 @@ import type { ToolResult } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
 
 /**
- * Tool for deleting records
+ * Tool for deleting records.
  *
- * Supports user_id impersonation for service accounts.
+ * Delegates CRUD to ModelService. Owns MCP concerns:
+ * input schema, response formatting, vector storage.
  */
 export class DeleteModelTool extends BaseTool {
   override get name(): string {
@@ -40,7 +41,7 @@ export class DeleteModelTool extends BaseTool {
 
   override async execute(args: Record<string, unknown>): Promise<ToolResult> {
     try {
-      this.requireApiClient()
+      const service = this.requireModelService()
 
       const { model, record_id, user_id } = args as {
         model: string
@@ -52,44 +53,13 @@ export class DeleteModelTool extends BaseTool {
 
       if (!record_id) {
         return {
-          content: [
-            {
-              type: 'text',
-              text: 'record_id is required for delete'
-            }
-          ],
+          content: [{ type: 'text', text: 'record_id is required for delete' }],
           isError: true
         }
       }
 
-      const modelConfig = this.getModelConfig(model)!
-
-      if (modelConfig.api?.readOnly) {
-        throw new Error(
-          `The '${model}' model is read-only and cannot be deleted. ` +
-            `${modelConfig.description ? modelConfig.description + ' ' : ''}` +
-            'Use find_model to look up existing records.'
-        )
-      }
-
-      const options = user_id ? { userId: user_id } : {}
-
-      if (this.logger) {
-        this.logger.info('Deleting model', {
-          service: 'mcp-tools',
-          tool: 'delete_model',
-          model,
-          record_id,
-          impersonating: user_id ?? null
-        })
-      }
-
-      // Cast to allow server-specific options (e.g., userId impersonation)
-      const api = this.apiClient! as unknown as Record<
-        string,
-        (...args: unknown[]) => Promise<unknown>
-      >
-      await api.delete!(`${modelConfig.endpoint}/${record_id}`, options)
+      const options = user_id ? { userId: user_id } : undefined
+      await service.delete(model, record_id, options)
 
       // Fire-and-forget: store operation embedding for retrospective analysis
       storeOperation({

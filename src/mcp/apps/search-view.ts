@@ -20,7 +20,7 @@ import {
   getAvailableColumnNames
 } from '#src/mcp/apps/list-schema.js'
 import { createSelectionTools } from '#src/mcp/apps/selection-tools.js'
-import type { SearchClient } from '#src/mcp/search/search-client.js'
+import type { SearchService } from '#src/mcp/search/search-service.js'
 import * as logger from '#src/services/logger.js'
 
 import type { AppModelClass, ListSchema, ToolResult } from './types.js'
@@ -97,7 +97,7 @@ export function createSearchViewApp({ modelClasses, namespace }: SearchViewOptio
 
     async handleToolCall(
       args: Record<string, unknown> = {},
-      { searchClient }: { searchClient?: SearchClient } = {}
+      { searchClient }: { searchClient?: SearchService } = {}
     ): Promise<ToolResult> {
       const {
         model,

@@ -96,7 +96,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
         {
           activity: { title: 'Updated Session' }
         },
-        {}
+        undefined
       )
       expect(result.isError).toBeFalsy()
     })
@@ -194,11 +194,11 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Updating model',
-        expect.objectContaining({ model: 'book', record_id: '5' })
+        expect.objectContaining({ model: 'book', recordId: '5' })
       )
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Model updated successfully',
-        expect.objectContaining({ model: 'book', record_id: '5' })
+        expect.objectContaining({ model: 'book', recordId: '5' })
       )
     })
 
@@ -324,7 +324,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
       expect(mockApiClient.patch).toHaveBeenCalledWith(
         'activities/1',
         { title: 'Updated Session' },
-        {}
+        undefined
       )
       expect(result.isError).toBeFalsy()
     })
@@ -424,11 +424,11 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Updating model',
-        expect.objectContaining({ model: 'book', record_id: '5' })
+        expect.objectContaining({ model: 'book', recordId: '5' })
       )
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Model updated successfully',
-        expect.objectContaining({ model: 'book', record_id: '5' })
+        expect.objectContaining({ model: 'book', recordId: '5' })
       )
     })
 

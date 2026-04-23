@@ -1,5 +1,5 @@
 import { RailsSearchAdapter } from '../../../../src/mcp/search/rails-search-adapter.js'
-import { SearchClient } from '../../../../src/mcp/search/search-client.js'
+import { SearchService } from '../../../../src/mcp/search/search-service.js'
 import { flatConvention } from '../../../__fixtures__/flat-convention.js'
 
 // Mock model classes
@@ -49,7 +49,7 @@ const searchGroups = {
   }
 }
 
-describe('SearchClient', () => {
+describe('SearchService', () => {
   let mockApiClient
   let client
 
@@ -64,7 +64,7 @@ describe('SearchClient', () => {
         pagination: { page: 1, per_page: 20, total: 1 }
       })
     }
-    client = new SearchClient(mockApiClient, { searchGroups })
+    client = new SearchService(mockApiClient, { searchGroups })
   })
 
   // ============================================================================
@@ -222,7 +222,7 @@ describe('SearchClient', () => {
 
   describe('defaultAdapter', () => {
     it('should use the provided defaultAdapter for direct search', async () => {
-      const railsClient = new SearchClient(mockApiClient, {
+      const railsClient = new SearchService(mockApiClient, {
         searchGroups,
         defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
       })
@@ -240,7 +240,7 @@ describe('SearchClient', () => {
     })
 
     it('should use the provided defaultAdapter for group search', async () => {
-      const railsClient = new SearchClient(mockApiClient, {
+      const railsClient = new SearchService(mockApiClient, {
         searchGroups,
         defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
       })
@@ -272,7 +272,7 @@ describe('SearchClient', () => {
         }
       }
 
-      const railsClient = new SearchClient(mockApiClient, {
+      const railsClient = new SearchService(mockApiClient, {
         defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
       })
 
@@ -293,7 +293,7 @@ describe('SearchClient', () => {
       const customGroups = {
         library: { ...searchGroups.library, adapter: customAdapter }
       }
-      const railsClient = new SearchClient(mockApiClient, {
+      const railsClient = new SearchService(mockApiClient, {
         searchGroups: customGroups,
         defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
       })
@@ -304,7 +304,7 @@ describe('SearchClient', () => {
     })
 
     it('should default to base SearchAdapter when no defaultAdapter provided', async () => {
-      const plainClient = new SearchClient(mockApiClient, { searchGroups })
+      const plainClient = new SearchService(mockApiClient, { searchGroups })
 
       await plainClient.search(DirectSearchModel, 'test', {
         filters: { status: 'active' }
@@ -603,7 +603,7 @@ describe('SearchClient', () => {
       const customGroups = {
         library: { ...searchGroups.library, adapter: customAdapter }
       }
-      const customClient = new SearchClient(mockApiClient, { searchGroups: customGroups })
+      const customClient = new SearchService(mockApiClient, { searchGroups: customGroups })
 
       await customClient.groupSearch('library', 'test', {
         filters: { tag_id: 3 }
@@ -718,19 +718,19 @@ describe('SearchClient', () => {
 
   describe('getSearchCapability()', () => {
     it('should return "direct" for models with search endpoint', () => {
-      expect(SearchClient.getSearchCapability(DirectSearchModel)).toBe('direct')
+      expect(SearchService.getSearchCapability(DirectSearchModel)).toBe('direct')
     })
 
     it('should return "group" for models with group search', () => {
-      expect(SearchClient.getSearchCapability(GroupSearchModel)).toBe('group')
+      expect(SearchService.getSearchCapability(GroupSearchModel)).toBe('group')
     })
 
     it('should return "list-only" for models without search config', () => {
-      expect(SearchClient.getSearchCapability(ListOnlyModel)).toBe('list-only')
+      expect(SearchService.getSearchCapability(ListOnlyModel)).toBe('list-only')
     })
 
     it('should return "list-only" when search is null', () => {
-      expect(SearchClient.getSearchCapability(NoSearchableModel)).toBe('list-only')
+      expect(SearchService.getSearchCapability(NoSearchableModel)).toBe('list-only')
     })
   })
 
@@ -740,33 +740,33 @@ describe('SearchClient', () => {
         endpoint: 'brands',
         search: { lookup: { endpoint: 'brands/autocomplete', fields: ['name'] } }
       }
-      expect(SearchClient.getLookupCapability(model)).toBe('dedicated')
+      expect(SearchService.getLookupCapability(model)).toBe('dedicated')
     })
 
     it('should return "search-fallback" for models with query config but no lookup endpoint', () => {
-      expect(SearchClient.getLookupCapability(DirectSearchModel)).toBe('search-fallback')
+      expect(SearchService.getLookupCapability(DirectSearchModel)).toBe('search-fallback')
     })
 
     it('should return "list-fallback" for models with only lookup fields', () => {
-      expect(SearchClient.getLookupCapability(ListOnlyModel)).toBe('list-fallback')
+      expect(SearchService.getLookupCapability(ListOnlyModel)).toBe('list-fallback')
     })
 
     it('should return "list-fallback" when search is null', () => {
-      expect(SearchClient.getLookupCapability(NoSearchableModel)).toBe('list-fallback')
+      expect(SearchService.getLookupCapability(NoSearchableModel)).toBe('list-fallback')
     })
   })
 
   describe('getSearchGroup()', () => {
     it('should return group name for group search models', () => {
-      expect(SearchClient.getSearchGroup(GroupSearchModel)).toBe('library')
+      expect(SearchService.getSearchGroup(GroupSearchModel)).toBe('library')
     })
 
     it('should return null for direct search models', () => {
-      expect(SearchClient.getSearchGroup(DirectSearchModel)).toBeNull()
+      expect(SearchService.getSearchGroup(DirectSearchModel)).toBeNull()
     })
 
     it('should return null for list-only models', () => {
-      expect(SearchClient.getSearchGroup(ListOnlyModel)).toBeNull()
+      expect(SearchService.getSearchGroup(ListOnlyModel)).toBeNull()
     })
   })
 

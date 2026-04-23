@@ -11,9 +11,8 @@
  *   // All calls through `logged` now emit debug logs
  */
 
-import type { ApiClient, ToolLogger } from './base-tool.js'
-
-type AnyFn = (...args: unknown[]) => Promise<unknown>
+import type { ApiClient, RequestOptions } from '../search/types.js'
+import type { ToolLogger } from './base-tool.js'
 
 const MAX_LOG_LENGTH = 2000
 
@@ -52,51 +51,51 @@ export class LoggingApiClient implements ApiClient {
   async get(
     url: string,
     params?: Record<string, unknown>,
-    ...rest: unknown[]
+    options?: RequestOptions
   ): Promise<Record<string, unknown>> {
     this._logger.debug('[API Request] GET', { url, params })
-    const result = await (this._inner.get as AnyFn).call(this._inner, url, params, ...rest)
+    const result = await this._inner.get(url, params, options)
     this._logger.debug('[API Response] GET', { url, body: summarize(result) })
-    return result as Record<string, unknown>
+    return result
   }
 
   async post(
     url: string,
     data?: Record<string, unknown>,
-    ...rest: unknown[]
+    options?: RequestOptions
   ): Promise<Record<string, unknown>> {
     this._logger.debug('[API Request] POST', { url, body: summarize(data) })
-    const result = await (this._inner.post as AnyFn).call(this._inner, url, data, ...rest)
+    const result = await this._inner.post(url, data, options)
     this._logger.debug('[API Response] POST', { url, body: summarize(result) })
-    return result as Record<string, unknown>
+    return result
   }
 
   async put(
     url: string,
     data?: Record<string, unknown>,
-    ...rest: unknown[]
+    options?: RequestOptions
   ): Promise<Record<string, unknown>> {
     this._logger.debug('[API Request] PUT', { url, body: summarize(data) })
-    const result = await (this._inner.put as AnyFn).call(this._inner, url, data, ...rest)
+    const result = await this._inner.put(url, data, options)
     this._logger.debug('[API Response] PUT', { url, body: summarize(result) })
-    return result as Record<string, unknown>
+    return result
   }
 
   async patch(
     url: string,
     data?: Record<string, unknown>,
-    ...rest: unknown[]
+    options?: RequestOptions
   ): Promise<Record<string, unknown>> {
     this._logger.debug('[API Request] PATCH', { url, body: summarize(data) })
-    const result = await (this._inner.patch as AnyFn).call(this._inner, url, data, ...rest)
+    const result = await this._inner.patch(url, data, options)
     this._logger.debug('[API Response] PATCH', { url, body: summarize(result) })
-    return result as Record<string, unknown>
+    return result
   }
 
-  async delete(url: string, ...rest: unknown[]): Promise<Record<string, unknown>> {
+  async delete(url: string, options?: RequestOptions): Promise<Record<string, unknown>> {
     this._logger.debug('[API Request] DELETE', { url })
-    const result = await (this._inner.delete as AnyFn).call(this._inner, url, ...rest)
+    const result = await this._inner.delete(url, options)
     this._logger.debug('[API Response] DELETE', { url, body: summarize(result) })
-    return result as Record<string, unknown>
+    return result
   }
 }

@@ -21,7 +21,7 @@
  *
  * @example Server setup
  * const adapter = new RailsSearchAdapter({ filtersParam: 'filters' })
- * const client = new SearchClient(api, { defaultAdapter: adapter })
+ * const client = new SearchService(api, { defaultAdapter: adapter })
  *
  * @example Model config with rangeMappings
  * static search = {
