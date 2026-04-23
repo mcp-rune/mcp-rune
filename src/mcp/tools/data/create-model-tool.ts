@@ -12,6 +12,9 @@ import { SaveModelBaseTool } from '../save-model-base-tool.js'
  *
  * Delegates CRUD to ModelService. Owns MCP concerns:
  * input schema, response formatting, vector storage, usage rules.
+ *
+ * Supports parent_path for creating nested resources
+ * (e.g., parent_path="titles/42/assets").
  */
 export class CreateModelTool extends SaveModelBaseTool {
   override get name(): string {
@@ -38,6 +41,13 @@ export class CreateModelTool extends SaveModelBaseTool {
         'Model name to create. For complex models: call get_prompt_guide first to get valid attribute values.'
       ),
       attributes: z.record(z.string(), z.unknown()).describe('Model attributes as key-value pairs'),
+      parent_path: z
+        .string()
+        .describe(
+          "Parent path for nested model creation (e.g., 'titles/42/assets'). " +
+            'Required for nested-only models.'
+        )
+        .optional(),
       user_id: z
         .string()
         .describe(
@@ -55,14 +65,15 @@ export class CreateModelTool extends SaveModelBaseTool {
     try {
       const service = this.requireModelService()
 
-      const { model, attributes, user_id } = args as {
+      const { model, attributes, parent_path, user_id } = args as {
         model: string
         attributes: Record<string, unknown>
+        parent_path?: string
         user_id?: string
       }
 
       this.validateModel(model)
-      const options = user_id ? { userId: user_id } : undefined
+      const options = { userId: user_id, parentPath: parent_path }
 
       const data = await service.create(model, attributes, options)
 

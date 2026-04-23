@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { pickFields } from '#src/core/helpers.js'
 import { defaultConvention } from '#src/mcp/api-conventions/index.js'
 import { SearchService } from '#src/mcp/search/search-service.js'
+import { buildCollectionPath } from '#src/mcp/services/compound-id.js'
 import {
   getIngestedRecordIds,
   storeAnalysisMemory,
@@ -544,7 +545,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
 
     const tasks = parentIds.map((parentId) => async () => {
       try {
-        const endpoint = `${parentConfig.endpoint}/${parentId}/${childPath}`
+        const endpoint = buildCollectionPath(parentConfig.endpoint, parentId, childPath)
         const data = (await api.get(endpoint, {}, apiOptions)) as Record<string, unknown>
         const rawRecords = convention.extractNestedRecords(
           data,
