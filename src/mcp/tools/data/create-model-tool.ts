@@ -1,6 +1,7 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
+import { MissingRequiredFieldsError } from '#src/mcp/services/model-service.js'
 import { storeOperation } from '#src/services/vector-storage.js'
 
 import type { ToolAnnotations, ToolResult } from '../base-tool.js'
@@ -9,8 +10,8 @@ import { SaveModelBaseTool } from '../save-model-base-tool.js'
 /**
  * Tool for creating new records
  *
- * Uses convention-based payload wrapping.
- * Supports user_id impersonation for service accounts.
+ * Delegates CRUD to ModelService. Owns MCP concerns:
+ * input schema, response formatting, vector storage, usage rules.
  */
 export class CreateModelTool extends SaveModelBaseTool {
   override get name(): string {
@@ -61,78 +62,78 @@ export class CreateModelTool extends SaveModelBaseTool {
       }
 
       this.validateModel(model)
+      const options = user_id ? { userId: user_id } : undefined
 
-      const modelConfig = this.getModelConfig(model)!
+      let data: Record<string, unknown>
 
-      if (modelConfig.api?.readOnly) {
-        throw new Error(
-          `The '${model}' model is read-only and cannot be created. ` +
-            `${modelConfig.description ? modelConfig.description + ' ' : ''}` +
-            'Use find_model to look up existing records.'
-        )
-      }
+      if (this.modelService) {
+        data = await this.modelService.create(model, attributes, options)
+      } else {
+        // Fallback: direct API call (backward compatibility)
+        const modelConfig = this.getModelConfig(model)!
 
-      const options = user_id ? { userId: user_id } : {}
-
-      // Resolve nested path template when model has nested routing
-      let endpoint = modelConfig.endpoint
-      const nested = modelConfig.api?.nested
-      if (nested?.nestedOnly) {
-        const parentId = attributes[nested.parentKey!] as string | undefined
-        if (parentId) {
-          endpoint = nested.pathTemplate!.replace(`:${nested.parentKey}`, parentId)
-        } else {
+        if (modelConfig.api?.readOnly) {
           throw new Error(
-            `'${model}' requires parent. Provide '${nested.parentKey}' in attributes.`
+            `The '${model}' model is read-only and cannot be created. ` +
+              `${modelConfig.description ? modelConfig.description + ' ' : ''}` +
+              'Use find_model to look up existing records.'
           )
         }
-      } else if (nested?.pathTemplate) {
-        const parentId = attributes[nested.parentKey!] as string | undefined
-        if (parentId) {
-          endpoint = nested.pathTemplate.replace(`:${nested.parentKey}`, parentId)
+
+        let endpoint = modelConfig.endpoint
+        const nested = modelConfig.api?.nested
+        if (nested?.nestedOnly) {
+          const parentId = attributes[nested.parentKey!] as string | undefined
+          if (parentId) {
+            endpoint = nested.pathTemplate!.replace(`:${nested.parentKey}`, parentId)
+          } else {
+            throw new Error(
+              `'${model}' requires parent. Provide '${nested.parentKey}' in attributes.`
+            )
+          }
+        } else if (nested?.pathTemplate) {
+          const parentId = attributes[nested.parentKey!] as string | undefined
+          if (parentId) {
+            endpoint = nested.pathTemplate.replace(`:${nested.parentKey}`, parentId)
+          }
         }
-      }
 
-      // Validate required fields
-      const missingFields = (
-        ((modelConfig as Record<string, unknown>).required as string[]) ?? []
-      ).filter((field: string) => !attributes || attributes[field] === undefined)
+        const missingFields = (
+          ((modelConfig as Record<string, unknown>).required as string[]) ?? []
+        ).filter((field: string) => !attributes || attributes[field] === undefined)
 
-      if (missingFields.length > 0) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Missing required fields: ${missingFields.join(', ')}`
-            }
-          ],
-          isError: true
+        if (missingFields.length > 0) {
+          return {
+            content: [
+              { type: 'text', text: `Missing required fields: ${missingFields.join(', ')}` }
+            ],
+            isError: true
+          }
         }
-      }
 
-      if (this.logger) {
-        this.logger.info('Creating model', {
-          service: 'mcp-tools',
-          tool: 'create_model',
-          model,
-          impersonating: user_id ?? null
-        })
-      }
+        if (this.logger) {
+          this.logger.info('Creating model', {
+            service: 'mcp-tools',
+            tool: 'create_model',
+            model,
+            impersonating: user_id ?? null
+          })
+        }
 
-      // Build payload using convention adapter
-      const data = await this.apiClient!.post(
-        endpoint,
-        this.buildRequestPayload(model, attributes),
-        options
-      )
+        data = await this.apiClient!.post(
+          endpoint,
+          this.buildRequestPayload(model, attributes),
+          options
+        )
 
-      if (this.logger) {
-        this.logger.info('Model created successfully', {
-          service: 'mcp-tools',
-          tool: 'create_model',
-          model,
-          id: data.id
-        })
+        if (this.logger) {
+          this.logger.info('Model created successfully', {
+            service: 'mcp-tools',
+            tool: 'create_model',
+            model,
+            id: data.id
+          })
+        }
       }
 
       // Fire-and-forget: store operation embedding for retrospective analysis
@@ -150,6 +151,12 @@ export class CreateModelTool extends SaveModelBaseTool {
 
       return this.formatResponse({ status: 'created', model, id: data.id })
     } catch (error) {
+      if (error instanceof MissingRequiredFieldsError) {
+        return {
+          content: [{ type: 'text', text: error.message }],
+          isError: true
+        }
+      }
       return this.formatError(error as Error)
     }
   }

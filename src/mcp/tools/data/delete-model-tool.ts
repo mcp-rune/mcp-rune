@@ -9,7 +9,8 @@ import { BaseTool } from '../base-tool.js'
 /**
  * Tool for deleting records
  *
- * Supports user_id impersonation for service accounts.
+ * Delegates CRUD to ModelService. Owns MCP concerns:
+ * input schema, response formatting, vector storage.
  */
 export class DeleteModelTool extends BaseTool {
   override get name(): string {
@@ -52,39 +53,39 @@ export class DeleteModelTool extends BaseTool {
 
       if (!record_id) {
         return {
-          content: [
-            {
-              type: 'text',
-              text: 'record_id is required for delete'
-            }
-          ],
+          content: [{ type: 'text', text: 'record_id is required for delete' }],
           isError: true
         }
       }
 
-      const modelConfig = this.getModelConfig(model)!
+      const options = user_id ? { userId: user_id } : undefined
 
-      if (modelConfig.api?.readOnly) {
-        throw new Error(
-          `The '${model}' model is read-only and cannot be deleted. ` +
-            `${modelConfig.description ? modelConfig.description + ' ' : ''}` +
-            'Use find_model to look up existing records.'
-        )
+      if (this.modelService) {
+        await this.modelService.delete(model, record_id, options)
+      } else {
+        // Fallback: direct API call (backward compatibility)
+        const modelConfig = this.getModelConfig(model)!
+
+        if (modelConfig.api?.readOnly) {
+          throw new Error(
+            `The '${model}' model is read-only and cannot be deleted. ` +
+              `${modelConfig.description ? modelConfig.description + ' ' : ''}` +
+              'Use find_model to look up existing records.'
+          )
+        }
+
+        if (this.logger) {
+          this.logger.info('Deleting model', {
+            service: 'mcp-tools',
+            tool: 'delete_model',
+            model,
+            record_id,
+            impersonating: user_id ?? null
+          })
+        }
+
+        await this.apiClient!.delete(`${modelConfig.endpoint}/${record_id}`, options)
       }
-
-      const options = user_id ? { userId: user_id } : {}
-
-      if (this.logger) {
-        this.logger.info('Deleting model', {
-          service: 'mcp-tools',
-          tool: 'delete_model',
-          model,
-          record_id,
-          impersonating: user_id ?? null
-        })
-      }
-
-      await this.apiClient!.delete(`${modelConfig.endpoint}/${record_id}`, options)
 
       // Fire-and-forget: store operation embedding for retrospective analysis
       storeOperation({

@@ -9,6 +9,9 @@ import { validateFilterParams } from '../validators.js'
 
 /**
  * Tool for finding records by ID or search criteria
+ *
+ * Delegates reads to ModelService when available. Owns MCP concerns:
+ * filter validation, field picking, transient context, response formatting.
  */
 export class FindModelTool extends BaseTool {
   override get name(): string {
@@ -77,9 +80,7 @@ Use this tool to:
       }
 
       this.validateModel(model)
-
-      const modelConfig = this.getModelConfig(model)!
-      const options = user_id ? { userId: user_id } : {}
+      const options = user_id ? { userId: user_id } : undefined
 
       // Validate filter params against model's filterable fields
       if (filters) {
@@ -103,20 +104,35 @@ Use this tool to:
       }
 
       if (record_id) {
-        const data = await this.apiClient!.get(`${modelConfig.endpoint}/${record_id}`, {}, options)
+        const data = this.modelService
+          ? await this.modelService.find(model, record_id, options)
+          : await this.apiClient!.get(
+              `${this.getModelConfig(model)!.endpoint}/${record_id}`,
+              {},
+              options
+            )
+
         return this.formatResponse(pickFields(data, fields) as Record<string, unknown>)
       } else {
-        // Search/list records
         const currentPage = page ?? 1
-        const queryParams = {
-          ...filters,
-          page: currentPage,
-          per_page: per_page ?? 20
-        }
-        const data = await this.apiClient!.get(modelConfig.endpoint, queryParams, options)
+        const data = this.modelService
+          ? await this.modelService.list(
+              model,
+              filters,
+              { page: currentPage, perPage: per_page ?? 20 },
+              options
+            )
+          : await this.apiClient!.get(
+              this.getModelConfig(model)!.endpoint,
+              {
+                ...filters,
+                page: currentPage,
+                per_page: per_page ?? 20
+              },
+              options
+            )
 
-        // Transient context: emit _meta hint for large results so the client
-        // can collapse this response after a consumer tool processes it
+        // Transient context: emit _meta hint for large results
         const records = Array.isArray(data)
           ? data
           : ((data?.data ?? data?.records ?? []) as unknown[])

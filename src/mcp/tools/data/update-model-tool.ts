@@ -9,8 +9,8 @@ import { SaveModelBaseTool } from '../save-model-base-tool.js'
 /**
  * Tool for updating existing records
  *
- * Uses convention-based payload wrapping.
- * Supports user_id impersonation for service accounts.
+ * Delegates CRUD to ModelService. Owns MCP concerns:
+ * input schema, response formatting, vector storage, usage rules.
  */
 export class UpdateModelTool extends SaveModelBaseTool {
   override get name(): string {
@@ -68,52 +68,53 @@ export class UpdateModelTool extends SaveModelBaseTool {
 
       if (!record_id) {
         return {
-          content: [
-            {
-              type: 'text',
-              text: 'record_id is required for update'
-            }
-          ],
+          content: [{ type: 'text', text: 'record_id is required for update' }],
           isError: true
         }
       }
 
-      const modelConfig = this.getModelConfig(model)!
+      const options = user_id ? { userId: user_id } : undefined
 
-      if (modelConfig.api?.readOnly) {
-        throw new Error(
-          `The '${model}' model is read-only and cannot be updated. ` +
-            `${modelConfig.description ? modelConfig.description + ' ' : ''}` +
-            'Use find_model to look up existing records.'
+      let data: Record<string, unknown>
+
+      if (this.modelService) {
+        data = await this.modelService.update(model, record_id, attributes, options)
+      } else {
+        // Fallback: direct API call (backward compatibility)
+        const modelConfig = this.getModelConfig(model)!
+
+        if (modelConfig.api?.readOnly) {
+          throw new Error(
+            `The '${model}' model is read-only and cannot be updated. ` +
+              `${modelConfig.description ? modelConfig.description + ' ' : ''}` +
+              'Use find_model to look up existing records.'
+          )
+        }
+
+        if (this.logger) {
+          this.logger.info('Updating model', {
+            service: 'mcp-tools',
+            tool: 'update_model',
+            model,
+            record_id,
+            impersonating: user_id ?? null
+          })
+        }
+
+        data = await this.apiClient!.patch(
+          `${modelConfig.endpoint}/${record_id}`,
+          this.buildRequestPayload(model, attributes),
+          options
         )
-      }
 
-      const options = user_id ? { userId: user_id } : {}
-
-      if (this.logger) {
-        this.logger.info('Updating model', {
-          service: 'mcp-tools',
-          tool: 'update_model',
-          model,
-          record_id,
-          impersonating: user_id ?? null
-        })
-      }
-
-      // Build payload using convention adapter
-      const data = await this.apiClient!.patch(
-        `${modelConfig.endpoint}/${record_id}`,
-        this.buildRequestPayload(model, attributes),
-        options
-      )
-
-      if (this.logger) {
-        this.logger.info('Model updated successfully', {
-          service: 'mcp-tools',
-          tool: 'update_model',
-          model,
-          record_id
-        })
+        if (this.logger) {
+          this.logger.info('Model updated successfully', {
+            service: 'mcp-tools',
+            tool: 'update_model',
+            model,
+            record_id
+          })
+        }
       }
 
       // Fire-and-forget: store operation embedding for retrospective analysis
