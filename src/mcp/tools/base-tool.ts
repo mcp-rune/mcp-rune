@@ -66,6 +66,16 @@ export interface ModelConfig {
       pathTemplate?: string
       parentKey?: string
     }
+    /** API namespace prefix (e.g., 'api/v1'). Overrides server-wide default. */
+    namespace?: string
+    /** Per-action endpoint overrides for non-standard API paths. */
+    endpoints?: {
+      collection?: string
+      record?: string
+      create?: string
+      update?: string
+      delete?: string
+    }
   }
   search?: {
     lookup?: { endpoint?: string; fields: string[]; queryParam?: string }

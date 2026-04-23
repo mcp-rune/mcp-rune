@@ -294,6 +294,129 @@ describe('lib/mcp/services/model-service', () => {
   })
 
   // =========================================================================
+  // Endpoint overrides (per-action)
+  // =========================================================================
+
+  describe('endpoint overrides', () => {
+    it('uses collection override for list', async () => {
+      const apiClient = makeApiClient()
+      const service = new ModelService({
+        apiClient,
+        models: {
+          book: {
+            endpoint: 'books',
+            api: { endpoints: { collection: 'catalogue/book-items' } }
+          }
+        }
+      })
+
+      await service.list('book')
+      expect(apiClient.get).toHaveBeenCalledWith(
+        'catalogue/book-items',
+        expect.any(Object),
+        undefined
+      )
+    })
+
+    it('uses per-action create override', async () => {
+      const apiClient = makeApiClient()
+      const service = new ModelService({
+        apiClient,
+        models: {
+          book: {
+            endpoint: 'books',
+            api: { endpoints: { create: 'books/draft' } }
+          }
+        }
+      })
+
+      await service.create('book', {})
+      expect(apiClient.post).toHaveBeenCalledWith('books/draft', expect.any(Object), undefined)
+    })
+
+    it('uses record override with :id substitution for find', async () => {
+      const apiClient = makeApiClient()
+      const service = new ModelService({
+        apiClient,
+        models: {
+          book: {
+            endpoint: 'books',
+            api: { endpoints: { record: 'catalogue/book-items/:id' } }
+          }
+        }
+      })
+
+      await service.find('book', '456')
+      expect(apiClient.get).toHaveBeenCalledWith('catalogue/book-items/456', {}, undefined)
+    })
+
+    it('uses per-action update override with :id substitution', async () => {
+      const apiClient = makeApiClient()
+      const service = new ModelService({
+        apiClient,
+        models: {
+          book: {
+            endpoint: 'books',
+            api: { endpoints: { update: 'books/:id/revise' } }
+          }
+        }
+      })
+
+      await service.update('book', '789', { title: 'Updated' })
+      expect(apiClient.patch).toHaveBeenCalledWith(
+        'books/789/revise',
+        expect.any(Object),
+        undefined
+      )
+    })
+
+    it('uses per-action delete override', async () => {
+      const apiClient = makeApiClient()
+      const service = new ModelService({
+        apiClient,
+        models: {
+          book: {
+            endpoint: 'books',
+            api: { endpoints: { delete: 'books/:id/archive' } }
+          }
+        }
+      })
+
+      await service.delete('book', '10')
+      expect(apiClient.delete).toHaveBeenCalledWith('books/10/archive', undefined)
+    })
+  })
+
+  // =========================================================================
+  // Per-model namespace override
+  // =========================================================================
+
+  describe('per-model namespace override', () => {
+    it('model namespace overrides server-wide namespace', async () => {
+      const apiClient = makeApiClient()
+      const service = new ModelService({
+        apiClient,
+        models: {
+          book: {
+            endpoint: 'books',
+            api: { namespace: 'api/v2' }
+          },
+          author: {
+            endpoint: 'authors'
+          }
+        },
+        namespace: 'api/v1'
+      })
+
+      await service.list('book')
+      expect(apiClient.get).toHaveBeenCalledWith('api/v2/books', expect.any(Object), undefined)
+
+      await service.list('author')
+      expect(apiClient.get).toHaveBeenCalledWith('api/v1/authors', expect.any(Object), undefined)
+    })
+  })
+
+  // =========================================================================
   // Accessors
   // =========================================================================
 
