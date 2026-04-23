@@ -1,11 +1,11 @@
 /**
- * SearchClient -- Normalized search interface for MCP apps and tools.
+ * SearchService -- Normalized search interface for MCP apps and tools.
  *
  * Wraps apiClient to provide a consistent search API regardless of
  * whether a model has its own search endpoint, delegates to a group
  * search endpoint, or only supports listing.
  *
- *   MCP App/Tool -> SearchClient -> apiClient -> API
+ *   MCP App/Tool -> SearchService -> apiClient -> API
  *
  * Three entry points:
  * - search()  — structured query with filters (POST or group-based)
@@ -16,7 +16,7 @@
  * SearchAdapter. The adapter can be set at three levels (highest priority first):
  * 1. Per-model: `search.query.adapter`
  * 2. Per-group: `searchGroup.adapter`
- * 3. Server-wide: `defaultAdapter` in the SearchClient constructor
+ * 3. Server-wide: `defaultAdapter` in the SearchService constructor
  *
  * The base SearchAdapter spreads filters flat into the body. For Rails-style
  * nesting (e.g., `{ filters: { ... } }`), use RailsSearchAdapter.
@@ -35,7 +35,7 @@ import type {
   SearchResult
 } from './types.js'
 
-export class SearchClient {
+export class SearchService {
   private _apiClient: SearchApiClient
   private _searchGroups: Record<string, SearchGroup>
   private _defaultAdapter: SearchAdapter

@@ -21,7 +21,7 @@ import {
   getAvailableColumnNames
 } from '#src/mcp/apps/list-schema.js'
 import { createSelectionTools } from '#src/mcp/apps/selection-tools.js'
-import type { SearchClient } from '#src/mcp/search/search-client.js'
+import type { SearchService } from '#src/mcp/search/search-service.js'
 import type { SearchApiClient } from '#src/mcp/search/types.js'
 import * as logger from '#src/services/logger.js'
 
@@ -87,7 +87,10 @@ export function createListViewApp({ modelClasses, namespace }: ListViewOptions):
 
     async handleToolCall(
       args: Record<string, unknown> = {},
-      { apiClient, searchClient }: { apiClient?: SearchApiClient; searchClient?: SearchClient } = {}
+      {
+        apiClient,
+        searchClient
+      }: { apiClient?: SearchApiClient; searchClient?: SearchService } = {}
     ): Promise<ToolResult> {
       const {
         model,

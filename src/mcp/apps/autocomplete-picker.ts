@@ -3,7 +3,7 @@
  *
  * Type-ahead search to find and select records by text.
  * Supports single-model search (model param) and cross-model group search
- * (group param) via SearchClient.groupSearch().
+ * (group param) via SearchService.groupSearch().
  *
  * Build: npm run build:apps:lib
  */
@@ -15,7 +15,7 @@ import { z } from 'zod'
 
 import { errorMeta } from '#src/mcp/apps/helpers.js'
 import { createSelectionTools } from '#src/mcp/apps/selection-tools.js'
-import type { SearchClient } from '#src/mcp/search/search-client.js'
+import type { SearchService } from '#src/mcp/search/search-service.js'
 import type { SearchApiClient } from '#src/mcp/search/types.js'
 import * as logger from '#src/services/logger.js'
 
@@ -147,7 +147,7 @@ export function createAutocompletePickerApp({
 
     async handleToolCall(
       args: Record<string, unknown> = {},
-      { searchClient }: { apiClient?: SearchApiClient; searchClient?: SearchClient } = {}
+      { searchClient }: { apiClient?: SearchApiClient; searchClient?: SearchService } = {}
     ): Promise<ToolResult> {
       const {
         model,
@@ -248,7 +248,7 @@ export function createAutocompletePickerApp({
         }
       }
 
-      // --- Single-model search path (uses SearchClient.lookup) ---
+      // --- Single-model search path (uses SearchService.lookup) ---
       if (!eligible[model!]) {
         return {
           content: [

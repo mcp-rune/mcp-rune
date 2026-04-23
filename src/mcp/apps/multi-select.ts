@@ -16,7 +16,7 @@ import { z } from 'zod'
 import { defaultConvention } from '#src/mcp/api-conventions/index.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
 import { createSelectionTools } from '#src/mcp/apps/selection-tools.js'
-import type { SearchClient } from '#src/mcp/search/search-client.js'
+import type { SearchService } from '#src/mcp/search/search-service.js'
 import type { SearchApiClient } from '#src/mcp/search/types.js'
 import * as logger from '#src/services/logger.js'
 
@@ -73,7 +73,10 @@ export function createMultiSelectApp({ modelClasses, namespace }: MultiSelectOpt
 
     async handleToolCall(
       args: Record<string, unknown> = {},
-      { apiClient, searchClient }: { apiClient?: SearchApiClient; searchClient?: SearchClient } = {}
+      {
+        apiClient,
+        searchClient
+      }: { apiClient?: SearchApiClient; searchClient?: SearchService } = {}
     ): Promise<ToolResult> {
       const { model } = args as { model?: string }
 

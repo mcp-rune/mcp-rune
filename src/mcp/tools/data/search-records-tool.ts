@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import { pickFields } from '#src/core/helpers.js'
 import { resolveDerivedFields } from '#src/mcp/apps/derived-fields.js'
-import { SearchClient } from '#src/mcp/search/search-client.js'
+import { SearchService } from '#src/mcp/search/search-service.js'
 import type { PaginationInfo } from '#src/mcp/search/types.js'
 import { normalizeFilterValues, validateFilterValues } from '#src/mcp/tools/validators.js'
 
@@ -15,7 +15,7 @@ import type { FilterSchema } from '../validators.js'
  * Stateless search tool
  *
  * Validates filter args against the model's filter declaration,
- * then delegates to SearchClient for query execution.
+ * then delegates to SearchService for query execution.
  */
 export class SearchRecordsTool extends BaseTool {
   override get name(): string {
@@ -114,7 +114,7 @@ export class SearchRecordsTool extends BaseTool {
       }
 
       const clampedPerPage = Math.min(per_page, 200)
-      const searchClient = this._createSearchClient()
+      const searchClient = this._createSearchService()
       const { records, pagination } = (await searchClient.search(
         ModelClass as unknown as Parameters<typeof searchClient.search>[0],
         '',
@@ -166,17 +166,17 @@ export class SearchRecordsTool extends BaseTool {
     return `${records.length} ${model} records (page ${pagination.page}/${pagination.total_pages}, IDs: ${idPreview})`
   }
 
-  /** Create a SearchClient from the tool's apiClient and serverContext */
-  private _createSearchClient(): SearchClient {
+  /** Create a SearchService from the tool's apiClient and serverContext */
+  private _createSearchService(): SearchService {
     const ctx = this.serverContext as Record<string, unknown>
     const searchGroups = (ctx?.searchGroups ?? {}) as Record<string, unknown>
     const defaultAdapter = ctx?.defaultAdapter as
-      | NonNullable<ConstructorParameters<typeof SearchClient>[1]>['defaultAdapter']
+      | NonNullable<ConstructorParameters<typeof SearchService>[1]>['defaultAdapter']
       | undefined
-    return new SearchClient(this.apiClient!, {
+    return new SearchService(this.apiClient!, {
       searchGroups,
       defaultAdapter
-    } as ConstructorParameters<typeof SearchClient>[1])
+    } as ConstructorParameters<typeof SearchService>[1])
   }
 
   /**

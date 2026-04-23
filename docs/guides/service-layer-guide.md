@@ -45,7 +45,7 @@ Tools become thin MCP-protocol adapters: validate input, call the service, forma
 └──────────────┬──────────────────┬───────────────┘
                │                  │
     ┌──────────▼──────┐  ┌───────▼────────┐
-    │  ModelService    │  │  SearchClient   │
+    │  ModelService    │  │  SearchService   │
     │  (CRUD ops)      │  │  (search/lookup)│
     └──────┬───┬──────┘  └───────┬────────┘
            │   │                 │

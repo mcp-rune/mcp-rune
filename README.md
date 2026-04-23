@@ -516,7 +516,7 @@ import type { ApiClient, RequestOptions, ToolDependencies } from 'mcp-kit/tools'
 import { ModelService, EndpointResolver } from 'mcp-kit/lib/mcp/services/index.js'
 import { BasePrompt, PromptContentGenerator, derivePromptSchema } from 'mcp-kit/prompts'
 import { AppRegistry, createCreateFormApp } from 'mcp-kit/apps'
-import { SearchClient, SearchAdapter } from 'mcp-kit/search'
+import { SearchService, SearchAdapter } from 'mcp-kit/search'
 import { DomainRegistry, WorkflowDefinition } from 'mcp-kit/domain'
 import { OAuthService } from 'mcp-kit/oauth2'
 import { logger, tracing, errorTracking } from 'mcp-kit/services'
@@ -534,7 +534,7 @@ import { BaseTool, TOOL_CATEGORIES, CRUD_TOOL_CLASSES } from 'mcp-kit/tools'
 import { ModelService, EndpointResolver } from 'mcp-kit/lib/mcp/services/index.js'
 import { BasePrompt, PromptContentGenerator, derivePromptSchema } from 'mcp-kit/prompts'
 import { AppRegistry, createCreateFormApp } from 'mcp-kit/apps'
-import { SearchClient, SearchAdapter } from 'mcp-kit/search'
+import { SearchService, SearchAdapter } from 'mcp-kit/search'
 import { DomainRegistry, WorkflowDefinition } from 'mcp-kit/domain'
 import { OAuthService } from 'mcp-kit/oauth2'
 import { logger, tracing, errorTracking } from 'mcp-kit/services'
@@ -568,7 +568,7 @@ mcp-kit/                              (the framework)
     ├─ prompts                         BasePrompt, strategies, pipeline
     ├─ apps                            AppRegistry, 6 generic app factories
     ├─ domain                          Workflows, knowledge, business rules
-    ├─ search                          SearchClient, SearchAdapter
+    ├─ search                          SearchService, SearchAdapter
     ├─ oauth2                          OAuthService, token store
     ├─ services                        Logger, tracing, error tracking
     └─ db                              PostgreSQL client

@@ -21,7 +21,7 @@ import type { z } from 'zod'
 
 import { errorMeta } from '#src/mcp/apps/helpers.js'
 import type { SearchAdapter } from '#src/mcp/search/search-adapter.js'
-import { SearchClient } from '#src/mcp/search/search-client.js'
+import { SearchService } from '#src/mcp/search/search-service.js'
 import type { SearchGroup } from '#src/mcp/search/types.js'
 import * as logger from '#src/services/logger.js'
 
@@ -134,7 +134,7 @@ export class AppRegistry {
               const token = await getAccessToken()
               const apiClient = this._createApiClient(token, { apiUrl: this._apiUrl })
               context.apiClient = apiClient
-              context.searchClient = new SearchClient(apiClient, {
+              context.searchClient = new SearchService(apiClient, {
                 searchGroups: this._searchGroups,
                 defaultAdapter: this._defaultAdapter
               })

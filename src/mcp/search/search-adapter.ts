@@ -1,7 +1,7 @@
 /**
  * SearchAdapter — Default adapter for building search request bodies.
  *
- * Adapters sit between the MCP SearchClient and the API, transforming
+ * Adapters sit between the MCP SearchService and the API, transforming
  * the MCP-generic filter format into the shape each API endpoint expects.
  *
  * ## Data Flow Pipeline
@@ -11,7 +11,7 @@
  *   → LLM calls search tool with MCP-generic format:
  *       { query, filters: { category_id: 4, status: "active" } }
  *   → SearchAdapter.buildBody() builds the request body
- *   → SearchClient POSTs the body to the API endpoint
+ *   → SearchService POSTs the body to the API endpoint
  *
  * ## Default Behavior
  *

@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import { pickFields } from '#src/core/helpers.js'
 import { defaultConvention } from '#src/mcp/api-conventions/index.js'
-import { SearchClient } from '#src/mcp/search/search-client.js'
+import { SearchService } from '#src/mcp/search/search-service.js'
 import {
   getIngestedRecordIds,
   storeAnalysisMemory,
@@ -277,13 +277,13 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     // Resolve convention for extraction and flattening
     const convention = modelConfig.api?.convention ?? defaultConvention
 
-    // Use SearchClient if model supports query search and filters provided
+    // Use SearchService if model supports query search and filters provided
     const hasFullText = modelConfig.search?.query
     const hasSearchParams = filters && Object.keys(filters).length > 0
 
     if (hasFullText && hasSearchParams) {
-      // Use SearchClient for filtered ingestion
-      const searchClient = this._createSearchClient(api as unknown as ApiClient)
+      // Use SearchService for filtered ingestion
+      const searchClient = this._createSearchService(api as unknown as ApiClient)
       const { records, pagination } = (await searchClient.search(
         ModelClass as Parameters<typeof searchClient.search>[0],
         '',
@@ -363,17 +363,17 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     // Resolve convention once for all pages
     const convention = modelConfig.api?.convention ?? defaultConvention
 
-    // Use SearchClient if model supports query search and filters provided
+    // Use SearchService if model supports query search and filters provided
     const hasFullText = modelConfig.search?.query
     const hasSearchParams = filters && Object.keys(filters).length > 0
     const searchClient =
-      hasFullText && hasSearchParams ? this._createSearchClient(api as unknown as ApiClient) : null
+      hasFullText && hasSearchParams ? this._createSearchService(api as unknown as ApiClient) : null
 
     while (currentPage <= MAX_INGEST_PAGES) {
       let rawRecords: Record<string, unknown>[]
 
       if (searchClient) {
-        // Use SearchClient for filtered ingestion
+        // Use SearchService for filtered ingestion
         const { records, pagination } = (await searchClient.search(
           ModelClass as Parameters<typeof searchClient.search>[0],
           '',
@@ -672,14 +672,14 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     return augmented
   }
 
-  /** Create a SearchClient from the tool's apiClient and serverContext */
-  private _createSearchClient(apiClient?: ApiClient): SearchClient {
+  /** Create a SearchService from the tool's apiClient and serverContext */
+  private _createSearchService(apiClient?: ApiClient): SearchService {
     const client = apiClient ?? this.apiClient!
     const searchGroups = ((this.serverContext as Record<string, unknown>)?.searchGroups ??
       {}) as Record<string, unknown>
-    return new SearchClient(
-      client as unknown as ConstructorParameters<typeof SearchClient>[0],
-      { searchGroups } as unknown as ConstructorParameters<typeof SearchClient>[1]
+    return new SearchService(
+      client as unknown as ConstructorParameters<typeof SearchService>[0],
+      { searchGroups } as unknown as ConstructorParameters<typeof SearchService>[1]
     )
   }
 
