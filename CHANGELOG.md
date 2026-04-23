@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.17.0] — 2026-04-24
+
+### Added
+
+- **Compound ID support** — path-based compound IDs (`titles/42/assets/7`) encode full resource hierarchy, enabling uniform CRUD for nested and top-level resources. New `compound-id.ts` module with `parseId`, `buildCompoundId`, and `buildCollectionPath` utilities.
+- **`parent_path` parameter** on `find_model` and `create_model` — replaces separate nested resource tools for listing and creating nested collections (e.g., `find_model(model: "asset", parent_path: "titles/42/assets")`).
+- **`ModelRequestOptions`** — extended request options type with `parentPath` for `ModelService.create()` and `ModelService.list()`.
+
+### Changed
+
+- **`ModelConfig.api`** — replaced `nested` block (`pathTemplate`, `parentKey`, `nestedOnly`, `parentModels`) with flatter `parent` and `standalone` fields. Models declare `api: { parent: 'title', standalone: false }` instead of the verbose nested config.
+- **`EndpointResolver`** — `resolveRecord()` now handles compound IDs (containing `/`) as full paths. `resolveCollection()` uses `parentPath` instead of `parentResource` and pathTemplate substitution. `MissingParentError` now reports parent model names instead of parentKey.
+- **`BulkActionModelsTool`** — `parent_resource` renamed to `parent_path`. Update/delete operations support compound IDs via `_resolveRecordEndpoint()`.
+- **Prompt generators** — `parentResource`/`parent_resource` renamed to `parentPath`/`parent_path` across tool-usage-generator, base-prompt, association-transformers, and hybrid-strategy.
+- **Apps layer** — `AppModelClass.api` uses `parent`/`standalone` instead of `nested` block. Form schema detects nested associations via `standalone === false`. Model form constructs paths from parent endpoint + child endpoint.
+
+### Removed
+
+- **`get_nested_resources` tool** — functionality absorbed by `find_model` with `parent_path` parameter.
+- **`bulk_get_nested_resources` tool** — functionality absorbed by `find_model` with `parent_path` parameter.
+- **`ModelService.getNestedResources()`** — replaced by `list()` with `parentPath` option.
+- **`EndpointResolver.resolveNested()`** — replaced by compound ID handling in `resolveRecord()`.
+- **`detectParentResource()` and `buildParentTypes()`** — helper functions from `core/helpers.ts`, no longer needed with explicit compound IDs.
+- **`ParentType`, `ParentResource`, `NestedConfig`** — removed interfaces.
+
+[0.17.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.16.0...v0.17.0
+
 ## [0.16.0] — 2026-04-23
 
 ### Added
