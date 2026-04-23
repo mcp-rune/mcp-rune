@@ -32,13 +32,6 @@ export interface AttributeDefinition {
   readOnly?: boolean
 }
 
-export interface NestedConfig {
-  parent?: string | string[]
-  nestedOnly?: boolean
-  pathTemplate?: string
-  parentKey?: string
-}
-
 /** Per-action endpoint overrides for models with non-standard API paths. */
 export interface EndpointOverrides {
   /** Override for collection operations (list, create). */
@@ -54,7 +47,10 @@ export interface EndpointOverrides {
 export interface ApiConfig {
   convention?: BaseConvention
   readOnly?: boolean
-  nested?: NestedConfig
+  /** Parent model name(s) for nested resources. */
+  parent?: string | string[]
+  /** Whether the model has a standalone (non-nested) endpoint. Default: true. */
+  standalone?: boolean
   /** API namespace prefix (e.g., 'api/v1'). Overrides server-wide default. */
   namespace?: string
   /** Per-action endpoint overrides for non-standard API paths. */

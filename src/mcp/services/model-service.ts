@@ -40,6 +40,12 @@ export interface PaginationParams {
   perPage?: number
 }
 
+/** Extended request options with parent path for nested operations. */
+export interface ModelRequestOptions extends RequestOptions {
+  /** Parent path for nested resource operations (e.g., 'titles/42/assets'). */
+  parentPath?: string
+}
+
 // ============================================================================
 // Errors
 // ============================================================================
@@ -105,7 +111,7 @@ export class ModelService {
   async create(
     model: string,
     attributes: Record<string, unknown>,
-    options?: RequestOptions
+    options?: ModelRequestOptions
   ): Promise<Record<string, unknown>> {
     const modelConfig = this._validateWritable(model)
 
@@ -117,7 +123,7 @@ export class ModelService {
     }
 
     const endpoint = this._resolver.resolveCollection(
-      { model, modelConfig, attributes },
+      { model, modelConfig, attributes, parentPath: options?.parentPath },
       'create' as CrudAction
     )
     const payload = this._buildPayload(model, modelConfig, attributes)
@@ -132,7 +138,7 @@ export class ModelService {
     return data
   }
 
-  /** Find a record by ID. */
+  /** Find a record by ID. Supports compound IDs for nested resources. */
   async find(
     model: string,
     recordId: string,
@@ -148,15 +154,18 @@ export class ModelService {
     return await this._apiClient.get(endpoint, {}, options)
   }
 
-  /** List records with optional filters and pagination. */
+  /** List records with optional filters and pagination. Supports parentPath for nested resources. */
   async list(
     model: string,
     filters?: Record<string, unknown>,
     pagination?: PaginationParams,
-    options?: RequestOptions
+    options?: ModelRequestOptions
   ): Promise<Record<string, unknown>> {
     const modelConfig = this._validateModel(model)
-    const endpoint = this._resolver.resolveCollection({ model, modelConfig }, 'list' as CrudAction)
+    const endpoint = this._resolver.resolveCollection(
+      { model, modelConfig, parentPath: options?.parentPath },
+      'list' as CrudAction
+    )
 
     const queryParams = {
       ...filters,
@@ -168,7 +177,7 @@ export class ModelService {
     return await this._apiClient.get(endpoint, queryParams, options)
   }
 
-  /** Update a record (partial attributes). */
+  /** Update a record (partial attributes). Supports compound IDs. */
   async update(
     model: string,
     recordId: string,
@@ -193,7 +202,7 @@ export class ModelService {
     return data
   }
 
-  /** Delete a record. */
+  /** Delete a record. Supports compound IDs. */
   async delete(
     model: string,
     recordId: string,
@@ -211,21 +220,6 @@ export class ModelService {
       impersonating: options?.userId ?? null
     })
     return await this._apiClient.delete(endpoint, options)
-  }
-
-  /** Get nested resources for a parent record. */
-  async getNestedResources(
-    parentModel: string,
-    parentId: string,
-    childPath: string,
-    params?: Record<string, unknown>,
-    options?: RequestOptions
-  ): Promise<Record<string, unknown>> {
-    const parentConfig = this._validateModel(parentModel)
-    const endpoint = this._resolver.resolveNested(parentConfig, parentId, childPath)
-
-    this._log('info', 'Getting nested resources', { parentModel, parentId, childPath })
-    return await this._apiClient.get(endpoint, params, options)
   }
 
   // --- Accessors ---
