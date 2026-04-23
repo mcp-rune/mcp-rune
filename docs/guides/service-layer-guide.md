@@ -1,6 +1,6 @@
 # Service Layer Guide
 
-This guide covers the `ModelService` and `EndpointResolver` — a service layer that sits between MCP tools and the API client, providing flexible endpoint resolution, convention-based payloads, and typed domain errors.
+This guide covers the two services that sit between MCP tools and the API client: `ModelService` for CRUD operations, and `SearchService` for search, lookup, and listing. Both compose lower-level primitives (EndpointResolver, Convention, SearchAdapter) into clean interfaces that tools delegate to.
 
 ## Table of Contents
 
@@ -16,8 +16,16 @@ This guide covers the `ModelService` and `EndpointResolver` — a service layer 
   - [Setup](#setup)
   - [CRUD Operations](#crud-operations)
   - [Domain Errors](#domain-errors)
+- [SearchService](#searchservice)
+  - [Setup](#setup-1)
+  - [Search Resolution Chain](#search-resolution-chain)
+  - [Lookup Resolution Chain](#lookup-resolution-chain)
+  - [Group Search](#group-search)
+  - [List (Always Available)](#list-always-available)
+  - [Search Adapters](#search-adapters)
+  - [Static Capability Queries](#static-capability-queries)
 - [Tool Integration](#tool-integration)
-  - [Injecting ModelService](#injecting-modelservice)
+  - [Injecting Services](#injecting-services)
   - [Backward Compatibility](#backward-compatibility)
 - [ApiClient RequestOptions](#apiclient-requestoptions)
 - [Design Boundaries](#design-boundaries)
@@ -26,14 +34,19 @@ This guide covers the `ModelService` and `EndpointResolver` — a service layer 
 
 ## Overview
 
-Prior to the service layer, each CRUD tool (create, find, update, delete) directly resolved endpoints from model config, built payloads via conventions, and called the API client. This scattered endpoint resolution logic across 7+ files and coupled tools to API routing concerns.
+The service layer provides two focused services that encapsulate all API communication:
 
-The service layer extracts these responsibilities into two focused classes:
+| Service             | Purpose                                              | Consumers                                                                                 | Composes                                  |
+| ------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **`ModelService`**  | CRUD operations (create, find, list, update, delete) | CRUD tools, bulk tools                                                                    | EndpointResolver + Convention + ApiClient |
+| **`SearchService`** | Search, lookup, group search, listing                | search_records tool, analysis_ingest, MCP Apps (list, search, autocomplete, multi-select) | SearchAdapter + Convention + ApiClient    |
 
-- **`EndpointResolver`** — URL resolution with a layered chain (inspired by [Ember Data's Adapter pattern](https://guides.emberjs.com/release/models/customizing-adapters/))
-- **`ModelService`** — CRUD operations composing EndpointResolver + Convention + ApiClient
+Both services follow the same pattern: wrap `ApiClient` with domain logic, resolve endpoints from model config, normalize requests/responses, and return clean results. Tools delegate data operations to these services and focus on MCP-specific concerns (input validation, response formatting, vector storage).
 
-Tools become thin MCP-protocol adapters: validate input, call the service, format the response.
+Supporting classes:
+
+- **`EndpointResolver`** — layered URL resolution chain for CRUD (inspired by [Ember Data's Adapter pattern](https://guides.emberjs.com/release/models/customizing-adapters/))
+- **`SearchAdapter`** / **`RailsSearchAdapter`** — pluggable request body builders for search endpoints
 
 ## Architecture
 
@@ -248,45 +261,247 @@ try {
 
 ---
 
-## Tool Integration
+## SearchService
 
-### Injecting ModelService
+`SearchService` provides a normalized search interface for tools and apps. It wraps the API client with a 3-tier endpoint resolution chain for search and a separate chain for lookup (typeahead/autocomplete).
 
-Add `modelService` to your tool registry's dependency construction:
+### Setup
 
 ```typescript
+import { SearchService, SearchAdapter, RailsSearchAdapter } from 'mcp-kit/search'
+
+const searchService = new SearchService(apiClient, {
+  searchGroups: {
+    // Optional — named group search endpoints
+    catalogue: {
+      endpoint: 'catalogue/search',
+      modelsParam: 'models',
+      queryParam: 'q'
+    }
+  },
+  defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' }) // Optional — server-wide adapter
+})
+```
+
+### Search Resolution Chain
+
+`searchService.search(ModelClass, query, { page, perPage, filters })` resolves the search endpoint using a 3-tier chain:
+
+1. **Direct endpoint** — `model.search.query.endpoint` exists → POST/GET to that endpoint
+2. **Group search** — `model.search.query.group` exists → POST to shared group endpoint, scoped to this model's type
+3. **List fallback** — neither configured → GET listing with first lookup field as filter
+
+```typescript
+// Path 1: Direct search endpoint
+class Activity extends BaseModel {
+  static endpoint = 'activities'
+  static search = {
+    query: { endpoint: 'activities/search', method: 'POST', queryParam: 'q' },
+    filters: { theme_id: { type: 'relation' } },
+    lookup: { fields: ['title'] }
+  }
+}
+const results = await searchService.search(Activity, 'React', {
+  page: 1,
+  perPage: 20,
+  filters: { theme_id: '5' }
+})
+// → POST /activities/search { q: "React", theme_id: "5", page: 1, per_page: 20 }
+
+// Path 2: Group search (multiple models share one search endpoint)
+class Title extends BaseModel {
+  static endpoint = 'titles'
+  static search = {
+    query: { group: 'catalogue', modelName: ['episode', 'feature'] },
+    lookup: { fields: ['external_id'] }
+  }
+}
+const results = await searchService.search(Title, 'drama')
+// → POST /catalogue/search { q: "drama", models: ["episode", "feature"], page: 1, per_page: 20 }
+
+// Path 3: List fallback (no query config)
+class Platform extends BaseModel {
+  static endpoint = 'platforms'
+  static search = { lookup: { fields: ['name'] } }
+}
+const results = await searchService.search(Platform, 'Netflix')
+// → GET /platforms?name=Netflix&page=1&per_page=20
+```
+
+### Lookup Resolution Chain
+
+`searchService.lookup(ModelClass, query, { perPage })` resolves typeahead/autocomplete with its own 3-tier chain:
+
+1. **Dedicated lookup endpoint** — `model.search.lookup.endpoint` exists → GET to that endpoint
+2. **Search fallback** — `model.search.query` exists → delegates to `search()`
+3. **List fallback** — neither configured → GET listing with first lookup field
+
+```typescript
+// Path 1: Dedicated lookup endpoint
+class Brand extends BaseModel {
+  static endpoint = 'brands'
+  static search = {
+    query: { group: 'catalogue' },
+    lookup: { endpoint: 'brands/autocomplete', fields: ['external_id'] }
+  }
+}
+const results = await searchService.lookup(Brand, 'BBC')
+// → GET /brands/autocomplete?external_id=BBC&per_page=10
+
+// Path 2: Falls through to search()
+class Activity extends BaseModel {
+  static search = {
+    query: { endpoint: 'activities/search', method: 'POST', queryParam: 'q' },
+    lookup: { fields: ['title'] }
+  }
+}
+const results = await searchService.lookup(Activity, 'Haskell')
+// → POST /activities/search { q: "Haskell", page: 1, per_page: 10 }
+```
+
+### Group Search
+
+Multi-model search across a named endpoint:
+
+```typescript
+const results = await searchService.groupSearch('catalogue', 'drama', {
+  page: 1,
+  perPage: 20,
+  models: ['episode', 'feature'], // scope to specific model types
+  filters: { status: 'published' }
+})
+// → POST /catalogue/search { q: "drama", models: [...], status: "published", page: 1, per_page: 20 }
+```
+
+### List (Always Available)
+
+Paginated listing via GET — always works regardless of search configuration:
+
+```typescript
+const results = await searchService.list(BookModel, {
+  page: 2,
+  perPage: 50,
+  status: 'reading',
+  sort: 'title'
+})
+// → GET /books?page=2&per_page=50&status=reading&sort=title
+```
+
+List uses the model's Convention to normalize the response into `{ records, pagination }`.
+
+### Search Adapters
+
+Request bodies are built by pluggable adapters. The adapter is selected at three levels (highest priority first):
+
+1. **Per-model** — `model.search.query.adapter`
+2. **Per-group** — `searchGroup.adapter`
+3. **Server-wide** — `defaultAdapter` in the SearchService constructor
+
+The base `SearchAdapter` spreads filters flat into the body. For Rails APIs that nest filters, use `RailsSearchAdapter`:
+
+```typescript
+import { RailsSearchAdapter } from 'mcp-kit/search'
+
+// Nests filters under a key + flattens range mappings
+const adapter = new RailsSearchAdapter({ filtersParam: 'filters' })
+
+// Input:  { duration_minutes: { from: 40, to: 120 } }
+// Output: { filters: { min_duration: 40, max_duration: 120 } }
+//   (via adapterConfig.rangeMappings on the model's search.query)
+```
+
+See the [Search & Filter Integration Guide](search-filter-integration-guide.md) for the full Rails integration walkthrough.
+
+### Static Capability Queries
+
+Query a model's search/lookup capability without instantiating a service:
+
+```typescript
+SearchService.getSearchCapability(BookModel) // → 'direct' | 'group' | 'list-only'
+SearchService.getLookupCapability(BookModel) // → 'dedicated' | 'search-fallback' | 'list-fallback'
+SearchService.getSearchGroup(BookModel) // → 'catalogue' | null
+```
+
+### Response Shape
+
+All SearchService methods return a normalized `SearchResult`:
+
+```typescript
+interface SearchResult {
+  records: Record<string, unknown>[]
+  pagination: {
+    page: number
+    per_page: number
+    total: number
+    total_pages?: number
+  }
+}
+```
+
+---
+
+## Tool Integration
+
+### Injecting Services
+
+Construct both services in your tool registry and pass them as dependencies:
+
+```typescript
+import { ModelService } from 'mcp-kit/lib/mcp/services/index.js'
+import { SearchService, RailsSearchAdapter } from 'mcp-kit/search'
+
 async _createAuthenticatedInstance(ToolClass, getAccessToken) {
   const token = await getAccessToken()
   const apiClient = createApiClient(token, { apiUrl })
 
-  // Construct ModelService from apiClient + models
+  // Construct services from shared apiClient + models
   const modelService = new ModelService({
     apiClient,
     models: this.models,
-    namespace: 'api/v1'  // optional
+    namespace: 'api/v1'
+  })
+
+  const searchService = new SearchService(apiClient, {
+    searchGroups: this.serverContext.searchGroups,
+    defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
   })
 
   return new ToolClass({
     apiClient,
-    modelService,        // NEW — tools delegate CRUD here
+    modelService,        // CRUD tools delegate here
+    // searchService — passed via serverContext for search tools/apps
     logger: this.logger,
     models: this.models,
     promptRegistry: this.promptRegistry,
-    serverContext: this.serverContext,
+    serverContext: { ...this.serverContext, searchService },
     domainRegistry: this.domainRegistry
   })
 }
 ```
 
+### Which service for which tool?
+
+| Tool                                  | Service               | Why                                      |
+| ------------------------------------- | --------------------- | ---------------------------------------- |
+| `create_model`                        | ModelService          | Convention payload + endpoint resolution |
+| `find_model`                          | ModelService          | Record/list endpoint resolution          |
+| `update_model`                        | ModelService          | Convention payload + record endpoint     |
+| `delete_model`                        | ModelService          | Record endpoint resolution               |
+| `bulk_action_models`                  | ModelService (future) | Batch CRUD operations                    |
+| `search_records`                      | SearchService         | 3-tier search resolution + adapters      |
+| `analysis_ingest`                     | SearchService         | Filtered multi-page ingestion            |
+| MCP Apps (list, search, autocomplete) | SearchService         | Listing, search, lookup for UI rendering |
+
 ### Backward Compatibility
 
-`modelService` is **optional** in `ToolDependencies`. When not provided:
+Both `modelService` and `searchService` are **optional**. When not provided:
 
 - CRUD tools fall back to direct `apiClient` calls (pre-service-layer behavior)
+- Search tools create a `SearchService` instance ad-hoc from `apiClient` + `serverContext`
 - No code changes required in existing tool registries
-- Adopt incrementally by adding `modelService` when ready
+- Adopt incrementally by adding services when ready
 
-Custom tools that call `this.apiClient.get()` directly for non-CRUD endpoints (e.g., `users/me`) continue to work unchanged — ModelService is for model CRUD operations only.
+Custom tools that call `this.apiClient.get()` directly for non-model endpoints (e.g., `users/me`) continue to work unchanged — services are for model-driven operations only.
 
 ---
 
@@ -314,14 +529,31 @@ This is backward-compatible — existing ApiClient implementations that only acc
 
 ## Design Boundaries
 
-ModelService is intentionally scoped to API data operations. It does **not** absorb:
+Both services are intentionally scoped to API data operations. They do **not** absorb:
 
 | Concern                           | Stays in      | Why                                        |
 | --------------------------------- | ------------- | ------------------------------------------ |
 | MCP response formatting           | Tool layer    | `ToolResult`, `content[]` are MCP protocol |
-| Vector storage (`storeOperation`) | Tool layer    | Cross-cutting, not CRUD                    |
+| Vector storage (`storeOperation`) | Tool layer    | Cross-cutting, not data operations         |
 | Usage rules / descriptions        | Tool layer    | LLM-facing metadata                        |
 | Schema derivation                 | Prompt system | Prompt-specific concern                    |
 | Filter validation                 | Tool layer    | MCP input validation                       |
 
-The test: **would a non-MCP consumer use this?** If you imagine importing `ModelService` in a script to batch-create records without MCP, everything it does should still make sense.
+### Why two services, not one?
+
+ModelService and SearchService serve different purposes with different resolution strategies:
+
+| Aspect              | ModelService                              | SearchService                                 |
+| ------------------- | ----------------------------------------- | --------------------------------------------- |
+| Operations          | CRUD (create, find, list, update, delete) | search, lookup, groupSearch, list             |
+| Input               | Model name + attributes/ID                | ModelClass + query string + filters           |
+| Endpoint resolution | EndpointResolver (5-level layered chain)  | Own 3-tier chain (direct → group → list)      |
+| Request building    | Convention (`buildRequestPayload`)        | SearchAdapter (`buildBody`)                   |
+| Response            | Raw API response                          | Normalized `{ records, pagination }`          |
+| Consumers           | CRUD tools                                | Search tool, analysis_ingest, 5 MCP app types |
+
+Merging them would force the apps layer to depend on CRUD concerns it doesn't need, and the fundamentally different resolution strategies would compete within a single class.
+
+### The litmus test
+
+**Would a non-MCP consumer use this?** If you imagine importing `ModelService` in a script to batch-create records, or `SearchService` to query an API from a CLI tool — everything they do should still make sense without any MCP protocol knowledge.

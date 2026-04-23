@@ -62,7 +62,10 @@ These tools are completely generic — they have zero server-specific logic. The
 
 ### Service Layer
 
-CRUD tools delegate to `ModelService` when injected, which composes `EndpointResolver` + `Convention` + `ApiClient`. This separates concerns:
+Tools delegate data operations to two services:
+
+- **`ModelService`** — CRUD operations (create, find, update, delete). Composes `EndpointResolver` + `Convention` + `ApiClient`.
+- **`SearchService`** — search, lookup, and listing. Composes `SearchAdapter` + `Convention` + `ApiClient`.
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -72,7 +75,7 @@ CRUD tools delegate to `ModelService` when injected, which composes `EndpointRes
 └──────────────┬──────────────────┬───────────────┘
                │                  │
     ┌──────────▼──────┐  ┌───────▼────────┐
-    │  ModelService    │  │  SearchService   │
+    │  ModelService    │  │  SearchService  │
     │  (CRUD ops)      │  │  (search/lookup)│
     └──────┬───┬──────┘  └───────┬────────┘
            │   │                 │
@@ -90,16 +93,20 @@ CRUD tools delegate to `ModelService` when injected, which composes `EndpointRes
               └────────────┘
 ```
 
-To inject ModelService in your tool registry:
+To inject services in your tool registry:
 
 ```typescript
 import { ModelService } from 'mcp-kit/lib/mcp/services/index.js'
+import { SearchService, RailsSearchAdapter } from 'mcp-kit/search'
 
 const modelService = new ModelService({ apiClient, models, namespace: 'api/v1' })
-const tool = new CreateModelTool({ apiClient, modelService, models, logger })
+const searchService = new SearchService(apiClient, {
+  searchGroups,
+  defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
+})
 ```
 
-See the [Service Layer Guide](service-layer-guide.md) for full details.
+See the [Service Layer Guide](service-layer-guide.md) for full details on both services, resolution chains, adapters, and design boundaries.
 
 ## Tool Categories
 
