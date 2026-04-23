@@ -59,14 +59,7 @@ interface RenderOptions {
  * Data-fetching tools that should never be substituted with app/view tools.
  * Used to determine which steps get exclusion warnings.
  */
-const DATA_TOOLS = new Set([
-  'list_models',
-  'find_model',
-  'search_records',
-  'get_nested_resources',
-  'bulk_get_nested_resources',
-  'get_filters_guide'
-])
+const DATA_TOOLS = new Set(['list_models', 'find_model', 'search_records', 'get_filters_guide'])
 
 // ---- Step Rendering --------------------------------------------------------
 

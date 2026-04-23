@@ -54,12 +54,8 @@ describe('lib/mcp/services/model-service', () => {
         attributes: { start_date: { type: 'string' } },
         required: [],
         api: {
-          nested: {
-            parent: 'book',
-            nestedOnly: true,
-            pathTemplate: 'books/:book_id/schedulings',
-            parentKey: 'book_id'
-          }
+          parent: 'book',
+          standalone: false
         }
       }
     }
@@ -119,14 +115,23 @@ describe('lib/mcp/services/model-service', () => {
       await expect(service.create('nonexistent', {})).rejects.toThrow(UnknownModelError)
     })
 
-    it('resolves nested endpoint when nestedOnly', async () => {
+    it('resolves nested endpoint when parentPath provided', async () => {
       const { service, apiClient } = makeService()
-      await service.create('scheduling', { start_date: '2026-01-01', book_id: '42' })
+      await service.create(
+        'scheduling',
+        { start_date: '2026-01-01' },
+        { parentPath: 'books/42/schedulings' }
+      )
 
-      expect(apiClient.post).toHaveBeenCalledWith(
-        'books/42/schedulings',
-        expect.any(Object),
-        undefined
+      expect(apiClient.post).toHaveBeenCalledWith('books/42/schedulings', expect.any(Object), {
+        parentPath: 'books/42/schedulings'
+      })
+    })
+
+    it('throws MissingParentError for nested-only model without parentPath', async () => {
+      const { service } = makeService()
+      await expect(service.create('scheduling', { start_date: '2026-01-01' })).rejects.toThrow(
+        /nested-only/
       )
     })
 
@@ -227,18 +232,43 @@ describe('lib/mcp/services/model-service', () => {
   })
 
   // =========================================================================
-  // getNestedResources
+  // Compound ID support
   // =========================================================================
 
-  describe('getNestedResources', () => {
-    it('gets from parent/id/child path', async () => {
+  describe('compound ID support', () => {
+    it('find resolves compound ID as full path', async () => {
       const { service, apiClient } = makeService()
-      await service.getNestedResources('book', '42', 'reviews', { page: 1, per_page: 10 })
+      await service.find('book', 'authors/42/books/7')
+
+      expect(apiClient.get).toHaveBeenCalledWith('authors/42/books/7', {}, undefined)
+    })
+
+    it('update resolves compound ID as full path', async () => {
+      const { service, apiClient } = makeService()
+      await service.update('book', 'authors/42/books/7', { title: 'Updated' })
+
+      expect(apiClient.patch).toHaveBeenCalledWith(
+        'authors/42/books/7',
+        expect.any(Object),
+        undefined
+      )
+    })
+
+    it('delete resolves compound ID as full path', async () => {
+      const { service, apiClient } = makeService()
+      await service.delete('book', 'authors/42/books/7')
+
+      expect(apiClient.delete).toHaveBeenCalledWith('authors/42/books/7', undefined)
+    })
+
+    it('list uses parentPath for nested collection', async () => {
+      const { service, apiClient } = makeService()
+      await service.list('book', undefined, undefined, { parentPath: 'authors/42/books' })
 
       expect(apiClient.get).toHaveBeenCalledWith(
-        'books/42/reviews',
-        { page: 1, per_page: 10 },
-        undefined
+        'authors/42/books',
+        { page: 1, per_page: 20 },
+        { parentPath: 'authors/42/books' }
       )
     })
   })

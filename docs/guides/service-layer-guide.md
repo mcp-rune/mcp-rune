@@ -10,7 +10,7 @@ This guide covers the two services that sit between MCP tools and the API client
   - [Resolution Chain](#resolution-chain)
   - [Namespace Configuration](#namespace-configuration)
   - [Per-Action Endpoint Overrides](#per-action-endpoint-overrides)
-  - [Nested Routing](#nested-routing)
+  - [Compound IDs and Nested Resources](#compound-ids-and-nested-resources)
   - [Custom pathForType](#custom-pathfortype)
 - [ModelService](#modelservice)
   - [Setup](#setup)
@@ -26,7 +26,6 @@ This guide covers the two services that sit between MCP tools and the API client
   - [Static Capability Queries](#static-capability-queries)
 - [Tool Integration](#tool-integration)
   - [Injecting Services](#injecting-services)
-  - [Backward Compatibility](#backward-compatibility)
 - [ApiClient RequestOptions](#apiclient-requestoptions)
 - [Design Boundaries](#design-boundaries)
 
@@ -88,17 +87,17 @@ When resolving a collection endpoint (list or create):
 
 1. **Per-action override** — `api.endpoints.create` (highest priority)
 2. **Collection override** — `api.endpoints.collection`
-3. **Parent resource** — explicit `parentResource` (bulk operations)
-4. **Nested routing** — `api.nested.pathTemplate` with `:parentKey` substitution
-5. **Namespace + convention** — `(model namespace || server namespace) / endpoint`
+3. **Parent path** — explicit `parentPath` for nested collection operations
+4. **Namespace + convention** — `(model namespace || server namespace) / endpoint`
 
 When resolving a record endpoint (find, update, delete):
 
 1. **Per-action override** — `api.endpoints.update`, `api.endpoints.delete`
 2. **Record override** — `api.endpoints.record` with `:id` substitution
-3. **Namespace + convention** — `namespace / endpoint / recordId`
+3. **Compound ID** — if `recordId` contains `/`, it is used as the full path
+4. **Namespace + convention** — `namespace / endpoint / recordId`
 
-Each level falls through to the next if not configured. Explicit overrides (per-action, collection, nested templates) bypass namespace — they are treated as full paths.
+Each level falls through to the next if not configured. Explicit overrides (per-action, collection) bypass namespace — they are treated as full paths.
 
 ### Namespace Configuration
 
@@ -150,27 +149,38 @@ class Book extends BaseModel {
 // delete → 'books/123/archive'     (per-action > record)
 ```
 
-### Nested Routing
+### Compound IDs and Nested Resources
 
-Nested models use `pathTemplate` with `:parentKey` substitution (unchanged from before):
+Nested resources are handled through **compound IDs** and the `parentPath` parameter, eliminating the need for separate nested routing configuration:
 
 ```typescript
-class Scheduling extends BaseModel {
-  static endpoint = 'schedulings'
+class Asset extends BaseModel {
+  static endpoint = 'assets'
   static api = {
-    nested: {
-      parent: 'book',
-      nestedOnly: true,
-      pathTemplate: 'books/:book_id/schedulings',
-      parentKey: 'book_id'
-    }
+    parent: 'title', // Parent model name(s)
+    standalone: false // No standalone endpoint (nested-only)
   }
 }
 
-// With attributes { book_id: '42' }:
-resolver.resolveCollection(...) // → 'books/42/schedulings'
+// Record operations use compound IDs (the ID encodes the full path):
+resolver.resolveRecord({ model: 'asset', modelConfig, recordId: 'titles/42/assets/7' })
+// → 'titles/42/assets/7'
 
-// Without book_id when nestedOnly → throws MissingParentError
+// Collection operations use parentPath:
+resolver.resolveCollection({ model: 'asset', modelConfig, parentPath: 'titles/42/assets' })
+// → 'titles/42/assets'
+
+// Nested-only model without parentPath → throws MissingParentError
+```
+
+The `compound-id` module provides utilities for building these paths:
+
+```typescript
+import { buildCompoundId, buildCollectionPath, parseId } from 'mcp-kit/lib/mcp/services/index.js'
+
+buildCompoundId('titles', '42', 'assets', '7') // → 'titles/42/assets/7'
+buildCollectionPath('titles', '42', 'assets') // → 'titles/42/assets'
+parseId('titles/42/assets/7', 'assets') // → { isCompound: true, leafId: '7', ... }
 ```
 
 ### Custom pathForType
@@ -212,26 +222,30 @@ const modelService = new ModelService({
 ### CRUD Operations
 
 ```typescript
-// Create — validates required fields, resolves nested endpoint, builds convention payload
+// Create — validates required fields, resolves endpoint, builds convention payload
 const data = await modelService.create('book', { title: 'Test', author: 'Author' })
 
-// Find — resolves record endpoint
+// Create nested — use parentPath for nested-only models
+const asset = await modelService.create('asset', { name: 'HD' }, { parentPath: 'titles/42/assets' })
+
+// Find — resolves record endpoint (supports compound IDs)
 const book = await modelService.find('book', '123')
+const nested = await modelService.find('asset', 'titles/42/assets/7')
 
 // List — merges filters with pagination
 const results = await modelService.list('book', { status: 'active' }, { page: 2, perPage: 10 })
 
-// Update — builds convention payload for partial update
+// List nested — use parentPath for nested collections
+const assets = await modelService.list('asset', {}, {}, { parentPath: 'titles/42/assets' })
+
+// Update — builds convention payload (supports compound IDs)
 const updated = await modelService.update('book', '123', { title: 'New Title' })
 
-// Delete
+// Delete (supports compound IDs)
 await modelService.delete('book', '123')
 
-// Nested resources
-const reviews = await modelService.getNestedResources('book', '42', 'reviews', { page: 1 })
-
 // With userId impersonation
-const data = await modelService.create('book', attrs, { userId: 'user-123' })
+const impersonated = await modelService.create('book', attrs, { userId: 'user-123' })
 ```
 
 All methods return raw API responses (`Record<string, unknown>`) — no MCP formatting.
@@ -240,12 +254,12 @@ All methods return raw API responses (`Record<string, unknown>`) — no MCP form
 
 ModelService throws typed errors that tools catch and format for the MCP protocol:
 
-| Error                        | When                                | Properties                  |
-| ---------------------------- | ----------------------------------- | --------------------------- |
-| `UnknownModelError`          | Model name not in registry          | `availableModels: string[]` |
-| `ModelReadOnlyError`         | Write operation on read-only model  | —                           |
-| `MissingRequiredFieldsError` | Create missing required attributes  | `missingFields: string[]`   |
-| `MissingParentError`         | Nested-only model without parent ID | —                           |
+| Error                        | When                                   | Properties                  |
+| ---------------------------- | -------------------------------------- | --------------------------- |
+| `UnknownModelError`          | Model name not in registry             | `availableModels: string[]` |
+| `ModelReadOnlyError`         | Write operation on read-only model     | —                           |
+| `MissingRequiredFieldsError` | Create missing required attributes     | `missingFields: string[]`   |
+| `MissingParentError`         | Nested-only model without `parentPath` | —                           |
 
 ```typescript
 import { MissingRequiredFieldsError } from 'mcp-kit/lib/mcp/services/index.js'

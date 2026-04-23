@@ -37,7 +37,7 @@ describe('Pattern A: Simple standalone', () => {
     expect(result).toContain('## TOOL USAGE')
     expect(result).toContain('### Creating the Brand')
     expect(result).toContain('model: "brand"')
-    expect(result).not.toContain('parent_resource')
+    expect(result).not.toContain('parent_path')
   })
 
   it('auto-derives example attributes from model examples', () => {
@@ -99,16 +99,16 @@ describe('Pattern B: Nested with static parent', () => {
     external_id: { type: 'string', description: 'External ID', examples: ['ASSET-001'] }
   }
 
-  it('includes parent_resource in create block', () => {
-    const config = { parentResource: 'titles/{title_id}/assets' }
+  it('includes parent_path in create block', () => {
+    const config = { parentPath: 'titles/{title_id}/assets' }
     const result = generateToolUsage(makeContext(config, nestedFieldDefs, 'asset'))
 
-    expect(result).toContain('parent_resource: "titles/{title_id}/assets"')
+    expect(result).toContain('parent_path: "titles/{title_id}/assets"')
   })
 
   it('renders alternative creation section', () => {
     const config = {
-      parentResource: 'titles/{title_id}/assets',
+      parentPath: 'titles/{title_id}/assets',
       alternativeCreation: {
         title: 'Using title_link in attributes',
         linkAttribute: 'title_link',
@@ -142,12 +142,12 @@ describe('Pattern C: Dynamic parent via instance overrides', () => {
     }
   }
 
-  it('uses parentResource from instance overrides', () => {
+  it('uses parentPath from instance overrides', () => {
     const result = generateToolUsage(makeContext({}, fieldDefs, 'scheduling'), {
-      parentResource: 'titles/123/schedule/schedulings'
+      parentPath: 'titles/123/schedule/schedulings'
     })
 
-    expect(result).toContain('parent_resource: "titles/123/schedule/schedulings"')
+    expect(result).toContain('parent_path: "titles/123/schedule/schedulings"')
   })
 })
 
@@ -194,7 +194,7 @@ describe('Pattern D: Multi-step with postCreateSteps', () => {
 
     expect(result).toContain('### Step 2: Add Specific Platforms')
     expect(result).toContain('model: "specific_platform"')
-    expect(result).toContain('parent_resource: "deals/{deal_id}/specific_platforms"')
+    expect(result).toContain('parent_path: "deals/{deal_id}/specific_platforms"')
   })
 
   it('renders iterate and skip instructions', () => {
@@ -241,7 +241,7 @@ describe('Pattern E: Multiple creation variants', () => {
       },
       {
         title: 'Creating Under a Brand',
-        parentResource: 'brands/{brand_id}/series',
+        parentPath: 'brands/{brand_id}/series',
         fixedAttributes: { title_group_type: 'series' },
         description: 'WARNING: Only use if user explicitly requests.'
       }
@@ -262,17 +262,17 @@ describe('Pattern E: Multiple creation variants', () => {
     expect(result).toContain('WARNING: Only use if user explicitly requests.')
   })
 
-  it('includes parent_resource only for variants that have it', () => {
+  it('includes parent_path only for variants that have it', () => {
     const result = generateToolUsage(makeContext(config, seriesFieldDefs, 'series'))
 
-    // First variant should NOT have parent_resource
+    // First variant should NOT have parent_path
     const firstBlock = result.split('### Creating Under a Brand')[0]
     // The first block contains the "Creating a Series" variant
     const firstCodeBlock = firstBlock.split('```')[1] || ''
-    expect(firstCodeBlock).not.toContain('parent_resource')
+    expect(firstCodeBlock).not.toContain('parent_path')
 
-    // Second variant SHOULD have parent_resource
-    expect(result).toContain('parent_resource: "brands/{brand_id}/series"')
+    // Second variant SHOULD have parent_path
+    expect(result).toContain('parent_path: "brands/{brand_id}/series"')
   })
 
   it('renders shared checklists once after all variants', () => {

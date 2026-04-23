@@ -27,54 +27,28 @@ describe('lib/mcp/services/endpoint-resolver', () => {
       expect(result).toBe('books')
     })
 
-    it('uses parentResource when provided (bulk operations)', () => {
+    it('uses parentPath when provided', () => {
       const resolver = new EndpointResolver()
       const result = resolver.resolveCollection({
         model: 'book',
         modelConfig: makeConfig(),
-        parentResource: 'authors/42/books'
+        parentPath: 'authors/42/books'
       })
       expect(result).toBe('authors/42/books')
     })
 
-    describe('nested routing', () => {
-      it('resolves pathTemplate when parent ID is in attributes', () => {
-        const resolver = new EndpointResolver()
-        const result = resolver.resolveCollection({
-          model: 'book',
-          modelConfig: makeConfig({
-            api: {
-              nested: {
-                parent: 'author',
-                pathTemplate: 'authors/:author_id/books',
-                parentKey: 'author_id'
-              }
-            }
-          }),
-          attributes: { author_id: '42', title: 'Test' }
-        })
-        expect(result).toBe('authors/42/books')
+    it('parentPath takes priority over default endpoint', () => {
+      const resolver = new EndpointResolver()
+      const result = resolver.resolveCollection({
+        model: 'book',
+        modelConfig: makeConfig(),
+        parentPath: 'custom/path/books'
       })
+      expect(result).toBe('custom/path/books')
+    })
 
-      it('falls back to base endpoint when parent ID is absent and not nestedOnly', () => {
-        const resolver = new EndpointResolver()
-        const result = resolver.resolveCollection({
-          model: 'book',
-          modelConfig: makeConfig({
-            api: {
-              nested: {
-                parent: 'author',
-                pathTemplate: 'authors/:author_id/books',
-                parentKey: 'author_id'
-              }
-            }
-          }),
-          attributes: { title: 'Test' }
-        })
-        expect(result).toBe('books')
-      })
-
-      it('throws MissingParentError when nestedOnly and parent ID is absent', () => {
+    describe('nested-only models (standalone: false)', () => {
+      it('throws MissingParentError when no parentPath', () => {
         const resolver = new EndpointResolver()
         expect(() =>
           resolver.resolveCollection({
@@ -82,58 +56,44 @@ describe('lib/mcp/services/endpoint-resolver', () => {
             modelConfig: makeConfig({
               endpoint: 'schedulings',
               api: {
-                nested: {
-                  parent: 'title',
-                  nestedOnly: true,
-                  pathTemplate: 'titles/:title_id/schedulings',
-                  parentKey: 'title_id'
-                }
+                parent: 'title',
+                standalone: false
               }
-            }),
-            attributes: {}
+            })
           })
         ).toThrow(MissingParentError)
       })
 
-      it('resolves nestedOnly when parent ID is provided', () => {
+      it('resolves when parentPath is provided', () => {
         const resolver = new EndpointResolver()
         const result = resolver.resolveCollection({
           model: 'scheduling',
           modelConfig: makeConfig({
             endpoint: 'schedulings',
             api: {
-              nested: {
-                parent: 'title',
-                nestedOnly: true,
-                pathTemplate: 'titles/:title_id/schedulings',
-                parentKey: 'title_id'
-              }
+              parent: 'title',
+              standalone: false
             }
           }),
-          attributes: { title_id: '99' }
+          parentPath: 'titles/99/schedulings'
         })
         expect(result).toBe('titles/99/schedulings')
       })
-    })
 
-    describe('parentResource takes priority over nested routing', () => {
-      it('uses parentResource even when nested config exists', () => {
+      it('includes parent models in error message', () => {
         const resolver = new EndpointResolver()
-        const result = resolver.resolveCollection({
-          model: 'book',
-          modelConfig: makeConfig({
-            api: {
-              nested: {
-                parent: 'author',
-                pathTemplate: 'authors/:author_id/books',
-                parentKey: 'author_id'
+        expect(() =>
+          resolver.resolveCollection({
+            model: 'scheduling',
+            modelConfig: makeConfig({
+              endpoint: 'schedulings',
+              api: {
+                parent: ['title', 'title_group'],
+                standalone: false
               }
-            }
-          }),
-          attributes: { author_id: '42' },
-          parentResource: 'custom/path/books'
-        })
-        expect(result).toBe('custom/path/books')
+            })
+          })
+        ).toThrow(/title, title_group/)
       })
     })
   })
@@ -161,17 +121,43 @@ describe('lib/mcp/services/endpoint-resolver', () => {
       })
       expect(result).toBe('books')
     })
-  })
 
-  // =========================================================================
-  // resolveNested
-  // =========================================================================
+    describe('compound ID support', () => {
+      it('uses compound ID as full path', () => {
+        const resolver = new EndpointResolver()
+        const result = resolver.resolveRecord({
+          model: 'asset',
+          modelConfig: makeConfig({ endpoint: 'assets' }),
+          recordId: 'titles/42/assets/7'
+        })
+        expect(result).toBe('titles/42/assets/7')
+      })
 
-  describe('resolveNested', () => {
-    it('builds parent/id/child path', () => {
-      const resolver = new EndpointResolver()
-      const result = resolver.resolveNested(makeConfig({ endpoint: 'authors' }), '42', 'books')
-      expect(result).toBe('authors/42/books')
+      it('applies namespace to compound IDs', () => {
+        const resolver = new EndpointResolver({ namespace: 'api/v1' })
+        const result = resolver.resolveRecord({
+          model: 'asset',
+          modelConfig: makeConfig({ endpoint: 'assets' }),
+          recordId: 'titles/42/assets/7'
+        })
+        expect(result).toBe('api/v1/titles/42/assets/7')
+      })
+
+      it('per-action override takes priority over compound ID', () => {
+        const resolver = new EndpointResolver()
+        const result = resolver.resolveRecord(
+          {
+            model: 'book',
+            modelConfig: makeConfig({
+              api: { endpoints: { update: 'books/:id/revise' } }
+            }),
+            recordId: 'authors/42/books/7'
+          },
+          'update'
+        )
+        // Override wins — :id gets the full compound ID
+        expect(result).toBe('books/authors/42/books/7/revise')
+      })
     })
   })
 
@@ -197,12 +183,6 @@ describe('lib/mcp/services/endpoint-resolver', () => {
         recordId: '123'
       })
       expect(result).toBe('api/v1/books/123')
-    })
-
-    it('applies server-wide namespace to nested endpoints', () => {
-      const resolver = new EndpointResolver({ namespace: 'api/v1' })
-      const result = resolver.resolveNested(makeConfig({ endpoint: 'authors' }), '42', 'books')
-      expect(result).toBe('api/v1/authors/42/books')
     })
 
     it('model-level namespace overrides server-wide', () => {
@@ -378,24 +358,20 @@ describe('lib/mcp/services/endpoint-resolver', () => {
       expect(result).toBe('catalogue/book-items')
     })
 
-    it('nested routing bypasses namespace (templates are full paths)', () => {
+    it('parentPath bypasses namespace (paths are explicit)', () => {
       const resolver = new EndpointResolver({ namespace: 'api/v1' })
       const result = resolver.resolveCollection({
         model: 'scheduling',
         modelConfig: makeConfig({
           endpoint: 'schedulings',
           api: {
-            nested: {
-              parent: 'title',
-              nestedOnly: true,
-              pathTemplate: 'titles/:title_id/schedulings',
-              parentKey: 'title_id'
-            }
+            parent: 'title',
+            standalone: false
           }
         }),
-        attributes: { title_id: '99' }
+        parentPath: 'titles/99/schedulings'
       })
-      // Nested templates are explicit paths — bypass namespace
+      // Parent paths are explicit — bypass namespace
       expect(result).toBe('titles/99/schedulings')
     })
   })

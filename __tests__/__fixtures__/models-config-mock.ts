@@ -49,11 +49,8 @@ export const MOCK_MODELS = {
     required: [],
     description: 'Scheduling entries',
     api: {
-      nested: {
-        parentModels: ['title', 'title_group'],
-        nestedOnly: true,
-        notes: 'Must be created via title schedule endpoint'
-      }
+      parent: ['title', 'title_group'],
+      standalone: false
     }
   }
 }

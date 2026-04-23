@@ -47,7 +47,7 @@ export interface SummaryResult {
 
 interface TechnicalSummary {
   model: string
-  parent_resource: string | undefined
+  parent_path: string | undefined
   attributes: Record<string, unknown>
 }
 
@@ -277,7 +277,7 @@ export class HybridStrategy extends BaseStrategy {
 
     return {
       model: (context.model as string) || 'unknown',
-      parent_resource: (context.parent_resource as string) || undefined,
+      parent_path: (context.parent_path as string) || undefined,
       attributes
     }
   }

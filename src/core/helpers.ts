@@ -2,29 +2,9 @@
  * Common helper functions for MCP servers
  */
 
-export interface ParentType {
-  model: string
-  endpoint: string
-}
-
-export interface ParentResource {
-  id: string
-  model: string
-}
-
 export interface ToolResponse {
   content: Array<{ type: 'text'; text: string }>
   isError: boolean
-}
-
-export interface ModelConfig {
-  endpoint: string
-  api?: {
-    nested?: {
-      parent?: string | string[]
-    }
-  }
-  [key: string]: unknown
 }
 
 /**
@@ -154,68 +134,4 @@ export function coerceToObject(value: unknown): Record<string, unknown> | null {
 
   // Undefined, null, array, or unparseable - return null
   return null
-}
-
-/**
- * Detect parent resource from attributes for nested resource creation.
- * Scans attributes for _link or _id fields matching known parent types.
- *
- * Note: may mutate `attributes` by removing `_id` keys.
- */
-export function detectParentResource(
-  attributes: Record<string, unknown>,
-  parentTypes: ParentType[]
-): ParentResource | null {
-  for (const { model, endpoint } of parentTypes) {
-    const linkAttr = `${model}_link`
-    const idAttr = `${model}_id`
-
-    // Check for link attribute (e.g., title_link)
-    if (attributes[linkAttr]) {
-      const linkValue = String(attributes[linkAttr])
-      const match = linkValue.match(new RegExp(`${endpoint}/(\\d+)`))
-      if (match) {
-        return { id: match[1]!, model }
-      }
-    }
-
-    // Check for ID attribute (e.g., title_id)
-    if (attributes[idAttr]) {
-      const parentId = String(attributes[idAttr])
-      // Remove the ID attribute as it's not part of the API payload
-      delete attributes[idAttr]
-      return { id: parentId, model }
-    }
-  }
-
-  return null
-}
-
-/**
- * Build parent types array from a models registry.
- * Scans all models for nestedCreation.parentModels to discover which models
- * serve as parents, eliminating the need for a hardcoded PARENT_TYPES constant.
- */
-export function buildParentTypes(models: Record<string, ModelConfig>): ParentType[] {
-  const parentMap = new Map<string, ParentType>()
-
-  for (const config of Object.values(models)) {
-    const nested = config.api?.nested
-    if (!nested?.parent) continue
-
-    const parentModels = Array.isArray(nested.parent) ? nested.parent : [nested.parent]
-    for (const parentModelName of parentModels) {
-      if (parentMap.has(parentModelName)) continue
-
-      const parentConfig = models[parentModelName]
-      if (parentConfig) {
-        parentMap.set(parentModelName, {
-          model: parentModelName,
-          endpoint: parentConfig.endpoint
-        })
-      }
-    }
-  }
-
-  return Array.from(parentMap.values())
 }

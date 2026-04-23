@@ -60,12 +60,10 @@ export interface ModelConfig {
   api?: {
     convention?: BaseConvention
     readOnly?: boolean
-    nested?: {
-      parent?: string | string[]
-      nestedOnly?: boolean
-      pathTemplate?: string
-      parentKey?: string
-    }
+    /** Parent model name(s) for nested resources. */
+    parent?: string | string[]
+    /** Whether the model has a standalone (non-nested) endpoint. Default: true. */
+    standalone?: boolean
     /** API namespace prefix (e.g., 'api/v1'). Overrides server-wide default. */
     namespace?: string
     /** Per-action endpoint overrides for non-standard API paths. */

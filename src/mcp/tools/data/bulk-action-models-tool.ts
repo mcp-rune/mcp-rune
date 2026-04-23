@@ -29,6 +29,9 @@ interface HttpError extends Error {
  *
  * Replaces individual tool calls that hit Claude Desktop's per-turn tool-use limit.
  * Uses parallel execution with concurrency cap and partial failure handling.
+ *
+ * Supports compound IDs for nested resources (e.g., 'titles/42/assets/7')
+ * and parent_path for nested model creation.
  */
 export class BulkActionModelsTool extends SaveModelBaseTool {
   override get name(): string {
@@ -44,7 +47,7 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
       'When the user refers to "selected" records, call get_selection first to retrieve stored record_ids. ' +
       "Use action='update' with record_ids + attributes to apply the same change to many records. " +
       "Use action='delete' with record_ids to remove many records. " +
-      'For nested-only models (e.g., renditions, schedulings), provide parent_resource ' +
+      'For nested-only models (e.g., renditions, schedulings), provide parent_path ' +
       '(tool-level for shared parent, or per-record inside each record for different parents). ' +
       'Handles partial failures gracefully.'
     )
@@ -68,16 +71,18 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
         .array(z.string())
         .min(1)
         .max(MAX_BATCH_SIZE)
-        .describe('For uniform update or delete: array of record IDs.')
+        .describe(
+          'For uniform update or delete: array of record IDs. Supports compound IDs (e.g., "titles/42/assets/7").'
+        )
         .optional(),
       attributes: z
         .record(z.string(), z.unknown())
         .describe('For uniform update: attributes to apply to all record_ids.')
         .optional(),
-      parent_resource: z
+      parent_path: z
         .string()
         .describe(
-          "Parent resource path for nested model creation (e.g., 'assets/123/renditions'). " +
+          "Parent path for nested model creation (e.g., 'titles/42/assets'). " +
             'Required when bulk-creating nested-only models.'
         )
         .optional(),
@@ -93,11 +98,11 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
     try {
       this.requireApiClient()
 
-      const { model, action, user_id, parent_resource } = args as {
+      const { model, action, user_id, parent_path } = args as {
         model: string
         action: 'create' | 'update' | 'delete'
         user_id?: string
-        parent_resource?: string
+        parent_path?: string
       }
 
       this.validateModel(model)
@@ -124,7 +129,7 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
             model,
             args.records as Record<string, unknown>[],
             options,
-            parent_resource
+            parent_path
           )
           break
         case 'update':
@@ -209,11 +214,11 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
         if (!records || records.length === 0) {
           throw new Error("action 'create' requires 'records' array.")
         }
-        if (args.parent_resource && records.some((r) => r.parent_resource)) {
+        if (args.parent_path && records.some((r) => r.parent_path)) {
           throw new Error(
-            'Cannot combine tool-level parent_resource with per-record parent_resource. ' +
-              'Use EITHER the parent_resource parameter (all records share one parent) ' +
-              'OR parent_resource inside each record (each record specifies its own parent).'
+            'Cannot combine tool-level parent_path with per-record parent_path. ' +
+              'Use EITHER the parent_path parameter (all records share one parent) ' +
+              'OR parent_path inside each record (each record specifies its own parent).'
           )
         }
         break
@@ -245,20 +250,28 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
   }
 
   /**
-   * Prepare create: extract per-record parent_resource, resolve endpoints, validate required fields.
+   * Resolve the endpoint for a record ID (simple or compound).
+   * Compound IDs (containing '/') are used as-is; simple IDs are prefixed with the model endpoint.
+   */
+  private _resolveRecordEndpoint(modelConfig: ModelConfig, recordId: string): string {
+    return recordId.includes('/') ? recordId : `${modelConfig.endpoint}/${recordId}`
+  }
+
+  /**
+   * Prepare create: extract per-record parent_path, resolve endpoints, validate required fields.
    */
   private _prepareCreate(
     modelConfig: ModelConfig,
     model: string,
     records: Record<string, unknown>[],
-    parentResource: string | undefined
+    parentPath: string | undefined
   ): {
     records: Record<string, unknown>[]
     endpoints: string[]
     results: BulkResult[]
     validIndices: number[]
   } {
-    const nestedOnly = modelConfig.api?.nested?.nestedOnly
+    const isNestedOnly = modelConfig.api?.standalone === false
     const requiredFields = ((modelConfig as Record<string, unknown>).required as string[]) ?? []
     const results = new Array<BulkResult>(records.length)
     const endpoints = new Array<string>(records.length)
@@ -266,22 +279,22 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
     const validIndices: number[] = []
 
     for (let i = 0; i < records.length; i++) {
-      const { parent_resource: recordParent, ...attrs } = records[i]!
+      const { parent_path: recordParentPath, ...attrs } = records[i]!
       cleanRecords[i] = attrs
 
       // Resolve endpoint
-      const effectiveParent = (recordParent as string | undefined) || parentResource
+      const effectiveParent = (recordParentPath as string | undefined) || parentPath
       if (effectiveParent) {
         endpoints[i] = effectiveParent
-      } else if (nestedOnly) {
-        const parentModels =
-          ((modelConfig.api?.nested as Record<string, unknown>)?.parentModels as string[]) ?? []
+      } else if (isNestedOnly) {
+        const parent = modelConfig.api?.parent
+        const parentModels = parent ? (Array.isArray(parent) ? parent : [parent]) : []
         results[i] = {
           index: i,
           status: 'validation_error',
           errors: [
-            `'${model}' is a nested-only model — provide parent_resource in the record ` +
-              `(e.g., '${parentModels[0]}s/123/${modelConfig.endpoint}'). ` +
+            `'${model}' is nested-only — provide parent_path in the record ` +
+              `(e.g., '{parent_endpoint}/{parent_id}/${modelConfig.endpoint}'). ` +
               `Valid parents: ${parentModels.join(', ')}.`
           ]
         }
@@ -313,14 +326,14 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
     model: string,
     records: Record<string, unknown>[],
     options: Record<string, unknown>,
-    parentResource: string | undefined
+    parentPath: string | undefined
   ): Promise<BulkResult[]> {
     const {
       records: cleanRecords,
       endpoints,
       results,
       validIndices
-    } = this._prepareCreate(modelConfig, model, records, parentResource)
+    } = this._prepareCreate(modelConfig, model, records, parentPath)
 
     const tasks = validIndices.map(
       (i) => () =>
@@ -363,7 +376,7 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
     const tasks = recordIds.map(
       (id, i) => () =>
         this.apiClient!.patch(
-          `${modelConfig.endpoint}/${id}`,
+          this._resolveRecordEndpoint(modelConfig, id),
           this.buildRequestPayload(model, attributes),
           options
         )
@@ -397,7 +410,7 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
     const tasks = records.map((record, i) => () => {
       const { record_id, ...attrs } = record
       return this.apiClient!.patch(
-        `${modelConfig.endpoint}/${record_id}`,
+        this._resolveRecordEndpoint(modelConfig, record_id as string),
         this.buildRequestPayload(model, attrs),
         options
       )
@@ -430,7 +443,7 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
 
     const tasks = recordIds.map(
       (id, i) => () =>
-        this.apiClient!.delete(`${modelConfig.endpoint}/${id}`, options)
+        this.apiClient!.delete(this._resolveRecordEndpoint(modelConfig, id), options)
           .then(() => {
             results[i] = { index: i, id, status: 'deleted' }
           })

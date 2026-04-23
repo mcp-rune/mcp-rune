@@ -26,8 +26,7 @@ lib/mcp/tools/
     ├── find-model-tool.js
     ├── create-model-tool.js
     ├── update-model-tool.js
-    ├── delete-model-tool.js
-    └── get-nested-resources-tool.js
+    └── delete-model-tool.js
 
 src/{server}/tools/
 ├── base-tool.js              # ServerBaseTool — extends lib BaseTool
@@ -49,14 +48,13 @@ lib/mcp/tools/base-tool.js (BaseTool)
 
 The following CRUD tools are provided in `lib/mcp/tools/crud/` and shared across all servers:
 
-| Tool                   | Description                                             |
-| ---------------------- | ------------------------------------------------------- |
-| `list_models`          | Lists available models with attributes and associations |
-| `find_model`           | Finds records by ID or search criteria with pagination  |
-| `create_model`         | Creates records with model-key payload wrapping         |
-| `update_model`         | Updates records with model-key payload wrapping         |
-| `delete_model`         | Deletes records by ID                                   |
-| `get_nested_resources` | Fetches nested/associated resources                     |
+| Tool           | Description                                                                                                                                          |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_models`  | Lists available models with attributes and associations                                                                                              |
+| `find_model`   | Finds records by ID or search criteria with pagination. Supports compound IDs for nested resources and `parent_path` for listing nested collections. |
+| `create_model` | Creates records with model-key payload wrapping. Supports `parent_path` for nested model creation.                                                   |
+| `update_model` | Updates records with model-key payload wrapping. Supports compound IDs.                                                                              |
+| `delete_model` | Deletes records by ID. Supports compound IDs.                                                                                                        |
 
 These tools are completely generic — they have zero server-specific logic. They receive their configuration (models, serverContext) via constructor dependency injection.
 
@@ -167,7 +165,7 @@ static associations = {
 }
 ```
 
-The `list_models` tool exposes these associations in its output. The `get_nested_resources` tool uses them to validate and fetch related resources.
+The `list_models` tool exposes these associations in its output. Nested resources are accessed via `find_model` with compound IDs (e.g., `titles/42/assets/7`) or the `parent_path` parameter for listing nested collections.
 
 ## Generic Validators
 

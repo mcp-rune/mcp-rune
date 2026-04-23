@@ -226,14 +226,14 @@ describe('BasePrompt', () => {
       const example = BasePrompt.generateToolExample('item', null, { name: 'test' })
 
       expect(example).toContain('create_model(model: "item"')
-      expect(example).not.toContain('parent_resource')
+      expect(example).not.toContain('parent_path')
       expect(example).toContain('"name": "test"')
     })
 
     test('generates tool example with parent resource', () => {
       const example = BasePrompt.generateToolExample('item', '/parent/123', { name: 'test' })
 
-      expect(example).toContain('parent_resource: "/parent/123"')
+      expect(example).toContain('parent_path: "/parent/123"')
     })
   })
 

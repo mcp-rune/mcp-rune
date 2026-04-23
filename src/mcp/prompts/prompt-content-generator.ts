@@ -11,7 +11,7 @@
  *   return PromptContentGenerator.for(RulePrompt, 'rule')
  *     .add('# Rule Creation Guide\n...')
  *     .standard({ skip: ['content'] })
- *     .toolUsage({ parentResource: this.parentResource })
+ *     .toolUsage({ parentPath: this.parentPath })
  *     .attributeReference()
  *     .build()
  * }

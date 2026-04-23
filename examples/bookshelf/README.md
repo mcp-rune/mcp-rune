@@ -39,16 +39,14 @@ From a **30-line model definition**, the framework registers these tools automat
 
 ### Tools that need an API backend
 
-| Tool                        | What it does                 |
-| --------------------------- | ---------------------------- |
-| `create_model`              | Create a book record         |
-| `find_model`                | Find a book by ID or search  |
-| `update_model`              | Update book attributes       |
-| `delete_model`              | Delete a book                |
-| `search_records`            | Search with filters          |
-| `get_nested_resources`      | Fetch child resources        |
-| `bulk_action_models`        | Batch create/update/delete   |
-| `bulk_get_nested_resources` | Batch fetch nested resources |
+| Tool                 | What it does               |
+| -------------------- | -------------------------- |
+| `create_model`       | Create a book record       |
+| `find_model`         | Find by ID or list records |
+| `update_model`       | Update book attributes     |
+| `delete_model`       | Delete a book              |
+| `search_records`     | Search with filters        |
+| `bulk_action_models` | Batch create/update/delete |
 
 The strategy tools are the most interesting part — they showcase what mcp-kit does that other frameworks don't: **guided form filling with validation feedback, no API calls needed**.
 
@@ -395,7 +393,7 @@ mcp-kit doesn't care what API you talk to. It formats payloads according to the 
 
 ## Next Steps
 
-- Add more models (Author, Category) — still 10 tools, polymorphic
+- Add more models (Author, Category) — still 8 tools, polymorphic
 - Add OAuth for remote access (`HttpServer` + `OAuthService`)
 - Add MCP Apps for interactive forms (`AppRegistry`)
 - Add domain workflows for multi-step operations

@@ -131,7 +131,7 @@ export function createListViewApp({ modelClasses, namespace }: ListViewOptions):
         per_page: 20,
         total: 0
       }
-      const isNestedOnly = ModelClass.api?.nested?.nestedOnly
+      const isNestedOnly = ModelClass.api?.standalone === false
       const hasFilters = Object.keys(filters as Record<string, unknown>).length > 0
 
       if (isNestedOnly && searchClient) {

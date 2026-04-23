@@ -12,6 +12,9 @@ import { validateFilterParams } from '../validators.js'
  *
  * Delegates reads to ModelService. Owns MCP concerns:
  * filter validation, field picking, transient context, response formatting.
+ *
+ * Supports compound IDs (e.g., 'titles/42/assets/7') for nested resources,
+ * and parent_path (e.g., 'titles/42/assets') for listing nested collections.
  */
 export class FindModelTool extends BaseTool {
   override get name(): string {
@@ -25,7 +28,8 @@ export class FindModelTool extends BaseTool {
 Use this tool to:
 - Look up a specific record by ID
 - Query records with specific filters
-- Get raw record data for further processing`
+- Get raw record data for further processing
+- List nested resources using parent_path (e.g., parent_path="titles/42/assets")`
   }
 
   override get annotations(): ToolAnnotations {
@@ -35,7 +39,18 @@ Use this tool to:
   override get inputSchema(): Record<string, ZodTypeAny> {
     return {
       model: this.zodEnum(this.getModelNames()).describe('Model name'),
-      record_id: z.string().describe('Record ID to find a specific record').optional(),
+      record_id: z
+        .string()
+        .describe(
+          "Record ID to find a specific record. Supports compound IDs for nested resources (e.g., 'titles/42/assets/7')."
+        )
+        .optional(),
+      parent_path: z
+        .string()
+        .describe(
+          "Parent path for listing nested resources (e.g., 'titles/42/assets'). Use instead of record_id when listing a nested collection."
+        )
+        .optional(),
       filters: z
         .record(z.string(), z.unknown())
         .describe(
@@ -69,9 +84,10 @@ Use this tool to:
     try {
       const service = this.requireModelService()
 
-      const { model, record_id, filters, page, per_page, user_id, fields } = args as {
+      const { model, record_id, parent_path, filters, page, per_page, user_id, fields } = args as {
         model: string
         record_id?: string
+        parent_path?: string
         filters?: Record<string, unknown>
         page?: number
         per_page?: number
@@ -99,6 +115,7 @@ Use this tool to:
           tool: 'find_model',
           model,
           hasId: !!record_id,
+          hasParentPath: !!parent_path,
           impersonating: user_id ?? null
         })
       }
@@ -112,7 +129,7 @@ Use this tool to:
           model,
           filters,
           { page: currentPage, perPage: per_page ?? 20 },
-          options
+          { ...options, parentPath: parent_path }
         )
 
         // Transient context: emit _meta hint for large results

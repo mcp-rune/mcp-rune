@@ -7,12 +7,12 @@
  *
  *   1. Per-action override   (e.g., api.endpoints.create → 'books/draft')
  *   2. Collection override   (e.g., api.endpoints.collection → 'catalogue/book-items')
- *   3. Nested routing        (pathTemplate with :parentKey substitution)
+ *   3. Parent path           (compound ID context for nested resources)
  *   4. Namespace + convention (namespace + modelConfig.endpoint)
  *   5. Base convention       (modelConfig.endpoint)
  *
- * This consolidates endpoint resolution logic that was previously scattered
- * across CreateModelTool, BulkActionModelsTool, FindModelTool, etc.
+ * Supports compound IDs (e.g., 'titles/42/assets/7') that encode the full
+ * resource hierarchy, eliminating the need for separate nested routing logic.
  */
 
 import type { ModelConfig } from '../tools/base-tool.js'
@@ -45,12 +45,12 @@ export interface EndpointContext {
   model: string
   /** Model configuration from the registry. */
   modelConfig: ModelConfig
-  /** Record ID for record-level operations. */
+  /** Record ID for record-level operations (simple or compound). */
   recordId?: string
-  /** Attributes hash — used to extract parentKey for nested routing. */
+  /** Parent path for nested collection operations (e.g., 'titles/42/assets'). */
+  parentPath?: string
+  /** Attributes hash — used for payload building. */
   attributes?: Record<string, unknown>
-  /** Explicit parent resource path override (used by bulk operations). */
-  parentResource?: string
 }
 
 /** CRUD action type for per-action endpoint resolution. */
@@ -60,10 +60,14 @@ export type CrudAction = 'list' | 'find' | 'create' | 'update' | 'delete'
 // Errors
 // ============================================================================
 
-/** Thrown when a nested-only model is missing a required parent ID. */
+/** Thrown when a nested-only model is missing required parent context. */
 export class MissingParentError extends Error {
-  constructor(model: string, parentKey: string) {
-    super(`'${model}' requires parent. Provide '${parentKey}' in attributes.`)
+  constructor(model: string, parentModels: string[]) {
+    super(
+      `'${model}' is nested-only — provide parent_path ` +
+        `(e.g., '{parent_endpoint}/{parent_id}/${model}s'). ` +
+        `Valid parents: ${parentModels.join(', ')}.`
+    )
     this.name = 'MissingParentError'
   }
 }
@@ -85,16 +89,16 @@ export class EndpointResolver {
    * Resolution chain:
    *   1. Per-action override (endpoints.create for 'create', none for 'list')
    *   2. Collection override (endpoints.collection)
-   *   3. Explicit parentResource (bulk operations)
-   *   4. Nested routing (pathTemplate + parentKey from attributes)
-   *   5. Namespace + pathForType
+   *   3. Parent path (for nested resource collections)
+   *   4. Namespace + pathForType
    */
   resolveCollection(ctx: EndpointContext, action?: CrudAction): string {
     const overrides = this._getOverrides(ctx.modelConfig)
 
     // 1. Per-action override
-    if (action && action !== 'list' && overrides?.[action]) {
-      return overrides[action]!
+    if (action && action !== 'list') {
+      const override = overrides?.[action as keyof EndpointOverrides]
+      if (override) return override
     }
 
     // 2. Collection override
@@ -102,27 +106,16 @@ export class EndpointResolver {
       return overrides.collection
     }
 
-    // 3. Explicit parentResource (bulk operations pass this directly)
-    if (ctx.parentResource) {
-      return ctx.parentResource
+    // 3. Parent path (replaces both parentResource and pathTemplate routing)
+    if (ctx.parentPath) {
+      return ctx.parentPath
     }
 
-    // 4. Nested routing
-    const nested = ctx.modelConfig.api?.nested
-    if (nested?.pathTemplate && ctx.attributes) {
-      const parentKey = nested.parentKey
-      const parentId = parentKey ? (ctx.attributes[parentKey] as string | undefined) : undefined
-
-      if (nested.nestedOnly) {
-        if (!parentId) {
-          throw new MissingParentError(ctx.model, parentKey!)
-        }
-        return nested.pathTemplate.replace(`:${parentKey}`, parentId)
-      }
-
-      if (parentId) {
-        return nested.pathTemplate.replace(`:${parentKey}`, parentId)
-      }
+    // 4. Validate nested-only models have parent context
+    if (ctx.modelConfig.api?.standalone === false) {
+      const parent = ctx.modelConfig.api?.parent
+      const parentModels = parent ? (Array.isArray(parent) ? parent : [parent]) : []
+      throw new MissingParentError(ctx.model, parentModels)
     }
 
     // 5. Namespace + pathForType
@@ -133,9 +126,10 @@ export class EndpointResolver {
    * Resolve the endpoint for a record-level operation (find, update, delete).
    *
    * Resolution chain:
-   *   1. Per-action override (endpoints.update, endpoints.delete)
-   *   2. Record override (endpoints.record) with :id substitution
-   *   3. Namespace + pathForType + /recordId
+   *   1. Per-action override with :id substitution
+   *   2. Record override with :id substitution
+   *   3. Compound ID (contains '/') — used as full path
+   *   4. Namespace + pathForType + /recordId
    */
   resolveRecord(ctx: EndpointContext, action?: CrudAction): string {
     const overrides = this._getOverrides(ctx.modelConfig)
@@ -152,17 +146,14 @@ export class EndpointResolver {
       return recordId ? overrides.record.replace(':id', recordId) : overrides.record
     }
 
-    // 3. Namespace + pathForType + /recordId
+    // 3. Compound ID — use as full path (apply namespace only)
+    if (recordId?.includes('/')) {
+      return this._applyNamespace(ctx.modelConfig, recordId)
+    }
+
+    // 4. Namespace + pathForType + /recordId
     const base = this._applyNamespace(ctx.modelConfig, this.pathForType(ctx.model, ctx.modelConfig))
     return recordId ? `${base}/${recordId}` : base
-  }
-
-  /**
-   * Resolve endpoint for nested child resources (parent/:id/children).
-   */
-  resolveNested(parentConfig: ModelConfig, parentId: string, childPath: string): string {
-    const parentBase = this._applyNamespace(parentConfig, parentConfig.endpoint)
-    return `${parentBase}/${parentId}/${childPath}`
   }
 
   /**

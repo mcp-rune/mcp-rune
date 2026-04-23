@@ -352,13 +352,14 @@ async function resolveAssociationOptions(
 
       // Handle nested associations (e.g., categories under themes)
       if (field.association!.nested) {
-        const { pathTemplate, parentKey } = field.association!.nested
-        const parentValue = defaults[parentKey]
+        const { parentModel, childEndpoint } = field.association!.nested
+        const parentValue = defaults[`${parentModel}_id`]
         if (!parentValue) {
           field.options = []
           return
         }
-        endpoint = pathTemplate.replace(`:${parentKey}`, String(parentValue))
+        const parentModelEndpoint = field.association!.endpoint
+        endpoint = `${parentModelEndpoint}/${String(parentValue)}/${childEndpoint}`
       }
 
       const data = await apiClient.get(endpoint)
