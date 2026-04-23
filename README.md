@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://github.com/dsaenztagarro/mcp-kit/actions/workflows/ci.yml"><img src="https://github.com/dsaenztagarro/mcp-kit/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-  <img src="https://img.shields.io/badge/MCP-2025--06--18-blue" alt="MCP Spec" />
+  <img src="https://img.shields.io/badge/MCP-2025--11--25-blue" alt="MCP Spec" />
   <img src="https://img.shields.io/badge/node-%3E%3D24-green" alt="Node.js" />
   <img src="https://img.shields.io/badge/tests-2177%20passing-brightgreen" alt="Tests" />
   <img src="https://img.shields.io/badge/coverage-81%25-yellow" alt="Coverage" />
@@ -771,7 +771,7 @@ Add to your `claude_desktop_config.json`:
 
 - **Language:** TypeScript 5.9 (strict mode, compiled with `tsc`)
 - **Runtime:** Node.js >= 24 (ES modules)
-- **MCP SDK:** `@modelcontextprotocol/sdk` (spec 2025-06-18)
+- **MCP SDK:** `@modelcontextprotocol/sdk` (spec 2025-11-25)
 - **Schema:** Zod v4
 - **HTTP:** Express 5
 - **OAuth2:** openid-client (RFCs 6749, 7591, 7636, 7662, 8414, 8707, 9728 + OIDC Core)
