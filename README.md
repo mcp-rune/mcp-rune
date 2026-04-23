@@ -2,7 +2,7 @@
   <a href="https://github.com/dsaenztagarro/mcp-kit/actions/workflows/ci.yml"><img src="https://github.com/dsaenztagarro/mcp-kit/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <img src="https://img.shields.io/badge/MCP-2025--11--25-blue" alt="MCP Spec" />
   <img src="https://img.shields.io/badge/node-%3E%3D24-green" alt="Node.js" />
-  <img src="https://img.shields.io/badge/tests-2177%20passing-brightgreen" alt="Tests" />
+  <img src="https://img.shields.io/badge/tests-2139%20passing-brightgreen" alt="Tests" />
   <img src="https://img.shields.io/badge/coverage-81%25-yellow" alt="Coverage" />
   <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License" />
 </p>
@@ -29,13 +29,14 @@ export class Book extends BaseModel {
 
 // That's it. You now have:
 //   list_models, find_model, create_model, update_model, delete_model
-//   search_records, get_nested_resources, bulk_action_models, ...
+//   search_records, bulk_action_models, ...
+//   + compound IDs for nested resources (titles/42/assets/7)
 //   + prompt guide with validation strategy
 //   + interactive form app
 //   + auto-generated documentation
 //
 // All tools are polymorphic — they work with every model you register.
-// 10 models, still 10 tools. The LLM's context stays clean.
+// 10 models, still 8 tools. The LLM's context stays clean.
 ```
 
 <details>
@@ -94,7 +95,7 @@ mcp-kit works at the **application** level. You describe your domain, the framew
 ```
   You write                         mcp-kit generates
  ┌──────────────────┐     ┌────────────────────────────────────────┐
- │  Model           │────▶│  Polymorphic CRUD tools (10 tools      │
+ │  Model           │────▶│  Polymorphic CRUD tools (8 tools       │
  │  attributesConfig│     │    serve ALL models, not N x 5)        │
  └──────────────────┘     ├────────────────────────────────────────┤
  ┌──────────────────┐     │  Prompt guide with validation          │
@@ -130,22 +131,20 @@ mcp-kit works at the **application** level. You describe your domain, the framew
 
 ### Polymorphic CRUD Tools
 
-10 generic tools serve your entire domain. Register 10 models or 100 — the tool count stays constant:
+8 generic tools serve your entire domain. Register 10 models or 100 — the tool count stays constant:
 
-| Tool                        | Description                            |
-| --------------------------- | -------------------------------------- |
-| `list_models`               | Paginated listing with field selection |
-| `find_model`                | Fetch a single record by ID            |
-| `create_model`              | Create with attribute validation       |
-| `update_model`              | Partial update                         |
-| `delete_model`              | Destroy a record                       |
-| `search_records`            | Full-text and filtered search          |
-| `get_nested_resources`      | Fetch child resources                  |
-| `get_filters_guide`         | Describe available filters for a model |
-| `bulk_action_models`        | Batch create/update/delete             |
-| `bulk_get_nested_resources` | Batch fetch nested resources           |
+| Tool                 | Description                                |
+| -------------------- | ------------------------------------------ |
+| `list_models`        | Paginated listing with field selection     |
+| `find_model`         | Fetch by ID, list nested via `parent_path` |
+| `create_model`       | Create with attribute validation           |
+| `update_model`       | Partial update                             |
+| `delete_model`       | Destroy a record                           |
+| `search_records`     | Full-text and filtered search              |
+| `get_filters_guide`  | Describe available filters for a model     |
+| `bulk_action_models` | Batch create/update/delete                 |
 
-The LLM passes the model name as a parameter — `{ "model": "book", "attributes": {...} }`. Fewer tools = better LLM tool selection, smaller system prompts, more context window for actual work.
+Nested resources use **compound IDs** (`titles/42/assets/7`) — no separate nested tools needed. The LLM passes the model name as a parameter — `{ "model": "book", "attributes": {...} }`. Fewer tools = better LLM tool selection, smaller system prompts, more context window for actual work.
 
 Tools declare a **category** and the framework infers auth requirements automatically:
 
@@ -291,7 +290,7 @@ The convention handles payload wrapping, association resolution, and response no
 **The service layer** (`ModelService` + `EndpointResolver`) sits between tools and the API client, providing a layered endpoint resolution chain inspired by Ember Data's Adapter pattern:
 
 ```
-Per-action override → Collection override → Nested routing → Namespace → Base endpoint
+Per-action override → Collection override → Parent path → Namespace → Base endpoint
 ```
 
 Configure per-model namespaces, per-action endpoint overrides, or subclass `EndpointResolver` for full URL control — without changing model definitions or tool code.
@@ -481,7 +480,7 @@ npm install
 npx @modelcontextprotocol/inspector -- npx tsx server.ts
 ```
 
-This starts a working MCP server with a Book model, prompt strategy, and all 10 polymorphic tools. Open the MCP Inspector and try:
+This starts a working MCP server with a Book model, prompt strategy, and all polymorphic tools. Open the MCP Inspector and try:
 
 1. `get_prompt_guide` with `{ "model": "book" }` — see the auto-generated creation guide
 2. `validate_form` with `{ "model": "book", "attributes": { "title": "Clean Code" } }` — see validation feedback
@@ -667,7 +666,7 @@ mcp-kit/                              (the framework)
 
 - **Model is the single source of truth** — `attributesConfig` drives tools, prompts, forms, and docs
 - **Convention over configuration** — sensible defaults, override when needed
-- **Polymorphic tools** — 10 tools serve all models, keeping LLM context clean
+- **Polymorphic tools** — 8 tools serve all models, keeping LLM context clean
 - **Category-driven auth** — tools declare a category, the framework infers requirements
 - **API-agnostic** — pluggable conventions and search adapters for any REST backend
 - **Dependency injection** — the framework never reads env vars or hardcodes URLs
