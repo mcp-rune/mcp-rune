@@ -59,6 +59,32 @@ export class Book extends BaseModel {
 
 ---
 
+## Table of Contents
+
+- [Why mcp-kit?](#why-mcp-kit)
+- [Features](#features)
+  - [Polymorphic CRUD Tools](#polymorphic-crud-tools)
+  - [Prompt Strategies](#prompt-strategies)
+  - [API-Agnostic Integration](#api-agnostic-integration)
+  - [Interactive MCP Apps](#interactive-mcp-apps)
+  - [Domain Intelligence](#domain-intelligence)
+  - [OAuth 2.1 + PKCE](#oauth-21--pkce)
+  - [Dual Transport](#dual-transport)
+  - [Observability](#observability)
+- [Quick Start](#quick-start)
+- [Database](#database)
+- [Subpath Imports](#subpath-imports)
+- [Architecture](#architecture)
+- [Documentation](#documentation)
+- [Design Principles](#design-principles)
+- [Comparison with Alternatives](#comparison-with-alternatives)
+- [Development](#development)
+- [Tech Stack](#tech-stack)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
 ## Why mcp-kit?
 
 Every MCP framework today works at the **transport/tool** level. You register tools, handle HTTP, write one handler per operation per model. 10 models x 5 CRUD operations = 50 hand-written tool handlers. Tool lists bloat, LLM tool selection degrades, and you're maintaining boilerplate across every model.
@@ -67,19 +93,19 @@ mcp-kit works at the **application** level. You describe your domain, the framew
 
 ```
   You write                         mcp-kit generates
- ┌─────────────────┐     ┌──────────────────────────────────────┐
- │  Model           │────▶│  Polymorphic CRUD tools (10 tools    │
- │  attributesConfig│     │    serve ALL models, not N x 5)      │
- └─────────────────┘     ├──────────────────────────────────────┤
- ┌─────────────────┐     │  Prompt guide with validation         │
- │  Prompt          │────▶│    (stateless / hybrid / stateful)    │
- │  fieldGroups     │     ├──────────────────────────────────────┤
- │  sections        │     │  Interactive Apps (form, list,        │
- └─────────────────┘     │    detail, search, autocomplete)      │
-                         ├──────────────────────────────────────┤
-                         │  Field documentation & reference      │
-                         │    tables (auto-generated from config) │
-                         └──────────────────────────────────────┘
+ ┌──────────────────┐     ┌────────────────────────────────────────┐
+ │  Model           │────▶│  Polymorphic CRUD tools (10 tools      │
+ │  attributesConfig│     │    serve ALL models, not N x 5)        │
+ └──────────────────┘     ├────────────────────────────────────────┤
+ ┌──────────────────┐     │  Prompt guide with validation          │
+ │  Prompt          │────▶│    (stateless / hybrid / stateful)     │
+ │  fieldGroups     │     ├────────────────────────────────────────┤
+ │  sections        │     │  Interactive Apps (form, list,         │
+ └──────────────────┘     │    detail, search, autocomplete)       │
+                          ├────────────────────────────────────────┤
+                          │  Field documentation & reference       │
+                          │    tables (auto-generated from config) │
+                          └────────────────────────────────────────┘
 ```
 
 ### How It Compares
@@ -365,13 +391,43 @@ export const onboardNewUser = new WorkflowDefinition({
 
 Production-grade OAuth2 built on [openid-client](https://github.com/panva/openid-client):
 
-| RFC  | Standard                      |
-| ---- | ----------------------------- |
-| 7636 | PKCE                          |
-| 7591 | Dynamic Client Registration   |
-| 8414 | Authorization Server Metadata |
-| 8707 | Resource Indicators           |
-| 9728 | Protected Resource Metadata   |
+```
+┌──────────────────────────────────────────────────────────────┬──────────────┐
+│                     RFC / Specification                      │    Status    │
+├──────────────────────────────────────────────────────────────┼──────────────┤
+│ RFC 9728 — Protected Resource Metadata                       │              │
+│   • Origin-only form (/.well-known/oauth-protected-resource) │ Implemented  │
+│   • §3.1 path-inserted form                                  │ Implemented  │
+│   • WWW-Authenticate resource_metadata parameter             │ Implemented  │
+├──────────────────────────────────────────────────────────────┼──────────────┤
+│ RFC 8414 — Authorization Server Metadata Discovery           │              │
+│   • Metadata proxy with endpoint rewriting                   │ Implemented  │
+│   • OpenID Configuration alias                               │ Implemented  │
+├──────────────────────────────────────────────────────────────┼──────────────┤
+│ RFC 7591 — Dynamic Client Registration (DCR)                 │              │
+│   • Registration proxy with fallback to pre-configured       │ Implemented  │
+├──────────────────────────────────────────────────────────────┼──────────────┤
+│ RFC 6749 — OAuth 2.0 Authorization Framework                 │              │
+│   • Authorization Code Grant (with mandatory PKCE)           │ Implemented  │
+│   • Client Credentials Grant (M2M)                           │ Implemented  │
+│   • Refresh Token Grant (auto-refresh with 5 min buffer)     │ Implemented  │
+├──────────────────────────────────────────────────────────────┼──────────────┤
+│ RFC 7636 — Proof Key for Code Exchange (PKCE)                │              │
+│   • S256 challenge method (mandatory for all flows)          │ Implemented  │
+├──────────────────────────────────────────────────────────────┼──────────────┤
+│ RFC 7662 — Token Introspection                               │              │
+│   • Cached introspection (60s TTL, 100-entry LRU)            │ Implemented  │
+├──────────────────────────────────────────────────────────────┼──────────────┤
+│ RFC 8707 — Resource Indicators                               │              │
+│   • Audience-restricted tokens via resource parameter        │ Implemented  │
+├──────────────────────────────────────────────────────────────┼──────────────┤
+│ Token Revocation                                             │ Implemented  │
+├──────────────────────────────────────────────────────────────┼──────────────┤
+│ OpenID Connect Core 1.0                                      │              │
+│   • Discovery via openid-client                              │ Implemented  │
+│   • UserInfo endpoint (fallback to introspection)            │ Implemented  │
+└──────────────────────────────────────────────────────────────┴──────────────┘
+```
 
 ```typescript
 import { OAuthService } from 'mcp-kit/oauth2'
@@ -718,7 +774,7 @@ Add to your `claude_desktop_config.json`:
 - **MCP SDK:** `@modelcontextprotocol/sdk` (spec 2025-06-18)
 - **Schema:** Zod v4
 - **HTTP:** Express 5
-- **OAuth2:** openid-client (5 RFCs)
+- **OAuth2:** openid-client (RFCs 6749, 7591, 7636, 7662, 8414, 8707, 9728 + OIDC Core)
 - **Database:** PostgreSQL
 - **Apps:** Vite (build only)
 - **Testing:** Vitest (2054 tests, 81%+ coverage)
