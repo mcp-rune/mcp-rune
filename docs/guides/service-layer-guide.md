@@ -35,10 +35,10 @@ This guide covers the two services that sit between MCP tools and the API client
 
 The service layer provides two focused services that encapsulate all API communication:
 
-| Service             | Purpose                                              | Consumers                                                                                 | Composes                                  |
-| ------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------- |
-| **`ModelService`**  | CRUD operations (create, find, list, update, delete) | CRUD tools, bulk tools                                                                    | EndpointResolver + Convention + ApiClient |
-| **`SearchService`** | Search, lookup, group search, listing                | search_records tool, analysis_ingest, MCP Apps (list, search, autocomplete, multi-select) | SearchAdapter + Convention + ApiClient    |
+| Service             | Purpose                                                                       | Consumers                                                                                 | Composes                                  |
+| ------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **`ModelService`**  | CRUD operations + custom actions (create, find, list, update, delete, action) | CRUD tools, bulk tools, model_action tool                                                 | EndpointResolver + Convention + ApiClient |
+| **`SearchService`** | Search, lookup, group search, listing                                         | search_records tool, analysis_ingest, MCP Apps (list, search, autocomplete, multi-select) | SearchAdapter + Convention + ApiClient    |
 
 Both services follow the same pattern: wrap `ApiClient` with domain logic, resolve endpoints from model config, normalize requests/responses, and return clean results. Tools delegate data operations to these services and focus on MCP-specific concerns (input validation, response formatting, vector storage).
 
@@ -79,7 +79,7 @@ Supporting classes:
 
 ## EndpointResolver
 
-`EndpointResolver` consolidates URL building logic into a single class with a layered resolution chain.
+`EndpointResolver` consolidates URL building logic into a single class with layered resolution chains for CRUD and custom actions. For the complete `ApiConfig` reference including custom actions (`ActionDefinition`), path parameter substitution, and compound ID interaction, see the [API Configuration Guide](api-config-guide.md).
 
 ### Resolution Chain
 
@@ -246,9 +246,27 @@ await modelService.delete('book', '123')
 
 // With userId impersonation
 const impersonated = await modelService.create('book', attrs, { userId: 'user-123' })
+
+// Custom action — any HTTP method, any URL pattern
+await modelService.action('book', 'publish', { recordId: '42' })
+// → POST /books/42/publish
+
+await modelService.action('book', 'approve_chapter', {
+  recordId: '42',
+  pathParams: { chapter_id: '5' }
+})
+// → POST /books/42/chapters/5/approve
+
+await modelService.action('book', 'export', {
+  recordId: '42',
+  params: { format: 'pdf' }
+})
+// → GET /books/42/export?format=pdf
 ```
 
 All methods return raw API responses (`Record<string, unknown>`) — no MCP formatting.
+
+For the complete reference on custom actions, `ActionDefinition`, path parameter substitution, and `rawPayload`, see the [API Configuration Guide](api-config-guide.md).
 
 ### Domain Errors
 
@@ -260,6 +278,7 @@ ModelService throws typed errors that tools catch and format for the MCP protoco
 | `ModelReadOnlyError`         | Write operation on read-only model     | —                           |
 | `MissingRequiredFieldsError` | Create missing required attributes     | `missingFields: string[]`   |
 | `MissingParentError`         | Nested-only model without `parentPath` | —                           |
+| `UnknownActionError`         | Custom action not declared on model    | —                           |
 
 ```typescript
 import { MissingRequiredFieldsError } from 'mcp-kit/lib/mcp/services/index.js'
@@ -495,16 +514,17 @@ async _createAuthenticatedInstance(ToolClass, getAccessToken) {
 
 ### Which service for which tool?
 
-| Tool                                  | Service               | Why                                      |
-| ------------------------------------- | --------------------- | ---------------------------------------- |
-| `create_model`                        | ModelService          | Convention payload + endpoint resolution |
-| `find_model`                          | ModelService          | Record/list endpoint resolution          |
-| `update_model`                        | ModelService          | Convention payload + record endpoint     |
-| `delete_model`                        | ModelService          | Record endpoint resolution               |
-| `bulk_action_models`                  | ModelService (future) | Batch CRUD operations                    |
-| `search_records`                      | SearchService         | 3-tier search resolution + adapters      |
-| `analysis_ingest`                     | SearchService         | Filtered multi-page ingestion            |
-| MCP Apps (list, search, autocomplete) | SearchService         | Listing, search, lookup for UI rendering |
+| Tool                                  | Service               | Why                                       |
+| ------------------------------------- | --------------------- | ----------------------------------------- |
+| `create_model`                        | ModelService          | Convention payload + endpoint resolution  |
+| `find_model`                          | ModelService          | Record/list endpoint resolution           |
+| `update_model`                        | ModelService          | Convention payload + record endpoint      |
+| `delete_model`                        | ModelService          | Record endpoint resolution                |
+| `model_action`                        | ModelService          | Custom actions with any HTTP method + URL |
+| `bulk_action_models`                  | ModelService (future) | Batch CRUD operations                     |
+| `search_records`                      | SearchService         | 3-tier search resolution + adapters       |
+| `analysis_ingest`                     | SearchService         | Filtered multi-page ingestion             |
+| MCP Apps (list, search, autocomplete) | SearchService         | Listing, search, lookup for UI rendering  |
 
 ### How ModelService is resolved
 

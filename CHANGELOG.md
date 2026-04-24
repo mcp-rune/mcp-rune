@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.19.0] — 2026-04-24
+
+### Added
+
+- **Custom actions on models** — new `actions` config on `ApiConfig` enables declaring custom endpoints beyond CRUD with any HTTP method and Rails-style URL path templates. Actions are model-scoped, resolved through `EndpointResolver`, and dispatched through `ModelService`.
+- **`ActionDefinition` interface** — declares `method` (GET/POST/PUT/PATCH/DELETE), `path` (with `:id` and `:param_name` placeholders), `recordLevel`, `description`, and `rawPayload` options.
+- **`EndpointResolver.resolveAction()`** — layered resolution for custom actions: substitutes `:id` from `recordId`, `:param_name` from `pathParams`, handles compound IDs (skip base prepend), and applies namespace.
+- **`ModelService.action()`** — orchestrates custom action execution through the resolver + convention + ApiClient pipeline. Supports convention-wrapped payloads (default) or raw payloads (`rawPayload: true`), query params for GET actions, and user impersonation.
+- **`ModelActionTool`** (`model_action`) — new MCP tool that exposes custom actions to LLMs. Dynamically discovers models with actions and includes action summaries (names, methods, descriptions) in the tool description.
+- **`UnknownActionError`** — thrown when a custom action is not declared on the model, with available actions listed in the error message.
+- **`ActionContext` interface** — extends `EndpointContext` with `action` name and `pathParams` for multi-parameter URL substitution.
+- **Rails-style path parameter substitution** — action paths support multiple named parameters (e.g., `:id/chapters/:chapter_id/approve`) resolved from `recordId` and `pathParams`.
+- **API Configuration Guide** (`docs/guides/api-config-guide.md`) — exhaustive standalone guide covering the complete `ApiConfig` and `ActionDefinition` reference, endpoint resolution chains, ModelService integration, compound IDs, and real-world examples.
+
+[0.19.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.18.0...v0.19.0
+
 ## [0.18.0] — 2026-04-24
 
 ### Changed
