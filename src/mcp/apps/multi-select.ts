@@ -117,7 +117,7 @@ export function createMultiSelectApp({ modelClasses, namespace }: MultiSelectOpt
         }
       } else if (apiClient) {
         try {
-          const data = await apiClient.get(ModelClass.endpoint, { per_page: MAX_RECORDS })
+          const data = await apiClient.get(ModelClass.api.endpoint, { per_page: MAX_RECORDS })
           const convention = ModelClass.api?.convention ?? defaultConvention
           const { records: rawRecords } = convention.normalizeListResponse(data, {
             page: 1,

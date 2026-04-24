@@ -46,7 +46,7 @@ export class Book extends BaseModel {
 import { BaseModel } from 'mcp-kit/core'
 
 export class Book extends BaseModel {
-  static endpoint = 'books'
+  static api = { endpoint: 'books' }
   static attributes = {
     title: { type: 'string', required: true, description: 'Book title' },
     author: { type: 'string', required: true, description: 'Author name' },

@@ -78,8 +78,8 @@ export function generateListSchema(ModelClass: AppModelClass): ListSchema {
 
   return {
     model,
-    title: humanize(ModelClass.endpoint),
-    endpoint: ModelClass.endpoint,
+    title: humanize(ModelClass.api.endpoint),
+    endpoint: ModelClass.api.endpoint,
     columns,
     searchFields
   }

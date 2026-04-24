@@ -282,7 +282,7 @@ export function createUpdateFormApp({
 
       let defaults: Record<string, unknown>
       if (record_id && apiClient) {
-        defaults = await fetchRecord(apiClient, ModelClass.endpoint, record_id as string)
+        defaults = await fetchRecord(apiClient, ModelClass.api.endpoint, record_id as string)
       } else if (PromptClass) {
         defaults = new PromptClass(prefillArgs).getDefaultFormState()
         Object.assign(defaults, filterEmpty(prefillArgs))

@@ -5,7 +5,7 @@
  * Each model class defines its schema, attributes, and behavior.
  *
  * Models can be used in two ways:
- * 1. Static access for metadata: BookModel.endpoint, BookModel.required (derived from attributes)
+ * 1. Static access for metadata: BookModel.api.endpoint, BookModel.required (derived from attributes)
  * 2. Instantiated with record data: new BookModel(record).displayValue
  */
 
@@ -45,6 +45,8 @@ export interface EndpointOverrides {
 }
 
 export interface ApiConfig {
+  /** Base API path for this model (e.g., 'books', 'activities'). */
+  endpoint?: string
   convention?: BaseConvention
   readOnly?: boolean
   /** Parent model name(s) for nested resources. */
@@ -70,10 +72,10 @@ export interface ModelData {
 // ============================================================================
 
 export class BaseModel {
-  static endpoint: string = ''
+  static modelName?: string
   static attributes: Record<string, AttributeDefinition> = {}
   static description: string = ''
-  static api: ApiConfig = { convention: jsonApiConvention }
+  static api: ApiConfig = { endpoint: '', convention: jsonApiConvention }
   static search: SearchConfig | null = null
   static associations: AssociationConfig = {}
 
@@ -100,9 +102,9 @@ export class BaseModel {
     return Object.keys(this.attributes)
   }
 
-  /** Singular name for API payloads (e.g., 'books' -> 'book') */
+  /** Singular name for API payloads (e.g., 'books' -> 'book'). Override with `static modelName`. */
   static get singularName(): string {
-    return this.endpoint.replace(/s$/, '')
+    return this.modelName ?? this.api.endpoint!.replace(/s$/, '')
   }
 
   /** Check if this model supports lookup (typeahead/autocomplete) */
@@ -126,7 +128,7 @@ export class BaseModel {
 
   /** Get endpoint for a specific record */
   static getRecordEndpoint(id: string | number): string {
-    return `${this.endpoint}/${id}`
+    return `${this.api.endpoint}/${id}`
   }
 
   // --- Instance ---
@@ -161,7 +163,7 @@ export class BaseModel {
 
   /** API endpoint for this specific record */
   get recordEndpoint(): string {
-    return `${(this.constructor as typeof BaseModel).endpoint}/${this.id}`
+    return `${(this.constructor as typeof BaseModel).api.endpoint}/${this.id}`
   }
 
   /** Build payload for updating this record */

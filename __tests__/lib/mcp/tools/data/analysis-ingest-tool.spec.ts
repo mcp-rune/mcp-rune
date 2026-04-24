@@ -16,7 +16,7 @@ import { flatConvention } from '../../../../__fixtures__/flat-convention.js'
 
 const mockModels = {
   scheduling: {
-    endpoint: 'schedulings',
+    api: { endpoint: 'schedulings' },
     attributes: {
       id: { type: 'string' },
       name: { type: 'string' },
@@ -38,7 +38,7 @@ const mockModels = {
     }
   },
   metadata_error: {
-    endpoint: 'metadata_errors',
+    api: { endpoint: 'metadata_errors' },
     attributes: {
       id: { type: 'string' },
       message: { type: 'string' }
@@ -433,7 +433,6 @@ describe('AnalysisIngestTool — nested resource ingestion', () => {
 describe('AnalysisIngestTool — association ID preservation', () => {
   const halModels = {
     scheduling: {
-      endpoint: 'schedulings',
       attributes: {
         id: { type: 'string' },
         name: { type: 'string' },
@@ -454,7 +453,7 @@ describe('AnalysisIngestTool — association ID preservation', () => {
           }
         }
       },
-      api: { convention: flatConvention }
+      api: { endpoint: 'schedulings', convention: flatConvention }
     }
   }
 

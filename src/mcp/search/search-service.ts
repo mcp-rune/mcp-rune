@@ -253,7 +253,7 @@ export class SearchService {
     const params: Record<string, unknown> = { page, per_page: perPage, ...fieldFilters }
     if (sort) params.sort = sort
 
-    const data = await this._apiClient.get(ModelClass.endpoint, params)
+    const data = await this._apiClient.get(ModelClass.api.endpoint, params)
 
     const convention = ModelClass.api?.convention ?? defaultConvention
     return convention.normalizeListResponse(data, { page, perPage }) as SearchResult

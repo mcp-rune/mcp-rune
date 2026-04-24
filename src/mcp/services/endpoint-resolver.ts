@@ -8,8 +8,8 @@
  *   1. Per-action override   (e.g., api.endpoints.create → 'books/draft')
  *   2. Collection override   (e.g., api.endpoints.collection → 'catalogue/book-items')
  *   3. Parent path           (compound ID context for nested resources)
- *   4. Namespace + convention (namespace + modelConfig.endpoint)
- *   5. Base convention       (modelConfig.endpoint)
+ *   4. Namespace + convention (namespace + modelConfig.api.endpoint)
+ *   5. Base convention       (modelConfig.api.endpoint)
  *
  * Supports compound IDs (e.g., 'titles/42/assets/7') that encode the full
  * resource hierarchy, eliminating the need for separate nested routing logic.
@@ -159,12 +159,12 @@ export class EndpointResolver {
   /**
    * Convention hook: derive the API path from a model name.
    *
-   * Default implementation returns modelConfig.endpoint unchanged.
+   * Default implementation returns modelConfig.api.endpoint unchanged.
    * Override in subclasses for APIs that use different naming conventions
    * (e.g., dasherize, underscore, or custom mappings).
    */
   pathForType(_model: string, modelConfig: ModelConfig): string {
-    return modelConfig.endpoint
+    return modelConfig.api.endpoint
   }
 
   // --- Private helpers ---

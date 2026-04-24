@@ -4,7 +4,7 @@ import { createListViewApp } from '../../../../src/mcp/apps/list-view.js'
 
 const modelClasses = {
   book: {
-    endpoint: 'books',
+    api: { endpoint: 'books' },
     singularName: 'book',
     search: { lookup: { fields: ['title'] } },
     attributes: {

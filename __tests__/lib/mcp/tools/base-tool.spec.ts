@@ -38,7 +38,7 @@ describe('lib/mcp/tools/base-tool', () => {
     })
 
     it('should use provided models config', () => {
-      const models = { custom_model: { endpoint: 'custom' } }
+      const models = { custom_model: { api: { endpoint: 'custom' } } }
       const tool = new BaseTool({ models })
       expect(tool.models).toBe(models)
     })

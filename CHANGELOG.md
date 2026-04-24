@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.18.0] — 2026-04-24
+
+### Changed
+
+- **`endpoint` moved into `api` config** — `static endpoint = 'books'` is now `static api = { endpoint: 'books' }` on both `BaseModel` and `ModelConfig`. Co-locates all API concerns (`endpoint`, `convention`, `parent`, `standalone`, `namespace`, `endpoints`) under a single config object.
+- **`ApiConfig.endpoint`** — new field on the `ApiConfig` interface. `ModelConfig.api` and `AppModelClass.api` are now required (previously optional) since `endpoint` is required.
+- **Optional `static modelName`** — new property on `BaseModel` that overrides the derived `singularName`. Fixes the fragile `endpoint.replace(/s$/, '')` pattern for irregular plurals (e.g., `static modelName = 'activity'` for endpoint `'activities'`).
+
+[0.18.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.17.0...v0.18.0
+
 ## [0.17.0] — 2026-04-24
 
 ### Added

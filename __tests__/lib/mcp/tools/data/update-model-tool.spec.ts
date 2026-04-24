@@ -46,8 +46,8 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should include model enum from models config', () => {
       const mockModels = {
-        activity: { endpoint: 'activities' },
-        book: { endpoint: 'books' }
+        activity: { api: { endpoint: 'activities' } },
+        book: { api: { endpoint: 'books' } }
       }
 
       const tool = new UpdateModelTool({ models: mockModels })
@@ -73,7 +73,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
     it('should update a record successfully with Rails payload wrapping', async () => {
       const mockModels = {
         activity: {
-          endpoint: 'activities'
+          api: { endpoint: 'activities' }
         }
       }
 
@@ -103,7 +103,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should return error when record_id is missing', async () => {
       const mockModels = {
-        activity: { endpoint: 'activities' }
+        activity: { api: { endpoint: 'activities' } }
       }
 
       const tool = new UpdateModelTool({
@@ -123,7 +123,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
     it('should return error for unknown model', async () => {
       const tool = new UpdateModelTool({
         apiClient: mockApiClient,
-        models: { book: { endpoint: 'books' } }
+        models: { book: { api: { endpoint: 'books' } } }
       })
 
       const result = await tool.execute({
@@ -151,7 +151,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should handle API errors', async () => {
       const mockModels = {
-        activity: { endpoint: 'activities' }
+        activity: { api: { endpoint: 'activities' } }
       }
 
       const error = new Error('API Error')
@@ -175,7 +175,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should log update when logger is available', async () => {
       const mockModels = {
-        book: { endpoint: 'books' }
+        book: { api: { endpoint: 'books' } }
       }
 
       mockApiClient.patch.mockResolvedValue({ id: 5, title: 'Updated Book' })
@@ -204,7 +204,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should support user_id impersonation', async () => {
       const mockModels = {
-        book: { endpoint: 'books' }
+        book: { api: { endpoint: 'books' } }
       }
 
       mockApiClient.patch.mockResolvedValue({ id: 5, title: 'Updated' })
@@ -230,7 +230,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should call storeOperation after successful update', async () => {
       const mockModels = {
-        book: { endpoint: 'books' }
+        book: { api: { endpoint: 'books' } }
       }
 
       mockApiClient.patch.mockResolvedValue({ id: 5, title: 'Updated Book' })
@@ -259,7 +259,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should not fail if storeOperation rejects', async () => {
       const mockModels = {
-        book: { endpoint: 'books' }
+        book: { api: { endpoint: 'books' } }
       }
 
       mockApiClient.patch.mockResolvedValue({ id: 5, title: 'Updated' })
@@ -302,8 +302,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
     it('should update a record successfully with flat payload', async () => {
       const mockModels = {
         activity: {
-          endpoint: 'activities',
-          api: { convention: flatConvention }
+          api: { endpoint: 'activities', convention: flatConvention }
         }
       }
 
@@ -331,7 +330,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should return error when record_id is missing', async () => {
       const mockModels = {
-        activity: { endpoint: 'activities', api: { convention: flatConvention } }
+        activity: { api: { endpoint: 'activities', convention: flatConvention } }
       }
 
       const tool = new UpdateModelTool({
@@ -351,7 +350,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
     it('should return error for unknown model', async () => {
       const tool = new UpdateModelTool({
         apiClient: mockApiClient,
-        models: { book: { endpoint: 'books', api: { convention: flatConvention } } }
+        models: { book: { api: { endpoint: 'books', convention: flatConvention } } }
       })
 
       const result = await tool.execute({
@@ -381,7 +380,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should handle API errors', async () => {
       const mockModels = {
-        activity: { endpoint: 'activities', api: { convention: flatConvention } }
+        activity: { api: { endpoint: 'activities', convention: flatConvention } }
       }
 
       const error = new Error('API Error')
@@ -405,7 +404,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should log update when logger is available', async () => {
       const mockModels = {
-        book: { endpoint: 'books', api: { convention: flatConvention } }
+        book: { api: { endpoint: 'books', convention: flatConvention } }
       }
 
       mockApiClient.patch.mockResolvedValue({ id: 5, title: 'Updated Book' })
@@ -434,7 +433,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should support user_id impersonation with flat payload', async () => {
       const mockModels = {
-        book: { endpoint: 'books', api: { convention: flatConvention } }
+        book: { api: { endpoint: 'books', convention: flatConvention } }
       }
 
       mockApiClient.patch.mockResolvedValue({ id: 5, title: 'Updated' })
@@ -460,7 +459,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should call storeOperation after successful update', async () => {
       const mockModels = {
-        book: { endpoint: 'books', api: { convention: flatConvention } }
+        book: { api: { endpoint: 'books', convention: flatConvention } }
       }
 
       mockApiClient.patch.mockResolvedValue({ id: 5, title: 'Updated Book' })
@@ -489,7 +488,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should not fail if storeOperation rejects', async () => {
       const mockModels = {
-        book: { endpoint: 'books', api: { convention: flatConvention } }
+        book: { api: { endpoint: 'books', convention: flatConvention } }
       }
 
       mockApiClient.patch.mockResolvedValue({ id: 5, title: 'Updated' })

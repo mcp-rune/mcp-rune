@@ -54,10 +54,11 @@ export interface FilterSchema {
 
 /** Model configuration as stored in the models registry */
 export interface ModelConfig {
-  endpoint: string
   attributes?: Record<string, unknown>
   description?: string
-  api?: {
+  api: {
+    /** Base API path for this model (e.g., 'books', 'activities'). */
+    endpoint: string
     convention?: BaseConvention
     readOnly?: boolean
     /** Parent model name(s) for nested resources. */

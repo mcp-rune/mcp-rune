@@ -3,7 +3,7 @@ import { SearchRecordsTool } from '../../../../../src/mcp/tools/data/search-reco
 // Mock model classes with search.filters and search.query config
 const mockModels = {
   title: {
-    endpoint: 'titles',
+    api: { endpoint: 'titles' },
     attributes: {
       id: { prompt_visible: false },
       name: { label: 'Name', type: 'string' },
@@ -22,7 +22,7 @@ const mockModels = {
     }
   },
   brand: {
-    endpoint: 'brands',
+    api: { endpoint: 'brands' },
     attributes: { id: {}, name: {} }
     // No search
   }
@@ -275,7 +275,7 @@ describe('SearchRecordsTool', () => {
   it('should use attribute name as label fallback in schema', async () => {
     const modelsNoLabel = {
       title: {
-        endpoint: 'titles',
+        api: { endpoint: 'titles' },
         attributes: {
           raw_attr: { type: 'string' }
         },
@@ -308,7 +308,7 @@ describe('SearchRecordsTool', () => {
   it('should default attribute type to string in schema', async () => {
     const modelsNoType = {
       title: {
-        endpoint: 'titles',
+        api: { endpoint: 'titles' },
         attributes: {
           no_type: { label: 'No Type' }
         },
@@ -509,7 +509,7 @@ describe('SearchRecordsTool', () => {
     it('should resolve derived fields from expanded associations', async () => {
       const modelsWithDerived = {
         scheduling: {
-          endpoint: 'schedulings',
+          api: { endpoint: 'schedulings' },
           attributes: {
             id: { prompt_visible: false },
             put_up: { label: 'Put Up', type: 'string' },
@@ -561,7 +561,7 @@ describe('SearchRecordsTool', () => {
     it('should support fields param with derived fields', async () => {
       const modelsWithDerived = {
         scheduling: {
-          endpoint: 'schedulings',
+          api: { endpoint: 'schedulings' },
           attributes: {
             id: { prompt_visible: false },
             put_up: { label: 'Put Up', type: 'string' },

@@ -3,7 +3,7 @@ import { generateFormSchema } from '../../../../src/mcp/apps/form-schema.js'
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 
 const MockModel = {
-  endpoint: 'books',
+  api: { endpoint: 'books' },
   singularName: 'book',
   attributes: {
     id: { type: 'string', prompt_visible: false, description: 'Auto-generated ID' },
@@ -267,7 +267,7 @@ describe('lib/mcp/apps/form-schema', () => {
 
     describe('association transformers', () => {
       const TransformerModel = {
-        endpoint: 'schedulings',
+        api: { endpoint: 'schedulings' },
         singularName: 'scheduling',
         attributes: {
           put_up: { type: 'date', required: true, description: 'Start date' },
@@ -420,7 +420,7 @@ describe('lib/mcp/apps/form-schema', () => {
     describe('empty fieldset filtering', () => {
       it('filters out fieldsets when all group fields are missing from attributes', () => {
         const Model = {
-          endpoint: 'items',
+          api: { endpoint: 'items' },
           singularName: 'item',
           attributes: {
             name: { type: 'string', required: true }
@@ -445,7 +445,7 @@ describe('lib/mcp/apps/form-schema', () => {
 
       it('keeps fieldsets with mixed fields when some are renderable', () => {
         const Model = {
-          endpoint: 'items',
+          api: { endpoint: 'items' },
           singularName: 'item',
           attributes: {
             name: { type: 'string' },
@@ -477,7 +477,7 @@ describe('lib/mcp/apps/form-schema', () => {
     describe('conditional visibility', () => {
       it('passes visibleWhen from attribute config to field schema', () => {
         const Model = {
-          endpoint: 'items',
+          api: { endpoint: 'items' },
           singularName: 'item',
           attributes: {
             status: { type: 'enum', enumValues: ['active', 'archived'] },
@@ -512,7 +512,7 @@ describe('lib/mcp/apps/form-schema', () => {
 
     describe('FormClass mode', () => {
       const SimpleModel = {
-        endpoint: 'books',
+        api: { endpoint: 'books' },
         singularName: 'book',
         attributes: {
           id: { type: 'string', prompt_visible: false },

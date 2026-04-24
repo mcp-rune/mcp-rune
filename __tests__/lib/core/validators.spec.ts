@@ -140,9 +140,9 @@ describe('lib/core/validators', () => {
 
   describe('validateModel', () => {
     const modelsConfig = {
-      study_session: { endpoint: 'study_sessions' },
-      book: { endpoint: 'books' },
-      theme: { endpoint: 'themes' }
+      study_session: { api: { endpoint: 'study_sessions' } },
+      book: { api: { endpoint: 'books' } },
+      theme: { api: { endpoint: 'themes' } }
     }
 
     it('should return valid for known model', () => {

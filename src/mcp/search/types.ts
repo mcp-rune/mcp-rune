@@ -94,10 +94,10 @@ export interface SearchRequest {
 // ============================================================================
 
 export interface SearchModelClass {
-  endpoint: string
   singularName?: string
   search?: SearchConfig | null
-  api?: {
+  api: {
+    endpoint: string
     convention?: BaseConvention
     readOnly?: boolean
     [key: string]: unknown

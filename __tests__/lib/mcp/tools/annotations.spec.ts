@@ -11,7 +11,7 @@ const ALL_TOOL_CLASSES = {
 }
 
 const minimalDeps = {
-  models: { book: { endpoint: '/books', attributes: {}, search: { filters: {} } } }
+  models: { book: { api: { endpoint: '/books' }, attributes: {}, search: { filters: {} } } }
 }
 
 describe('tool annotations enforcement', () => {

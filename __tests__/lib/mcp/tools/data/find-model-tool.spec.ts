@@ -21,7 +21,7 @@ describe('FindModelTool', () => {
   describe('fields parameter', () => {
     const mockModels = {
       brand: {
-        endpoint: 'brands',
+        api: { endpoint: 'brands' },
         attributes: { id: {}, name: {}, status: {}, extra: {} },
         search: { lookup: { fields: ['name'] } }
       }

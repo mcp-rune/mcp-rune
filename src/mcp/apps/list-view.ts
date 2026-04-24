@@ -156,7 +156,7 @@ export function createListViewApp({ modelClasses, namespace }: ListViewOptions):
       } else if (apiClient) {
         try {
           const queryParams = { page, per_page: 20, ...(filters as Record<string, unknown>) }
-          const data = await apiClient.get(ModelClass.endpoint, queryParams)
+          const data = await apiClient.get(ModelClass.api.endpoint, queryParams)
           const convention = ModelClass.api?.convention ?? defaultConvention
           const normalized = convention.normalizeListResponse(data, {
             page: page as number,

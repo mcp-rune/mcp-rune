@@ -204,7 +204,7 @@ export function createRecordDetailApp({
       const results = await Promise.allSettled(
         ids.map(async (id) => {
           if (!apiClient) throw new Error('No API client available')
-          const data = await apiClient.get(`${ModelClass.endpoint}/${id}`)
+          const data = await apiClient.get(`${ModelClass.api.endpoint}/${id}`)
           return (data.data as Record<string, unknown>) || data
         })
       )

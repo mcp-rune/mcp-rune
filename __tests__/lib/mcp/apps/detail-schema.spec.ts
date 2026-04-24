@@ -3,7 +3,7 @@ import { generateDetailSchema } from '../../../../src/mcp/apps/detail-schema.js'
 describe('lib/mcp/apps/detail-schema', () => {
   function makeModel(overrides = {}) {
     return {
-      endpoint: '/api/books',
+      api: { endpoint: '/api/books' },
       singularName: 'book',
       description: 'Books for study',
       attributes: {
