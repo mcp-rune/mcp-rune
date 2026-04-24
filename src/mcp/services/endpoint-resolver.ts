@@ -19,8 +19,10 @@
  * and any HTTP method.
  */
 
-import type { ActionDefinition } from '../../core/base-model.js'
+import type { EndpointOverrides } from '../../core/base-model.js'
 import type { ModelConfig } from '../tools/base-tool.js'
+
+export type { EndpointOverrides } from '../../core/base-model.js'
 
 // ============================================================================
 // Types
@@ -30,18 +32,6 @@ import type { ModelConfig } from '../tools/base-tool.js'
 export interface EndpointResolverConfig {
   /** Server-wide API namespace prefix (e.g., 'api/v1'). */
   namespace?: string
-}
-
-/** Per-action endpoint overrides declared on a model's ApiConfig. */
-export interface EndpointOverrides {
-  /** Override for collection operations (list, create). */
-  collection?: string
-  /** Override for record operations (find, update, delete). */
-  record?: string
-  /** Action-specific overrides — take highest priority. */
-  create?: string
-  update?: string
-  delete?: string
 }
 
 /** Context needed to resolve an endpoint. */
@@ -75,13 +65,20 @@ export type CrudAction = 'list' | 'find' | 'create' | 'update' | 'delete'
 
 /** Thrown when a nested-only model is missing required parent context. */
 export class MissingParentError extends Error {
-  constructor(model: string, parentModels: string[]) {
+  readonly model: string
+  readonly childEndpoint: string
+  readonly parentModels: string[]
+
+  constructor(model: string, childEndpoint: string, parentModels: string[]) {
     super(
       `'${model}' is nested-only — provide parent_path ` +
-        `(e.g., '{parent_endpoint}/{parent_id}/${model}s'). ` +
+        `(e.g., '{parent_endpoint}/{id}/${childEndpoint}'). ` +
         `Valid parents: ${parentModels.join(', ')}.`
     )
     this.name = 'MissingParentError'
+    this.model = model
+    this.childEndpoint = childEndpoint
+    this.parentModels = parentModels
   }
 }
 
@@ -139,7 +136,7 @@ export class EndpointResolver {
     if (ctx.modelConfig.api?.standalone === false) {
       const parent = ctx.modelConfig.api?.parent
       const parentModels = parent ? (Array.isArray(parent) ? parent : [parent]) : []
-      throw new MissingParentError(ctx.model, parentModels)
+      throw new MissingParentError(ctx.model, ctx.modelConfig.api.endpoint, parentModels)
     }
 
     // 5. Namespace + pathForType
@@ -193,9 +190,7 @@ export class EndpointResolver {
    *   7. Apply namespace
    */
   resolveAction(ctx: ActionContext): { url: string; method: string } {
-    const actions = (ctx.modelConfig.api as Record<string, unknown>)?.actions as
-      | Record<string, ActionDefinition>
-      | undefined
+    const actions = ctx.modelConfig.api?.actions
     const actionDef = actions?.[ctx.action]
     if (!actionDef) {
       throw new UnknownActionError(ctx.model, ctx.action, Object.keys(actions ?? {}))
@@ -253,9 +248,7 @@ export class EndpointResolver {
 
   /** Get endpoint overrides from model config, if any. */
   private _getOverrides(modelConfig: ModelConfig): EndpointOverrides | undefined {
-    return (modelConfig.api as Record<string, unknown> | undefined)?.endpoints as
-      | EndpointOverrides
-      | undefined
+    return modelConfig.api?.endpoints
   }
 
   /**
@@ -272,9 +265,6 @@ export class EndpointResolver {
    * Resolve the effective namespace: model-level > server-wide > none.
    */
   private _resolveNamespace(modelConfig: ModelConfig): string | undefined {
-    const modelNs = (modelConfig.api as Record<string, unknown> | undefined)?.namespace as
-      | string
-      | undefined
-    return modelNs ?? this._namespace
+    return modelConfig.api?.namespace ?? this._namespace
   }
 }

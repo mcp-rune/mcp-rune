@@ -292,6 +292,8 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       expect(text).toContain('nested-only')
       expect(text).toContain('parent_path')
       expect(text).toContain('asset')
+      // Error shows concrete parent endpoint path
+      expect(text).toContain('assets/{id}/renditions')
     })
   })
 
@@ -443,6 +445,7 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       expect(body.results[1]).toMatchObject({ index: 1, status: 'validation_error' })
       expect(body.results[1].errors[0]).toContain('nested-only')
       expect(body.results[1].errors[0]).toContain('parent_path')
+      expect(body.results[1].errors[0]).toContain('assets/{id}/renditions')
 
       expect(mockApiClient.post).toHaveBeenCalledTimes(1)
       expect(mockApiClient.post).toHaveBeenCalledWith(

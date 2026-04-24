@@ -48,7 +48,9 @@ Use this tool to:
       parent_path: z
         .string()
         .describe(
-          "Parent path for listing nested resources (e.g., 'titles/42/assets'). Use instead of record_id when listing a nested collection."
+          "Parent path for listing nested collections: '{parent_endpoint}/{parent_id}/{model_endpoint}' " +
+            "(e.g., 'titles/42/assets'). Required when model has standalone: false. " +
+            'Use list_models to discover parent relationships and endpoint names.'
         )
         .optional(),
       filters: z

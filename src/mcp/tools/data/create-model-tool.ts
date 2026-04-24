@@ -44,8 +44,9 @@ export class CreateModelTool extends SaveModelBaseTool {
       parent_path: z
         .string()
         .describe(
-          "Parent path for nested model creation (e.g., 'titles/42/assets'). " +
-            'Required for nested-only models.'
+          "Parent path for nested resources: '{parent_endpoint}/{parent_id}/{model_endpoint}' " +
+            "(e.g., 'titles/42/assets'). Required when model has standalone: false. " +
+            'Use list_models to discover parent relationships and endpoint names.'
         )
         .optional(),
       user_id: z

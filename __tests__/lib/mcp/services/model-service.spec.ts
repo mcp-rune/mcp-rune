@@ -133,6 +133,13 @@ describe('lib/mcp/services/model-service', () => {
       )
     })
 
+    it('enriches MissingParentError with concrete parent endpoint path', async () => {
+      const { service } = makeService()
+      await expect(service.create('scheduling', { start_date: '2026-01-01' })).rejects.toThrow(
+        /books\/\{id\}\/schedulings/
+      )
+    })
+
     it('returns raw API response', async () => {
       const { service } = makeService()
       const result = await service.create('book', { title: 'Test', author: 'Author' })
@@ -268,6 +275,11 @@ describe('lib/mcp/services/model-service', () => {
         { page: 1, per_page: 20 },
         { parentPath: 'authors/42/books' }
       )
+    })
+
+    it('list enriches MissingParentError with concrete parent endpoint path', async () => {
+      const { service } = makeService()
+      await expect(service.list('scheduling')).rejects.toThrow(/books\/\{id\}\/schedulings/)
     })
   })
 
