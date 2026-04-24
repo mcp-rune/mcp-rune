@@ -28,7 +28,6 @@ describe('lib/mcp/services/model-service', () => {
   function makeModels(): Record<string, ModelConfig> {
     return {
       book: {
-        endpoint: 'books',
         attributes: {
           title: { type: 'string', required: true },
           author: { type: 'string', required: true },
@@ -36,7 +35,7 @@ describe('lib/mcp/services/model-service', () => {
         },
         required: ['title', 'author'],
         description: 'A book record',
-        api: { convention: jsonApiConvention },
+        api: { endpoint: 'books', convention: jsonApiConvention },
         associations: {
           belongsTo: {
             publisher: { rel: 'publisher', target_model: 'publisher' }
@@ -44,16 +43,15 @@ describe('lib/mcp/services/model-service', () => {
         }
       },
       review: {
-        endpoint: 'reviews',
         attributes: { rating: { type: 'integer' } },
         description: 'Read-only review data',
-        api: { readOnly: true }
+        api: { endpoint: 'reviews', readOnly: true }
       },
       scheduling: {
-        endpoint: 'schedulings',
         attributes: { start_date: { type: 'string' } },
         required: [],
         api: {
+          endpoint: 'schedulings',
           parent: 'book',
           standalone: false
         }
@@ -334,8 +332,7 @@ describe('lib/mcp/services/model-service', () => {
         apiClient,
         models: {
           book: {
-            endpoint: 'books',
-            api: { endpoints: { collection: 'catalogue/book-items' } }
+            api: { endpoint: 'books', endpoints: { collection: 'catalogue/book-items' } }
           }
         }
       })
@@ -354,8 +351,7 @@ describe('lib/mcp/services/model-service', () => {
         apiClient,
         models: {
           book: {
-            endpoint: 'books',
-            api: { endpoints: { create: 'books/draft' } }
+            api: { endpoint: 'books', endpoints: { create: 'books/draft' } }
           }
         }
       })
@@ -370,8 +366,7 @@ describe('lib/mcp/services/model-service', () => {
         apiClient,
         models: {
           book: {
-            endpoint: 'books',
-            api: { endpoints: { record: 'catalogue/book-items/:id' } }
+            api: { endpoint: 'books', endpoints: { record: 'catalogue/book-items/:id' } }
           }
         }
       })
@@ -386,8 +381,7 @@ describe('lib/mcp/services/model-service', () => {
         apiClient,
         models: {
           book: {
-            endpoint: 'books',
-            api: { endpoints: { update: 'books/:id/revise' } }
+            api: { endpoint: 'books', endpoints: { update: 'books/:id/revise' } }
           }
         }
       })
@@ -406,8 +400,7 @@ describe('lib/mcp/services/model-service', () => {
         apiClient,
         models: {
           book: {
-            endpoint: 'books',
-            api: { endpoints: { delete: 'books/:id/archive' } }
+            api: { endpoint: 'books', endpoints: { delete: 'books/:id/archive' } }
           }
         }
       })
@@ -428,11 +421,10 @@ describe('lib/mcp/services/model-service', () => {
         apiClient,
         models: {
           book: {
-            endpoint: 'books',
-            api: { namespace: 'api/v2' }
+            api: { endpoint: 'books', namespace: 'api/v2' }
           },
           author: {
-            endpoint: 'authors'
+            api: { endpoint: 'authors' }
           }
         },
         namespace: 'api/v1'

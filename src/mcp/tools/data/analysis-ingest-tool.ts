@@ -300,7 +300,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     } else {
       // Use plain GET for simple listing (no filters)
       const queryParams = { page, per_page: perPage }
-      const data = (await api.get(modelConfig.endpoint, queryParams, apiOptions)) as Record<
+      const data = (await api.get(modelConfig.api.endpoint, queryParams, apiOptions)) as Record<
         string,
         unknown
       >
@@ -392,7 +392,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       } else {
         // Use plain GET for simple listing
         const queryParams = { page: currentPage, per_page: perPage }
-        const data = (await api.get(modelConfig.endpoint, queryParams, apiOptions)) as Record<
+        const data = (await api.get(modelConfig.api.endpoint, queryParams, apiOptions)) as Record<
           string,
           unknown
         >
@@ -545,7 +545,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
 
     const tasks = parentIds.map((parentId) => async () => {
       try {
-        const endpoint = buildCollectionPath(parentConfig.endpoint, parentId, childPath)
+        const endpoint = buildCollectionPath(parentConfig.api.endpoint, parentId, childPath)
         const data = (await api.get(endpoint, {}, apiOptions)) as Record<string, unknown>
         const rawRecords = convention.extractNestedRecords(
           data,

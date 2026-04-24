@@ -129,8 +129,8 @@ For APIs with non-standard paths, override specific actions on `ApiConfig`:
 
 ```typescript
 class Book extends BaseModel {
-  static endpoint = 'books'
   static api = {
+    endpoint: 'books',
     endpoints: {
       collection: 'catalogue/book-items', // list + create
       record: 'catalogue/book-items/:id', // find + update + delete
@@ -155,8 +155,8 @@ Nested resources are handled through **compound IDs** and the `parentPath` param
 
 ```typescript
 class Asset extends BaseModel {
-  static endpoint = 'assets'
   static api = {
+    endpoint: 'assets',
     parent: 'title', // Parent model name(s)
     standalone: false // No standalone endpoint (nested-only)
   }
@@ -308,7 +308,7 @@ const searchService = new SearchService(apiClient, {
 ```typescript
 // Path 1: Direct search endpoint
 class Activity extends BaseModel {
-  static endpoint = 'activities'
+  static api = { endpoint: 'activities' }
   static search = {
     query: { endpoint: 'activities/search', method: 'POST', queryParam: 'q' },
     filters: { theme_id: { type: 'relation' } },
@@ -324,7 +324,7 @@ const results = await searchService.search(Activity, 'React', {
 
 // Path 2: Group search (multiple models share one search endpoint)
 class Title extends BaseModel {
-  static endpoint = 'titles'
+  static api = { endpoint: 'titles' }
   static search = {
     query: { group: 'catalogue', modelName: ['episode', 'feature'] },
     lookup: { fields: ['external_id'] }
@@ -335,7 +335,7 @@ const results = await searchService.search(Title, 'drama')
 
 // Path 3: List fallback (no query config)
 class Platform extends BaseModel {
-  static endpoint = 'platforms'
+  static api = { endpoint: 'platforms' }
   static search = { lookup: { fields: ['name'] } }
 }
 const results = await searchService.search(Platform, 'Netflix')
@@ -353,7 +353,7 @@ const results = await searchService.search(Platform, 'Netflix')
 ```typescript
 // Path 1: Dedicated lookup endpoint
 class Brand extends BaseModel {
-  static endpoint = 'brands'
+  static api = { endpoint: 'brands' }
   static search = {
     query: { group: 'catalogue' },
     lookup: { endpoint: 'brands/autocomplete', fields: ['external_id'] }

@@ -19,7 +19,7 @@ describe('lib/mcp/prompts/schema-derivation - Memoization', () => {
   describe('deriveFieldDefinitions', () => {
     it('should return cached result on subsequent calls with same inputs', () => {
       const modelConfig = {
-        endpoint: 'brands',
+        api: { endpoint: 'brands' },
         attributes: {
           id: { type: 'string', prompt_visible: false },
           name: {
@@ -48,7 +48,7 @@ describe('lib/mcp/prompts/schema-derivation - Memoization', () => {
 
     it('should create separate cache entries for different options', () => {
       const modelConfig = {
-        endpoint: 'brands',
+        api: { endpoint: 'brands' },
         attributes: {
           id: { type: 'string', prompt_visible: false },
           name: { type: 'string', required: true }
@@ -67,12 +67,12 @@ describe('lib/mcp/prompts/schema-derivation - Memoization', () => {
 
     it('should create separate cache entries for different models', () => {
       const brandConfig = {
-        endpoint: 'brands',
+        api: { endpoint: 'brands' },
         attributes: { name: { type: 'string', required: true } }
       }
 
       const seriesConfig = {
-        endpoint: 'series',
+        api: { endpoint: 'series' },
         attributes: {
           name: { type: 'string', required: true },
           season_number: { type: 'integer' }
@@ -90,7 +90,7 @@ describe('lib/mcp/prompts/schema-derivation - Memoization', () => {
   describe('derivePromptSchema', () => {
     it('should return cached result on subsequent calls', () => {
       const modelConfig = {
-        endpoint: 'brands',
+        api: { endpoint: 'brands' },
         attributes: {
           id: { type: 'string', prompt_visible: false },
           name: {
@@ -124,7 +124,7 @@ describe('lib/mcp/prompts/schema-derivation - Memoization', () => {
 
     it('should leverage nested function caches', () => {
       const modelConfig = {
-        endpoint: 'brands',
+        api: { endpoint: 'brands' },
         attributes: { name: { type: 'string', required: true } }
       }
 
@@ -140,7 +140,7 @@ describe('lib/mcp/prompts/schema-derivation - Memoization', () => {
 
     it('should handle multiple prompt classes using same model', () => {
       const modelConfig = {
-        endpoint: 'brands',
+        api: { endpoint: 'brands' },
         attributes: {
           name: { type: 'string', required: true },
           external_id: { type: 'string' }
@@ -211,7 +211,7 @@ describe('lib/mcp/prompts/schema-derivation - Memoization', () => {
   describe('clearSchemaCaches', () => {
     it('should clear all caches and return statistics', () => {
       const modelConfig = {
-        endpoint: 'brands',
+        api: { endpoint: 'brands' },
         attributes: { name: { type: 'string', required: true } }
       }
 
@@ -235,7 +235,7 @@ describe('lib/mcp/prompts/schema-derivation - Memoization', () => {
   describe('enhanceModelConfig', () => {
     it('should merge prompt metadata into model attributes', () => {
       const modelConfig = {
-        endpoint: 'books',
+        api: { endpoint: 'books' },
         attributes: {
           title: { type: 'string', description: 'Book title' }
         }
@@ -377,7 +377,7 @@ describe('lib/mcp/prompts/schema-derivation - Memoization', () => {
   describe('Cache key generation', () => {
     it('should differentiate between different field overrides', () => {
       const modelConfig = {
-        endpoint: 'brands',
+        api: { endpoint: 'brands' },
         attributes: { name: { type: 'string', required: true } }
       }
 
@@ -398,7 +398,7 @@ describe('lib/mcp/prompts/schema-derivation - Memoization', () => {
 
     it('should differentiate between different additional fields', () => {
       const modelConfig = {
-        endpoint: 'brands',
+        api: { endpoint: 'brands' },
         attributes: { name: { type: 'string', required: true } }
       }
 

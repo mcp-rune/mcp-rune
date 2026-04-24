@@ -4,7 +4,7 @@ import { createSearchViewApp } from '../../../../src/mcp/apps/search-view.js'
 
 const modelClasses = {
   book: {
-    endpoint: 'books',
+    api: { endpoint: 'books' },
     singularName: 'book',
     search: { query: { endpoint: 'search' }, lookup: { fields: ['title'] } },
     attributes: {

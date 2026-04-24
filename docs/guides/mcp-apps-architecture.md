@@ -659,7 +659,7 @@ Ensure the model has `attributes`, `endpoint`, and optionally `associations`:
 
 ```javascript
 export class Project extends BaseModel {
-  static endpoint = 'projects'
+  static api = { endpoint: 'projects' }
   static associations = {
     belongsTo: { category: { rel: 'category', target_model: 'category' } }
   }

@@ -4,7 +4,7 @@ import { flatConvention } from '../../../__fixtures__/flat-convention.js'
 
 // Mock model classes
 const DirectSearchModel = {
-  endpoint: 'activities',
+  api: { endpoint: 'activities' },
   singularName: 'activity',
   search: {
     query: {
@@ -17,7 +17,7 @@ const DirectSearchModel = {
 }
 
 const GroupSearchModel = {
-  endpoint: 'books',
+  api: { endpoint: 'books' },
   singularName: 'book',
   search: {
     query: { group: 'library' },
@@ -26,13 +26,13 @@ const GroupSearchModel = {
 }
 
 const ListOnlyModel = {
-  endpoint: 'brands',
+  api: { endpoint: 'brands' },
   singularName: 'brand',
   search: { lookup: { fields: ['name'] } }
 }
 
 const NoSearchableModel = {
-  endpoint: 'settings',
+  api: { endpoint: 'settings' },
   singularName: 'setting',
   search: null
 }
@@ -349,7 +349,7 @@ describe('SearchService', () => {
 
     it('should use query.modelName when set (string)', async () => {
       const ModelWithModelName = {
-        endpoint: 'title_groups',
+        api: { endpoint: 'title_groups' },
         singularName: 'title_group',
         search: {
           query: { group: 'library', modelName: 'series' }
@@ -368,7 +368,7 @@ describe('SearchService', () => {
 
     it('should use query.modelName when set (array)', async () => {
       const ModelWithMultipleNames = {
-        endpoint: 'titles',
+        api: { endpoint: 'titles' },
         singularName: 'title',
         search: {
           query: { group: 'library', modelName: ['episode', 'feature'] }
@@ -439,7 +439,7 @@ describe('SearchService', () => {
   describe('lookup()', () => {
     it('should use dedicated lookup endpoint when configured', async () => {
       const modelWithLookupEndpoint = {
-        endpoint: 'brands',
+        api: { endpoint: 'brands' },
         singularName: 'brand',
         search: {
           query: { group: 'catalogue' },
@@ -457,7 +457,7 @@ describe('SearchService', () => {
 
     it('should use custom queryParam for dedicated lookup endpoint', async () => {
       const modelWithQueryParam = {
-        endpoint: 'brands',
+        api: { endpoint: 'brands' },
         singularName: 'brand',
         search: {
           lookup: { endpoint: 'brands/autocomplete', fields: ['name'], queryParam: 'q' }
@@ -684,9 +684,8 @@ describe('SearchService', () => {
 
     it('should handle HAL _embedded response via convention', async () => {
       const HalModel = {
-        endpoint: 'platforms',
         singularName: 'platform',
-        api: { convention: flatConvention }
+        api: { endpoint: 'platforms', convention: flatConvention }
       }
 
       mockApiClient.get.mockResolvedValue({
@@ -737,7 +736,7 @@ describe('SearchService', () => {
   describe('getLookupCapability()', () => {
     it('should return "dedicated" for models with lookup endpoint', () => {
       const model = {
-        endpoint: 'brands',
+        api: { endpoint: 'brands' },
         search: { lookup: { endpoint: 'brands/autocomplete', fields: ['name'] } }
       }
       expect(SearchService.getLookupCapability(model)).toBe('dedicated')

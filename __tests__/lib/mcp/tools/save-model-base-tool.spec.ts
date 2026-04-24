@@ -159,7 +159,7 @@ describe('lib/mcp/tools/save-model-base-tool', () => {
     it('should accept standard BaseTool dependencies', () => {
       const apiClient = { get: () => {} }
       const logger = { info: () => {} }
-      const models = { book: { endpoint: 'books' } }
+      const models = { book: { api: { endpoint: 'books' } } }
       const tool = new SaveModelBaseTool({ apiClient, logger, models })
 
       expect(tool.apiClient).toBe(apiClient)

@@ -42,11 +42,11 @@ interface AssociationsConfig {
 }
 
 interface ModelConfig {
-  endpoint?: string
   attributes?: Record<string, AttributeConfig>
   required?: string[]
   associations?: AssociationsConfig
   api?: {
+    endpoint?: string
     convention?: BaseConvention
     [key: string]: unknown
   }
@@ -96,7 +96,7 @@ const promptSchemaCache = new Map<string, DerivedSchema>()
  */
 function generateCacheKey(modelConfig: ModelConfig, options: DeriveSchemaOptions = {}): string {
   const modelKey = JSON.stringify({
-    endpoint: modelConfig?.endpoint,
+    endpoint: modelConfig?.api?.endpoint,
     attributes: modelConfig?.attributes ? Object.keys(modelConfig.attributes).sort() : [],
     required: modelConfig?.required,
     associations: modelConfig?.associations ? Object.keys(modelConfig.associations).sort() : [],

@@ -10,7 +10,8 @@ describe('lib/mcp/services/endpoint-resolver', () => {
   // =========================================================================
 
   function makeConfig(overrides: Partial<ModelConfig> = {}): ModelConfig {
-    return { endpoint: 'books', ...overrides }
+    const { api: apiOverrides, ...rest } = overrides
+    return { api: { endpoint: 'books', ...apiOverrides }, ...rest }
   }
 
   // =========================================================================
@@ -18,7 +19,7 @@ describe('lib/mcp/services/endpoint-resolver', () => {
   // =========================================================================
 
   describe('resolveCollection', () => {
-    it('returns modelConfig.endpoint by default', () => {
+    it('returns modelConfig.api.endpoint by default', () => {
       const resolver = new EndpointResolver()
       const result = resolver.resolveCollection({
         model: 'book',
@@ -54,8 +55,8 @@ describe('lib/mcp/services/endpoint-resolver', () => {
           resolver.resolveCollection({
             model: 'scheduling',
             modelConfig: makeConfig({
-              endpoint: 'schedulings',
               api: {
+                endpoint: 'schedulings',
                 parent: 'title',
                 standalone: false
               }
@@ -69,8 +70,8 @@ describe('lib/mcp/services/endpoint-resolver', () => {
         const result = resolver.resolveCollection({
           model: 'scheduling',
           modelConfig: makeConfig({
-            endpoint: 'schedulings',
             api: {
+              endpoint: 'schedulings',
               parent: 'title',
               standalone: false
             }
@@ -86,8 +87,8 @@ describe('lib/mcp/services/endpoint-resolver', () => {
           resolver.resolveCollection({
             model: 'scheduling',
             modelConfig: makeConfig({
-              endpoint: 'schedulings',
               api: {
+                endpoint: 'schedulings',
                 parent: ['title', 'title_group'],
                 standalone: false
               }
@@ -127,7 +128,7 @@ describe('lib/mcp/services/endpoint-resolver', () => {
         const resolver = new EndpointResolver()
         const result = resolver.resolveRecord({
           model: 'asset',
-          modelConfig: makeConfig({ endpoint: 'assets' }),
+          modelConfig: makeConfig({ api: { endpoint: 'assets' } }),
           recordId: 'titles/42/assets/7'
         })
         expect(result).toBe('titles/42/assets/7')
@@ -137,7 +138,7 @@ describe('lib/mcp/services/endpoint-resolver', () => {
         const resolver = new EndpointResolver({ namespace: 'api/v1' })
         const result = resolver.resolveRecord({
           model: 'asset',
-          modelConfig: makeConfig({ endpoint: 'assets' }),
+          modelConfig: makeConfig({ api: { endpoint: 'assets' } }),
           recordId: 'titles/42/assets/7'
         })
         expect(result).toBe('api/v1/titles/42/assets/7')
@@ -317,9 +318,9 @@ describe('lib/mcp/services/endpoint-resolver', () => {
   // =========================================================================
 
   describe('pathForType', () => {
-    it('returns modelConfig.endpoint by default', () => {
+    it('returns modelConfig.api.endpoint by default', () => {
       const resolver = new EndpointResolver()
-      const config = makeConfig({ endpoint: 'book-items' })
+      const config = makeConfig({ api: { endpoint: 'book-items' } })
       expect(resolver.pathForType('book', config)).toBe('book-items')
     })
 
@@ -332,7 +333,7 @@ describe('lib/mcp/services/endpoint-resolver', () => {
       const resolver = new DasherizedResolver()
       const result = resolver.resolveCollection({
         model: 'book_item',
-        modelConfig: makeConfig({ endpoint: 'book_items' })
+        modelConfig: makeConfig({ api: { endpoint: 'book_items' } })
       })
       expect(result).toBe('book-items')
     })
@@ -363,8 +364,8 @@ describe('lib/mcp/services/endpoint-resolver', () => {
       const result = resolver.resolveCollection({
         model: 'scheduling',
         modelConfig: makeConfig({
-          endpoint: 'schedulings',
           api: {
+            endpoint: 'schedulings',
             parent: 'title',
             standalone: false
           }

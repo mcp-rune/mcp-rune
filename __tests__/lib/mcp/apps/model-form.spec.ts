@@ -3,7 +3,7 @@ import { createCreateFormApp } from '../../../../src/mcp/apps/model-form.js'
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 
 const MockModel = {
-  endpoint: 'books',
+  api: { endpoint: 'books' },
   singularName: 'book',
   attributes: {
     id: { type: 'string', prompt_visible: false },

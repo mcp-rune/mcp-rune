@@ -44,8 +44,8 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
 
     it('should include model enum from models config', () => {
       const mockModels = {
-        activity: { endpoint: 'activities' },
-        book: { endpoint: 'books' }
+        activity: { api: { endpoint: 'activities' } },
+        book: { api: { endpoint: 'books' } }
       }
 
       const tool = new CreateModelTool({ models: mockModels })
@@ -71,7 +71,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
     it('should create a record successfully with Rails payload wrapping', async () => {
       const mockModels = {
         activity: {
-          endpoint: 'activities',
+          api: { endpoint: 'activities' },
           required: ['title']
         }
       }
@@ -102,7 +102,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
     it('should return error for missing required fields', async () => {
       const mockModels = {
         activity: {
-          endpoint: 'activities',
+          api: { endpoint: 'activities' },
           required: ['title', 'duration']
         }
       }
@@ -125,7 +125,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
     it('should return error for unknown model', async () => {
       const tool = new CreateModelTool({
         apiClient: mockApiClient,
-        models: { book: { endpoint: 'books' } }
+        models: { book: { api: { endpoint: 'books' } } }
       })
 
       const result = await tool.execute({
@@ -152,7 +152,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
     it('should handle API errors', async () => {
       const mockModels = {
         activity: {
-          endpoint: 'activities',
+          api: { endpoint: 'activities' },
           required: ['title']
         }
       }
@@ -178,7 +178,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
     it('should log creation when logger is available', async () => {
       const mockModels = {
         book: {
-          endpoint: 'books',
+          api: { endpoint: 'books' },
           required: ['title']
         }
       }
@@ -209,7 +209,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
     it('should support user_id impersonation', async () => {
       const mockModels = {
         book: {
-          endpoint: 'books',
+          api: { endpoint: 'books' },
           required: ['title']
         }
       }
@@ -237,7 +237,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
     it('should call storeOperation after successful creation', async () => {
       const mockModels = {
         activity: {
-          endpoint: 'activities',
+          api: { endpoint: 'activities' },
           required: ['title']
         }
       }
@@ -268,7 +268,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
     it('should not fail if storeOperation rejects', async () => {
       const mockModels = {
         activity: {
-          endpoint: 'activities',
+          api: { endpoint: 'activities' },
           required: ['title']
         }
       }
@@ -308,7 +308,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
     it('should return compact response without echoing full API data', async () => {
       const mockModels = {
         brand: {
-          endpoint: 'brands',
+          api: { endpoint: 'brands' },
           required: ['name']
         }
       }
@@ -358,9 +358,8 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
     it('should create a record successfully with flat payload', async () => {
       const mockModels = {
         activity: {
-          endpoint: 'activities',
           required: ['title'],
-          api: { convention: flatConvention }
+          api: { endpoint: 'activities', convention: flatConvention }
         }
       }
 
@@ -388,9 +387,8 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
     it('should return error for missing required fields', async () => {
       const mockModels = {
         activity: {
-          endpoint: 'activities',
           required: ['title', 'duration'],
-          api: { convention: flatConvention }
+          api: { endpoint: 'activities', convention: flatConvention }
         }
       }
 
@@ -412,7 +410,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
     it('should return error for unknown model', async () => {
       const tool = new CreateModelTool({
         apiClient: mockApiClient,
-        models: { book: { endpoint: 'books', api: { convention: flatConvention } } }
+        models: { book: { api: { endpoint: 'books', convention: flatConvention } } }
       })
 
       const result = await tool.execute({
@@ -441,9 +439,8 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
     it('should handle API errors', async () => {
       const mockModels = {
         activity: {
-          endpoint: 'activities',
           required: ['title'],
-          api: { convention: flatConvention }
+          api: { endpoint: 'activities', convention: flatConvention }
         }
       }
 
@@ -468,9 +465,8 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
     it('should log creation when logger is available', async () => {
       const mockModels = {
         book: {
-          endpoint: 'books',
           required: ['title'],
-          api: { convention: flatConvention }
+          api: { endpoint: 'books', convention: flatConvention }
         }
       }
 
@@ -500,9 +496,8 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
     it('should support user_id impersonation with flat payload', async () => {
       const mockModels = {
         book: {
-          endpoint: 'books',
           required: ['title'],
-          api: { convention: flatConvention }
+          api: { endpoint: 'books', convention: flatConvention }
         }
       }
 
@@ -525,9 +520,8 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
     it('should call storeOperation after successful creation', async () => {
       const mockModels = {
         activity: {
-          endpoint: 'activities',
           required: ['title'],
-          api: { convention: flatConvention }
+          api: { endpoint: 'activities', convention: flatConvention }
         }
       }
 
@@ -557,9 +551,8 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
     it('should not fail if storeOperation rejects', async () => {
       const mockModels = {
         activity: {
-          endpoint: 'activities',
           required: ['title'],
-          api: { convention: flatConvention }
+          api: { endpoint: 'activities', convention: flatConvention }
         }
       }
 

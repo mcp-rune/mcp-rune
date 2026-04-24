@@ -254,7 +254,7 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
    * Compound IDs (containing '/') are used as-is; simple IDs are prefixed with the model endpoint.
    */
   private _resolveRecordEndpoint(modelConfig: ModelConfig, recordId: string): string {
-    return recordId.includes('/') ? recordId : `${modelConfig.endpoint}/${recordId}`
+    return recordId.includes('/') ? recordId : `${modelConfig.api.endpoint}/${recordId}`
   }
 
   /**
@@ -294,13 +294,13 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
           status: 'validation_error',
           errors: [
             `'${model}' is nested-only — provide parent_path in the record ` +
-              `(e.g., '{parent_endpoint}/{parent_id}/${modelConfig.endpoint}'). ` +
+              `(e.g., '{parent_endpoint}/{parent_id}/${modelConfig.api.endpoint}'). ` +
               `Valid parents: ${parentModels.join(', ')}.`
           ]
         }
         continue
       } else {
-        endpoints[i] = modelConfig.endpoint
+        endpoints[i] = modelConfig.api.endpoint
       }
 
       // Validate required fields

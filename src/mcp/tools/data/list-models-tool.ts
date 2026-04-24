@@ -41,7 +41,7 @@ export class ListModelsTool extends BaseTool {
 
       return {
         name: modelName,
-        endpoint: config.endpoint,
+        endpoint: config.api.endpoint,
         description: config.description,
         attributes: Object.keys(attrs),
         required_attributes: (config as Record<string, unknown>).required,

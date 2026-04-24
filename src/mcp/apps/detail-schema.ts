@@ -126,7 +126,7 @@ export function generateDetailSchema(
   return {
     model,
     title: humanize(model),
-    endpoint: ModelClass.endpoint,
+    endpoint: ModelClass.api.endpoint,
     fields
   }
 }

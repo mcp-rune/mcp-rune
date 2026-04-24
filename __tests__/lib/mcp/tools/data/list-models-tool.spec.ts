@@ -31,14 +31,14 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
     it('should return list of models', async () => {
       const mockModels = {
         activity: {
-          endpoint: 'activities',
+          api: { endpoint: 'activities' },
           attributes: { title: { type: 'string', required: true }, duration: { type: 'integer' } },
           required: ['title'],
           search: { lookup: { fields: ['title'] } },
           description: 'Study session model'
         },
         book: {
-          endpoint: 'books',
+          api: { endpoint: 'books' },
           attributes: { title: { type: 'string', required: true }, author: { type: 'string' } },
           required: ['title'],
           search: { lookup: { fields: ['title'] } },
@@ -61,7 +61,7 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
     it('should include model associations when available', async () => {
       const mockModels = {
         category: {
-          endpoint: 'categories',
+          api: { endpoint: 'categories' },
           attributes: { name: { type: 'string', required: true } },
           required: ['name'],
           search: { lookup: { fields: ['name'] } },
@@ -84,7 +84,7 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
     it('should handle models without associations', async () => {
       const mockModels = {
         tag: {
-          endpoint: 'tags',
+          api: { endpoint: 'tags' },
           attributes: { name: { type: 'string', required: true } },
           required: ['name'],
           search: { lookup: { fields: ['name'] } },
@@ -103,7 +103,7 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
     it('should include filterable_search when model has filters', async () => {
       const mockModels = {
         title: {
-          endpoint: 'titles',
+          api: { endpoint: 'titles' },
           attributes: { name: { type: 'string' } },
           required: ['name'],
           search: {
@@ -131,7 +131,7 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
     it('should return enum_fields as array of field names, not full enum objects', async () => {
       const mockModels = {
         title: {
-          endpoint: 'titles',
+          api: { endpoint: 'titles' },
           attributes: {
             name: { type: 'string' },
             status: { type: 'enum', enumValues: ['draft', 'active'] },
@@ -154,7 +154,7 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
     it('should not include filterable_search when model has no filters', async () => {
       const mockModels = {
         book: {
-          endpoint: 'books',
+          api: { endpoint: 'books' },
           attributes: { title: { type: 'string' } },
           required: ['title'],
           search: { lookup: { fields: ['title'] } },

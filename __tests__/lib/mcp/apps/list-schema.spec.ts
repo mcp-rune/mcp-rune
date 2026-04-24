@@ -7,7 +7,7 @@ import {
 describe('lib/mcp/apps/list-schema', () => {
   function makeModel(overrides = {}) {
     return {
-      endpoint: 'books',
+      api: { endpoint: 'books' },
       singularName: 'book',
       search: { lookup: { fields: ['title', 'author'] } },
       description: 'Books for study',

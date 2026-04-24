@@ -216,7 +216,7 @@ Adding a form for a new model requires **zero new HTML** — just one entry in t
 ```javascript
 // src/engineer/models/project.js
 export class Project extends BaseModel {
-  static endpoint = 'projects'
+  static api = { endpoint: 'projects' }
 
   static associations = {
     belongsTo: {

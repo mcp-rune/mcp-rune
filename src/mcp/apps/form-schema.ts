@@ -91,7 +91,7 @@ export function generateFormSchema(
   // Fallback: empty schema
   return {
     model: ModelClass.singularName,
-    title: `Create ${humanize(ModelClass.endpoint)}`,
+    title: `Create ${humanize(ModelClass.api.endpoint)}`,
     fieldsets: [],
     fields: []
   }
@@ -157,7 +157,7 @@ function generateFromFormClass(
 
   return {
     model: ModelClass.singularName,
-    title: `Create ${humanize(ModelClass.endpoint)}`,
+    title: `Create ${humanize(ModelClass.api.endpoint)}`,
     fieldsets,
     fields
   }
@@ -223,7 +223,7 @@ function generateFromPrompt(
 
   return {
     model: ModelClass.singularName,
-    title: PromptClass.title || `Create ${humanize(ModelClass.endpoint)}`,
+    title: PromptClass.title || `Create ${humanize(ModelClass.api.endpoint)}`,
     fieldsets,
     fields,
     ...(groupLayouts && { groupLayouts })
@@ -307,10 +307,10 @@ function buildField(
         if (parentModelClass) {
           field.association.nested = {
             parentModel: parentName,
-            childEndpoint: targetModel.endpoint
+            childEndpoint: targetModel.api.endpoint
           }
           // Override endpoint to be the parent's endpoint (used for path construction)
-          field.association.endpoint = parentModelClass.endpoint
+          field.association.endpoint = parentModelClass.api.endpoint
         }
       }
     } else {

@@ -49,7 +49,6 @@ export interface AppAttributeDefinition {
  */
 export interface AppModelClass {
   new (data?: Record<string, unknown>): AppModelInstance
-  endpoint: string
   singularName: string
   attributes: Record<string, AppAttributeDefinition>
   associations?: AssociationConfig
@@ -69,7 +68,8 @@ export interface AppModelClass {
     filters?: Record<string, unknown>
     [key: string]: unknown
   }
-  api?: {
+  api: {
+    endpoint: string
     convention?: BaseConvention
     readOnly?: boolean
     parent?: string | string[]

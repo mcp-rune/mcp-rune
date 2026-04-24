@@ -3,7 +3,7 @@ import { createMultiSelectApp } from '../../../../src/mcp/apps/multi-select.js'
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 
 class FakeModel {
-  static endpoint = '/fakes'
+  static api = { endpoint: '/fakes' }
   static attributes = ['id', 'name']
   static attributesConfig = { id: { type: 'integer' }, name: { type: 'string' } }
   static supportsLookup = true

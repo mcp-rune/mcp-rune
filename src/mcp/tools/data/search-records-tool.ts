@@ -214,7 +214,7 @@ export class SearchRecordsTool extends BaseTool {
       }))
 
     return {
-      model: ModelClass.endpoint?.replace(/s$/, '') ?? '',
+      model: ModelClass.api?.endpoint?.replace(/s$/, '') ?? '',
       columns
     }
   }

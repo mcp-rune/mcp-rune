@@ -1,6 +1,5 @@
 export const MOCK_MODELS = {
   title: {
-    endpoint: 'titles',
     attributes: ['id', 'name', 'external_id', 'title_type', 'episode_number', 'tags'],
     required: ['name'],
     search: {
@@ -12,6 +11,9 @@ export const MOCK_MODELS = {
       }
     },
     description: 'Titles (movies, episodes, features)',
+    api: {
+      endpoint: 'titles'
+    },
     associations: {
       belongsTo: {
         licensor: { rel: 'licensor', target_model: 'licensor', expandable: true }
@@ -26,7 +28,6 @@ export const MOCK_MODELS = {
     }
   },
   image: {
-    endpoint: 'images',
     attributes: ['id', 'encoding', 'width', 'height', 'type', 'is_cover'],
     required: ['encoding'],
     search: {
@@ -36,6 +37,9 @@ export const MOCK_MODELS = {
       }
     },
     description: 'Images for titles and brands',
+    api: {
+      endpoint: 'images'
+    },
     associations: {
       belongsTo: {
         content: { rel: 'content', target_model: 'polymorphic', expandable: true }
@@ -44,11 +48,11 @@ export const MOCK_MODELS = {
     }
   },
   scheduling: {
-    endpoint: 'schedulings',
     attributes: ['id', 'start_date', 'end_date'],
     required: [],
     description: 'Scheduling entries',
     api: {
+      endpoint: 'schedulings',
       parent: ['title', 'title_group'],
       standalone: false
     }

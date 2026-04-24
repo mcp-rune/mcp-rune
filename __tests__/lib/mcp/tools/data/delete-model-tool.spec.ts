@@ -41,8 +41,8 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
 
     it('should exclude read-only models from enum', () => {
       const mockModels = {
-        book: { endpoint: 'books' },
-        report: { endpoint: 'reports', api: { readOnly: true } }
+        book: { api: { endpoint: 'books' } },
+        report: { api: { endpoint: 'reports', readOnly: true } }
       }
 
       const tool = new DeleteModelTool({ models: mockModels })
@@ -69,7 +69,7 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
 
     it('should delete a record successfully', async () => {
       const mockModels = {
-        book: { endpoint: 'books' }
+        book: { api: { endpoint: 'books' } }
       }
 
       const tool = new DeleteModelTool({
@@ -90,7 +90,7 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
 
     it('should return error when record_id is missing', async () => {
       const mockModels = {
-        book: { endpoint: 'books' }
+        book: { api: { endpoint: 'books' } }
       }
 
       const tool = new DeleteModelTool({
@@ -109,7 +109,7 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
     it('should return error for unknown model', async () => {
       const tool = new DeleteModelTool({
         apiClient: mockApiClient,
-        models: { book: { endpoint: 'books' } }
+        models: { book: { api: { endpoint: 'books' } } }
       })
 
       const result = await tool.execute({
@@ -126,8 +126,7 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
         apiClient: mockApiClient,
         models: {
           report: {
-            endpoint: 'reports',
-            api: { readOnly: true },
+            api: { endpoint: 'reports', readOnly: true },
             description: 'Read-only reports'
           }
         }
@@ -156,7 +155,7 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
 
     it('should handle API errors', async () => {
       const mockModels = {
-        book: { endpoint: 'books' }
+        book: { api: { endpoint: 'books' } }
       }
 
       const error = new Error('API Error')
@@ -179,7 +178,7 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
 
     it('should log deletion when logger is available', async () => {
       const mockModels = {
-        book: { endpoint: 'books' }
+        book: { api: { endpoint: 'books' } }
       }
 
       const tool = new DeleteModelTool({
@@ -201,7 +200,7 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
 
     it('should support user_id impersonation', async () => {
       const mockModels = {
-        book: { endpoint: 'books' }
+        book: { api: { endpoint: 'books' } }
       }
 
       const tool = new DeleteModelTool({
@@ -220,7 +219,7 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
 
     it('should call storeOperation after successful deletion', async () => {
       const mockModels = {
-        book: { endpoint: 'books' }
+        book: { api: { endpoint: 'books' } }
       }
 
       const tool = new DeleteModelTool({
@@ -244,7 +243,7 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
 
     it('should not fail if storeOperation rejects', async () => {
       const mockModels = {
-        book: { endpoint: 'books' }
+        book: { api: { endpoint: 'books' } }
       }
 
       storeOperation.mockRejectedValueOnce(new Error('pgvector unavailable'))

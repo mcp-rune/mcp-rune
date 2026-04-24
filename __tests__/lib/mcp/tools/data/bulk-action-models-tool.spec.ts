@@ -13,22 +13,21 @@ const { storeOperation } = await import('#src/services/vector-storage.js')
 describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
   const mockModels = {
     activity: {
-      endpoint: 'activities',
+      api: { endpoint: 'activities' },
       required: ['title']
     },
     tag: {
-      endpoint: 'tags',
-      api: { readOnly: true },
+      api: { endpoint: 'tags', readOnly: true },
       description: 'Tags are managed by the system.'
     },
     asset: {
-      endpoint: 'assets',
+      api: { endpoint: 'assets' },
       required: ['name']
     },
     rendition: {
-      endpoint: 'renditions',
       required: [],
       api: {
+        endpoint: 'renditions',
         parent: 'asset',
         standalone: false
       }

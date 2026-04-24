@@ -5,7 +5,7 @@ describe('lib/mcp/apps/display-adapter', () => {
 
   function makeModel(overrides = {}) {
     return {
-      endpoint: 'books',
+      api: { endpoint: 'books' },
       singularName: 'book',
       attributes: {
         id: { type: 'string', prompt_visible: false },

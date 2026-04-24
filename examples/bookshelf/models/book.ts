@@ -2,8 +2,8 @@ import { BaseModel } from 'mcp-kit/core'
 import type { AttributeDefinition } from 'mcp-kit/core'
 
 export class Book extends BaseModel {
-  static override endpoint = 'books'
   static override description = 'A book in the library'
+  static override api = { endpoint: 'books' }
 
   static override attributes: Record<string, AttributeDefinition> = {
     title: {

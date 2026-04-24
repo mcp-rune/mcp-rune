@@ -3,7 +3,7 @@ import { GetFiltersGuideTool } from '../../../../../src/mcp/tools/data/get-filte
 // Mock model classes with static filters
 const mockModels = {
   title: {
-    endpoint: 'titles',
+    api: { endpoint: 'titles' },
     attributes: { id: {}, name: { label: 'Name' } },
     search: {
       filters: {
@@ -33,7 +33,7 @@ const mockModels = {
     }
   },
   brand: {
-    endpoint: 'brands',
+    api: { endpoint: 'brands' },
     attributes: { id: {}, name: {} }
     // No search — not searchable
   }
@@ -100,7 +100,7 @@ describe('GetFiltersGuideTool', () => {
   it('should fall back to name when label is missing', async () => {
     const modelsWithNoLabel = {
       title: {
-        endpoint: 'titles',
+        api: { endpoint: 'titles' },
         attributes: {},
         search: {
           filters: {
@@ -123,7 +123,7 @@ describe('GetFiltersGuideTool', () => {
   it('should handle filter without description', async () => {
     const modelsNoDesc = {
       title: {
-        endpoint: 'titles',
+        api: { endpoint: 'titles' },
         attributes: {},
         search: {
           filters: {
@@ -144,7 +144,7 @@ describe('GetFiltersGuideTool', () => {
 
   it('should show "none" when no models are searchable', async () => {
     const noSearchable = {
-      brand: { endpoint: 'brands', attributes: {} }
+      brand: { api: { endpoint: 'brands' }, attributes: {} }
     }
     const noSearchTool = new GetFiltersGuideTool({ models: noSearchable })
     const result = await noSearchTool.execute({ model: 'brand' })
@@ -156,7 +156,7 @@ describe('GetFiltersGuideTool', () => {
   it('should document integer_range format', async () => {
     const modelsWithIntRange = {
       title: {
-        endpoint: 'titles',
+        api: { endpoint: 'titles' },
         attributes: {},
         search: {
           filters: {
@@ -182,7 +182,7 @@ describe('GetFiltersGuideTool', () => {
   it('should generate example with integer_range filter type', async () => {
     const modelsWithIntRange = {
       title: {
-        endpoint: 'titles',
+        api: { endpoint: 'titles' },
         attributes: {},
         search: {
           filters: {
@@ -207,7 +207,7 @@ describe('GetFiltersGuideTool', () => {
   it('should generate example with relation and date_range filter types', async () => {
     const modelsWithRelation = {
       title: {
-        endpoint: 'titles',
+        api: { endpoint: 'titles' },
         attributes: {},
         search: {
           filters: {
