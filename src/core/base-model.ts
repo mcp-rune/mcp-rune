@@ -44,6 +44,30 @@ export interface EndpointOverrides {
   delete?: string
 }
 
+/** Definition of a custom action on a model. */
+export interface ActionDefinition {
+  /** HTTP method. Defaults to 'POST'. */
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+  /**
+   * URL path template with Rails-style named parameters.
+   * Supports :id (mapped from recordId) and any :param_name (mapped from pathParams).
+   * Relative paths are resolved against the model's base endpoint.
+   *
+   * Examples:
+   *   ':id/publish'                              — single record action
+   *   ':id/chapters/:chapter_id/approve'          — nested action with extra param
+   *   'reports/:report_type/:year/generate'       — collection action with params
+   *   'bulk-publish'                               — collection action, no params
+   */
+  path: string
+  /** Whether this action operates on a specific record (requires recordId). Default: true. */
+  recordLevel?: boolean
+  /** Description for tooling/documentation. */
+  description?: string
+  /** When true, send attributes as-is without convention wrapping. Default: false. */
+  rawPayload?: boolean
+}
+
 export interface ApiConfig {
   /** Base API path for this model (e.g., 'books', 'activities'). */
   endpoint?: string
@@ -57,6 +81,8 @@ export interface ApiConfig {
   namespace?: string
   /** Per-action endpoint overrides for non-standard API paths. */
   endpoints?: EndpointOverrides
+  /** Custom actions beyond CRUD. Keys are action names. */
+  actions?: Record<string, ActionDefinition>
 }
 
 export interface ModelData {

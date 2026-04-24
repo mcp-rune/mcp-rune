@@ -12,6 +12,7 @@
  * - Does NOT absorb vector storage, usage rules, or schema derivation
  */
 
+import type { ActionDefinition } from '../../core/base-model.js'
 import type { AssociationConfig, BaseConvention } from '../api-conventions/base-convention.js'
 import { defaultConvention } from '../api-conventions/index.js'
 import type { ApiClient, RequestOptions } from '../search/types.js'
@@ -222,6 +223,67 @@ export class ModelService {
     return await this._apiClient.delete(endpoint, options)
   }
 
+  /**
+   * Execute a custom action declared on a model.
+   *
+   * Resolves the endpoint and HTTP method from the model's actions config,
+   * builds the payload using the model's convention (unless rawPayload), and
+   * dispatches through ApiClient.
+   */
+  async action(
+    model: string,
+    actionName: string,
+    options?: {
+      recordId?: string
+      /** Named path parameters for :param_name substitution. */
+      pathParams?: Record<string, string>
+      attributes?: Record<string, unknown>
+      params?: Record<string, unknown>
+      requestOptions?: ModelRequestOptions
+    }
+  ): Promise<Record<string, unknown>> {
+    const modelConfig = this._validateModel(model)
+
+    const { url, method } = this._resolver.resolveAction({
+      model,
+      modelConfig,
+      action: actionName,
+      recordId: options?.recordId,
+      pathParams: options?.pathParams,
+      parentPath: options?.requestOptions?.parentPath
+    })
+
+    // Build payload for body-bearing methods
+    let payload: Record<string, unknown> | undefined
+    if (options?.attributes && ['POST', 'PUT', 'PATCH'].includes(method)) {
+      const actionDef = (modelConfig.api as Record<string, unknown>)?.actions as
+        | Record<string, ActionDefinition>
+        | undefined
+      payload = actionDef?.[actionName]?.rawPayload
+        ? options.attributes
+        : this._buildPayload(model, modelConfig, options.attributes)
+    }
+
+    this._log('info', 'Executing action', {
+      model,
+      action: actionName,
+      method,
+      url,
+      impersonating: options?.requestOptions?.userId ?? null
+    })
+
+    const result = await this._dispatch(
+      method,
+      url,
+      payload,
+      options?.params,
+      options?.requestOptions
+    )
+
+    this._log('info', 'Action completed', { model, action: actionName })
+    return result
+  }
+
   // --- Accessors ---
 
   /** Access the underlying endpoint resolver (for advanced use cases). */
@@ -235,6 +297,30 @@ export class ModelService {
   }
 
   // --- Internal helpers ---
+
+  /** Dispatch an HTTP request to the appropriate ApiClient method. */
+  private async _dispatch(
+    method: string,
+    url: string,
+    payload?: Record<string, unknown>,
+    params?: Record<string, unknown>,
+    options?: RequestOptions
+  ): Promise<Record<string, unknown>> {
+    switch (method) {
+      case 'GET':
+        return this._apiClient.get(url, params, options)
+      case 'POST':
+        return this._apiClient.post(url, payload, options)
+      case 'PUT':
+        return this._apiClient.put(url, payload, options)
+      case 'PATCH':
+        return this._apiClient.patch(url, payload, options)
+      case 'DELETE':
+        return this._apiClient.delete(url, options)
+      default:
+        throw new Error(`Unsupported HTTP method: ${method}`)
+    }
+  }
 
   /** Validate model exists and return its config. */
   private _validateModel(model: string): ModelConfig {

@@ -439,6 +439,158 @@ describe('lib/mcp/services/model-service', () => {
   })
 
   // =========================================================================
+  // action (custom actions)
+  // =========================================================================
+
+  describe('action', () => {
+    function makeModelsWithActions(): Record<string, ModelConfig> {
+      return {
+        ...makeModels(),
+        book_with_actions: {
+          attributes: { title: { type: 'string' } },
+          description: 'Book with custom actions',
+          api: {
+            endpoint: 'books',
+            convention: jsonApiConvention,
+            actions: {
+              publish: { path: ':id/publish', description: 'Publish a book' },
+              archive: { path: ':id/archive', method: 'PATCH' },
+              export: { path: ':id/export', method: 'GET' },
+              bulk_publish: { path: 'bulk-publish', recordLevel: false, rawPayload: true },
+              approve_chapter: { path: ':id/chapters/:chapter_id/approve' }
+            }
+          }
+        }
+      }
+    }
+
+    it('dispatches POST by default', async () => {
+      const { service, apiClient } = makeService(undefined, makeModelsWithActions())
+      await service.action('book_with_actions', 'publish', { recordId: '42' })
+
+      expect(apiClient.post).toHaveBeenCalledWith('books/42/publish', undefined, undefined)
+    })
+
+    it('dispatches to correct HTTP method (PATCH)', async () => {
+      const { service, apiClient } = makeService(undefined, makeModelsWithActions())
+      await service.action('book_with_actions', 'archive', {
+        recordId: '42',
+        attributes: { reason: 'outdated' }
+      })
+
+      expect(apiClient.patch).toHaveBeenCalledWith(
+        'books/42/archive',
+        { book_with_actions: { reason: 'outdated' } },
+        undefined
+      )
+    })
+
+    it('dispatches GET with query params', async () => {
+      const { service, apiClient } = makeService(undefined, makeModelsWithActions())
+      await service.action('book_with_actions', 'export', {
+        recordId: '42',
+        params: { format: 'pdf' }
+      })
+
+      expect(apiClient.get).toHaveBeenCalledWith('books/42/export', { format: 'pdf' }, undefined)
+    })
+
+    it('wraps attributes via convention by default', async () => {
+      const { service, apiClient } = makeService(undefined, makeModelsWithActions())
+      await service.action('book_with_actions', 'archive', {
+        recordId: '42',
+        attributes: { reason: 'outdated' }
+      })
+
+      // jsonApiConvention wraps under singularName
+      const call = (apiClient.patch as ReturnType<typeof vi.fn>).mock.calls[0]
+      expect(call[1]).toHaveProperty('book_with_actions')
+    })
+
+    it('sends raw payload when rawPayload is true', async () => {
+      const { service, apiClient } = makeService(undefined, makeModelsWithActions())
+      await service.action('book_with_actions', 'bulk_publish', {
+        attributes: { ids: [1, 2, 3] }
+      })
+
+      expect(apiClient.post).toHaveBeenCalledWith(
+        'books/bulk-publish',
+        { ids: [1, 2, 3] },
+        undefined
+      )
+    })
+
+    it('passes request options (userId) through', async () => {
+      const { service, apiClient } = makeService(undefined, makeModelsWithActions())
+      await service.action('book_with_actions', 'publish', {
+        recordId: '42',
+        requestOptions: { userId: 'u1' }
+      })
+
+      expect(apiClient.post).toHaveBeenCalledWith('books/42/publish', undefined, { userId: 'u1' })
+    })
+
+    it('passes pathParams for multi-param substitution', async () => {
+      const { service, apiClient } = makeService(undefined, makeModelsWithActions())
+      await service.action('book_with_actions', 'approve_chapter', {
+        recordId: '42',
+        pathParams: { chapter_id: '5' }
+      })
+
+      expect(apiClient.post).toHaveBeenCalledWith(
+        'books/42/chapters/5/approve',
+        undefined,
+        undefined
+      )
+    })
+
+    it('resolves compound IDs correctly', async () => {
+      const { service, apiClient } = makeService(undefined, makeModelsWithActions())
+      await service.action('book_with_actions', 'publish', {
+        recordId: 'authors/10/books/42'
+      })
+
+      expect(apiClient.post).toHaveBeenCalledWith(
+        'authors/10/books/42/publish',
+        undefined,
+        undefined
+      )
+    })
+
+    it('throws UnknownModelError for bad model', async () => {
+      const { service } = makeService(undefined, makeModelsWithActions())
+      await expect(service.action('nonexistent', 'publish', { recordId: '1' })).rejects.toThrow(
+        UnknownModelError
+      )
+    })
+
+    it('throws UnknownActionError for bad action', async () => {
+      const { service } = makeService(undefined, makeModelsWithActions())
+      await expect(
+        service.action('book_with_actions', 'nonexistent', { recordId: '1' })
+      ).rejects.toThrow(/Unknown action/)
+    })
+
+    it('does NOT enforce readOnly guard', async () => {
+      const models = makeModelsWithActions()
+      models.readonly_book = {
+        api: {
+          endpoint: 'books',
+          readOnly: true,
+          actions: {
+            export: { path: ':id/export', method: 'GET' }
+          }
+        }
+      }
+      const { service, apiClient } = makeService(undefined, models)
+
+      // Should NOT throw ModelReadOnlyError
+      await service.action('readonly_book', 'export', { recordId: '1' })
+      expect(apiClient.get).toHaveBeenCalledWith('books/1/export', undefined, undefined)
+    })
+  })
+
+  // =========================================================================
   // Accessors
   // =========================================================================
 

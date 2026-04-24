@@ -14,6 +14,7 @@ import { DeleteModelTool } from './delete-model-tool.js'
 import { FindModelTool } from './find-model-tool.js'
 import { GetFiltersGuideTool } from './get-filters-guide-tool.js'
 import { ListModelsTool } from './list-models-tool.js'
+import { ModelActionTool } from './model-action-tool.js'
 import { SearchRecordsTool } from './search-records-tool.js'
 import { UpdateModelTool } from './update-model-tool.js'
 
@@ -25,6 +26,7 @@ export {
   FindModelTool,
   GetFiltersGuideTool,
   ListModelsTool,
+  ModelActionTool,
   SearchRecordsTool,
   UpdateModelTool
 }
@@ -38,5 +40,6 @@ export const DATA_TOOL_CLASSES = {
   delete_model: DeleteModelTool,
   get_filters_guide: GetFiltersGuideTool,
   bulk_action_models: BulkActionModelsTool,
-  analysis_ingest: AnalysisIngestTool
+  analysis_ingest: AnalysisIngestTool,
+  model_action: ModelActionTool
 }
