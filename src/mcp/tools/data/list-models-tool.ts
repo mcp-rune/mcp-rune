@@ -39,6 +39,14 @@ export class ListModelsTool extends BaseTool {
       )
       const filters = config.search?.filters
 
+      const actions = config.api?.actions
+        ? Object.entries(config.api.actions).map(([name, def]) => ({
+            name,
+            method: (def as Record<string, unknown>).method ?? 'POST',
+            description: (def as Record<string, unknown>).description
+          }))
+        : undefined
+
       return {
         name: modelName,
         endpoint: config.api.endpoint,
@@ -46,6 +54,8 @@ export class ListModelsTool extends BaseTool {
         attributes: Object.keys(attrs),
         required_attributes: (config as Record<string, unknown>).required,
         read_only: config.api?.readOnly ?? false,
+        parent: config.api?.parent ?? undefined,
+        standalone: config.api?.standalone === false ? false : undefined,
         searchable_by: config.search?.lookup?.fields,
         enum_fields: enumFields.length > 0 ? enumFields : undefined,
         belongs_to: config.associations?.belongsTo
@@ -54,6 +64,7 @@ export class ListModelsTool extends BaseTool {
         has_many: config.associations?.hasMany
           ? Object.keys(config.associations.hasMany)
           : undefined,
+        actions: actions?.length ? actions : undefined,
         filterable_search: filters
           ? {
               available: true,

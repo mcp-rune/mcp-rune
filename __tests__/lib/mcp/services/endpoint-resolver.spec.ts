@@ -97,6 +97,29 @@ describe('lib/mcp/services/endpoint-resolver', () => {
           })
         ).toThrow(/title, title_group/)
       })
+
+      it('includes child endpoint in error for concrete path construction', () => {
+        const resolver = new EndpointResolver()
+        try {
+          resolver.resolveCollection({
+            model: 'scheduling',
+            modelConfig: makeConfig({
+              api: {
+                endpoint: 'schedulings',
+                parent: 'title',
+                standalone: false
+              }
+            })
+          })
+          expect.fail('should have thrown')
+        } catch (error) {
+          expect(error).toBeInstanceOf(MissingParentError)
+          const err = error as MissingParentError
+          expect(err.childEndpoint).toBe('schedulings')
+          expect(err.parentModels).toEqual(['title'])
+          expect(err.message).toContain('schedulings')
+        }
+      })
     })
   })
 

@@ -82,8 +82,9 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
       parent_path: z
         .string()
         .describe(
-          "Parent path for nested model creation (e.g., 'titles/42/assets'). " +
-            'Required when bulk-creating nested-only models.'
+          "Parent path for nested resources: '{parent_endpoint}/{parent_id}/{model_endpoint}' " +
+            "(e.g., 'titles/42/assets'). Required when bulk-creating models with standalone: false. " +
+            'Use list_models to discover parent relationships and endpoint names.'
         )
         .optional(),
       user_id: z.string().describe('User ID to impersonate (service accounts only).').optional(),
@@ -289,12 +290,19 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
       } else if (isNestedOnly) {
         const parent = modelConfig.api?.parent
         const parentModels = parent ? (Array.isArray(parent) ? parent : [parent]) : []
+        const examples = parentModels
+          .map((name) => this.models[name]?.api?.endpoint)
+          .filter(Boolean)
+          .map((ep) => `'${ep}/{id}/${modelConfig.api.endpoint}'`)
+        const example = examples.length
+          ? examples.join(' or ')
+          : `'{parent_endpoint}/{id}/${modelConfig.api.endpoint}'`
         results[i] = {
           index: i,
           status: 'validation_error',
           errors: [
             `'${model}' is nested-only — provide parent_path in the record ` +
-              `(e.g., '{parent_endpoint}/{parent_id}/${modelConfig.api.endpoint}'). ` +
+              `(e.g., ${example}). ` +
               `Valid parents: ${parentModels.join(', ')}.`
           ]
         }

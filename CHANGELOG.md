@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.20.0] — 2026-04-24
+
+### Added
+
+- **Nesting info in `list_models`** — output now includes `parent`, `standalone` (only when `false`), and `actions` summary (name, method, description) per model. LLMs can discover nested resource relationships upfront instead of learning from errors.
+- **Registry-aware `MissingParentError`** — error messages now show concrete parent endpoint paths (e.g., `'titles/{id}/assets'`) instead of generic placeholders (`'{parent_endpoint}/{parent_id}/assets'`). ModelService enriches errors using the models registry.
+
+### Changed
+
+- **Improved `parent_path` tool descriptions** — `create_model`, `find_model`, and `bulk_action_models` descriptions now include the format template `{parent_endpoint}/{parent_id}/{model_endpoint}`, explain the `standalone: false` trigger, and cross-reference `list_models` for discovery.
+- **`MissingParentError` constructor** — now accepts `childEndpoint` and exposes `model`, `childEndpoint`, and `parentModels` as readonly properties for downstream enrichment.
+- **Removed duplicate `EndpointOverrides`** — `endpoint-resolver.ts` now re-exports from `base-model.ts` instead of declaring its own identical interface.
+- **Cleaned up unsafe casts** — removed `Record<string, unknown>` casts in `EndpointResolver` (`_getOverrides`, `_resolveNamespace`, `resolveAction`) and `ModelService` (`action`), using direct optional chaining on typed `ModelConfig.api`.
+
+[0.20.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.19.0...v0.20.0
+
 ## [0.19.0] — 2026-04-24
 
 ### Added

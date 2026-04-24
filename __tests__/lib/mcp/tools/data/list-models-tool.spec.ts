@@ -151,6 +151,81 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
       expect(content[0].enum_fields.every((f) => typeof f === 'string')).toBe(true)
     })
 
+    it('should include parent and standalone for nested-only models', async () => {
+      const mockModels = {
+        asset: {
+          api: { endpoint: 'assets', parent: 'title', standalone: false },
+          attributes: { name: { type: 'string' } },
+          description: 'Asset model'
+        }
+      }
+
+      const tool = new ListModelsTool({ models: mockModels })
+      const result = await tool.execute()
+
+      const content = JSON.parse(result.content[0].text)
+      expect(content[0].parent).toBe('title')
+      expect(content[0].standalone).toBe(false)
+    })
+
+    it('should omit standalone for standalone models (default)', async () => {
+      const mockModels = {
+        book: {
+          api: { endpoint: 'books' },
+          attributes: { title: { type: 'string' } },
+          description: 'Book model'
+        }
+      }
+
+      const tool = new ListModelsTool({ models: mockModels })
+      const result = await tool.execute()
+
+      const content = JSON.parse(result.content[0].text)
+      expect(content[0].standalone).toBeUndefined()
+      expect(content[0].parent).toBeUndefined()
+    })
+
+    it('should include actions summary when model has actions', async () => {
+      const mockModels = {
+        book: {
+          api: {
+            endpoint: 'books',
+            actions: {
+              publish: { path: ':id/publish', method: 'POST', description: 'Publish a book' },
+              archive: { path: ':id/archive', description: 'Archive a book' }
+            }
+          },
+          attributes: { title: { type: 'string' } },
+          description: 'Book model'
+        }
+      }
+
+      const tool = new ListModelsTool({ models: mockModels })
+      const result = await tool.execute()
+
+      const content = JSON.parse(result.content[0].text)
+      expect(content[0].actions).toEqual([
+        { name: 'publish', method: 'POST', description: 'Publish a book' },
+        { name: 'archive', method: 'POST', description: 'Archive a book' }
+      ])
+    })
+
+    it('should omit actions when model has none', async () => {
+      const mockModels = {
+        book: {
+          api: { endpoint: 'books' },
+          attributes: { title: { type: 'string' } },
+          description: 'Book model'
+        }
+      }
+
+      const tool = new ListModelsTool({ models: mockModels })
+      const result = await tool.execute()
+
+      const content = JSON.parse(result.content[0].text)
+      expect(content[0].actions).toBeUndefined()
+    })
+
     it('should not include filterable_search when model has no filters', async () => {
       const mockModels = {
         book: {

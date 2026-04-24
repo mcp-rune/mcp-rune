@@ -12,13 +12,12 @@
  * - Does NOT absorb vector storage, usage rules, or schema derivation
  */
 
-import type { ActionDefinition } from '../../core/base-model.js'
 import type { AssociationConfig, BaseConvention } from '../api-conventions/base-convention.js'
 import { defaultConvention } from '../api-conventions/index.js'
 import type { ApiClient, RequestOptions } from '../search/types.js'
 import type { ModelConfig, ModelsRegistry, ToolLogger } from '../tools/base-tool.js'
 import type { CrudAction, EndpointResolverConfig } from './endpoint-resolver.js'
-import { EndpointResolver } from './endpoint-resolver.js'
+import { EndpointResolver, MissingParentError } from './endpoint-resolver.js'
 
 // ============================================================================
 // Types
@@ -123,10 +122,15 @@ export class ModelService {
       throw new MissingRequiredFieldsError(missingFields)
     }
 
-    const endpoint = this._resolver.resolveCollection(
-      { model, modelConfig, attributes, parentPath: options?.parentPath },
-      'create' as CrudAction
-    )
+    let endpoint: string
+    try {
+      endpoint = this._resolver.resolveCollection(
+        { model, modelConfig, attributes, parentPath: options?.parentPath },
+        'create' as CrudAction
+      )
+    } catch (error) {
+      throw error instanceof MissingParentError ? this._enrichMissingParentError(error) : error
+    }
     const payload = this._buildPayload(model, modelConfig, attributes)
 
     this._log('info', 'Creating model', { model, impersonating: options?.userId ?? null })
@@ -163,10 +167,15 @@ export class ModelService {
     options?: ModelRequestOptions
   ): Promise<Record<string, unknown>> {
     const modelConfig = this._validateModel(model)
-    const endpoint = this._resolver.resolveCollection(
-      { model, modelConfig, parentPath: options?.parentPath },
-      'list' as CrudAction
-    )
+    let endpoint: string
+    try {
+      endpoint = this._resolver.resolveCollection(
+        { model, modelConfig, parentPath: options?.parentPath },
+        'list' as CrudAction
+      )
+    } catch (error) {
+      throw error instanceof MissingParentError ? this._enrichMissingParentError(error) : error
+    }
 
     const queryParams = {
       ...filters,
@@ -256,10 +265,7 @@ export class ModelService {
     // Build payload for body-bearing methods
     let payload: Record<string, unknown> | undefined
     if (options?.attributes && ['POST', 'PUT', 'PATCH'].includes(method)) {
-      const actionDef = (modelConfig.api as Record<string, unknown>)?.actions as
-        | Record<string, ActionDefinition>
-        | undefined
-      payload = actionDef?.[actionName]?.rawPayload
+      payload = modelConfig.api?.actions?.[actionName]?.rawPayload
         ? options.attributes
         : this._buildPayload(model, modelConfig, options.attributes)
     }
@@ -364,6 +370,28 @@ export class ModelService {
   /** Get the convention for a model. */
   private _getConvention(modelConfig: ModelConfig): BaseConvention {
     return modelConfig.api?.convention ?? defaultConvention
+  }
+
+  /**
+   * Enrich a MissingParentError with concrete parent endpoint paths from the registry.
+   * Replaces generic `'{parent_endpoint}/{id}/assets'` with `'titles/{id}/assets'`.
+   */
+  private _enrichMissingParentError(error: MissingParentError): MissingParentError {
+    const parentEndpoints = error.parentModels
+      .map((name) => this._models[name]?.api?.endpoint)
+      .filter((ep): ep is string => !!ep)
+
+    if (parentEndpoints.length === 0) return error
+
+    const examples = parentEndpoints.map((ep) => `'${ep}/{id}/${error.childEndpoint}'`).join(' or ')
+
+    const enriched = new Error(
+      `'${error.model}' is nested-only — provide parent_path ` +
+        `(e.g., ${examples}). ` +
+        `Valid parents: ${error.parentModels.join(', ')}.`
+    ) as MissingParentError
+    enriched.name = 'MissingParentError'
+    return enriched
   }
 
   /** Log with optional logger. */

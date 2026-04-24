@@ -47,6 +47,21 @@ export const MOCK_MODELS = {
       hasMany: {}
     }
   },
+  asset: {
+    attributes: ['id', 'name', 'encoding'],
+    required: ['name'],
+    description: 'Assets (video files)',
+    api: {
+      endpoint: 'assets',
+      parent: 'title',
+      standalone: false
+    },
+    associations: {
+      belongsTo: {
+        title: { rel: 'title', target_model: 'title', expandable: true }
+      }
+    }
+  },
   scheduling: {
     attributes: ['id', 'start_date', 'end_date'],
     required: [],
