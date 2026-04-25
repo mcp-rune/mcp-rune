@@ -2,7 +2,6 @@ import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
 import { MissingRequiredFieldsError } from '#src/mcp/services/model-service.js'
-import { storeOperation } from '#src/services/vector-storage.js'
 
 import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { SaveModelBaseTool } from '../save-model-base-tool.js'
@@ -81,17 +80,11 @@ export class CreateModelTool extends SaveModelBaseTool {
 
       const data = await service.create(model, attributes, options)
 
-      // Fire-and-forget: store operation embedding for retrospective analysis
-      storeOperation({
+      this.storeToolMemory({
         toolName: 'create_model',
         toolArgs: { model, attributes },
         toolOutput: data,
-        userId: user_id,
-        sessionId: (this.serverContext as Record<string, unknown>)?.sessionId as string | undefined
-      }).catch((err: Error) => {
-        if (this.logger) {
-          this.logger.warn('Vector storage failed', { service: 'mcp-tools', error: err.message })
-        }
+        userId: user_id
       })
 
       return this.formatResponse({ status: 'created', model, id: data.id })

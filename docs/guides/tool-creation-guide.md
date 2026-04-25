@@ -262,17 +262,18 @@ export class MyGenericTool extends BaseTool {
 
 ### Available Helpers
 
-| Method                       | Description                                |
-| ---------------------------- | ------------------------------------------ |
-| `requireApiClient()`         | Throws if not authenticated                |
-| `this.modelService`          | ModelService instance (optional, for CRUD) |
-| `formatResponse(data)`       | Wrap successful response                   |
-| `formatError(error)`         | Wrap error response                        |
-| `validateModel(name)`        | Check model exists in config               |
-| `getModelConfig(name)`       | Get model configuration                    |
-| `getModelEnum()`             | Get list of available models               |
-| `truncateString(s, n)`       | Truncate string to max length              |
-| `sanitizeResponseData(data)` | JSON stringify for display                 |
+| Method                       | Description                                                          |
+| ---------------------------- | -------------------------------------------------------------------- |
+| `requireApiClient()`         | Throws if not authenticated                                          |
+| `this.modelService`          | ModelService instance (optional, for CRUD)                           |
+| `formatResponse(data)`       | Wrap successful response                                             |
+| `formatError(error)`         | Wrap error response (delegates to convention for structured parsing) |
+| `storeToolMemory(params)`    | Fire-and-forget vector storage of tool operations                    |
+| `validateModel(name)`        | Check model exists in config                                         |
+| `getModelConfig(name)`       | Get model configuration                                              |
+| `getModelEnum()`             | Get list of available models                                         |
+| `truncateString(s, n)`       | Truncate string to max length                                        |
+| `sanitizeResponseData(data)` | JSON stringify for display                                           |
 
 ### Optional Overrides
 
@@ -314,6 +315,31 @@ async execute(args) {
   }
 }
 ```
+
+`formatError()` delegates to the model's API convention to parse structured error responses into LLM-optimized text. The convention's `parseErrorResponse()` extracts field-level errors, and the tool layer joins them with semicolons and appends the HTTP status inline:
+
+```
+title: can't be blank; status: is not included in the list (422)
+```
+
+No "Error:" prefix is added — `isError: true` on the MCP response already signals it.
+
+### Tool Memory (Vector Storage)
+
+Write tools that modify data should record operations for retrospective analysis using `storeToolMemory()`:
+
+```javascript
+const data = await service.create(model, attributes, options)
+
+this.storeToolMemory({
+  toolName: 'create_model',
+  toolArgs: { model, attributes },
+  toolOutput: data,
+  userId: user_id
+})
+```
+
+This is fire-and-forget — it never blocks the tool response. The `sessionId` is extracted automatically from `this.serverContext`. If vector storage is not configured, the call is a no-op.
 
 ## Tool Tiers
 

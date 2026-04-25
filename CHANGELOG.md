@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.21.0] — 2026-04-25
+
+### Added
+
+- **Convention-driven error parsing** — new `parseErrorResponse(response)` method on `BaseConvention` extracts structured error messages from HTTP error responses. Each convention knows its API's error envelope, returning a flat `string[]` of error messages. `JsonApiConvention` handles Rails validation hashes (`{ errors: { field: [msgs] } }`), single errors (`{ error: "msg" }`), and error arrays.
+- **`ErrorResponse` interface** — typed shape (`{ status?, data? }`) for HTTP error responses passed to convention error parsing. Exported from `mcp-kit/prompts`.
+- **`storeToolMemory()` on BaseTool** — protected fire-and-forget helper that encapsulates the vector storage pattern (calling `storeOperation` + `.catch()` logging). Extracts `sessionId` from `serverContext` internally.
+- **`sessionId` on `ServerContext`** — the interface now declares `sessionId?: string`, matching what the runtime already sets in both stdio and HTTP servers. Eliminates unsafe `Record<string, unknown>` casts at every call site.
+
+### Changed
+
+- **LLM-optimized error formatting** — `formatError()` now delegates to the convention's `parseErrorResponse()` and formats errors as semicolon-separated text with inline status: `title: can't be blank; status: is not included (422)`. No `Error:` prefix (redundant with `isError: true`) or `Status: N/A` noise.
+- **DRYed up vector storage in CRUD tools** — replaced duplicated 10-line `storeOperation` fire-and-forget blocks in `create-model-tool`, `update-model-tool`, `delete-model-tool`, and `bulk-action-models-tool` with single-line `this.storeToolMemory()` calls.
+- **Updated docs** — `api-config-guide.md` documents error parsing in the Convention Integration section; `tool-creation-guide.md` documents `storeToolMemory()` and the new `formatError` behavior.
+
+[0.21.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.20.0...v0.21.0
+
 ## [0.20.0] — 2026-04-24
 
 ### Added

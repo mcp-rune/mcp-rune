@@ -2,6 +2,7 @@ export type {
   AssociationConfig,
   BelongsToAssociation,
   CompletionConfig,
+  ErrorResponse,
   FieldDefinition,
   HasManyAssociation,
   NormalizedListResponse,

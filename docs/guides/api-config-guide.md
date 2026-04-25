@@ -510,6 +510,43 @@ The convention also handles:
 
 - **Association values** — transforms `_id` fields to convention-specific formats (e.g., `_link` for HAL)
 - **Response normalization** — `normalizeListResponse()` extracts records and pagination
+- **Error parsing** — `parseErrorResponse()` extracts structured error messages from HTTP error responses
+
+### Error Parsing
+
+Each convention knows its API's error response shape. `BaseTool.formatError()` delegates to the convention's `parseErrorResponse()` to extract structured errors and format them as compact, LLM-optimized text.
+
+The method receives an `ErrorResponse` object (`{ status?, data? }`) and returns a flat `string[]` of error messages:
+
+```typescript
+import type { ErrorResponse } from 'mcp-kit/prompts'
+
+// Base implementation: extracts from response.data, JSON dump for objects
+parseErrorResponse(response: ErrorResponse): string[] {
+  const data = response.data
+  if (data === undefined || data === null) return []
+  if (typeof data === 'string') return [data]
+  return [JSON.stringify(data, null, 2)]
+}
+```
+
+**JSON API convention** handles Rails error shapes:
+
+| API Response Shape                          | Parsed Output               |
+| ------------------------------------------- | --------------------------- |
+| `{ error: "Not found" }`                    | `["Not found"]`             |
+| `{ errors: { title: ["can't be blank"] } }` | `["title: can't be blank"]` |
+| `{ errors: ["msg1", "msg2"] }`              | `["msg1", "msg2"]`          |
+
+**Custom conventions** should override to handle their API's specific error envelope. For example, a HAL convention might extract errors from `_embedded.errors` or a different structure.
+
+The tool layer joins multiple errors with semicolons and appends the HTTP status inline:
+
+```
+title: can't be blank; status: is not included in the list (422)
+```
+
+This format is optimized for LLM consumption: `isError: true` already signals the error, so no "Error:" prefix or "Status:" label is needed.
 
 ---
 

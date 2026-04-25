@@ -3,6 +3,31 @@ import { jsonApiConvention } from '../../../../src/mcp/api-conventions/json-api.
 
 describe('lib/mcp/api-conventions', () => {
   describe('BaseConvention', () => {
+    describe('parseErrorResponse', () => {
+      it('returns string data as single-element array', () => {
+        const base = new BaseConvention()
+        // Proxy/nginx returning plain text body
+        expect(base.parseErrorResponse({ status: 502, data: 'Bad Gateway' })).toEqual([
+          'Bad Gateway'
+        ])
+      })
+
+      it('returns JSON dump for unrecognized objects', () => {
+        const base = new BaseConvention()
+        // Non-standard API error format
+        const data = { code: 'RATE_LIMITED', retry_after: 30 }
+        expect(base.parseErrorResponse({ status: 429, data })).toEqual([
+          JSON.stringify(data, null, 2)
+        ])
+      })
+
+      it('returns empty array when response has no data', () => {
+        const base = new BaseConvention()
+        expect(base.parseErrorResponse({ status: 504 })).toEqual([])
+        expect(base.parseErrorResponse({ status: 502, data: null })).toEqual([])
+      })
+    })
+
     it('cleanResponse is a no-op by default', () => {
       const base = new BaseConvention()
       const data = { id: 1, _links: { self: {} } }
@@ -88,6 +113,81 @@ describe('lib/mcp/api-conventions', () => {
     it('flattenExpandedResources is a no-op', () => {
       const records = [{ id: 1, title: { id: 58, name: 'Pilot' } }]
       expect(jsonApiConvention.flattenExpandedResources(records)).toBe(records)
+    })
+
+    describe('parseErrorResponse', () => {
+      it('parses Rails validation hash with field-level errors', () => {
+        // Rails 422 response: POST /api/titles with missing required fields
+        const response = {
+          status: 422,
+          data: {
+            errors: {
+              title: ["can't be blank"],
+              status: ['is not included in the list'],
+              release_date: ['must be a valid date', 'must be in the future']
+            }
+          }
+        }
+        expect(jsonApiConvention.parseErrorResponse(response)).toEqual([
+          "title: can't be blank",
+          'status: is not included in the list',
+          'release_date: must be a valid date, must be in the future'
+        ])
+      })
+
+      it('parses single error object', () => {
+        // Rails 404 response: GET /api/titles/999
+        const response = { status: 404, data: { error: 'Record not found' } }
+        expect(jsonApiConvention.parseErrorResponse(response)).toEqual(['Record not found'])
+      })
+
+      it('parses array of error strings', () => {
+        // Rails 422 response: bulk validation
+        const response = {
+          status: 422,
+          data: { errors: ['Title is required', 'Status must be valid'] }
+        }
+        expect(jsonApiConvention.parseErrorResponse(response)).toEqual([
+          'Title is required',
+          'Status must be valid'
+        ])
+      })
+
+      it('parses Rails base-level errors (no field association)', () => {
+        // Rails model-level error: not tied to a specific field
+        const response = {
+          status: 422,
+          data: { errors: { base: ['Record is locked for editing'] } }
+        }
+        expect(jsonApiConvention.parseErrorResponse(response)).toEqual([
+          'base: Record is locked for editing'
+        ])
+      })
+
+      it('returns string body as-is', () => {
+        // Proxy/nginx 502 response: plain text body
+        expect(jsonApiConvention.parseErrorResponse({ status: 502, data: 'Bad Gateway' })).toEqual([
+          'Bad Gateway'
+        ])
+      })
+
+      it('falls back to JSON for unknown object shapes', () => {
+        // Non-standard API error format
+        const data = { code: 'UNAUTHORIZED', message: 'Token expired' }
+        expect(jsonApiConvention.parseErrorResponse({ status: 401, data })).toEqual([
+          JSON.stringify(data, null, 2)
+        ])
+      })
+
+      it('handles validation hash with string messages (non-array)', () => {
+        // Some APIs return single strings instead of arrays
+        const response = { status: 422, data: { errors: { email: 'is already taken' } } }
+        expect(jsonApiConvention.parseErrorResponse(response)).toEqual(['email: is already taken'])
+      })
+
+      it('returns empty array when response has no data', () => {
+        expect(jsonApiConvention.parseErrorResponse({ status: 500 })).toEqual([])
+      })
     })
   })
 })

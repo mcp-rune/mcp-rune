@@ -1,8 +1,6 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
-import { storeOperation } from '#src/services/vector-storage.js'
-
 import type { ModelConfig, ToolResult } from '../base-tool.js'
 import { SaveModelBaseTool } from '../save-model-base-tool.js'
 
@@ -178,16 +176,11 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
         })
       }
 
-      storeOperation({
+      this.storeToolMemory({
         toolName: 'bulk_action_models',
         toolArgs: { model, action, record_count: results.length },
         toolOutput: summary,
-        userId: user_id,
-        sessionId: (this.serverContext as Record<string, unknown>)?.sessionId as string | undefined
-      }).catch((err: Error) => {
-        if (this.logger) {
-          this.logger.warn('Vector storage failed', { service: 'mcp-tools', error: err.message })
-        }
+        userId: user_id
       })
 
       const envelope = { summary, results }
