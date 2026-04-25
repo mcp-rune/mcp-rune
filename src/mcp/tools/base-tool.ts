@@ -4,8 +4,10 @@ import { z } from 'zod'
 export type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 import type { ApiClient, RequestOptions } from '#src/mcp/search/types.js'
 import { ModelService } from '#src/mcp/services/model-service.js'
+import { storeOperation } from '#src/services/vector-storage.js'
 
 import type { AssociationConfig, BaseConvention } from '../api-conventions/base-convention.js'
+import { defaultConvention } from '../api-conventions/index.js'
 import type { ToolCategory } from './categories.js'
 import { getCategoryConfig, TOOL_CATEGORIES } from './categories.js'
 
@@ -28,6 +30,7 @@ export interface ServerContext {
   name?: string
   description?: string
   productLines?: string[]
+  sessionId?: string
 }
 
 /** Prompt registry interface for dynamic descriptions */
@@ -321,31 +324,34 @@ export class BaseTool {
 
   /** Format error response */
   formatError(error: HttpError): ToolErrorResponse {
-    const errorMessage = error.response?.data
-      ? typeof error.response.data === 'string'
-        ? this.truncateString(error.response.data, 5000)
-        : JSON.stringify(error.response.data, null, 2)
-      : error.message
+    const errorMessage = error.response ? this.formatErrorResponse(error.response) : error.message
 
     if (this.logger) {
       this.logger.error('Tool execution failed', {
         service: 'mcp-tools',
         tool: this.name,
         error: errorMessage,
-        status: error.response?.status ?? 'N/A',
+        status: error.response?.status,
         stack: error.stack
       })
     }
 
     return {
-      content: [
-        {
-          type: 'text',
-          text: `Error: ${errorMessage}\nStatus: ${error.response?.status ?? 'N/A'}`
-        }
-      ],
+      content: [{ type: 'text', text: errorMessage }],
       isError: true
     }
+  }
+
+  /**
+   * Format an HTTP error response into LLM-optimized text.
+   * Delegates to convention for error extraction, then joins with semicolons.
+   */
+  private formatErrorResponse(response: { status?: number; data?: unknown }): string {
+    const convention = defaultConvention
+    const errors = convention.parseErrorResponse(response)
+    const message =
+      errors.length > 0 ? this.truncateString(errors.join('; '), 5000) : 'Unknown error'
+    return response.status ? `${message} (${response.status})` : message
   }
 
   /** Truncate string to maximum length */
@@ -388,5 +394,22 @@ export class BaseTool {
   requireModelService(): ModelService {
     this.requireApiClient()
     return this.modelService!
+  }
+
+  /** Fire-and-forget: store operation embedding for retrospective analysis */
+  protected storeToolMemory(params: {
+    toolName: string
+    toolArgs: Record<string, unknown>
+    toolOutput?: Record<string, unknown>
+    userId?: string
+  }): void {
+    storeOperation({
+      ...params,
+      sessionId: this.serverContext.sessionId
+    }).catch((err: Error) => {
+      if (this.logger) {
+        this.logger.warn('Vector storage failed', { service: 'mcp-tools', error: err.message })
+      }
+    })
   }
 }

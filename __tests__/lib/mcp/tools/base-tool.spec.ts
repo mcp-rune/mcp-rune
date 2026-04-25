@@ -1,6 +1,10 @@
 import { BaseTool } from '../../../../src/mcp/tools/base-tool.js'
 import { TOOL_CATEGORIES } from '../../../../src/mcp/tools/categories.js'
 
+vi.mock('../../../../src/services/vector-storage.js', () => ({
+  storeOperation: vi.fn().mockResolvedValue(null)
+}))
+
 describe('lib/mcp/tools/base-tool', () => {
   describe('abstract methods', () => {
     it('should throw when name getter is not implemented', () => {
@@ -276,54 +280,84 @@ describe('lib/mcp/tools/base-tool', () => {
   })
 
   describe('formatError', () => {
-    it('should format error with message', () => {
+    it('formats non-HTTP error without status (falls back to error.message)', () => {
       const tool = new BaseTool()
-      const error = new Error('Something failed')
+      // Network error, timeout, DNS failure — no HTTP response
+      const error = new Error('Connection timeout')
       const result = tool.formatError(error)
 
       expect(result.isError).toBe(true)
       expect(result.content[0].type).toBe('text')
-      expect(result.content[0].text).toContain('Something failed')
+      expect(result.content[0].text).toBe('Connection timeout')
     })
 
-    it('should include response data when available', () => {
+    it('formats string response body with inline status', () => {
       const tool = new BaseTool()
-      const error = new Error('API Error')
-      error.response = {
-        status: 422,
-        data: { errors: ['Title is required'] }
-      }
-
+      // Proxy/nginx 500: plain text body
+      const error = Object.assign(new Error('API Error'), {
+        response: { status: 500, data: 'Internal Server Error' }
+      })
       const result = tool.formatError(error)
-      expect(result.content[0].text).toContain('Title is required')
-      expect(result.content[0].text).toContain('422')
+      expect(result.content[0].text).toBe('Internal Server Error (500)')
     })
 
-    it('should handle string response data', () => {
+    it('formats Rails validation hash as semicolon-separated field errors', () => {
       const tool = new BaseTool()
-      const error = new Error('API Error')
-      error.response = {
-        status: 500,
-        data: 'Internal Server Error'
-      }
-
+      // Rails 422: POST /api/titles with invalid attributes
+      const error = Object.assign(new Error('API Error'), {
+        response: {
+          status: 422,
+          data: {
+            errors: { title: ["can't be blank"], status: ['is not included in the list'] }
+          }
+        }
+      })
       const result = tool.formatError(error)
-      expect(result.content[0].text).toContain('Internal Server Error')
+      expect(result.content[0].text).toBe(
+        "title: can't be blank; status: is not included in the list (422)"
+      )
     })
 
-    it('should truncate long error responses', () => {
+    it('formats single error object with inline status', () => {
       const tool = new BaseTool()
-      const error = new Error('API Error')
-      error.response = {
-        status: 500,
-        data: 'x'.repeat(6000)
-      }
+      // Rails 404: GET /api/titles/999
+      const error = Object.assign(new Error('API Error'), {
+        response: { status: 404, data: { error: 'Record not found' } }
+      })
+      const result = tool.formatError(error)
+      expect(result.content[0].text).toBe('Record not found (404)')
+    })
 
+    it('formats error array with semicolons', () => {
+      const tool = new BaseTool()
+      // Rails 422: bulk validation errors as array
+      const error = Object.assign(new Error('API Error'), {
+        response: { status: 422, data: { errors: ['Title is required', 'Status must be valid'] } }
+      })
+      const result = tool.formatError(error)
+      expect(result.content[0].text).toBe('Title is required; Status must be valid (422)')
+    })
+
+    it('shows Unknown error when response has no data', () => {
+      const tool = new BaseTool()
+      // Empty response body from upstream timeout
+      const error = Object.assign(new Error('API Error'), {
+        response: { status: 504 }
+      })
+      const result = tool.formatError(error)
+      expect(result.content[0].text).toBe('Unknown error (504)')
+    })
+
+    it('truncates long error responses', () => {
+      const tool = new BaseTool()
+      const error = Object.assign(new Error('API Error'), {
+        response: { status: 500, data: 'x'.repeat(6000) }
+      })
       const result = tool.formatError(error)
       expect(result.content[0].text).toContain('[truncated]')
     })
 
-    it('should log error when logger is available', () => {
+    it('logs error when logger is available', () => {
       const mockLogger = { error: vi.fn() }
       class TestTool extends BaseTool {
         get name() {
@@ -341,6 +375,90 @@ describe('lib/mcp/tools/base-tool', () => {
           error: 'Test error'
         })
       )
+    })
+  })
+
+  describe('storeToolMemory', () => {
+    it('calls storeOperation with correct params including sessionId', async () => {
+      const { storeOperation } = await import('../../../../src/services/vector-storage.js')
+      vi.mocked(storeOperation).mockResolvedValue(null)
+
+      class TestTool extends BaseTool {
+        get name() {
+          return 'test_tool'
+        }
+        // Expose protected method for testing
+        callStoreToolMemory(
+          ...args: Parameters<BaseTool['storeToolMemory']>
+        ): ReturnType<BaseTool['storeToolMemory']> {
+          return this.storeToolMemory(...args)
+        }
+      }
+
+      const tool = new TestTool({ serverContext: { sessionId: 'session-123' } })
+      tool.callStoreToolMemory({
+        toolName: 'test_tool',
+        toolArgs: { model: 'title', id: '42' },
+        toolOutput: { status: 'updated' },
+        userId: 'user-1'
+      })
+
+      expect(storeOperation).toHaveBeenCalledWith({
+        toolName: 'test_tool',
+        toolArgs: { model: 'title', id: '42' },
+        toolOutput: { status: 'updated' },
+        userId: 'user-1',
+        sessionId: 'session-123'
+      })
+    })
+
+    it('logs warning when storeOperation rejects', async () => {
+      const { storeOperation } = await import('../../../../src/services/vector-storage.js')
+      vi.mocked(storeOperation).mockRejectedValue(new Error('DB connection failed'))
+
+      const mockLogger = { warn: vi.fn() }
+      class TestTool extends BaseTool {
+        get name() {
+          return 'test_tool'
+        }
+        callStoreToolMemory(
+          ...args: Parameters<BaseTool['storeToolMemory']>
+        ): ReturnType<BaseTool['storeToolMemory']> {
+          return this.storeToolMemory(...args)
+        }
+      }
+
+      const tool = new TestTool({ logger: mockLogger })
+      tool.callStoreToolMemory({ toolName: 'test', toolArgs: {} })
+
+      // Wait for the promise rejection to be handled
+      await vi.waitFor(() => {
+        expect(mockLogger.warn).toHaveBeenCalledWith('Vector storage failed', {
+          service: 'mcp-tools',
+          error: 'DB connection failed'
+        })
+      })
+    })
+
+    it('does not throw when logger is missing and storeOperation rejects', async () => {
+      const { storeOperation } = await import('../../../../src/services/vector-storage.js')
+      vi.mocked(storeOperation).mockRejectedValue(new Error('DB down'))
+
+      class TestTool extends BaseTool {
+        get name() {
+          return 'test_tool'
+        }
+        callStoreToolMemory(
+          ...args: Parameters<BaseTool['storeToolMemory']>
+        ): ReturnType<BaseTool['storeToolMemory']> {
+          return this.storeToolMemory(...args)
+        }
+      }
+
+      const tool = new TestTool()
+      // Should not throw
+      tool.callStoreToolMemory({ toolName: 'test', toolArgs: {} })
+      await new Promise((r) => setTimeout(r, 10))
     })
   })
 

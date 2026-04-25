@@ -10,6 +10,7 @@
 
 import type {
   BelongsToAssociation,
+  ErrorResponse,
   FieldDefinition,
   HasManyAssociation,
   NormalizedListResponse
@@ -137,6 +138,43 @@ class JsonApiConvention extends BaseConvention {
         })
       : { page, per_page: perPage, total: records.length }
     return { records, pagination }
+  }
+
+  /**
+   * Parse Rails/JSON API error responses into flat error messages.
+   *
+   * Handles:
+   *   - { error: "message" }              → ["message"]
+   *   - { errors: { field: [msgs] } }     → ["field: msg1, msg2", ...]
+   *   - { errors: ["msg1", "msg2"] }      → ["msg1", "msg2"]
+   *   - unknown shape                     → fallback to base (JSON dump)
+   */
+  override parseErrorResponse(response: ErrorResponse): string[] {
+    const data = response.data
+    if (data === undefined || data === null) return []
+    if (typeof data === 'string') return [data]
+    if (typeof data !== 'object') return [String(data)]
+
+    const obj = data as Record<string, unknown>
+
+    // { error: "single message" }
+    if (typeof obj.error === 'string') return [obj.error]
+
+    // { errors: { field: [messages] } } — Rails validation hash
+    if (obj.errors && typeof obj.errors === 'object' && !Array.isArray(obj.errors)) {
+      const lines: string[] = []
+      for (const [field, messages] of Object.entries(obj.errors as Record<string, unknown>)) {
+        if (Array.isArray(messages)) lines.push(`${field}: ${messages.join(', ')}`)
+        else if (typeof messages === 'string') lines.push(`${field}: ${messages}`)
+      }
+      if (lines.length > 0) return lines
+    }
+
+    // { errors: ["msg1", "msg2"] }
+    if (Array.isArray(obj.errors)) return obj.errors.map((e: unknown) => String(e))
+
+    // Unknown shape — delegate to base
+    return super.parseErrorResponse(response)
   }
 
   /** Strip `_links` (HAL/HATEOAS metadata) from API responses recursively. */

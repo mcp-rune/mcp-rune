@@ -1,8 +1,6 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
-import { storeOperation } from '#src/services/vector-storage.js'
-
 import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { SaveModelBaseTool } from '../save-model-base-tool.js'
 
@@ -76,17 +74,11 @@ export class UpdateModelTool extends SaveModelBaseTool {
       const options = user_id ? { userId: user_id } : undefined
       const data = await service.update(model, record_id, attributes, options)
 
-      // Fire-and-forget: store operation embedding for retrospective analysis
-      storeOperation({
+      this.storeToolMemory({
         toolName: 'update_model',
         toolArgs: { model, id: record_id, attributes },
         toolOutput: data,
-        userId: user_id,
-        sessionId: (this.serverContext as Record<string, unknown>)?.sessionId as string | undefined
-      }).catch((err: Error) => {
-        if (this.logger) {
-          this.logger.warn('Vector storage failed', { service: 'mcp-tools', error: err.message })
-        }
+        userId: user_id
       })
 
       return this.formatResponse({ status: 'updated', model, id: record_id })

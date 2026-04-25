@@ -61,6 +61,12 @@ export interface AssociationConfig {
 import type { NormalizedListResponse } from '#src/mcp/search/types.js'
 export type { NormalizedListResponse, PaginationInfo } from '#src/mcp/search/types.js'
 
+/** HTTP error response shape passed to convention error parsing */
+export interface ErrorResponse {
+  status?: number
+  data?: unknown
+}
+
 export class BaseConvention {
   get name(): string {
     throw new Error('Convention must implement name')
@@ -168,6 +174,22 @@ export class BaseConvention {
     return ((response as Record<string, unknown>)?.data ??
       (response as Record<string, unknown>)?.records ??
       []) as Record<string, unknown>[]
+  }
+
+  /**
+   * Parse an HTTP error response into a flat list of error messages.
+   *
+   * Convention-specific: each convention knows the error envelope its API uses
+   * and where to find structured error data in the response.
+   *
+   * Default: extracts from response.data if present, falls back to JSON dump.
+   */
+  parseErrorResponse(response: ErrorResponse): string[] {
+    const data = response.data
+    if (data === undefined || data === null) return []
+    if (typeof data === 'string') return [data]
+    if (typeof data !== 'object') return [String(data)]
+    return [JSON.stringify(data, null, 2)]
   }
 
   /**
