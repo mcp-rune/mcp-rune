@@ -69,10 +69,20 @@ const toolRegistry = {
 export const mcpConfig = {
   name: 'bookshelf-mcp',
 
-  createServer({ getAccessToken }: { sessionId?: string; getAccessToken: () => Promise<string> }) {
+  createServer({
+    sessionId,
+    transport,
+    getAccessToken
+  }: {
+    sessionId: string
+    transport: string
+    getAccessToken: () => Promise<string>
+  }) {
     return createServer({
       name: 'bookshelf-mcp',
       version: '1.0.0',
+      sessionId,
+      transport,
       toolRegistry,
       promptRegistry,
       getAccessToken

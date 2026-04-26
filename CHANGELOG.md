@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.22.0] — 2026-04-26
+
+### Added
+
+- **MCP client identification in structured logs** — after the MCP handshake, the server now captures `clientInfo` (name, version) from the SDK's `oninitialized` hook and propagates it to all subsequent logs, error tracking (Sentry), and tracing (Langfuse). A `"Client connected"` log entry is emitted with client name, version, transport, and summarized capabilities. Every tool execution log automatically includes `clientName`, `clientVersion`, and `transport` via the enriched `logContext`.
+- **Logging environment variables documented in README** — `LOG_LEVEL`, `LOG_FORMAT`, `FORCE_COLOR`, and `LOG_FILE_ENABLED` are now listed in the Environment Variables table with a development tip.
+
+### Changed
+
+- **Logfmt text format for console output** — text-mode logs now render metadata as human-readable `key=value` pairs instead of appended `JSON.stringify()` blobs. Strings with spaces are quoted, nested objects fall back to JSON. The `app` key is omitted in text mode (redundant with `service`). JSON format for production/Loki is unchanged.
+- **Centralized session context setup** — `setSessionContext()` and `setMcpClientContext()` are now called from the server factory's `oninitialized` hook instead of individually in each transport, removing duplication.
+
+[0.22.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.21.0...v0.22.0
+
 ## [0.21.0] — 2026-04-25
 
 ### Added

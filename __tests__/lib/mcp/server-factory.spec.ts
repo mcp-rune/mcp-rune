@@ -1,23 +1,33 @@
 // Define mocks using vi.hoisted()
-const { mockUnderlyingServer, MockMcpServer, mockSchemas } = vi.hoisted(() => {
-  const underlyingServer = {
-    setRequestHandler: vi.fn(),
-    registerCapabilities: vi.fn()
-  }
-  const MockMcpServerFn = vi.fn(function () {
-    this.server = underlyingServer
-    this.registerTool = vi.fn()
-  })
-  return {
-    mockUnderlyingServer: underlyingServer,
-    MockMcpServer: MockMcpServerFn,
-    mockSchemas: {
-      CompleteRequestSchema: Symbol('CompleteRequestSchema'),
-      ListPromptsRequestSchema: Symbol('ListPromptsRequestSchema'),
-      GetPromptRequestSchema: Symbol('GetPromptRequestSchema')
+const { mockUnderlyingServer, MockMcpServer, mockSchemas, mockErrorTracking, mockTracing } =
+  vi.hoisted(() => {
+    const underlyingServer = {
+      setRequestHandler: vi.fn(),
+      registerCapabilities: vi.fn(),
+      oninitialized: undefined as (() => void) | undefined,
+      getClientVersion: vi.fn(),
+      getClientCapabilities: vi.fn()
     }
-  }
-})
+    const MockMcpServerFn = vi.fn(function () {
+      this.server = underlyingServer
+      this.registerTool = vi.fn()
+    })
+    return {
+      mockUnderlyingServer: underlyingServer,
+      MockMcpServer: MockMcpServerFn,
+      mockSchemas: {
+        CompleteRequestSchema: Symbol('CompleteRequestSchema'),
+        ListPromptsRequestSchema: Symbol('ListPromptsRequestSchema'),
+        GetPromptRequestSchema: Symbol('GetPromptRequestSchema')
+      },
+      mockErrorTracking: {
+        setMcpClientContext: vi.fn()
+      },
+      mockTracing: {
+        setSessionContext: vi.fn()
+      }
+    }
+  })
 
 // Mock the MCP SDK
 vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
@@ -34,6 +44,10 @@ vi.mock('#src/services/logger.js', () => ({
   error: vi.fn()
 }))
 
+// Mock error tracking and tracing
+vi.mock('#src/services/error-tracking.js', () => mockErrorTracking)
+vi.mock('#src/services/tracing.js', () => mockTracing)
+
 // Mock form handlers
 vi.mock('#src/mcp/forms/form-handlers.js', () => ({
   registerFormHandlers: vi.fn(),
@@ -44,6 +58,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { CompleteRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 
 import { createServer } from '../../../src/mcp/server-factory.js'
+import * as logger from '../../../src/services/logger.js'
 
 describe('lib/mcp/server-factory', () => {
   let mockToolRegistry
@@ -52,6 +67,7 @@ describe('lib/mcp/server-factory', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockUnderlyingServer.oninitialized = undefined
 
     mockToolRegistry = {
       registerTools: vi.fn(),
@@ -77,6 +93,8 @@ describe('lib/mcp/server-factory', () => {
       createServer({
         name: 'test-server',
         version: '1.0.0',
+        sessionId: 'test-session-1',
+        transport: 'stdio',
         toolRegistry: mockToolRegistry,
         getAccessToken: mockGetAccessToken
       })
@@ -88,6 +106,8 @@ describe('lib/mcp/server-factory', () => {
       createServer({
         name: 'test-server',
         version: '1.0.0',
+        sessionId: 'test-session-1',
+        transport: 'stdio',
         toolRegistry: mockToolRegistry,
         getAccessToken: mockGetAccessToken
       })
@@ -104,6 +124,8 @@ describe('lib/mcp/server-factory', () => {
       const result = createServer({
         name: 'test-server',
         version: '1.0.0',
+        sessionId: 'test-session-1',
+        transport: 'stdio',
         toolRegistry: mockToolRegistry,
         getAccessToken: mockGetAccessToken
       })
@@ -327,6 +349,143 @@ describe('lib/mcp/server-factory', () => {
 
       expect(result.completion.values).toEqual([])
       expect(result.completion.hasMore).toBe(false)
+    })
+  })
+
+  describe('oninitialized hook', () => {
+    it('should set oninitialized callback on the underlying server', () => {
+      createServer({
+        name: 'test-server',
+        version: '1.0.0',
+        sessionId: 'test-session-1',
+        transport: 'stdio',
+        toolRegistry: mockToolRegistry,
+        getAccessToken: mockGetAccessToken
+      })
+
+      expect(mockUnderlyingServer.oninitialized).toBeTypeOf('function')
+    })
+
+    it('should log client info and enrich context when client connects', () => {
+      mockUnderlyingServer.getClientVersion.mockReturnValue({
+        name: 'claude-code',
+        version: '1.2.3'
+      })
+      mockUnderlyingServer.getClientCapabilities.mockReturnValue({
+        sampling: {},
+        roots: { listChanged: true }
+      })
+
+      createServer({
+        name: 'test-server',
+        version: '1.0.0',
+        sessionId: 'session-abc',
+        transport: 'stdio',
+        toolRegistry: mockToolRegistry,
+        getAccessToken: mockGetAccessToken
+      })
+
+      // Trigger the oninitialized hook
+      mockUnderlyingServer.oninitialized!()
+
+      expect(logger.info).toHaveBeenCalledWith(
+        'Client connected',
+        expect.objectContaining({
+          service: 'test-server',
+          sessionId: 'session-abc',
+          clientName: 'claude-code',
+          clientVersion: '1.2.3',
+          transport: 'stdio',
+          capabilities: {
+            sampling: true,
+            roots: true,
+            rootsListChanged: true,
+            experimental: []
+          }
+        })
+      )
+
+      expect(mockErrorTracking.setMcpClientContext).toHaveBeenCalledWith({
+        name: 'claude-code',
+        version: '1.2.3',
+        transport: 'stdio'
+      })
+
+      expect(mockTracing.setSessionContext).toHaveBeenCalledWith({
+        sessionId: 'session-abc',
+        metadata: {
+          transport: 'stdio',
+          clientName: 'claude-code',
+          clientVersion: '1.2.3'
+        }
+      })
+    })
+
+    it('should default to unknown when client version is not available', () => {
+      mockUnderlyingServer.getClientVersion.mockReturnValue(undefined)
+      mockUnderlyingServer.getClientCapabilities.mockReturnValue(undefined)
+
+      createServer({
+        name: 'test-server',
+        version: '1.0.0',
+        sessionId: 'session-xyz',
+        transport: 'streamable-http',
+        toolRegistry: mockToolRegistry,
+        getAccessToken: mockGetAccessToken
+      })
+
+      mockUnderlyingServer.oninitialized!()
+
+      expect(logger.info).toHaveBeenCalledWith(
+        'Client connected',
+        expect.objectContaining({
+          clientName: 'unknown',
+          clientVersion: 'unknown',
+          transport: 'streamable-http',
+          capabilities: {
+            sampling: false,
+            roots: false,
+            rootsListChanged: false,
+            experimental: []
+          }
+        })
+      )
+
+      expect(mockErrorTracking.setMcpClientContext).toHaveBeenCalledWith({
+        name: 'unknown',
+        version: 'unknown',
+        transport: 'streamable-http'
+      })
+    })
+
+    it('should include experimental capability keys', () => {
+      mockUnderlyingServer.getClientVersion.mockReturnValue({
+        name: 'opencode',
+        version: '0.5.0'
+      })
+      mockUnderlyingServer.getClientCapabilities.mockReturnValue({
+        experimental: { tasks: {}, streaming: {} }
+      })
+
+      createServer({
+        name: 'test-server',
+        version: '1.0.0',
+        sessionId: 'session-exp',
+        transport: 'stdio',
+        toolRegistry: mockToolRegistry,
+        getAccessToken: mockGetAccessToken
+      })
+
+      mockUnderlyingServer.oninitialized!()
+
+      expect(logger.info).toHaveBeenCalledWith(
+        'Client connected',
+        expect.objectContaining({
+          capabilities: expect.objectContaining({
+            experimental: ['tasks', 'streaming']
+          })
+        })
+      )
     })
   })
 

@@ -566,6 +566,7 @@ describe('lib/mcp/http-server', () => {
       // Verify createServer was called with getAccessToken
       expect(mockMcp.createServer).toHaveBeenCalledWith({
         sessionId: 'new-session-id',
+        transport: 'streamable-http',
         getAccessToken: expect.any(Function)
       })
 

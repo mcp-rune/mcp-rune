@@ -101,6 +101,86 @@ describe('lib/services/logger', () => {
     })
   })
 
+  describe('text format (logfmt)', () => {
+    it('renders metadata as key=value pairs in text mode', async () => {
+      // The textFormat is passed to printf — extract and test it directly
+      const printfFn = winston.format.printf
+      // printf was called with the formatter function during module load
+      const formatter = (printfFn as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]
+      if (!formatter) return // Skip if printf wasn't called (e.g. JSON mode)
+
+      const result = formatter({
+        level: 'info',
+        message: 'Request completed',
+        timestamp: '2026-04-26 16:25:01',
+        service: 'express',
+        method: 'POST',
+        path: '/mcp',
+        statusCode: 200,
+        duration: '576ms',
+        app: 'engineer-mcp'
+      })
+
+      expect(result).toContain('[info]')
+      expect(result).toContain('[express]')
+      expect(result).toContain('Request completed')
+      expect(result).toContain('method=POST')
+      expect(result).toContain('path=/mcp')
+      expect(result).toContain('statusCode=200')
+      expect(result).toContain('duration=576ms')
+      // app key should be omitted in text mode
+      expect(result).not.toContain('app=')
+    })
+
+    it('quotes string values containing spaces', async () => {
+      const printfFn = winston.format.printf
+      const formatter = (printfFn as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]
+      if (!formatter) return
+
+      const result = formatter({
+        level: 'info',
+        message: 'test',
+        timestamp: '2026-04-26 16:25:01',
+        service: 'test',
+        error: 'something went wrong'
+      })
+
+      expect(result).toContain('error="something went wrong"')
+    })
+
+    it('renders nested objects as JSON', async () => {
+      const printfFn = winston.format.printf
+      const formatter = (printfFn as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]
+      if (!formatter) return
+
+      const result = formatter({
+        level: 'info',
+        message: 'test',
+        timestamp: '2026-04-26 16:25:01',
+        service: 'test',
+        capabilities: { sampling: true, roots: false }
+      })
+
+      expect(result).toContain('capabilities={"sampling":true,"roots":false}')
+    })
+
+    it('renders empty metadata without trailing space', async () => {
+      const printfFn = winston.format.printf
+      const formatter = (printfFn as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]
+      if (!formatter) return
+
+      const result = formatter({
+        level: 'info',
+        message: 'No metadata',
+        timestamp: '2026-04-26 16:25:01',
+        service: 'test',
+        app: 'mcp-servers' // app is skipped, so metadata is effectively empty
+      })
+
+      expect(result).toBe('2026-04-26 16:25:01 [info] [test] No metadata')
+    })
+  })
+
   // Regression coverage for the winston-daily-rotate-file retention bug.
   // Without a pinned `auditFile`, the library derives its ledger filename from
   // a hash that includes a per-process nonce, so every restart creates a fresh
