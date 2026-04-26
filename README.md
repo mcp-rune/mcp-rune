@@ -556,6 +556,16 @@ const needed = migrations.filter(
 | ------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL`     | —       | PostgreSQL connection string. When unset, all database features are disabled.                                             |
 | `ANALYSIS_ENABLED` | `false` | Enable analysis tools (`analysis_ingest`, `analysis_query`, `analysis_store`, `analysis_clear`). Requires `DATABASE_URL`. |
+| `LOG_LEVEL`        | `info`  | Logging verbosity: `debug`, `info`, `warn`, `error`.                                                                      |
+| `LOG_FORMAT`       | `text`  | Console log format: `text` (human-readable key=value pairs) or `json` (structured JSON for Loki/Grafana).                 |
+| `FORCE_COLOR`      | —       | Set to `1` to enable colorized console output.                                                                            |
+| `LOG_FILE_ENABLED` | `false` | Set to `true` to enable daily-rotated file logging (7-day retention).                                                     |
+
+> **Tip:** For local development, run with verbose colorized output:
+>
+> ```bash
+> FORCE_COLOR=1 LOG_LEVEL=debug npx tsx examples/bookshelf/server.ts
+> ```
 
 ---
 
@@ -695,6 +705,9 @@ API converters generate tools from OpenAPI specs. mcp-kit goes the other directi
 ---
 
 ## Development
+
+> [!NOTE]
+> The `dist/` directory is gitignored and compiled from `src/`. A **post-merge** git hook automatically runs `npm run build` after `git pull` when source files changed, so your local build stays fresh across machines. To rebuild manually: `npm run build` (tsc + copy HTML apps) or `npm run build:full` (Vite apps + tsc + copy).
 
 ### Prerequisites
 

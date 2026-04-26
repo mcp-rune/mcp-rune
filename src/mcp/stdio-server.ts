@@ -21,11 +21,14 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 
 import * as logger from '#src/services/logger.js'
-import { setSessionContext } from '#src/services/tracing.js'
 
 interface McpConfig {
   name: string
-  createServer: (options: { sessionId: string; getAccessToken: () => Promise<string> }) => McpServer
+  createServer: (options: {
+    sessionId: string
+    transport: string
+    getAccessToken: () => Promise<string>
+  }) => McpServer
 }
 
 interface StdioServerConfig {
@@ -71,16 +74,12 @@ export class StdioServer {
     // Create MCP server with getAccessToken bound to this instance
     this.server = this.mcp.createServer({
       sessionId: this.sessionId,
+      transport: 'stdio',
       getAccessToken: this.getAccessToken.bind(this)
     })
 
     const transport = new StdioServerTransport()
     await this.server.connect(transport)
-
-    setSessionContext({
-      sessionId: this.sessionId,
-      metadata: { transport: 'stdio' }
-    })
 
     logger.info(`${this.mcp.name} (stdio) running`, { service: this.mcp.name })
   }

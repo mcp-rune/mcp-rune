@@ -1,0 +1,5 @@
+CHANGED=$(git diff HEAD@{1} --name-only -- src/)
+if [ -n "$CHANGED" ]; then
+  echo "Source files changed — rebuilding dist/..."
+  npm run build
+fi

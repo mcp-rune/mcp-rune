@@ -20,7 +20,9 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { FormDataStore } from '#src/mcp/apps/form-data-store.js'
 import { SelectionStore } from '#src/mcp/apps/selection-store.js'
+import { setMcpClientContext } from '#src/services/error-tracking.js'
 import * as logger from '#src/services/logger.js'
+import { setSessionContext } from '#src/services/tracing.js'
 
 // Dynamic import for request schemas needed for custom handlers
 let CompleteRequestSchema: unknown = null
@@ -82,6 +84,8 @@ interface AppRegistry {
 interface CreateServerConfig {
   name: string
   version: string
+  sessionId: string
+  transport: string
   toolRegistry: ToolRegistry
   promptRegistry?: PromptRegistry
   appRegistry?: AppRegistry
@@ -92,13 +96,15 @@ interface CreateServerConfig {
 export function createServer({
   name,
   version,
+  sessionId,
+  transport,
   toolRegistry,
   promptRegistry,
   appRegistry,
   getAccessToken
 }: CreateServerConfig): McpServer {
   const mcpServer = new McpServer({ name, version })
-  const logContext = { service: name }
+  const logContext: Record<string, unknown> = { service: name }
 
   // ============================================================================
   // TOOL REGISTRATION
@@ -217,6 +223,42 @@ export function createServer({
         return { completion: { values: [], hasMore: false } }
       }
     )
+  }
+
+  // ============================================================================
+  // CLIENT IDENTIFICATION (after MCP handshake completes)
+  // ============================================================================
+
+  mcpServer.server.oninitialized = () => {
+    const clientVersion = mcpServer.server.getClientVersion()
+    const clientCapabilities = mcpServer.server.getClientCapabilities()
+
+    const clientName = clientVersion?.name ?? 'unknown'
+    const clientVer = clientVersion?.version ?? 'unknown'
+
+    // Enrich logContext — all tool handlers that spread logContext automatically pick these up
+    logContext.clientName = clientName
+    logContext.clientVersion = clientVer
+    logContext.transport = transport
+
+    logger.info('Client connected', {
+      ...logContext,
+      sessionId,
+      capabilities: {
+        sampling: !!clientCapabilities?.sampling,
+        roots: !!clientCapabilities?.roots,
+        rootsListChanged: !!clientCapabilities?.roots?.listChanged,
+        experimental: clientCapabilities?.experimental
+          ? Object.keys(clientCapabilities.experimental)
+          : []
+      }
+    })
+
+    setMcpClientContext({ name: clientName, version: clientVer, transport })
+    setSessionContext({
+      sessionId,
+      metadata: { transport, clientName, clientVersion: clientVer }
+    })
   }
 
   return mcpServer

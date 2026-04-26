@@ -25,7 +25,7 @@ import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
 
 import type { OAuthService } from '#src/oauth2/service.js'
 import * as logger from '#src/services/logger.js'
-import { closeTracing, flushTracing, setSessionContext } from '#src/services/tracing.js'
+import { closeTracing, flushTracing } from '#src/services/tracing.js'
 
 import {
   createOAuthRouter,
@@ -39,6 +39,7 @@ interface McpConfig {
   name: string
   createServer: (options: {
     sessionId: string
+    transport: string
     getAccessToken: () => Promise<string | null | undefined>
   }) => McpServer
   promptRegistry?: PromptRegistryWithStats
@@ -402,6 +403,7 @@ export class HttpServer {
 
           const mcpServer = this.mcp.createServer({
             sessionId: newSessionId,
+            transport: 'streamable-http',
             getAccessToken
           })
           await mcpServer.connect(transport)
@@ -409,11 +411,6 @@ export class HttpServer {
           // Store session with server reference
           sessionEntry.server = mcpServer
           this.sessions.set(newSessionId, sessionEntry)
-
-          setSessionContext({
-            sessionId: newSessionId,
-            metadata: { transport: 'streamable-http' }
-          })
 
           logger.info('New MCP session created', {
             service: this.mcp.name,

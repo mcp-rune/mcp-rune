@@ -20,11 +20,30 @@ const STRUCTURED_FILES =
 // Set FORCE_COLOR=1 to enable colorized output (e.g. via concurrently).
 const COLORIZE = 'FORCE_COLOR' in process.env
 
+/** Format a metadata value for logfmt-style text output */
+function formatValue(v: unknown): string {
+  if (v === null || v === undefined) return ''
+  if (typeof v === 'string') return v.includes(' ') ? `"${v}"` : v
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v)
+  return JSON.stringify(v)
+}
+
+/** Render metadata as key=value pairs (logfmt convention) */
+function toLogfmt(metadata: Record<string, unknown>): string {
+  const pairs: string[] = []
+  for (const [k, v] of Object.entries(metadata)) {
+    if (k === 'app') continue // app label is noise in text mode — service identifies the component
+    const formatted = formatValue(v)
+    if (formatted) pairs.push(`${k}=${formatted}`)
+  }
+  return pairs.join(' ')
+}
+
 // Human-readable format for development
 const textFormat = printf(({ level, message, timestamp: ts, service, ...metadata }) => {
-  const meta = Object.keys(metadata).length ? JSON.stringify(metadata) : ''
+  const meta = toLogfmt(metadata)
   const svc = service ? `[${service}]` : ''
-  return `${ts} [${level}] ${svc} ${message} ${meta}`
+  return `${ts} [${level}] ${svc} ${message}${meta ? ' ' + meta : ''}`
 })
 
 // JSON format for Loki/Grafana (matches Rails lograge output)
