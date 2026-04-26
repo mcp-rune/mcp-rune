@@ -696,6 +696,9 @@ API converters generate tools from OpenAPI specs. mcp-kit goes the other directi
 
 ## Development
 
+> [!NOTE]
+> The `dist/` directory is gitignored and compiled from `src/`. A **post-merge** git hook automatically runs `npm run build` after `git pull` when source files changed, so your local build stays fresh across machines. To rebuild manually: `npm run build` (tsc + copy HTML apps) or `npm run build:full` (Vite apps + tsc + copy).
+
 ### Prerequisites
 
 - Node.js >= 24.0.0
