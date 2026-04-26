@@ -556,6 +556,16 @@ const needed = migrations.filter(
 | ------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL`     | —       | PostgreSQL connection string. When unset, all database features are disabled.                                             |
 | `ANALYSIS_ENABLED` | `false` | Enable analysis tools (`analysis_ingest`, `analysis_query`, `analysis_store`, `analysis_clear`). Requires `DATABASE_URL`. |
+| `LOG_LEVEL`        | `info`  | Logging verbosity: `debug`, `info`, `warn`, `error`.                                                                      |
+| `LOG_FORMAT`       | `text`  | Console log format: `text` (human-readable key=value pairs) or `json` (structured JSON for Loki/Grafana).                 |
+| `FORCE_COLOR`      | —       | Set to `1` to enable colorized console output.                                                                            |
+| `LOG_FILE_ENABLED` | `false` | Set to `true` to enable daily-rotated file logging (7-day retention).                                                     |
+
+> **Tip:** For local development, run with verbose colorized output:
+>
+> ```bash
+> FORCE_COLOR=1 LOG_LEVEL=debug npx tsx examples/bookshelf/server.ts
+> ```
 
 ---
 
