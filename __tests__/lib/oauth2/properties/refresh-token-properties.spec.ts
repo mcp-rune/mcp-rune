@@ -163,6 +163,72 @@ describe('Refresh Token Properties (RFC 6749 Section 6)', () => {
     )
   })
 
+  it('refreshAccessToken includes resource parameter when resourceUri is configured (RFC 8707)', async () => {
+    const oauthWithResource = new OAuthService({
+      authServerUrl: 'http://localhost:4000',
+      clientId: 'test-client',
+      clientSecret: 'test-secret',
+      redirectUri: 'http://localhost:3456/callback',
+      scopes: 'read write',
+      resourceUri: 'https://mcp.example.com/mcp'
+    })
+    oauthWithResource.config = { serverMetadata: () => ({}) }
+
+    await fc.assert(
+      fc.asyncProperty(
+        tokenArb,
+        tokenArb,
+        expiresInArb,
+        scopeArb,
+        async (refreshToken, newAccessToken, expiresIn, scope) => {
+          openidClient.refreshTokenGrant.mockResolvedValueOnce({
+            access_token: newAccessToken,
+            refresh_token: refreshToken,
+            expires_in: expiresIn,
+            scope
+          })
+
+          await oauthWithResource.refreshAccessToken(refreshToken)
+
+          expect(openidClient.refreshTokenGrant).toHaveBeenCalledWith(
+            expect.anything(),
+            refreshToken,
+            { resource: 'https://mcp.example.com/mcp' }
+          )
+        }
+      ),
+      { numRuns: 50 }
+    )
+  })
+
+  it('refreshAccessToken omits resource parameter when resourceUri is not configured', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        tokenArb,
+        tokenArb,
+        expiresInArb,
+        scopeArb,
+        async (refreshToken, newAccessToken, expiresIn, scope) => {
+          openidClient.refreshTokenGrant.mockResolvedValueOnce({
+            access_token: newAccessToken,
+            refresh_token: refreshToken,
+            expires_in: expiresIn,
+            scope
+          })
+
+          await oauth.refreshAccessToken(refreshToken)
+
+          expect(openidClient.refreshTokenGrant).toHaveBeenCalledWith(
+            expect.anything(),
+            refreshToken,
+            undefined
+          )
+        }
+      ),
+      { numRuns: 50 }
+    )
+  })
+
   it('getValidAccessToken returns null when no tokens exist for session', async () => {
     await fc.assert(
       fc.asyncProperty(fc.uuid(), async (sessionId) => {

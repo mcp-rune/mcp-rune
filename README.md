@@ -437,6 +437,7 @@ const oauth = new OAuthService({
   clientId: process.env.OAUTH_CLIENT_ID,
   clientSecret: process.env.OAUTH_CLIENT_SECRET,
   redirectUri: `${BASE_URL}/oauth/callback`,
+  resourceUri: `${BASE_URL}/mcp`, // RFC 8707: audience-restrict tokens to this server
   scopes: 'read write'
 })
 
@@ -444,6 +445,36 @@ await oauth.getValidAccessToken(sessionId) // auto-refreshes
 await oauth.introspectToken(token) // cached 60s
 await oauth.revokeToken(token)
 ```
+
+<details>
+<summary><b>RFC 8707 — Audience-Restricted Tokens</b></summary>
+
+<br>
+
+Without audience restriction, a token issued for Service A could be replayed against Service B (token confusion attack). RFC 8707 Resource Indicators solve this by binding tokens to a specific resource server.
+
+**How it works in mcp-kit:**
+
+```
+1. Authorization Request
+   GET /oauth/authorize?resource=https://mcp.example.com/mcp&...
+   The MCP server tells the auth server: "issue a token for ME"
+
+2. Token Exchange
+   POST /oauth/token  { resource: "https://mcp.example.com/mcp", ... }
+   The resource parameter is repeated so the auth server scopes the token
+
+3. Token Validation
+   POST /oauth/introspect  { token: "..." }
+   Response: { active: true, aud: "https://mcp.example.com/mcp", ... }
+   The MCP server checks that `aud` matches its own resource URI
+```
+
+The `resourceUri` constructor option controls this. When set, mcp-kit includes the `resource` parameter in both the authorization and token exchange requests. The authorization server must honor it by scoping the token's `aud` claim to the requested resource.
+
+mcp-kit also implements [RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728) (Protected Resource Metadata) — it serves `/.well-known/oauth-protected-resource/mcp` so MCP clients can discover which authorization server protects this resource and what the canonical resource URI is.
+
+</details>
 
 ### Dual Transport
 

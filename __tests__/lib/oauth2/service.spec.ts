@@ -79,6 +79,24 @@ describe('lib/oauth2/service', () => {
       expect(svc.resourceUri).toBe('https://mcp.example.com')
     })
 
+    it('rejects resourceUri with fragment (RFC 8707)', () => {
+      expect(
+        () => new OAuthService({ ...defaultOptions, resourceUri: 'https://mcp.example.com#frag' })
+      ).toThrow('MUST NOT include a fragment')
+    })
+
+    it('rejects resourceUri with query component (RFC 8707)', () => {
+      expect(
+        () => new OAuthService({ ...defaultOptions, resourceUri: 'https://mcp.example.com?q=1' })
+      ).toThrow('SHOULD NOT include a query')
+    })
+
+    it('rejects relative resourceUri (RFC 8707)', () => {
+      expect(() => new OAuthService({ ...defaultOptions, resourceUri: '/not-absolute' })).toThrow(
+        'must be an absolute URI'
+      )
+    })
+
     it('throws on HTTP identity URL in production', () => {
       expect(
         () =>
@@ -203,10 +221,35 @@ describe('lib/oauth2/service', () => {
 
       const result = await oauth.refreshAccessToken('old-refresh-token')
 
-      expect(client.refreshTokenGrant).toHaveBeenCalledWith(mockConfig, 'old-refresh-token')
+      expect(client.refreshTokenGrant).toHaveBeenCalledWith(
+        mockConfig,
+        'old-refresh-token',
+        undefined
+      )
       expect(result.access_token).toBe('new-at')
       expect(result.refresh_token).toBe('new-rt')
       expect(result.expires_in).toBe(3600)
+    })
+
+    it('includes resource parameter when resourceUri is configured (RFC 8707)', async () => {
+      const svc = new OAuthService({
+        ...defaultOptions,
+        resourceUri: 'https://mcp.example.com/mcp'
+      })
+      const mockConfig = {}
+      client.discovery.mockResolvedValue(mockConfig)
+      client.refreshTokenGrant.mockResolvedValue({
+        access_token: 'new-at',
+        refresh_token: 'new-rt',
+        expires_in: 3600,
+        scope: 'read write'
+      })
+
+      await svc.refreshAccessToken('old-refresh-token')
+
+      expect(client.refreshTokenGrant).toHaveBeenCalledWith(mockConfig, 'old-refresh-token', {
+        resource: 'https://mcp.example.com/mcp'
+      })
     })
   })
 
@@ -246,6 +289,28 @@ describe('lib/oauth2/service', () => {
       })
       expect(result.access_token).toBe('cc-token')
       expect(result.token_type).toBe('Bearer')
+    })
+
+    it('includes resource parameter when resourceUri is configured (RFC 8707)', async () => {
+      const svc = new OAuthService({
+        ...defaultOptions,
+        resourceUri: 'https://mcp.example.com/mcp'
+      })
+      const mockConfig = {}
+      client.discovery.mockResolvedValue(mockConfig)
+      client.clientCredentialsGrant.mockResolvedValue({
+        access_token: 'cc-token',
+        expires_in: 7200,
+        token_type: 'Bearer',
+        scope: 'read write'
+      })
+
+      await svc.getClientCredentialsToken()
+
+      expect(client.clientCredentialsGrant).toHaveBeenCalledWith(mockConfig, {
+        scope: 'read write',
+        resource: 'https://mcp.example.com/mcp'
+      })
     })
 
     it('defaults token_type to Bearer', async () => {
