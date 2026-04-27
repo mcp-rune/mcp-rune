@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.23.0] — 2026-04-27
+
+### Changed
+
+- **Complete RFC 8707 Resource Indicators compliance** — added `resourceUri` validation in the `OAuthService` constructor enforcing absolute URI (MUST), no fragment (MUST NOT), and no query component (SHOULD NOT) per RFC 8707 Section 2. The `resource` parameter is now included in refresh token grants (RFC 8707 Section 5) and client credentials grants when `resourceUri` is configured, ensuring audience-restricted tokens across all OAuth grant types. Previously only authorization requests and authorization code token exchanges included the parameter.
+- **RFC 8707 test coverage** — added constructor validation tests (fragment, query, relative URI rejection), property-based tests for resource parameter presence/absence in refresh token and client credentials flows, and unit tests verifying the parameter is forwarded to `openid-client` grant functions.
+
+[0.23.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.22.0...v0.23.0
+
 ## [0.22.0] — 2026-04-26
 
 ### Added

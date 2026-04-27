@@ -128,6 +128,42 @@ describe('Resource Indicators Properties (RFC 8707)', () => {
     )
   })
 
+  it('constructor rejects resourceUri with fragment component (RFC 8707)', () => {
+    fc.assert(
+      fc.property(resourceUriArb, fc.stringMatching(/^#[a-z]{1,10}$/), (uri, fragment) => {
+        expect(
+          () =>
+            new OAuthService({
+              authServerUrl: 'http://localhost:4000',
+              clientId: 'test-client',
+              clientSecret: 'test-secret',
+              redirectUri: 'http://localhost:3456/callback',
+              resourceUri: `${uri}${fragment}`
+            })
+        ).toThrow('MUST NOT include a fragment')
+      }),
+      { numRuns: 50 }
+    )
+  })
+
+  it('constructor rejects resourceUri with query component (RFC 8707)', () => {
+    fc.assert(
+      fc.property(resourceUriArb, fc.stringMatching(/^\?[a-z]{1,5}=[a-z]{1,5}$/), (uri, query) => {
+        expect(
+          () =>
+            new OAuthService({
+              authServerUrl: 'http://localhost:4000',
+              clientId: 'test-client',
+              clientSecret: 'test-secret',
+              redirectUri: 'http://localhost:3456/callback',
+              resourceUri: `${uri}${query}`
+            })
+        ).toThrow('SHOULD NOT include a query')
+      }),
+      { numRuns: 50 }
+    )
+  })
+
   it('authorization URL always includes redirect_uri and scope', () => {
     fc.assert(
       fc.property(

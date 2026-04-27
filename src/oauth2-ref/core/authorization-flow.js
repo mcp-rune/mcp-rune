@@ -330,10 +330,11 @@ export class OAuth2AuthorizationFlowService {
    * @param {string} params.clientId - Client identifier
    * @param {string} params.clientSecret - Client secret (optional)
    * @param {string} params.scope - Requested scope (optional)
+   * @param {string} params.resourceUri - Target resource (RFC8707)
    * @returns {Object} New token response
    */
   async refreshAccessToken(params) {
-    const { tokenEndpoint, refreshToken, clientId, clientSecret, scope } = params
+    const { tokenEndpoint, refreshToken, clientId, clientSecret, scope, resourceUri } = params
 
     this.logger.info('TOKEN_REFRESH', `Refreshing access token`)
 
@@ -345,6 +346,11 @@ export class OAuth2AuthorizationFlowService {
 
     if (scope) {
       refreshRequest.set('scope', scope)
+    }
+
+    // Add resource parameter per RFC8707
+    if (resourceUri) {
+      refreshRequest.set('resource', resourceUri)
     }
 
     // Prepare headers

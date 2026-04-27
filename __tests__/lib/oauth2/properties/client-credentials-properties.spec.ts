@@ -109,6 +109,57 @@ describe('Client Credentials Properties (RFC 6749 Section 4.4)', () => {
     )
   })
 
+  it('includes resource parameter when resourceUri is configured (RFC 8707)', async () => {
+    const oauthWithResource = new OAuthService({
+      authServerUrl: 'http://localhost:4000',
+      clientId: 'test-client',
+      clientSecret: 'test-secret',
+      redirectUri: 'http://localhost:3456/callback',
+      scopes: 'read write',
+      resourceUri: 'https://mcp.example.com/mcp'
+    })
+    oauthWithResource.config = { serverMetadata: () => ({}) }
+
+    await fc.assert(
+      fc.asyncProperty(accessTokenArb, expiresInArb, scopeArb, async (token, expiresIn, scope) => {
+        openidClient.clientCredentialsGrant.mockResolvedValueOnce({
+          access_token: token,
+          expires_in: expiresIn,
+          token_type: 'Bearer',
+          scope
+        })
+
+        await oauthWithResource.getClientCredentialsToken()
+
+        expect(openidClient.clientCredentialsGrant).toHaveBeenCalledWith(expect.anything(), {
+          scope: 'read write',
+          resource: 'https://mcp.example.com/mcp'
+        })
+      }),
+      { numRuns: 50 }
+    )
+  })
+
+  it('omits resource parameter when resourceUri is not configured', async () => {
+    await fc.assert(
+      fc.asyncProperty(accessTokenArb, expiresInArb, scopeArb, async (token, expiresIn, scope) => {
+        openidClient.clientCredentialsGrant.mockResolvedValueOnce({
+          access_token: token,
+          expires_in: expiresIn,
+          token_type: 'Bearer',
+          scope
+        })
+
+        await oauth.getClientCredentialsToken()
+
+        expect(openidClient.clientCredentialsGrant).toHaveBeenCalledWith(expect.anything(), {
+          scope: 'read write'
+        })
+      }),
+      { numRuns: 50 }
+    )
+  })
+
   it('access_token is always a non-empty string', async () => {
     await fc.assert(
       fc.asyncProperty(accessTokenArb, async (token) => {

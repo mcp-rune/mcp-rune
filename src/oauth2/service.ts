@@ -32,6 +32,29 @@ interface TokenResponse {
 }
 
 /**
+ * Validate a resource URI per RFC 8707 Section 2:
+ * - MUST be an absolute URI (RFC 3986 Section 4.3)
+ * - MUST NOT include a fragment component
+ * - SHOULD NOT include a query component
+ */
+function validateResourceUri(uri: string): void {
+  let parsed: URL
+  try {
+    parsed = new URL(uri)
+  } catch {
+    throw new Error(`RFC 8707: resourceUri must be an absolute URI. Got: ${uri}`)
+  }
+
+  if (parsed.hash) {
+    throw new Error(`RFC 8707: resourceUri MUST NOT include a fragment component. Got: ${uri}`)
+  }
+
+  if (parsed.search) {
+    throw new Error(`RFC 8707: resourceUri SHOULD NOT include a query component. Got: ${uri}`)
+  }
+}
+
+/**
  * OAuth2 Service - Handles OAuth2/OpenID Connect flows for an MCP server
  *
  * Each MCP server should create its own instance with its specific
@@ -66,6 +89,9 @@ export class OAuthService {
     // RFC8707: Resource Indicators - canonical URI of the MCP server
     // Used to bind tokens to this specific resource server
     this.resourceUri = options.resourceUri || null
+    if (this.resourceUri) {
+      validateResourceUri(this.resourceUri)
+    }
     this.config = null
 
     // Security: HTTP is only allowed for local development
@@ -377,7 +403,18 @@ export class OAuthService {
     logger.info('Refreshing access token', { service: 'oauth2' })
 
     const config = await this.getConfig()
-    const tokens = await client.refreshTokenGrant(config, refreshToken)
+
+    // RFC8707: Include resource parameter to audience-restrict the refreshed token
+    const parameters: Record<string, string> = {}
+    if (this.resourceUri) {
+      parameters.resource = this.resourceUri
+    }
+
+    const tokens = await client.refreshTokenGrant(
+      config,
+      refreshToken,
+      Object.keys(parameters).length > 0 ? parameters : undefined
+    )
 
     logger.info('Access token refreshed', {
       service: 'oauth2',
@@ -416,7 +453,13 @@ export class OAuthService {
 
     const config = await this.getConfig()
 
-    const tokenSet = await client.clientCredentialsGrant(config, { scope: this.scopes })
+    // RFC8707: Include resource parameter to audience-restrict the token
+    const parameters: Record<string, string> = { scope: this.scopes }
+    if (this.resourceUri) {
+      parameters.resource = this.resourceUri
+    }
+
+    const tokenSet = await client.clientCredentialsGrant(config, parameters)
 
     logger.info('Client Credentials token received', {
       service: 'oauth2',
