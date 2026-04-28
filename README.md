@@ -407,6 +407,9 @@ Production-grade OAuth2 built on [openid-client](https://github.com/panva/openid
 │ RFC 7591 — Dynamic Client Registration (DCR)                 │              │
 │   • Registration proxy with fallback to pre-configured       │ Implemented  │
 ├──────────────────────────────────────────────────────────────┼──────────────┤
+│ CIMD — Client ID Metadata Document (MCP Auth Spec)           │              │
+│   • Metadata endpoint at /oauth/client-metadata.json         │ Implemented  │
+├──────────────────────────────────────────────────────────────┼──────────────┤
 │ RFC 6749 — OAuth 2.0 Authorization Framework                 │              │
 │   • Authorization Code Grant (with mandatory PKCE)           │ Implemented  │
 │   • Client Credentials Grant (M2M)                           │ Implemented  │
@@ -445,6 +448,40 @@ await oauth.getValidAccessToken(sessionId) // auto-refreshes
 await oauth.introspectToken(token) // cached 60s
 await oauth.revokeToken(token)
 ```
+
+<details>
+<summary><b>Client Registration Strategies</b></summary>
+
+<br>
+
+MCP clients must identify themselves to the authorization server before obtaining tokens. mcp-kit supports three registration strategies, matching the [MCP Authorization Spec (November 2025)](https://modelcontextprotocol.io/specification/draft/basic/authorization):
+
+| Strategy                | How it works                                                                        | Config needed                                                   | Client type            |
+| ----------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------- | ---------------------- |
+| **Pre-registered (CC)** | Admin creates the OAuth app upfront; client uses known `clientId`/`clientSecret`    | `OAuthService` with `clientId` + `clientSecret`                 | Confidential           |
+| **DCR (RFC 7591)**      | Client auto-registers on first connection via `/oauth/register`                     | `OAuthService` with `clientId` + `clientSecret` (for the proxy) | Public or confidential |
+| **CIMD**                | Client uses an HTTPS URL as `client_id`; auth server fetches metadata from that URL | `HttpServer` with `clientMetadata` config                       | Public                 |
+
+**Pre-registered (Client Credentials)** — The traditional approach. An admin creates an OAuth application in the authorization server and distributes the `clientId` and `clientSecret` to the MCP client. The client includes these credentials in the OAuth flow.
+
+**DCR (Dynamic Client Registration)** — The MCP server proxies registration requests to the authorization server at `/oauth/register`. Clients that support RFC 7591 auto-register on first connection without any pre-configuration.
+
+**CIMD (Client ID Metadata Document)** — The MCP server serves a JSON metadata document at `/oauth/client-metadata.json`. MCP clients use this URL as their `client_id`. When the authorization server receives this URL-based `client_id`, it fetches the metadata document, validates it, and creates the application record automatically. Configure the metadata via `clientMetadata` on `HttpServer`:
+
+```typescript
+new HttpServer({
+  // ... other config ...
+  clientMetadata: {
+    redirectUris: ['http://127.0.0.1/callback'],
+    clientName: 'My MCP Server',
+    scope: 'read write'
+  }
+})
+```
+
+When `clientMetadata` is omitted, the endpoint still serves defaults using the server name and `read` scope.
+
+</details>
 
 <details>
 <summary><b>RFC 8707 — Audience-Restricted Tokens</b></summary>
