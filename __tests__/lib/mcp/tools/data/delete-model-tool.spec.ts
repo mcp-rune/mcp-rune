@@ -15,7 +15,7 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
 
     it('should have correct base description', () => {
       const tool = new DeleteModelTool({})
-      expect(tool.baseDescription).toContain('Delete a record')
+      expect(tool.baseDescription).toContain('Delete a single record')
     })
 
     it('should have model and record_id in inputSchema', () => {

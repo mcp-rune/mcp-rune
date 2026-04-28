@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.23.1] — 2026-04-28
+
+### Changed
+
+- **Enforce bulk_action_models for multi-record operations** — the bulk tool description now says REQUIRED (not PREFERRED) when operating on more than one record, covering all multi-record scenarios instead of only tabular data imports. The atomic tools (create_model, update_model, delete_model) are explicitly scoped to single-record use and redirect LLMs to bulk_action_models, preventing repeated atomic calls.
+
+[0.23.1]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.23.0...v0.23.1
+
 ## [0.23.0] — 2026-04-27
 
 ### Changed

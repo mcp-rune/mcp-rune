@@ -31,7 +31,10 @@ export class CreateModelTool extends SaveModelBaseTool {
 
   override get baseDescription(): string {
     const scope = this.serverContext.name ? ` in the ${this.serverContext.name} API` : ''
-    return `Create a new record${scope}. Provide the required attributes for the model.`
+    return (
+      `Create a single record${scope}. Provide the required attributes for the model. ` +
+      'For multiple records, use bulk_action_models instead — never call this tool more than once per turn.'
+    )
   }
 
   override get inputSchema(): Record<string, ZodTypeAny> {
