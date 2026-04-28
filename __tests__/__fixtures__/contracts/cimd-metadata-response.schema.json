@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Client ID Metadata Document (CIMD) Response",
+  "type": "object",
+  "required": ["client_id", "redirect_uris"],
+  "properties": {
+    "client_id": { "type": "string", "format": "uri" },
+    "client_name": { "type": "string" },
+    "redirect_uris": {
+      "type": "array",
+      "items": { "type": "string", "format": "uri" },
+      "minItems": 1
+    },
+    "grant_types": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "response_types": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "token_endpoint_auth_method": { "type": "string" },
+    "scope": { "type": "string" }
+  },
+  "additionalProperties": true
+}

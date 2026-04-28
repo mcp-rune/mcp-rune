@@ -13,6 +13,7 @@
  * - RFC 8414  Authorization Server Metadata         -> /.well-known/oauth-authorization-server
  * - RFC 8707  Resource Indicators                   -> forwarded as `resource` param
  * - RFC 9728  Protected Resource Metadata           -> /.well-known/oauth-protected-resource[/mcp]
+ * - CIMD  Client ID Metadata Document (MCP Auth) -> /oauth/client-metadata.json
  *
  * Routes:
  * - GET  /.well-known/oauth-protected-resource      - RFC 9728 metadata (origin-only form)
@@ -23,6 +24,7 @@
  * - GET  /oauth/authorize                           - Redirect to authorization server (RFC 6749)
  * - POST /oauth/token                               - Proxy token requests (RFC 6749)
  * - POST /oauth/register                            - Proxy DCR (RFC 7591)
+ * - GET  /oauth/client-metadata.json                 - CIMD metadata document (MCP Auth Spec Nov 2025)
  * - POST /mcp/m2m/token                             - Machine-to-machine token endpoint
  */
 
@@ -33,6 +35,7 @@ import axios from 'axios'
 import type { NextFunction, Request, Response } from 'express'
 import { Router } from 'express'
 
+import type { ClientMetadataConfig } from '#src/mcp/http-server.js'
 import type { OAuthService } from '#src/oauth2/service.js'
 import * as logger from '#src/services/logger.js'
 
@@ -98,10 +101,16 @@ interface OAuthRouterConfig {
   oauth: OAuthService
   baseUrl: string
   mcpName: string
+  clientMetadata?: ClientMetadataConfig
 }
 
 /** Create OAuth router with all OAuth-related routes */
-export function createOAuthRouter({ oauth, baseUrl, mcpName }: OAuthRouterConfig): Router {
+export function createOAuthRouter({
+  oauth,
+  baseUrl,
+  mcpName,
+  clientMetadata
+}: OAuthRouterConfig): Router {
   const router = Router()
 
   // Extract origin from baseUrl for authorization_servers
@@ -357,6 +366,35 @@ export function createOAuthRouter({ oauth, baseUrl, mcpName }: OAuthRouterConfig
       }
     })
   )
+
+  /**
+   * Client ID Metadata Document (CIMD)
+   *
+   * MCP Authorization Spec (November 2025): Clients can use an HTTPS URL
+   * as their client_id. The authorization server fetches the JSON metadata
+   * document from that URL to register the client automatically.
+   *
+   * This endpoint serves the metadata document so this MCP server can be
+   * used as a CIMD client_id with any compliant authorization server.
+   */
+  router.get('/oauth/client-metadata.json', (_req: Request, res: Response) => {
+    const metadataUrl = `${baseUrl}/oauth/client-metadata.json`
+
+    logger.info('CIMD metadata document requested', {
+      service: mcpName,
+      clientId: metadataUrl
+    })
+
+    res.json({
+      client_id: metadataUrl,
+      client_name: clientMetadata?.clientName || mcpName,
+      redirect_uris: clientMetadata?.redirectUris || ['http://127.0.0.1/callback'],
+      grant_types: ['authorization_code'],
+      response_types: ['code'],
+      token_endpoint_auth_method: 'none',
+      scope: clientMetadata?.scope || 'read'
+    })
+  })
 
   /** Machine-to-Machine token endpoint - Client Credentials grant */
   router.post(

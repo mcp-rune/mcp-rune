@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.24.0] — 2026-04-28
+
+### Added
+
+- **CIMD (Client ID Metadata Document) support** — `HttpServer` now accepts an optional `clientMetadata` config and serves a JSON metadata document at `GET /oauth/client-metadata.json`. MCP clients can use this URL as their `client_id`; the authorization server fetches the metadata and registers the client automatically. Configurable `redirectUris`, `clientName`, and `scope` with sensible defaults.
+- **Client Registration Strategies documentation** — new collapsible section in README explaining all three supported strategies (Pre-registered CC, DCR, CIMD) with a summary table and code examples.
+
+[0.24.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.23.1...v0.24.0
+
 ## [0.23.1] — 2026-04-28
 
 ### Changed

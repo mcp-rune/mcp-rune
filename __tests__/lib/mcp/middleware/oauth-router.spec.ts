@@ -576,6 +576,145 @@ describe('lib/mcp/middleware/oauth-router', () => {
       })
     })
 
+    describe('GET /oauth/client-metadata.json (CIMD)', () => {
+      it('should return valid metadata document with correct client_id', () => {
+        const handler = findRouteHandler(router, 'get', '/oauth/client-metadata.json')
+        mockReq = {}
+
+        handler(mockReq, mockRes)
+
+        expect(mockRes.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            client_id: 'https://mcp.example.com/oauth/client-metadata.json'
+          })
+        )
+      })
+
+      it('should fall back to mcpName for client_name when no config', () => {
+        const handler = findRouteHandler(router, 'get', '/oauth/client-metadata.json')
+        mockReq = {}
+
+        handler(mockReq, mockRes)
+
+        expect(mockRes.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            client_name: 'test-mcp'
+          })
+        )
+      })
+
+      it('should use clientName from config when provided', () => {
+        const routerWithConfig = createOAuthRouter({
+          oauth: mockOauth,
+          baseUrl: 'https://mcp.example.com',
+          mcpName: 'test-mcp',
+          clientMetadata: {
+            redirectUris: ['https://app.example.com/callback'],
+            clientName: 'My Custom App'
+          }
+        })
+
+        const handler = findRouteHandler(routerWithConfig, 'get', '/oauth/client-metadata.json')
+        mockReq = {}
+
+        handler(mockReq, mockRes)
+
+        expect(mockRes.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            client_name: 'My Custom App'
+          })
+        )
+      })
+
+      it('should use redirectUris from config when provided', () => {
+        const routerWithConfig = createOAuthRouter({
+          oauth: mockOauth,
+          baseUrl: 'https://mcp.example.com',
+          mcpName: 'test-mcp',
+          clientMetadata: {
+            redirectUris: ['https://app.example.com/callback', 'https://app.example.com/cb2']
+          }
+        })
+
+        const handler = findRouteHandler(routerWithConfig, 'get', '/oauth/client-metadata.json')
+        mockReq = {}
+
+        handler(mockReq, mockRes)
+
+        expect(mockRes.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            redirect_uris: ['https://app.example.com/callback', 'https://app.example.com/cb2']
+          })
+        )
+      })
+
+      it('should fall back to default redirect URIs when no config', () => {
+        const handler = findRouteHandler(router, 'get', '/oauth/client-metadata.json')
+        mockReq = {}
+
+        handler(mockReq, mockRes)
+
+        expect(mockRes.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            redirect_uris: ['http://127.0.0.1/callback']
+          })
+        )
+      })
+
+      it('should use scope from config when provided', () => {
+        const routerWithConfig = createOAuthRouter({
+          oauth: mockOauth,
+          baseUrl: 'https://mcp.example.com',
+          mcpName: 'test-mcp',
+          clientMetadata: {
+            redirectUris: ['https://app.example.com/callback'],
+            scope: 'read write admin'
+          }
+        })
+
+        const handler = findRouteHandler(routerWithConfig, 'get', '/oauth/client-metadata.json')
+        mockReq = {}
+
+        handler(mockReq, mockRes)
+
+        expect(mockRes.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            scope: 'read write admin'
+          })
+        )
+      })
+
+      it('should return response with correct structure', () => {
+        const handler = findRouteHandler(router, 'get', '/oauth/client-metadata.json')
+        mockReq = {}
+
+        handler(mockReq, mockRes)
+
+        const response = mockRes.json.mock.calls[0][0]
+        expect(response).toEqual({
+          client_id: 'https://mcp.example.com/oauth/client-metadata.json',
+          client_name: 'test-mcp',
+          redirect_uris: ['http://127.0.0.1/callback'],
+          grant_types: ['authorization_code'],
+          response_types: ['code'],
+          token_endpoint_auth_method: 'none',
+          scope: 'read'
+        })
+      })
+
+      it('should log the request', () => {
+        const handler = findRouteHandler(router, 'get', '/oauth/client-metadata.json')
+        mockReq = {}
+
+        handler(mockReq, mockRes)
+
+        expect(logger.info).toHaveBeenCalledWith('CIMD metadata document requested', {
+          service: 'test-mcp',
+          clientId: 'https://mcp.example.com/oauth/client-metadata.json'
+        })
+      })
+    })
+
     describe('POST /mcp/m2m/token', () => {
       it('should return client credentials token', async () => {
         mockOauth.getClientCredentialsToken.mockResolvedValue({
