@@ -25,7 +25,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should have correct base description', () => {
       const tool = new UpdateModelTool({})
-      expect(tool.baseDescription).toContain('Update an existing record')
+      expect(tool.baseDescription).toContain('Update a single existing record')
     })
 
     it('should have model, record_id and attributes in inputSchema', () => {

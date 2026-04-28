@@ -26,7 +26,10 @@ export class UpdateModelTool extends SaveModelBaseTool {
 
   override get baseDescription(): string {
     const scope = this.serverContext.name ? ` in the ${this.serverContext.name} API` : ''
-    return `Update an existing record${scope}. Only include the attributes you want to change.`
+    return (
+      `Update a single existing record${scope}. Only include the attributes you want to change. ` +
+      'For multiple records, use bulk_action_models instead — never call this tool more than once per turn.'
+    )
   }
 
   override get inputSchema(): Record<string, ZodTypeAny> {

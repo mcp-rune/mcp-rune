@@ -40,8 +40,8 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
     const scope = this.serverContext.name ? ` in the ${this.serverContext.name} API` : ''
     return (
       `Create, update, or delete multiple records${scope} in a single call (max ${MAX_BATCH_SIZE}). ` +
-      'PREFERRED when the user provides a spreadsheet, Excel file, CSV, or any tabular data — ' +
-      "extract rows and use action='create' with records array. " +
+      'REQUIRED when operating on more than one record — never call create_model, update_model, or delete_model multiple times. ' +
+      'Covers all multi-record scenarios: spreadsheet/CSV imports, user-listed items, batch operations, etc. ' +
       'When the user refers to "selected" records, call get_selection first to retrieve stored record_ids. ' +
       "Use action='update' with record_ids + attributes to apply the same change to many records. " +
       "Use action='delete' with record_ids to remove many records. " +

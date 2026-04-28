@@ -17,7 +17,10 @@ export class DeleteModelTool extends BaseTool {
 
   override get baseDescription(): string {
     const scope = this.serverContext.name ? ` from the ${this.serverContext.name} API` : ''
-    return `Delete a record${scope} by ID. This may cascade to related resources depending on the model.`
+    return (
+      `Delete a single record${scope} by ID. This may cascade to related resources depending on the model. ` +
+      'For multiple records, use bulk_action_models instead — never call this tool more than once per turn.'
+    )
   }
 
   override get inputSchema(): Record<string, ZodTypeAny> {

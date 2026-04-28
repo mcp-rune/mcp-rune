@@ -25,7 +25,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
 
     it('should have correct base description', () => {
       const tool = new CreateModelTool({})
-      expect(tool.baseDescription).toContain('Create a new record')
+      expect(tool.baseDescription).toContain('Create a single record')
     })
 
     it('should have model and attributes in inputSchema', () => {
