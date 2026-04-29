@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.26.1] — 2026-04-29
+
+### Changed
+
+- **Unified MCP progress notifications across all bulk tools** — `BulkActionModelsTool` now sends `notifications/progress` after each record is processed during bulk create, update, and delete operations (up to 25 records with concurrency cap of 5). `AnalysisIngestTool._ingestNestedResources` now reports progress after each parent's nested resources are fetched. Both use fire-and-forget progress callbacks in their concurrent worker pools.
+
+[0.26.1]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.26.0...v0.26.1
+
 ## [0.26.0] — 2026-04-29
 
 ### Added

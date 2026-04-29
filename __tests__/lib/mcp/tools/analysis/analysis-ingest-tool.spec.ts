@@ -307,6 +307,42 @@ describe('AnalysisIngestTool — nested resource ingestion', () => {
   })
 
   // ============================================================================
+  // Progress notifications for nested ingestion
+  // ============================================================================
+
+  it('should send progress notifications during nested resource ingestion', async () => {
+    const sendNotification = vi.fn().mockResolvedValue(undefined)
+
+    mockApi.get
+      .mockResolvedValueOnce([{ id: 'err-1', message: 'missing field' }])
+      .mockResolvedValueOnce([{ id: 'err-2', message: 'invalid genre' }])
+
+    tool._extra = {
+      _meta: { progressToken: 'nested-tok' },
+      sendNotification
+    }
+
+    await tool.execute({
+      analysis_id: 'progress-nested-session',
+      parent_model: 'scheduling',
+      parent_ids: ['sched-A', 'sched-B'],
+      child_resource: 'metadata_errors'
+    })
+
+    // Should send 2 progress notifications (one per parent)
+    expect(sendNotification).toHaveBeenCalledTimes(2)
+    expect(sendNotification).toHaveBeenLastCalledWith({
+      method: 'notifications/progress',
+      params: {
+        progressToken: 'nested-tok',
+        progress: 2,
+        total: 2,
+        message: 'Fetched nested resources for 2/2 parents'
+      }
+    })
+  })
+
+  // ============================================================================
   // Context consumption flag
   // ============================================================================
 

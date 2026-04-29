@@ -1505,4 +1505,94 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       })
     })
   })
+
+  describe('progress notifications', () => {
+    it('should send progress notifications during bulk create', async () => {
+      const sendNotification = vi.fn().mockResolvedValue(undefined)
+      mockApiClient.post
+        .mockResolvedValueOnce({ id: '1' })
+        .mockResolvedValueOnce({ id: '2' })
+        .mockResolvedValueOnce({ id: '3' })
+
+      const tool = new BulkActionModelsTool({
+        apiClient: mockApiClient,
+        models: mockModels,
+        logger: mockLogger
+      })
+      tool._extra = {
+        _meta: { progressToken: 'bulk-tok' },
+        sendNotification
+      }
+
+      await tool.execute({
+        model: 'activity',
+        action: 'create',
+        records: [{ title: 'A' }, { title: 'B' }, { title: 'C' }]
+      })
+
+      // Should send 3 progress notifications (one per record)
+      expect(sendNotification).toHaveBeenCalledTimes(3)
+      expect(sendNotification).toHaveBeenLastCalledWith({
+        method: 'notifications/progress',
+        params: {
+          progressToken: 'bulk-tok',
+          progress: 3,
+          total: 3,
+          message: 'create: 3/3 records processed'
+        }
+      })
+    })
+
+    it('should send progress notifications during bulk delete', async () => {
+      const sendNotification = vi.fn().mockResolvedValue(undefined)
+      mockApiClient.delete.mockResolvedValueOnce({}).mockResolvedValueOnce({})
+
+      const tool = new BulkActionModelsTool({
+        apiClient: mockApiClient,
+        models: mockModels,
+        logger: mockLogger
+      })
+      tool._extra = {
+        _meta: { progressToken: 'del-tok' },
+        sendNotification
+      }
+
+      await tool.execute({
+        model: 'activity',
+        action: 'delete',
+        record_ids: ['1', '2']
+      })
+
+      expect(sendNotification).toHaveBeenCalledTimes(2)
+      expect(sendNotification).toHaveBeenNthCalledWith(1, {
+        method: 'notifications/progress',
+        params: {
+          progressToken: 'del-tok',
+          progress: 1,
+          total: 2,
+          message: 'delete: 1/2 records processed'
+        }
+      })
+    })
+
+    it('should not send progress notifications without progressToken', async () => {
+      mockApiClient.post.mockResolvedValue({ id: '1' })
+
+      const tool = new BulkActionModelsTool({
+        apiClient: mockApiClient,
+        models: mockModels,
+        logger: mockLogger
+      })
+      // No _extra set
+
+      const result = await tool.execute({
+        model: 'activity',
+        action: 'create',
+        records: [{ title: 'A' }]
+      })
+
+      // Should succeed without errors
+      expect(result.isError).toBeFalsy()
+    })
+  })
 })

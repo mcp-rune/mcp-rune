@@ -612,7 +612,13 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       }
     })
 
-    await this._runParallel(tasks)
+    await this._runParallel(tasks, (completed, total) => {
+      void this.sendProgress({
+        progress: completed,
+        total,
+        message: `Fetched nested resources for ${completed}/${total} parents`
+      })
+    })
 
     // Store collected records
     let totalStored = 0
@@ -724,14 +730,22 @@ When NOT to use: For quick lookups of specific records by ID or small result set
    * Run async tasks with a concurrency limit.
    *
    * Spawns up to MAX_NESTED_CONCURRENCY workers that pull from a shared task queue.
+   * Optional onProgress callback fires after each task completes.
    */
-  private async _runParallel(tasks: Array<() => Promise<void>>): Promise<void> {
+  private async _runParallel(
+    tasks: Array<() => Promise<void>>,
+    onProgress?: (completed: number, total: number) => void
+  ): Promise<void> {
     let next = 0
+    let completed = 0
+    const total = tasks.length
 
     async function worker(): Promise<void> {
-      while (next < tasks.length) {
+      while (next < total) {
         const i = next++
         await tasks[i]!()
+        completed++
+        if (onProgress) onProgress(completed, total)
       }
     }
 
