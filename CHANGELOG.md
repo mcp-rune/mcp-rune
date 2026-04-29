@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.25.0] — 2026-04-29
+
+### Added
+
+- **ToolRegistry class** — convention-based tool registration that eliminates the ~100-line boilerplate every integrator writes. Handles schema validation, auth wrapping per tool category, tracing, logging, error catching, and feature gating via a single constructor call. Configurable with `toolClasses`, `models`, `createApiClient`, `gates`, and custom `interceptors`.
+- **Tool execution pipeline** — composable `ToolInterceptor` interface with `before`/`after`/`onError` hooks and a `wrapToolHandler` utility for cross-cutting concerns (audit logging, permission checks, metrics). Before hooks run in declared order; after/onError hooks run in reverse order. First `onError` handler that returns a `ToolResult` recovers from the error.
+- **Built-in interceptors** — `loggingInterceptor` (tool call start + error logging), `tracingInterceptor` (execution timing via meta), and `errorInterceptor` (catches unhandled errors, returns structured MCP error response). Applied automatically by `ToolRegistry`; also available standalone for manual pipeline composition.
+
+[0.25.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.24.0...v0.25.0
+
 ## [0.24.0] — 2026-04-28
 
 ### Added
