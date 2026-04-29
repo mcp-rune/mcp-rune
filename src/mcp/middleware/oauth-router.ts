@@ -388,11 +388,11 @@ export function createOAuthRouter({
     res.json({
       client_id: metadataUrl,
       client_name: clientMetadata?.clientName || mcpName,
-      redirect_uris: clientMetadata?.redirectUris || ['http://127.0.0.1/callback'],
+      redirect_uris: clientMetadata?.redirectUris || [`${baseUrl}/oauth/callback`],
       grant_types: ['authorization_code'],
       response_types: ['code'],
       token_endpoint_auth_method: 'none',
-      scope: clientMetadata?.scope || 'read'
+      scope: clientMetadata?.scope || oauth.scopes
     })
   })
 

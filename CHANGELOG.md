@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.25.1] — 2026-04-29
+
+### Fixed
+
+- **CIMD default `redirect_uris`** — was hardcoded to `http://127.0.0.1/callback`, now defaults to `${baseUrl}/oauth/callback` using the server's own base URL. The previous default didn't match any registered route.
+- **CIMD default `scope`** — was hardcoded to `read`, now defaults to `oauth.scopes` (the scopes the server is actually configured to request). Prevents mismatches between what the metadata document advertises and what the server requests during authorization.
+
+[0.25.1]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.25.0...v0.25.1
+
 ## [0.25.0] — 2026-04-29
 
 ### Added
