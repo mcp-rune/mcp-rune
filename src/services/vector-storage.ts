@@ -290,6 +290,16 @@ export async function describeAnalysisSession(
   return ingestedRecords.describeSession(pool, analysisId)
 }
 
+/** Get count of ingested records for a given analysis session and model */
+export async function getIngestedRecordCount(analysisId: string, model: string): Promise<number> {
+  if (!vendor.isConfigured()) return 0
+
+  const pool = vendor.getPool()
+  if (!pool) return 0
+
+  return ingestedRecords.getRecordCount(pool, analysisId, model)
+}
+
 /** Get all record IDs for a given analysis session and model */
 export async function getIngestedRecordIds(analysisId: string, model: string): Promise<string[]> {
   if (!vendor.isConfigured()) return []

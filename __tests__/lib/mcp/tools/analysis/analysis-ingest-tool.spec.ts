@@ -2,16 +2,18 @@
 vi.mock('#src/services/vector-storage.js', () => ({
   storeAnalysisMemory: vi.fn(() => Promise.resolve('uuid-123')),
   storeIngestedRecords: vi.fn((params) => Promise.resolve(params.records.length)),
-  getIngestedRecordIds: vi.fn(() => Promise.resolve(['sched-1', 'sched-2', 'sched-3']))
+  getIngestedRecordIds: vi.fn(() => Promise.resolve(['sched-1', 'sched-2', 'sched-3'])),
+  getIngestedRecordCount: vi.fn(() => Promise.resolve(0))
 }))
 
 import {
+  getIngestedRecordCount,
   getIngestedRecordIds,
   storeAnalysisMemory,
   storeIngestedRecords
 } from '#src/services/vector-storage.js'
 
-import { AnalysisIngestTool } from '../../../../../src/mcp/tools/data/analysis-ingest-tool.js'
+import { AnalysisIngestTool } from '../../../../../src/mcp/tools/analysis/analysis-ingest-tool.js'
 import { flatConvention } from '../../../../__fixtures__/flat-convention.js'
 
 const mockModels = {
@@ -640,5 +642,244 @@ describe('AnalysisIngestTool — association ID preservation', () => {
     expect(rec.title_self_link).toBeUndefined()
     expect(rec.title_link).toBeUndefined()
     expect(rec.platform_resource_type).toBeUndefined()
+  })
+})
+
+// ============================================================================
+// Resume and Progress
+// ============================================================================
+
+describe('AnalysisIngestTool — resume and progress', () => {
+  const models = {
+    scheduling: {
+      api: { endpoint: 'schedulings', convention: flatConvention },
+      attributes: {
+        id: { type: 'string' },
+        name: { type: 'string' }
+      }
+    }
+  }
+
+  let tool: AnalysisIngestTool
+  let mockApi
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    mockApi = {
+      get: vi.fn()
+    }
+
+    tool = new AnalysisIngestTool({
+      models,
+      apiClient: mockApi,
+      logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    })
+  })
+
+  // ============================================================================
+  // Resume
+  // ============================================================================
+
+  it('should resume from where previous ingestion left off', async () => {
+    // 100 records already stored, per_page=50 → start from page 3
+    ;(getIngestedRecordCount as ReturnType<typeof vi.fn>).mockResolvedValueOnce(100)
+
+    // Page 3 returns 30 records (last page)
+    const page3Records = Array.from({ length: 30 }, (_, i) => ({
+      id: `rec-${100 + i + 1}`,
+      name: `Record ${100 + i + 1}`
+    }))
+    mockApi.get.mockResolvedValueOnce({
+      schedulings: page3Records,
+      total_count: 130,
+      total_pages: 3,
+      page: 3,
+      per_page: 50
+    })
+
+    const result = await tool.execute({
+      analysis_id: 'resume-session',
+      model: 'scheduling',
+      ingest_all: true,
+      resume: true,
+      per_page: 50
+    })
+
+    // Should have queried record count
+    expect(getIngestedRecordCount).toHaveBeenCalledWith('resume-session', 'scheduling')
+
+    // Should start from page 3 (skipping pages 1-2)
+    expect(mockApi.get).toHaveBeenCalledTimes(1)
+    expect(mockApi.get).toHaveBeenCalledWith('schedulings', { page: 3, per_page: 50 }, {})
+
+    // Total stored = 100 (existing) + 30 (new) = 130
+    expect(result.content[0].text).toContain('130 record(s)')
+    expect(result.content[0].text).toContain('Resumed from page 3')
+  })
+
+  it('should start from page 1 when resume is true but no records exist', async () => {
+    ;(getIngestedRecordCount as ReturnType<typeof vi.fn>).mockResolvedValueOnce(0)
+
+    const records = Array.from({ length: 10 }, (_, i) => ({
+      id: `rec-${i + 1}`,
+      name: `Record ${i + 1}`
+    }))
+    mockApi.get.mockResolvedValueOnce({
+      schedulings: records,
+      total_count: 10,
+      total_pages: 1,
+      page: 1,
+      per_page: 50
+    })
+
+    const result = await tool.execute({
+      analysis_id: 'fresh-session',
+      model: 'scheduling',
+      ingest_all: true,
+      resume: true
+    })
+
+    // Should start from page 1
+    expect(mockApi.get).toHaveBeenCalledWith('schedulings', { page: 1, per_page: 50 }, {})
+
+    expect(result.content[0].text).toContain('10 record(s)')
+    expect(result.content[0].text).not.toContain('Resumed')
+  })
+
+  it('should not call getIngestedRecordCount when resume is false', async () => {
+    const records = [{ id: 'rec-1', name: 'Test' }]
+    mockApi.get.mockResolvedValueOnce({
+      schedulings: records,
+      total_count: 1,
+      total_pages: 1,
+      page: 1,
+      per_page: 50
+    })
+
+    await tool.execute({
+      analysis_id: 'no-resume-session',
+      model: 'scheduling',
+      ingest_all: true
+    })
+
+    expect(getIngestedRecordCount).not.toHaveBeenCalled()
+  })
+
+  it('should return immediately when resume detects all pages are already stored', async () => {
+    // 50 records stored, per_page=50 → page 2 returns empty
+    ;(getIngestedRecordCount as ReturnType<typeof vi.fn>).mockResolvedValueOnce(50)
+
+    mockApi.get.mockResolvedValueOnce({
+      schedulings: [],
+      total_count: 50,
+      total_pages: 1,
+      page: 2,
+      per_page: 50
+    })
+
+    const result = await tool.execute({
+      analysis_id: 'complete-session',
+      model: 'scheduling',
+      ingest_all: true,
+      resume: true,
+      per_page: 50
+    })
+
+    // Should have tried page 2 (floor(50/50) + 1 = 2) and gotten empty
+    expect(mockApi.get).toHaveBeenCalledTimes(1)
+    expect(result.content[0].text).toContain('50 record(s)')
+    expect(result.content[0].text).toContain('Resumed from page 2')
+  })
+
+  // ============================================================================
+  // Progress notifications
+  // ============================================================================
+
+  it('should send progress notifications during ingest_all', async () => {
+    const sendNotification = vi.fn().mockResolvedValue(undefined)
+    tool._extra = {
+      _meta: { progressToken: 'prog-1' },
+      sendNotification
+    }
+
+    // 2 pages of records
+    const page1 = Array.from({ length: 50 }, (_, i) => ({
+      id: `rec-${i + 1}`,
+      name: `Record ${i + 1}`
+    }))
+    const page2 = Array.from({ length: 20 }, (_, i) => ({
+      id: `rec-${50 + i + 1}`,
+      name: `Record ${50 + i + 1}`
+    }))
+
+    mockApi.get
+      .mockResolvedValueOnce({
+        schedulings: page1,
+        total_count: 70,
+        total_pages: 2,
+        page: 1,
+        per_page: 50
+      })
+      .mockResolvedValueOnce({
+        schedulings: page2,
+        total_count: 70,
+        total_pages: 2,
+        page: 2,
+        per_page: 50
+      })
+
+    await tool.execute({
+      analysis_id: 'progress-session',
+      model: 'scheduling',
+      ingest_all: true,
+      per_page: 50
+    })
+
+    // Should have sent 2 progress notifications (one per page)
+    expect(sendNotification).toHaveBeenCalledTimes(2)
+
+    // First notification: page 1/2
+    expect(sendNotification).toHaveBeenNthCalledWith(1, {
+      method: 'notifications/progress',
+      params: {
+        progressToken: 'prog-1',
+        progress: 1,
+        total: 2,
+        message: expect.stringContaining('page 1/2')
+      }
+    })
+
+    // Second notification: page 2/2
+    expect(sendNotification).toHaveBeenNthCalledWith(2, {
+      method: 'notifications/progress',
+      params: {
+        progressToken: 'prog-1',
+        progress: 2,
+        total: 2,
+        message: expect.stringContaining('page 2/2')
+      }
+    })
+  })
+
+  it('should not send progress notifications when no progressToken', async () => {
+    const records = [{ id: 'rec-1', name: 'Test' }]
+    mockApi.get.mockResolvedValueOnce({
+      schedulings: records,
+      total_count: 1,
+      total_pages: 1,
+      page: 1,
+      per_page: 50
+    })
+
+    // No _extra set on tool
+    await tool.execute({
+      analysis_id: 'no-progress-session',
+      model: 'scheduling',
+      ingest_all: true
+    })
+
+    // No errors, no notifications
+    expect(true).toBe(true) // Just verify it doesn't throw
   })
 })

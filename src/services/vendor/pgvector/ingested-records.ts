@@ -508,6 +508,21 @@ export async function describeSession(
   return { model: row.model, totalRecords: row.total }
 }
 
+/** Get count of ingested records for a given analysis session and model */
+export async function getRecordCount(
+  pool: Pool,
+  analysisId: string,
+  model: string
+): Promise<number> {
+  const result = await pool.query(
+    `SELECT COUNT(*)::integer AS count FROM ingested_records
+     WHERE analysis_id = $1 AND model = $2
+       AND (expires_at IS NULL OR expires_at > NOW())`,
+    [analysisId, model]
+  )
+  return (result.rows[0] as { count: number })?.count ?? 0
+}
+
 /** Get all record IDs for a given analysis session and model */
 export async function getRecordIds(
   pool: Pool,

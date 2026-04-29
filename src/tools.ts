@@ -1,6 +1,6 @@
 // mcp-kit/tools — base classes, categories, data, domain, analysis, operations, pipeline, registry
 export * from './mcp/tools/analysis/index.js'
-export type { ToolAnnotations } from './mcp/tools/base-tool.js'
+export type { ToolAnnotations, ToolHandlerExtra } from './mcp/tools/base-tool.js'
 export { BaseTool } from './mcp/tools/base-tool.js'
 export {
   CATEGORY_CONFIG,
@@ -18,7 +18,7 @@ export {
 export { LoggingApiClient } from './mcp/tools/logging-api-client.js'
 export * from './mcp/tools/operations/index.js'
 export { SaveModelBaseTool } from './mcp/tools/save-model-base-tool.js'
-export type { ToolContext, ToolInterceptor } from './mcp/tools/tool-pipeline.js'
+export type { ToolContext, ToolHandler, ToolInterceptor } from './mcp/tools/tool-pipeline.js'
 export { wrapToolHandler } from './mcp/tools/tool-pipeline.js'
 export type {
   ApiClientFactory,

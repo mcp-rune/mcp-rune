@@ -136,6 +136,16 @@ export interface ToolErrorResponse {
 /** Union of all tool response shapes */
 export type ToolResult = ToolSuccessResponse | ToolErrorResponse
 
+/** Subset of SDK RequestHandlerExtra exposed to tools via the pipeline */
+export interface ToolHandlerExtra {
+  signal?: AbortSignal
+  sendNotification?: (notification: {
+    method: string
+    params: Record<string, unknown>
+  }) => Promise<void>
+  _meta?: { progressToken?: string | number; [key: string]: unknown }
+}
+
 /** Error with optional HTTP response data */
 interface HttpError extends Error {
   response?: {
@@ -191,6 +201,9 @@ export class BaseTool {
   promptRegistry: PromptRegistry | undefined
   serverContext: ServerContext
   domainRegistry: DomainRegistry | undefined
+
+  /** @internal Set by ToolRegistry before execute(). Exposes SDK request context (progress, abort). */
+  _extra?: ToolHandlerExtra
 
   private _modelService: ModelService | undefined
 
@@ -411,5 +424,28 @@ export class BaseTool {
         this.logger.warn('Vector storage failed', { service: 'mcp-tools', error: err.message })
       }
     })
+  }
+
+  /**
+   * Send an MCP progress notification.
+   * No-op if the client didn't request progress tracking (no progressToken).
+   */
+  protected async sendProgress(params: {
+    progress: number
+    total?: number
+    message?: string
+  }): Promise<void> {
+    const token = this._extra?._meta?.progressToken
+    if (token == null || !this._extra?.sendNotification) return
+
+    await this._extra.sendNotification({
+      method: 'notifications/progress',
+      params: { progressToken: token, ...params }
+    })
+  }
+
+  /** Abort signal from the client request (if available) */
+  protected get abortSignal(): AbortSignal | undefined {
+    return this._extra?.signal
   }
 }

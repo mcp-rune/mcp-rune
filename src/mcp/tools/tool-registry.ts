@@ -44,6 +44,7 @@ import type {
   PromptRegistry,
   ServerContext,
   ToolDependencies,
+  ToolHandlerExtra,
   ToolLogger,
   ToolResult
 } from './base-tool.js'
@@ -197,11 +198,15 @@ export class ToolRegistry {
       ]
 
       // Core handler: create tool instance (with or without auth) and execute
-      const coreHandler = async (args: Record<string, unknown>): Promise<ToolResult> => {
+      const coreHandler = async (
+        args: Record<string, unknown>,
+        extra?: ToolHandlerExtra
+      ): Promise<ToolResult> => {
         const instance = ToolCls.requiresAuth
           ? await this._createAuthenticatedInstance(ToolCls, getAccessToken)
           : this._createInstance(ToolCls)
 
+        instance._extra = extra
         return instance.execute(args)
       }
 
@@ -209,8 +214,11 @@ export class ToolRegistry {
       const wrappedHandler = wrapToolHandler(toolName, interceptors, coreHandler)
 
       // Wrap with tracing as outermost layer (captures full execution including interceptors)
-      const tracedHandler = async (args: Record<string, unknown>): Promise<ToolResult> => {
-        return tracing.traceToolCall(toolName, args ?? {}, () => wrappedHandler(args ?? {}))
+      const tracedHandler = async (
+        args: Record<string, unknown>,
+        extra?: ToolHandlerExtra
+      ): Promise<ToolResult> => {
+        return tracing.traceToolCall(toolName, args ?? {}, () => wrappedHandler(args ?? {}, extra))
       }
 
       mcpServer.registerTool(
@@ -220,7 +228,7 @@ export class ToolRegistry {
           inputSchema: defInstance.inputSchema,
           annotations: defInstance.annotations
         },
-        // SDK ToolCallback type uses index signature incompatible with our strict ToolResult
+        // SDK ToolCallback receives (args, extra) — we pass extra through the pipeline
         tracedHandler as unknown as Parameters<McpServer['registerTool']>[2]
       )
     }

@@ -6,16 +6,17 @@ import { defaultConvention } from '#src/mcp/api-conventions/index.js'
 import { SearchService } from '#src/mcp/search/search-service.js'
 import { buildCollectionPath } from '#src/mcp/services/compound-id.js'
 import {
+  getIngestedRecordCount,
   getIngestedRecordIds,
   storeAnalysisMemory,
   storeIngestedRecords
 } from '#src/services/vector-storage.js'
 
 import type { ApiClient, ModelConfig, ToolAnnotations, ToolResult } from '../base-tool.js'
-import { BaseTool } from '../base-tool.js'
 import { LoggingApiClient } from '../logging-api-client.js'
 import type { NestedValidationError, NestedValidationSuccess } from '../validators.js'
 import { validateFilterParams, validateNestedResource } from '../validators.js'
+import { BaseAnalysisTool } from './base-analysis-tool.js'
 
 /** Max pages allowed when ingest_all is true */
 const MAX_INGEST_PAGES = 50
@@ -36,7 +37,12 @@ const MAX_NESTED_CONCURRENCY = 5
  * (ingested_records) for querying via analysis_query. Only a status
  * summary is returned to context — no raw data pollutes the LLM window.
  */
-export class AnalysisIngestTool extends BaseTool {
+export class AnalysisIngestTool extends BaseAnalysisTool {
+  /** Requires API auth (fetches records) despite being ANALYSIS category (vector storage gate) */
+  static override get requiresAuth(): boolean {
+    return true
+  }
+
   override get name(): string {
     return 'analysis_ingest'
   }
@@ -100,6 +106,12 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         .describe(
           `When true, auto-paginates all pages (up to ${MAX_INGEST_PAGES} pages). Default: false (single page).`
         ),
+      resume: z
+        .boolean()
+        .optional()
+        .describe(
+          'Resume a previous ingestion. When used with ingest_all, skips already-stored pages and continues from where it left off.'
+        ),
       user_id: z.string().describe('User ID to impersonate (service accounts only).').optional(),
 
       // Nested resource ingestion params
@@ -142,6 +154,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         per_page = 50,
         fields,
         ingest_all = false,
+        resume = false,
         user_id,
         parent_model,
         parent_ids,
@@ -154,6 +167,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         per_page?: number
         fields?: string[]
         ingest_all?: boolean
+        resume?: boolean
         user_id?: string
         parent_model?: string
         parent_ids?: string[]
@@ -238,7 +252,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
           normalizedFilters,
           per_page,
           fields,
-          options
+          options,
+          resume
         )
       } else {
         return await this._ingestPage(
@@ -355,11 +370,23 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     filters: Record<string, unknown> | undefined,
     perPage: number,
     fields: string[] | undefined,
-    apiOptions: Record<string, unknown>
+    apiOptions: Record<string, unknown>,
+    resume = false
   ): Promise<ToolResult> {
     let currentPage = 1
     let totalStored = 0
     let totalPages: number | null = null
+    let resumedFrom: number | null = null
+
+    // Resume: skip already-stored pages
+    if (resume) {
+      const existingCount = await getIngestedRecordCount(analysisId, model)
+      if (existingCount > 0) {
+        currentPage = Math.floor(existingCount / perPage) + 1
+        totalStored = existingCount
+        resumedFrom = currentPage
+      }
+    }
 
     // Resolve convention once for all pages
     const convention = modelConfig.api?.convention ?? defaultConvention
@@ -440,6 +467,13 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         effectiveFields
       )
 
+      // Report progress
+      await this.sendProgress({
+        progress: currentPage,
+        total: totalPages ?? undefined,
+        message: `Ingested page ${currentPage}${totalPages ? '/' + totalPages : ''} (${totalStored} records)`
+      })
+
       // Stop if we got fewer records than requested (last page)
       if (rawRecords.length < perPage) break
 
@@ -453,9 +487,11 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     const fieldsNote = fields ? ` (${fields.length} fields per record)` : ''
     const capNote =
       pagesIngested >= MAX_INGEST_PAGES ? ` (capped at ${MAX_INGEST_PAGES} pages)` : ''
+    const resumeNote = resumedFrom !== null ? `\nResumed from page ${resumedFrom}.` : ''
 
     return this.formatResponse(
       `Stored ${totalStored} record(s)${fieldsNote} across ${pagesIngested} page(s)${capNote}.` +
+        resumeNote +
         `\nAnalysis: ${analysisId}` +
         `\nModel: ${model}`,
       { meta: { context: { consumed: true } } }

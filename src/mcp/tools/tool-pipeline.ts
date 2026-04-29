@@ -15,7 +15,7 @@
  * })
  */
 
-import type { ToolResult } from './base-tool.js'
+import type { ToolHandlerExtra, ToolResult } from './base-tool.js'
 
 // ============================================================================
 // Types
@@ -31,6 +31,8 @@ export interface ToolContext {
   sessionId?: string
   /** Mutable bag for passing data between before/after/onError hooks */
   meta: Record<string, unknown>
+  /** SDK request handler extra (progress token, abort signal, etc.) */
+  extra?: ToolHandlerExtra
 }
 
 /**
@@ -67,6 +69,12 @@ export interface ToolInterceptor {
 // Pipeline
 // ============================================================================
 
+/** Handler function type used by the tool pipeline */
+export type ToolHandler = (
+  args: Record<string, unknown>,
+  extra?: ToolHandlerExtra
+) => Promise<ToolResult>
+
 /**
  * Wrap a tool handler with an interceptor chain.
  *
@@ -86,17 +94,18 @@ export interface ToolInterceptor {
 export function wrapToolHandler(
   toolName: string,
   interceptors: ToolInterceptor[],
-  handler: (args: Record<string, unknown>) => Promise<ToolResult>,
+  handler: ToolHandler,
   options: { sessionId?: string } = {}
-): (args: Record<string, unknown>) => Promise<ToolResult> {
+): ToolHandler {
   if (interceptors.length === 0) return handler
 
-  return async (args: Record<string, unknown>): Promise<ToolResult> => {
+  return async (args: Record<string, unknown>, extra?: ToolHandlerExtra): Promise<ToolResult> => {
     const ctx: ToolContext = {
       toolName,
       args: { ...args },
       sessionId: options.sessionId,
-      meta: {}
+      meta: {},
+      extra
     }
 
     let result: ToolResult
@@ -109,7 +118,7 @@ export function wrapToolHandler(
       }
 
       // Execute handler
-      result = await handler(ctx.args)
+      result = await handler(ctx.args, ctx.extra)
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err))
 
