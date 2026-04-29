@@ -13,35 +13,37 @@ Tools are the primary way MCP servers expose functionality to AI agents. Each to
 
 ## Tool Architecture
 
-Tools follow a two-layer architecture: **generic tools** in `lib/` for cross-server reuse, and **server-specific tools** in `src/{server}/tools/`.
+Tools follow a two-layer architecture: **generic tools** in mcp-kit for cross-server reuse, and **server-specific tools** in your server's `tools/` directory.
 
 ```
-lib/mcp/tools/
-├── base-tool.js              # BaseTool — root base class (with serverContext)
-├── save-model-base-tool.js   # SaveModelBaseTool — base for create/update tools
-├── validators.js             # Generic model validators
-├── categories.js             # Tool category definitions
-└── crud/                     # Generic CRUD tools (reusable across servers)
-    ├── list-models-tool.js
-    ├── find-model-tool.js
-    ├── create-model-tool.js
-    ├── update-model-tool.js
-    └── delete-model-tool.js
+mcp-kit/src/mcp/tools/
+├── base-tool.ts              # BaseTool — root base class (with serverContext)
+├── save-model-base-tool.ts   # SaveModelBaseTool — base for create/update tools
+├── tool-registry.ts          # ToolRegistry — convention-based tool registration
+├── tool-pipeline.ts          # ToolInterceptor + wrapToolHandler
+├── interceptors.ts           # Built-in interceptors (logging, tracing, error-catch)
+├── validators.ts             # Generic model validators
+├── categories.ts             # Tool category definitions
+└── data/                     # Generic CRUD tools (reusable across servers)
+    ├── list-models-tool.ts
+    ├── find-model-tool.ts
+    ├── create-model-tool.ts
+    ├── update-model-tool.ts
+    └── delete-model-tool.ts
 
-src/{server}/tools/
-├── base-tool.js              # ServerBaseTool — extends lib BaseTool
-├── registry.js               # ToolRegistry — imports CRUD from lib/, adds server-specific tools
-├── validators.js             # Thin wrapper over lib validators
+your-server/tools/
+├── base-tool.js              # ServerBaseTool — extends mcp-kit BaseTool
+├── registry.js               # Factory using mcp-kit ToolRegistry
 └── {custom}-tool.js          # Server-specific tools only
 ```
 
 ### Inheritance Chain
 
 ```
-lib/mcp/tools/base-tool.js (BaseTool)
-  ├── lib/mcp/tools/crud/*.js (generic CRUD tools)
-  └── src/{server}/tools/base-tool.js (ServerBaseTool)
-        └── src/{server}/tools/{custom}-tool.js (server-specific tools)
+BaseTool (mcp-kit)
+  ├── data/*.ts (generic CRUD tools, from mcp-kit)
+  └── ServerBaseTool (your server)
+        └── {custom}-tool.js (server-specific tools)
 ```
 
 ### Generic CRUD Tools
@@ -91,18 +93,7 @@ Tools delegate data operations to two services:
               └────────────┘
 ```
 
-To inject services in your tool registry:
-
-```typescript
-import { ModelService } from 'mcp-kit/lib/mcp/services/index.js'
-import { SearchService, RailsSearchAdapter } from 'mcp-kit/search'
-
-const modelService = new ModelService({ apiClient, models, namespace: 'api/v1' })
-const searchService = new SearchService(apiClient, {
-  searchGroups,
-  defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
-})
-```
+Tools receive services via dependency injection through `ToolRegistry` (see [Tool Registration](#tool-registration) below).
 
 See the [Service Layer Guide](service-layer-guide.md) for full details on both services, resolution chains, adapters, and design boundaries.
 
@@ -110,31 +101,34 @@ See the [Service Layer Guide](service-layer-guide.md) for full details on both s
 
 Tools are organized by category which determines authentication requirements:
 
-| Category       | Auth Required | Description                                          |
-| -------------- | ------------- | ---------------------------------------------------- |
-| `STRATEGY`     | No            | Prompt strategies (get_prompt_guide, etc.)           |
-| `CRUD`         | Yes           | API operations — generic in `lib/mcp/tools/crud/`    |
-| `AUTOCOMPLETE` | Yes           | Field value suggestions                              |
-| `VECTOR`       | No            | Vector retrospective tools (requires vector storage) |
-| `DOMAIN`       | No            | Domain intelligence (concepts, rules, workflows)     |
-| `CUSTOM`       | Varies        | Server-specific behavior                             |
+| Category       | Auth Required | Description                                             |
+| -------------- | ------------- | ------------------------------------------------------- |
+| `STRATEGY`     | No            | Prompt strategies (get_prompt_guide, etc.)              |
+| `DATA`         | Yes           | API operations — generic CRUD tools                     |
+| `AUTOCOMPLETE` | Yes           | Field value suggestions                                 |
+| `ANALYSIS`     | No            | Qualitative data analysis (requires vector storage)     |
+| `OPERATIONS`   | No            | CRUD operation retrospectives (requires vector storage) |
+| `DOMAIN`       | No            | Domain intelligence (concepts, rules, workflows)        |
+| `CUSTOM`       | Varies        | Server-specific behavior                                |
 
-> **Shared embedding infrastructure:** Both `VECTOR` and `DOMAIN` categories use the same embedding service (`lib/services/embeddings.js` — MiniLM-L6-v2, 384 dims) and cosine similarity (`lib/services/cosine-similarity.js`). VECTOR tools store embeddings in pgvector for CRUD operation retrospectives. DOMAIN tools keep embeddings in memory for semantic search over concepts, workflows, and diagrams.
+> **Shared embedding infrastructure:** Both `ANALYSIS`/`OPERATIONS` and `DOMAIN` categories use the same embedding service (MiniLM-L6-v2, 384 dims) and cosine similarity. ANALYSIS/OPERATIONS tools store embeddings in pgvector. DOMAIN tools keep embeddings in memory for semantic search over concepts, workflows, and diagrams.
 
 ### Setting Tool Category
 
 Override the static `category` property:
 
 ```javascript
-import { TOOL_CATEGORIES } from '#src/mcp/tools/categories.js'
+import { TOOL_CATEGORIES } from 'mcp-kit/tools'
 
-export class MyTool extends EngineerBaseTool {
-  static category = TOOL_CATEGORIES.STRATEGY // No auth required
+export class MyTool extends ServerBaseTool {
+  static get category() {
+    return TOOL_CATEGORIES.STRATEGY
+  } // No auth required
   // ...
 }
 ```
 
-Default category is `CRUD` (requires authentication).
+Default category is `DATA` (requires authentication).
 
 ## Server Context and Disambiguation
 
@@ -176,20 +170,116 @@ The `list_models` tool exposes these associations in its output. Nested resource
 | `validateSearchParams()`   | Validates search params against a model's searchable fields  |
 | `validateNestedResource()` | Validates nested resource relationships using `associations` |
 
-Server-specific validators (e.g., `src/engineer/tools/validators.js`) are thin wrappers that bind these to the server's model registry.
+## Tool Registration
+
+### ToolRegistry
+
+`ToolRegistry` from `mcp-kit/tools` handles all registration boilerplate: schema validation, auth wrapping per tool category, tracing, logging, and error catching.
+
+```javascript
+import { ToolRegistry, DATA_TOOL_CLASSES, TOOL_CATEGORIES } from 'mcp-kit/tools'
+import { STRATEGY_TOOL_CLASSES } from 'mcp-kit/prompts'
+
+const toolRegistry = new ToolRegistry({
+  toolClasses: {
+    ...DATA_TOOL_CLASSES,
+    ...STRATEGY_TOOL_CLASSES,
+    my_custom_tool: MyCustomTool
+  },
+  models: MODEL_CLASSES,
+  serverContext: { name: 'My Server', namespace: 'my-server' },
+  createApiClient: (token) => createApiClient(token, { apiUrl }),
+  promptRegistry,
+  // Feature gates: disable categories when their dependencies are unavailable
+  gates: {
+    [TOOL_CATEGORIES.ANALYSIS]: vectorStorage.isVectorStorageEnabled(),
+    [TOOL_CATEGORIES.DOMAIN]: !!domainRegistry
+  }
+})
+```
+
+For each tool, ToolRegistry automatically:
+
+1. Creates a definition instance to read `description`, `inputSchema`, and `annotations`
+2. Validates the schema at startup (skips broken tools instead of crashing)
+3. Registers with `mcpServer.registerTool()` including annotations
+4. Wraps the handler with the interceptor chain: logging -> custom interceptors -> error-catch
+5. Wraps everything in `traceToolCall()` as the outermost layer
+6. Creates an authenticated API client per invocation for `requiresAuth` tools
+
+### Tool Interceptors
+
+Interceptors add cross-cutting concerns to all tool executions. ToolRegistry applies built-in interceptors automatically and accepts custom ones:
+
+```javascript
+const auditInterceptor = {
+  name: 'audit',
+  before(ctx) {
+    ctx.meta.startedAt = Date.now()
+  },
+  after(ctx, result) {
+    auditLog.write({
+      tool: ctx.toolName,
+      args: ctx.args,
+      duration: Date.now() - ctx.meta.startedAt
+    })
+    return result
+  },
+  onError(ctx, error) {
+    auditLog.write({ tool: ctx.toolName, error: error.message })
+    // Return void to let the error propagate
+  }
+}
+
+const toolRegistry = new ToolRegistry({
+  toolClasses: DATA_TOOL_CLASSES,
+  models: MODEL_CLASSES,
+  createApiClient: (token) => createApiClient(token, { apiUrl }),
+  interceptors: [auditInterceptor]
+})
+```
+
+**Execution order:**
+
+- `before` hooks run in declared order: `[logging, custom1, custom2, error-catch]`
+- `after` hooks run in reverse order: `[error-catch, custom2, custom1, logging]`
+- `onError` hooks run in reverse order; the first to return a `ToolResult` recovers from the error
+
+**Built-in interceptors** (applied automatically by ToolRegistry):
+
+| Interceptor          | Purpose                                                            |
+| -------------------- | ------------------------------------------------------------------ |
+| `loggingInterceptor` | Logs tool call start and errors with configurable `logContext`     |
+| `errorInterceptor`   | Catches unhandled errors, returns `{ isError: true }` MCP response |
+
+Tracing via `traceToolCall()` wraps the entire interceptor chain externally.
+
+**Manual composition** — for tools registered outside ToolRegistry:
+
+```javascript
+import { wrapToolHandler, loggingInterceptor, errorInterceptor } from 'mcp-kit/tools'
+
+const handler = wrapToolHandler(
+  'my_tool',
+  [loggingInterceptor(), errorInterceptor()],
+  async (args) => {
+    return tool.execute(args)
+  }
+)
+```
 
 ## Creating a New Tool
 
 ### Server-Specific Tools
 
-For tools with server-specific logic, create them in `src/engineer/tools/`:
+For tools with server-specific logic:
 
 #### 1. Create the Tool Class
 
 ```javascript
-import { EngineerBaseTool } from './base-tool.js'
+import { ServerBaseTool } from './base-tool.js'
 
-export class MyNewTool extends EngineerBaseTool {
+export class MyNewTool extends ServerBaseTool {
   get name() {
     return 'my_new_tool'
   }
@@ -231,18 +321,28 @@ Include:
 
 #### 2. Register the Tool
 
-Add to `src/engineer/tools/registry.js`.
+Add to the `toolClasses` map in your `ToolRegistry` configuration:
+
+```javascript
+const toolRegistry = new ToolRegistry({
+  toolClasses: {
+    ...DATA_TOOL_CLASSES,
+    my_new_tool: MyNewTool
+  }
+  // ...
+})
+```
 
 #### 3. Add Tests
 
-Create `__tests__/engineer/tools/my-new-tool.spec.js`.
+Create `__tests__/tools/my-new-tool.spec.js`.
 
-### Generic Tools (in lib/)
+### Generic Tools (in mcp-kit)
 
-For tools that are reusable across servers, create them in `lib/mcp/tools/`:
+For tools that are reusable across servers, create them in `src/mcp/tools/`:
 
-```javascript
-import { BaseTool } from '../base-tool.js'
+```typescript
+import { BaseTool } from './base-tool.js'
 
 export class MyGenericTool extends BaseTool {
   // Extend BaseTool directly (not server-specific base)
@@ -353,11 +453,10 @@ Tools can be organized into tiers for progressive disclosure:
 
 ## Checklist for New Tools
 
-- [ ] Create tool class with required methods
-- [ ] Set appropriate category
-- [ ] Register in registry.js
+- [ ] Create tool class with required methods (`name`, `baseDescription`, `inputSchema`, `execute`)
+- [ ] Set appropriate category (`static get category()`)
+- [ ] Add to `toolClasses` in your ToolRegistry configuration
 - [ ] Add comprehensive tests
-
 - [ ] Document in tool descriptions what it does, when to use it, and constraints
-- [ ] If generic/reusable, place in `lib/mcp/tools/` (not server-specific)
+- [ ] If generic/reusable, place in `src/mcp/tools/` in mcp-kit
 - [ ] If server-specific, extend the server's base tool
