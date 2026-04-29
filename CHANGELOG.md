@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.27.0] — 2026-04-29
+
+### Added
+
+- **RFC 9111 cache headers on CIMD metadata endpoint** — The `/oauth/client-metadata.json` endpoint now sends `Cache-Control: public, max-age=3600` and an `ETag` header. Authorization servers that respect HTTP cache headers (per the IETF Client ID Metadata Document draft) can use these to decide when to re-fetch metadata. The `max-age` is configurable via `ClientMetadataConfig.cacheMaxAge`.
+
+[0.27.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.26.1...v0.27.0
+
 ## [0.26.1] — 2026-04-29
 
 ### Changed

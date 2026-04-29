@@ -13,6 +13,7 @@
  * - RFC 8414  Authorization Server Metadata         -> /.well-known/oauth-authorization-server
  * - RFC 8707  Resource Indicators                   -> forwarded as `resource` param
  * - RFC 9728  Protected Resource Metadata           -> /.well-known/oauth-protected-resource[/mcp]
+ * - RFC 9111 HTTP Caching                         -> Cache-Control on CIMD metadata
  * - CIMD  Client ID Metadata Document (MCP Auth) -> /oauth/client-metadata.json
  *
  * Routes:
@@ -28,6 +29,7 @@
  * - POST /mcp/m2m/token                             - Machine-to-machine token endpoint
  */
 
+import { createHash } from 'node:crypto'
 import { URLSearchParams } from 'node:url'
 
 import type { AxiosError } from 'axios'
@@ -385,7 +387,7 @@ export function createOAuthRouter({
       clientId: metadataUrl
     })
 
-    res.json({
+    const body = {
       client_id: metadataUrl,
       client_name: clientMetadata?.clientName || mcpName,
       redirect_uris: clientMetadata?.redirectUris || [`${baseUrl}/oauth/callback`],
@@ -393,7 +395,16 @@ export function createOAuthRouter({
       response_types: ['code'],
       token_endpoint_auth_method: 'none',
       scope: clientMetadata?.scope || oauth.scopes
-    })
+    }
+
+    // RFC 9111: Cache headers so authorization servers know when to re-fetch.
+    // IETF Client ID Metadata Document draft: servers SHOULD respect these.
+    const maxAge = clientMetadata?.cacheMaxAge ?? 3600
+    const etag = `"${createHash('sha256').update(JSON.stringify(body)).digest('hex').slice(0, 16)}"`
+
+    res.setHeader('Cache-Control', `public, max-age=${maxAge}`)
+    res.setHeader('ETag', etag)
+    res.json(body)
   })
 
   /** Machine-to-Machine token endpoint - Client Credentials grant */

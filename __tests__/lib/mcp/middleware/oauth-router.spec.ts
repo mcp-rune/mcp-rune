@@ -205,6 +205,7 @@ describe('lib/mcp/middleware/oauth-router', () => {
 
       mockRes = {
         json: vi.fn(),
+        setHeader: vi.fn(),
         status: vi.fn().mockReturnThis(),
         send: vi.fn(),
         redirect: vi.fn()
@@ -712,6 +713,46 @@ describe('lib/mcp/middleware/oauth-router', () => {
           service: 'test-mcp',
           clientId: 'https://mcp.example.com/oauth/client-metadata.json'
         })
+      })
+
+      it('should set Cache-Control header with default max-age', () => {
+        const handler = findRouteHandler(router, 'get', '/oauth/client-metadata.json')
+        mockReq = {}
+
+        handler(mockReq, mockRes)
+
+        expect(mockRes.setHeader).toHaveBeenCalledWith('Cache-Control', 'public, max-age=3600')
+      })
+
+      it('should set ETag header', () => {
+        const handler = findRouteHandler(router, 'get', '/oauth/client-metadata.json')
+        mockReq = {}
+
+        handler(mockReq, mockRes)
+
+        expect(mockRes.setHeader).toHaveBeenCalledWith(
+          'ETag',
+          expect.stringMatching(/^"[0-9a-f]{16}"$/)
+        )
+      })
+
+      it('should use custom cacheMaxAge from config when provided', () => {
+        const routerWithConfig = createOAuthRouter({
+          oauth: mockOauth,
+          baseUrl: 'https://mcp.example.com',
+          mcpName: 'test-mcp',
+          clientMetadata: {
+            redirectUris: ['https://app.example.com/callback'],
+            cacheMaxAge: 7200
+          }
+        })
+
+        const handler = findRouteHandler(routerWithConfig, 'get', '/oauth/client-metadata.json')
+        mockReq = {}
+
+        handler(mockReq, mockRes)
+
+        expect(mockRes.setHeader).toHaveBeenCalledWith('Cache-Control', 'public, max-age=7200')
       })
     })
 

@@ -59,6 +59,7 @@ export interface ClientMetadataConfig {
   redirectUris: string[]
   clientName?: string
   scope?: string
+  cacheMaxAge?: number // Cache-Control max-age in seconds (default: 3600)
 }
 
 interface HttpServerConfig {
