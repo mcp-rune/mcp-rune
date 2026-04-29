@@ -121,6 +121,15 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
       const options = user_id ? { userId: user_id } : {}
       let results: BulkResult[]
 
+      const onProgress = (completed: number, total: number): void => {
+        // Fire-and-forget — sendProgress is async but we don't await in the hot path
+        void this.sendProgress({
+          progress: completed,
+          total,
+          message: `${action}: ${completed}/${total} records processed`
+        })
+      }
+
       switch (action) {
         case 'create':
           results = await this._executeCreate(
@@ -128,7 +137,8 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
             model,
             args.records as Record<string, unknown>[],
             options,
-            parent_path
+            parent_path,
+            onProgress
           )
           break
         case 'update':
@@ -138,13 +148,15 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
                 model,
                 args.record_ids as string[],
                 args.attributes as Record<string, unknown>,
-                options
+                options,
+                onProgress
               )
             : await this._executePerRecordUpdate(
                 modelConfig,
                 model,
                 args.records as Record<string, unknown>[],
-                options
+                options,
+                onProgress
               )
           break
         case 'delete':
@@ -152,7 +164,8 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
             modelConfig,
             model,
             args.record_ids as string[],
-            options
+            options,
+            onProgress
           )
           break
       }
@@ -327,7 +340,8 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
     model: string,
     records: Record<string, unknown>[],
     options: Record<string, unknown>,
-    parentPath: string | undefined
+    parentPath: string | undefined,
+    onProgress?: (completed: number, total: number) => void
   ): Promise<BulkResult[]> {
     const {
       records: cleanRecords,
@@ -360,7 +374,7 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
           })
     )
 
-    await this._runParallel(tasks)
+    await this._runParallel(tasks, onProgress)
     return results
   }
 
@@ -370,7 +384,8 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
     model: string,
     recordIds: string[],
     attributes: Record<string, unknown>,
-    options: Record<string, unknown>
+    options: Record<string, unknown>,
+    onProgress?: (completed: number, total: number) => void
   ): Promise<BulkResult[]> {
     const results = new Array<BulkResult>(recordIds.length)
 
@@ -395,7 +410,7 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
           })
     )
 
-    await this._runParallel(tasks)
+    await this._runParallel(tasks, onProgress)
     return results
   }
 
@@ -404,7 +419,8 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
     modelConfig: ModelConfig,
     model: string,
     records: Record<string, unknown>[],
-    options: Record<string, unknown>
+    options: Record<string, unknown>,
+    onProgress?: (completed: number, total: number) => void
   ): Promise<BulkResult[]> {
     const results = new Array<BulkResult>(records.length)
 
@@ -429,7 +445,7 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
         })
     })
 
-    await this._runParallel(tasks)
+    await this._runParallel(tasks, onProgress)
     return results
   }
 
@@ -438,7 +454,8 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
     modelConfig: ModelConfig,
     _model: string,
     recordIds: string[],
-    options: Record<string, unknown>
+    options: Record<string, unknown>,
+    onProgress?: (completed: number, total: number) => void
   ): Promise<BulkResult[]> {
     const results = new Array<BulkResult>(recordIds.length)
 
@@ -459,7 +476,7 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
           })
     )
 
-    await this._runParallel(tasks)
+    await this._runParallel(tasks, onProgress)
     return results
   }
 
@@ -479,14 +496,22 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
    *
    * Spawns up to MAX_CONCURRENCY workers that pull from the shared task queue.
    * Each task function is expected to handle its own errors (via .catch).
+   * Optional onProgress callback fires after each task completes.
    */
-  private async _runParallel(tasks: Array<() => Promise<void>>): Promise<void> {
+  private async _runParallel(
+    tasks: Array<() => Promise<void>>,
+    onProgress?: (completed: number, total: number) => void
+  ): Promise<void> {
     let next = 0
+    let completed = 0
+    const total = tasks.length
 
     async function worker(): Promise<void> {
-      while (next < tasks.length) {
+      while (next < total) {
         const i = next++
         await tasks[i]!()
+        completed++
+        if (onProgress) onProgress(completed, total)
       }
     }
 
