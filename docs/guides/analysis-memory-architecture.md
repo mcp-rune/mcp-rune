@@ -582,28 +582,36 @@ await initEmbeddings() // Downloads model if needed
 
 ## 8. Tool Categories & Registration
 
-### VECTOR Category
+### ANALYSIS and OPERATIONS Categories
 
-**File:** `lib/mcp/tools/categories.js`
+**File:** `src/mcp/tools/categories.ts`
 
 ```javascript
-VECTOR: {
+ANALYSIS: {
   requiresAuth: false,
   requiresPromptRegistry: false,
   requiresVectorStorage: true,
   isGeneric: true,
-  description: 'Vector retrospective tools, requires vector storage configuration'
+  description: 'Analysis tools for qualitative data analysis sessions, requires vector storage'
+},
+OPERATIONS: {
+  requiresAuth: false,
+  requiresPromptRegistry: false,
+  requiresVectorStorage: true,
+  isGeneric: true,
+  description: 'Operations tools for retrospective CRUD operation analysis, requires vector storage'
 }
 ```
 
 ### Inheritance Chain
 
 ```
-BaseTool (lib/mcp/tools/base-tool.js)
-  └── BaseVectorTool (lib/mcp/tools/vector/base-vector-tool.js)
-        ├── StoreAnalysisMemoryTool
-        ├── RecallAnalysisMemoriesTool
-        ├── ClearAnalysisMemoriesTool
+BaseTool (src/mcp/tools/base-tool.ts)
+  ├── BaseAnalysisTool (src/mcp/tools/analysis/base-analysis-tool.ts)
+  │     ├── AnalysisStoreTool
+  │     ├── AnalysisQueryTool
+  │     └── AnalysisClearTool
+  └── BaseOperationsTool (src/mcp/tools/operations/base-operations-tool.ts)
         ├── FindSimilarOperationsTool
         ├── DetectOperationGapsTool
         └── ClusterOperationsTool
@@ -611,19 +619,29 @@ BaseTool (lib/mcp/tools/base-tool.js)
 
 ### Registry Integration
 
-**File:** `src/engineer/tools/registry.js`
-
-Vector tools are registered in `TOOL_CLASSES` and conditionally enabled:
+Vector tools are included in `ANALYSIS_TOOL_CLASSES` and `OPERATIONS_TOOL_CLASSES` from `mcp-kit/tools`. Use the `gates` parameter on `ToolRegistry` to conditionally enable them based on vector storage availability:
 
 ```javascript
-// In _getEnabledTools():
-if (!isVectorStorageEnabled()) {
-  const vectorToolNames = this._getToolNamesByCategory(TOOL_CATEGORIES.VECTOR)
-  tools = tools.filter((name) => !vectorToolNames.has(name))
-}
+import {
+  ToolRegistry,
+  TOOL_CATEGORIES,
+  DATA_TOOL_CLASSES,
+  ANALYSIS_TOOL_CLASSES,
+  OPERATIONS_TOOL_CLASSES
+} from 'mcp-kit/tools'
+
+const toolRegistry = new ToolRegistry({
+  toolClasses: { ...DATA_TOOL_CLASSES, ...ANALYSIS_TOOL_CLASSES, ...OPERATIONS_TOOL_CLASSES },
+  models: MODEL_CLASSES,
+  createApiClient: (token) => createApiClient(token, { apiUrl }),
+  gates: {
+    [TOOL_CATEGORIES.ANALYSIS]: vectorStorage.isVectorStorageEnabled(),
+    [TOOL_CATEGORIES.OPERATIONS]: vectorStorage.isVectorStorageEnabled()
+  }
+})
 ```
 
-When vector storage is configured, all six vector tools appear. When not configured, they're silently excluded — no errors, no warnings.
+When vector storage is configured, all vector tools appear. When not configured, they're silently excluded — no errors, no warnings.
 
 ---
 
@@ -857,7 +875,7 @@ When the LLM creates a book:
 
 1. LLM calls create_model(model: "book", attributes: { title: "New Book", ... })
 
-2. Tool registry executes the tool, gets API response
+2. ToolRegistry executes the tool via interceptor chain, gets API response
 
 3. Fire-and-forget: storeOperation() runs asynchronously:
    a. adaptToolOutput('create_model', response, args)
@@ -879,20 +897,20 @@ When the LLM creates a book:
 
 ## 13. File Reference
 
-| File                                                    | Layer    | Purpose                          |
-| ------------------------------------------------------- | -------- | -------------------------------- |
-| `lib/mcp/tools/vector/base-vector-tool.js`              | Tool     | Base class, sets VECTOR category |
-| `lib/mcp/tools/vector/store-analysis-memory-tool.js`    | Tool     | Store findings                   |
-| `lib/mcp/tools/vector/recall-analysis-memories-tool.js` | Tool     | Recall findings                  |
-| `lib/mcp/tools/vector/clear-analysis-memories-tool.js`  | Tool     | Clear findings                   |
-| `lib/services/vector-storage.js`                        | Facade   | Vendor-agnostic API              |
-| `lib/services/vendor/pgvector/analysis-memories.js`     | Backend  | Analysis memory SQL              |
-| `lib/services/vendor/pgvector/tool-memories.js`         | Backend  | Tool memory SQL                  |
-| `lib/services/embeddings.js`                            | Service  | Local embedding model            |
-| `lib/services/cosine-similarity.js`                     | Utility  | In-memory vector math            |
-| `lib/services/tool-output-adapters.js`                  | Service  | Response normalization           |
-| `lib/mcp/tools/categories.js`                           | Config   | VECTOR category definition       |
-| `src/engineer/tools/registry.js`                        | Registry | Conditional tool registration    |
+| File                                                    | Layer    | Purpose                                               |
+| ------------------------------------------------------- | -------- | ----------------------------------------------------- |
+| `lib/mcp/tools/vector/base-vector-tool.js`              | Tool     | Base class, sets VECTOR category                      |
+| `lib/mcp/tools/vector/store-analysis-memory-tool.js`    | Tool     | Store findings                                        |
+| `lib/mcp/tools/vector/recall-analysis-memories-tool.js` | Tool     | Recall findings                                       |
+| `lib/mcp/tools/vector/clear-analysis-memories-tool.js`  | Tool     | Clear findings                                        |
+| `lib/services/vector-storage.js`                        | Facade   | Vendor-agnostic API                                   |
+| `lib/services/vendor/pgvector/analysis-memories.js`     | Backend  | Analysis memory SQL                                   |
+| `lib/services/vendor/pgvector/tool-memories.js`         | Backend  | Tool memory SQL                                       |
+| `lib/services/embeddings.js`                            | Service  | Local embedding model                                 |
+| `lib/services/cosine-similarity.js`                     | Utility  | In-memory vector math                                 |
+| `lib/services/tool-output-adapters.js`                  | Service  | Response normalization                                |
+| `lib/mcp/tools/categories.js`                           | Config   | VECTOR category definition                            |
+| `src/mcp/tools/tool-registry.ts`                        | Registry | Convention-based tool registration with feature gates |
 
 ### Test Files
 
