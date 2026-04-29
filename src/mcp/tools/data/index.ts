@@ -7,7 +7,6 @@
  * Covers CRUD operations, bulk operations, search, and discovery.
  */
 
-import { AnalysisIngestTool } from './analysis-ingest-tool.js'
 import { BulkActionModelsTool } from './bulk-action-models-tool.js'
 import { CreateModelTool } from './create-model-tool.js'
 import { DeleteModelTool } from './delete-model-tool.js'
@@ -19,7 +18,6 @@ import { SearchRecordsTool } from './search-records-tool.js'
 import { UpdateModelTool } from './update-model-tool.js'
 
 export {
-  AnalysisIngestTool,
   BulkActionModelsTool,
   CreateModelTool,
   DeleteModelTool,
@@ -40,6 +38,5 @@ export const DATA_TOOL_CLASSES = {
   delete_model: DeleteModelTool,
   get_filters_guide: GetFiltersGuideTool,
   bulk_action_models: BulkActionModelsTool,
-  analysis_ingest: AnalysisIngestTool,
   model_action: ModelActionTool
 }

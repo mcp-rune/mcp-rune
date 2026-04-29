@@ -520,4 +520,113 @@ describe('lib/mcp/tools/base-tool', () => {
       expect(() => tool.requireApiClient()).not.toThrow()
     })
   })
+
+  describe('sendProgress', () => {
+    class TestTool extends BaseTool {
+      get name() {
+        return 'test_tool'
+      }
+      get baseDescription() {
+        return 'Test'
+      }
+      get inputSchema() {
+        return {}
+      }
+      async callSendProgress(
+        ...args: Parameters<BaseTool['sendProgress']>
+      ): ReturnType<BaseTool['sendProgress']> {
+        return this.sendProgress(...args)
+      }
+    }
+
+    it('should send progress notification when progressToken is set', async () => {
+      const sendNotification = vi.fn().mockResolvedValue(undefined)
+      const tool = new TestTool()
+      tool._extra = {
+        _meta: { progressToken: 'tok-1' },
+        sendNotification
+      }
+
+      await tool.callSendProgress({ progress: 3, total: 10, message: 'Page 3/10' })
+
+      expect(sendNotification).toHaveBeenCalledWith({
+        method: 'notifications/progress',
+        params: { progressToken: 'tok-1', progress: 3, total: 10, message: 'Page 3/10' }
+      })
+    })
+
+    it('should support numeric progressToken', async () => {
+      const sendNotification = vi.fn().mockResolvedValue(undefined)
+      const tool = new TestTool()
+      tool._extra = {
+        _meta: { progressToken: 42 },
+        sendNotification
+      }
+
+      await tool.callSendProgress({ progress: 1 })
+
+      expect(sendNotification).toHaveBeenCalledWith({
+        method: 'notifications/progress',
+        params: { progressToken: 42, progress: 1 }
+      })
+    })
+
+    it('should no-op when no progressToken', async () => {
+      const sendNotification = vi.fn()
+      const tool = new TestTool()
+      tool._extra = { _meta: {}, sendNotification }
+
+      await tool.callSendProgress({ progress: 1 })
+
+      expect(sendNotification).not.toHaveBeenCalled()
+    })
+
+    it('should no-op when no _extra', async () => {
+      const tool = new TestTool()
+
+      // Should not throw
+      await tool.callSendProgress({ progress: 1 })
+    })
+
+    it('should no-op when no sendNotification', async () => {
+      const tool = new TestTool()
+      tool._extra = { _meta: { progressToken: 'tok' } }
+
+      // Should not throw
+      await tool.callSendProgress({ progress: 1 })
+    })
+  })
+
+  describe('abortSignal', () => {
+    it('should return signal from _extra', () => {
+      class TestTool extends BaseTool {
+        get name() {
+          return 'test_tool'
+        }
+        getSignal() {
+          return this.abortSignal
+        }
+      }
+
+      const controller = new AbortController()
+      const tool = new TestTool()
+      tool._extra = { signal: controller.signal }
+
+      expect(tool.getSignal()).toBe(controller.signal)
+    })
+
+    it('should return undefined when no _extra', () => {
+      class TestTool extends BaseTool {
+        get name() {
+          return 'test_tool'
+        }
+        getSignal() {
+          return this.abortSignal
+        }
+      }
+
+      const tool = new TestTool()
+      expect(tool.getSignal()).toBeUndefined()
+    })
+  })
 })

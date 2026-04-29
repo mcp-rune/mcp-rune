@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.26.0] — 2026-04-29
+
+### Added
+
+- **Resumable ingestion** — `analysis_ingest` now accepts a `resume` parameter. When used with `ingest_all`, it detects already-stored records and skips completed pages, allowing large ingestions to continue from where they left off after client disconnects or token exhaustion.
+- **MCP progress notifications** — the tool execution pipeline now threads the SDK's `RequestHandlerExtra` through to tool instances via `ToolContext.extra` and `BaseTool._extra`. Tools can call `this.sendProgress({ progress, total, message })` to send `notifications/progress` to clients that request progress tracking. `analysis_ingest` reports page-by-page progress during `ingest_all`.
+- **Abort signal access** — `BaseTool.abortSignal` getter exposes the client request's `AbortSignal` for future cancellation support.
+- **`ToolHandlerExtra` type** — exported from `mcp-kit/tools` for interceptors and custom tools that need to interact with the SDK request context.
+- **`ToolHandler` type** — exported convenience type for the `(args, extra?) => Promise<ToolResult>` handler signature.
+- **`getIngestedRecordCount`** — new vector storage function for counting ingested records by session and model without loading all IDs.
+
+### Changed
+
+- **Moved `AnalysisIngestTool` to `analysis/` directory** — the tool now lives with its semantic family (`analysis_store`, `analysis_query`, `analysis_clear`) under `src/mcp/tools/analysis/`. It extends `BaseAnalysisTool` (ANALYSIS category, gated on vector storage) and overrides `requiresAuth` to `true` since it needs API authentication. Moved from `DATA_TOOL_CLASSES` to `ANALYSIS_TOOL_CLASSES`. Public API export unchanged.
+- **`wrapToolHandler` signature** — now accepts and passes an optional `ToolHandlerExtra` parameter through the interceptor chain. Existing interceptors and handlers continue to work unchanged.
+- **`ToolContext` type** — gains an optional `extra` field exposing the SDK request handler context (progress token, abort signal) to interceptors.
+
+[0.26.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.25.1...v0.26.0
+
 ## [0.25.1] — 2026-04-29
 
 ### Fixed

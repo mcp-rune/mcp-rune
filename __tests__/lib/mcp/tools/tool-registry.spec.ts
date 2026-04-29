@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { ToolResult } from '../../../../src/mcp/tools/base-tool.js'
+import type { ToolHandlerExtra, ToolResult } from '../../../../src/mcp/tools/base-tool.js'
 import { BaseTool } from '../../../../src/mcp/tools/base-tool.js'
 import { TOOL_CATEGORIES } from '../../../../src/mcp/tools/categories.js'
 import type { ToolInterceptor } from '../../../../src/mcp/tools/tool-pipeline.js'
@@ -535,6 +535,67 @@ describe('lib/mcp/tools/tool-registry', () => {
       // before: logging, a, b, error-catch (logging/error-catch don't push to order)
       // after: error-catch, b, a, logging (reverse)
       expect(order).toEqual(['a:before', 'b:before', 'b:after', 'a:after'])
+    })
+  })
+
+  describe('extra plumbing', () => {
+    it('should set _extra on tool instance before execute', async () => {
+      let capturedExtra: ToolHandlerExtra | undefined
+
+      class ExtraCaptureTool extends BaseTool {
+        static override get category() {
+          return TOOL_CATEGORIES.STRATEGY
+        }
+        get name() {
+          return 'extra_capture'
+        }
+        get baseDescription() {
+          return 'Captures extra'
+        }
+        get inputSchema() {
+          return {}
+        }
+        async execute(): Promise<ToolResult> {
+          capturedExtra = this._extra
+          return { content: [{ type: 'text', text: 'ok' }] }
+        }
+      }
+
+      const registry = new ToolRegistry({
+        toolClasses: { extra_capture: ExtraCaptureTool as any },
+        models: {}
+      })
+
+      registry.registerTools(mockMcpServer as any, {
+        getAccessToken: async () => null
+      })
+
+      const handler = mockMcpServer.getHandler('extra_capture')!
+      const extra: ToolHandlerExtra = {
+        _meta: { progressToken: 'tok-abc' },
+        sendNotification: vi.fn()
+      }
+
+      await handler({}, extra)
+
+      expect(capturedExtra).toBeDefined()
+      expect(capturedExtra?._meta?.progressToken).toBe('tok-abc')
+    })
+
+    it('should work without extra (backward compatible)', async () => {
+      const registry = new ToolRegistry({
+        toolClasses: { no_auth_tool: NoAuthTool as any },
+        models: {}
+      })
+
+      registry.registerTools(mockMcpServer as any, {
+        getAccessToken: async () => null
+      })
+
+      const handler = mockMcpServer.getHandler('no_auth_tool')!
+      const result = await handler({ query: 'test' })
+
+      expect(result.content[0].text).toContain('executed with')
     })
   })
 

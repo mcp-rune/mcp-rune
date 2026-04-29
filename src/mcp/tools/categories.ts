@@ -13,7 +13,7 @@ import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 export const TOOL_CATEGORIES = {
   /** Data tools - require API authentication
    * CRUD operations, bulk operations, search, and discovery on models
-   * Examples: list_models, find_model, create_model, update_model, delete_model, analysis_ingest
+   * Examples: list_models, find_model, create_model, update_model, delete_model
    */
   DATA: 'data',
 
@@ -33,8 +33,8 @@ export const TOOL_CATEGORIES = {
   AUTOCOMPLETE: 'autocomplete',
 
   /** Analysis tools - qualitative data analysis sessions
-   * Requires vector storage configuration, no API auth required
-   * Examples: analysis_store, analysis_query, analysis_clear
+   * Requires vector storage configuration, no API auth required (except analysis_ingest which overrides requiresAuth)
+   * Examples: analysis_ingest, analysis_store, analysis_query, analysis_clear
    */
   ANALYSIS: 'analysis',
 

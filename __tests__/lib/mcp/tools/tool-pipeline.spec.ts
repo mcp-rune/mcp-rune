@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { ToolResult } from '../../../../src/mcp/tools/base-tool.js'
+import type { ToolHandlerExtra, ToolResult } from '../../../../src/mcp/tools/base-tool.js'
 import type { ToolInterceptor } from '../../../../src/mcp/tools/tool-pipeline.js'
 import { wrapToolHandler } from '../../../../src/mcp/tools/tool-pipeline.js'
 
@@ -117,7 +117,7 @@ describe('lib/mcp/tools/tool-pipeline', () => {
 
       await wrapped({ id: '1' })
 
-      expect(handler).toHaveBeenCalledWith({ id: '1', extra: 'injected' })
+      expect(handler).toHaveBeenCalledWith({ id: '1', extra: 'injected' }, undefined)
     })
 
     it('should allow before hooks to pass data to after hooks via meta', async () => {
@@ -307,7 +307,60 @@ describe('lib/mcp/tools/tool-pipeline', () => {
       await wrapped(originalArgs)
 
       expect(originalArgs).toEqual({ id: '1' }) // not mutated
-      expect(handler).toHaveBeenCalledWith({ id: '1', injected: true })
+      expect(handler).toHaveBeenCalledWith({ id: '1', injected: true }, undefined)
+    })
+
+    it('should pass extra through to the handler', async () => {
+      const handler = vi.fn().mockResolvedValue(ok())
+      const wrapped = wrapToolHandler('test', [], handler)
+      const extra: ToolHandlerExtra = {
+        _meta: { progressToken: 'tok-1' },
+        sendNotification: vi.fn()
+      }
+
+      await wrapped({ id: '1' }, extra)
+
+      expect(handler).toHaveBeenCalledWith({ id: '1' }, extra)
+    })
+
+    it('should expose extra on ToolContext for interceptors', async () => {
+      let capturedExtra: ToolHandlerExtra | undefined
+      const interceptor: ToolInterceptor = {
+        before(ctx) {
+          capturedExtra = ctx.extra
+        }
+      }
+      const handler = vi.fn().mockResolvedValue(ok())
+      const wrapped = wrapToolHandler('test', [interceptor], handler)
+      const extra: ToolHandlerExtra = {
+        _meta: { progressToken: 42 },
+        sendNotification: vi.fn()
+      }
+
+      await wrapped({}, extra)
+
+      expect(capturedExtra).toBe(extra)
+    })
+
+    it('should pass extra through interceptor chain to handler', async () => {
+      const interceptor: ToolInterceptor = { before: vi.fn() }
+      const handler = vi.fn().mockResolvedValue(ok())
+      const wrapped = wrapToolHandler('test', [interceptor], handler)
+      const extra: ToolHandlerExtra = { _meta: { progressToken: 'p1' } }
+
+      await wrapped({ model: 'book' }, extra)
+
+      expect(handler).toHaveBeenCalledWith({ model: 'book' }, extra)
+    })
+
+    it('should work without extra (backward compatible)', async () => {
+      const interceptor: ToolInterceptor = { before: vi.fn() }
+      const handler = vi.fn().mockResolvedValue(ok())
+      const wrapped = wrapToolHandler('test', [interceptor], handler)
+
+      await wrapped({ id: '1' })
+
+      expect(handler).toHaveBeenCalledWith({ id: '1' }, undefined)
     })
 
     it('should compose multiple interceptors for a realistic pipeline', async () => {
