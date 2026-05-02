@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.28.0] — 2026-05-02
+
+### Added
+
+- **RFC 8707 audience validation in token introspection** — `introspectToken()` now validates that the `aud` claim in the introspection response matches the configured `resourceUri`. Tokens issued for a different resource server are rejected (`active: false`), cached to avoid repeat calls, and reported via error tracking with `AUTH` category. Tokens without an `aud` claim are also rejected when `resourceUri` is set.
+- **`AudienceMismatchError` class** — Structured error with `expectedAudience` and `actualAudience` fields, exported from `oauth2/index.ts`.
+
+### Fixed
+
+- **CIMD metadata test expectations** — Fixed two stale tests in `oauth-router.spec.ts` that expected old default values for `redirect_uris` and `scope` instead of the actual `${baseUrl}/oauth/callback` and `oauth.scopes` fallbacks.
+
+[0.28.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.27.0...v0.28.0
+
 ## [0.27.0] — 2026-04-29
 
 ### Added
