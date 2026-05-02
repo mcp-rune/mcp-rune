@@ -194,6 +194,7 @@ describe('lib/mcp/middleware/oauth-router', () => {
     beforeEach(() => {
       mockOauth = {
         authServerUrl: 'https://identity.example.com',
+        scopes: 'read',
         getClientCredentialsToken: vi.fn()
       }
 
@@ -649,7 +650,7 @@ describe('lib/mcp/middleware/oauth-router', () => {
         )
       })
 
-      it('should fall back to default redirect URIs when no config', () => {
+      it('should fall back to baseUrl callback when no config', () => {
         const handler = findRouteHandler(router, 'get', '/oauth/client-metadata.json')
         mockReq = {}
 
@@ -657,7 +658,7 @@ describe('lib/mcp/middleware/oauth-router', () => {
 
         expect(mockRes.json).toHaveBeenCalledWith(
           expect.objectContaining({
-            redirect_uris: ['http://127.0.0.1/callback']
+            redirect_uris: ['https://mcp.example.com/oauth/callback']
           })
         )
       })
@@ -695,7 +696,7 @@ describe('lib/mcp/middleware/oauth-router', () => {
         expect(response).toEqual({
           client_id: 'https://mcp.example.com/oauth/client-metadata.json',
           client_name: 'test-mcp',
-          redirect_uris: ['http://127.0.0.1/callback'],
+          redirect_uris: ['https://mcp.example.com/oauth/callback'],
           grant_types: ['authorization_code'],
           response_types: ['code'],
           token_endpoint_auth_method: 'none',

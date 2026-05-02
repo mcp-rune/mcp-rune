@@ -4,6 +4,7 @@ import { URL } from 'node:url'
 import open from 'open'
 import * as client from 'openid-client'
 
+import { captureException, ErrorCategory } from '#src/services/error-tracking.js'
 import * as logger from '#src/services/logger.js'
 
 import * as tokenStore from './token-store.js'
@@ -51,6 +52,27 @@ function validateResourceUri(uri: string): void {
 
   if (parsed.search) {
     throw new Error(`RFC 8707: resourceUri SHOULD NOT include a query component. Got: ${uri}`)
+  }
+}
+
+/**
+ * Thrown when token audience does not match the configured resource URI (RFC 8707).
+ *
+ * This indicates a token issued for a different resource server is being presented
+ * to this MCP server — either a misconfiguration or a token misuse attempt.
+ */
+export class AudienceMismatchError extends Error {
+  readonly expectedAudience: string
+  readonly actualAudience: string | undefined
+
+  constructor(expected: string, actual: string | undefined) {
+    const detail = actual
+      ? `expected "${expected}", got "${actual}"`
+      : `expected "${expected}", but token has no aud claim`
+    super(`RFC 8707 audience mismatch: ${detail}`)
+    this.name = 'AudienceMismatchError'
+    this.expectedAudience = expected
+    this.actualAudience = actual
   }
 }
 
@@ -517,6 +539,39 @@ export class OAuthService {
         service: 'oauth2',
         active: result.active
       })
+
+      // RFC 8707: Validate audience if resourceUri is configured
+      if (result.active && this.resourceUri) {
+        const aud = (result as Record<string, unknown>).aud as string | string[] | undefined
+        const audList = Array.isArray(aud) ? aud : aud ? [aud] : []
+
+        if (!audList.includes(this.resourceUri)) {
+          const actualAud = Array.isArray(aud) ? aud.join(', ') : aud
+          const error = new AudienceMismatchError(this.resourceUri, actualAud)
+
+          logger.error(error.message, {
+            service: 'oauth2',
+            expectedAudience: this.resourceUri,
+            actualAudience: aud ?? 'absent',
+            sub: (result as Record<string, unknown>).sub
+          })
+
+          captureException(error, {
+            tags: { 'error.category': ErrorCategory.AUTH },
+            extra: {
+              expectedAudience: this.resourceUri,
+              actualAudience: aud ?? 'absent',
+              tokenSub: (result as Record<string, unknown>).sub
+            },
+            level: 'error'
+          })
+
+          // Cache as inactive so repeated requests don't re-trigger AS call + error tracking
+          const inactiveResult = { active: false } as client.IntrospectionResponse
+          this._cacheIntrospection(token, inactiveResult)
+          return inactiveResult
+        }
+      }
 
       // Cache the result
       this._cacheIntrospection(token, result)
