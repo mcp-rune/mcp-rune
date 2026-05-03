@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.30.0] — 2026-05-03
+
+### Added
+
+- **Topology-aware RFC 9728 endpoint registration** — `HttpServer` now auto-skips registering the two Protected Resource Metadata routes (`/.well-known/oauth-protected-resource` and the §3.1 `/mcp` form) whenever it's mounted under a non-empty `pathPrefix`. `.well-known` URIs are origin-scoped and cannot be served from inside a sub-path, so an upstream reverse proxy must own them. The `WWW-Authenticate` header continues to advertise the correct origin-rooted URL via `buildResourceMetadataUrl()`, so client discovery is unaffected.
+- **`serveProtectedResourceMetadata` config on `OAuthRouterConfig`** — Optional flag (default `true`) that gates PRM route registration in `createOAuthRouter()`. `HttpServer` derives the value from `pathPrefix === ''`; direct callers can override.
+- **"Path-Prefixed Deployments" guide section** in `docs/guides/oauth2-discovery-flow.md` explaining the operator's responsibility and showing a minimal nginx snippet to serve PRM at the origin root.
+- **README footnote** on the RFC 9728 row of the OAuth compliance table cross-referencing the new guide section.
+
+[0.30.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.29.0...v0.30.0
+
 ## [0.29.0] — 2026-05-03
 
 ### Added

@@ -395,7 +395,7 @@ Production-grade OAuth2 built on [openid-client](https://github.com/panva/openid
 ┌──────────────────────────────────────────────────────────────┬──────────────┐
 │                     RFC / Specification                      │    Status    │
 ├──────────────────────────────────────────────────────────────┼──────────────┤
-│ RFC 9728 — Protected Resource Metadata                       │              │
+│ RFC 9728 — Protected Resource Metadata*                      │              │
 │   • Origin-only form (/.well-known/oauth-protected-resource) │ Implemented  │
 │   • §3.1 path-inserted form                                  │ Implemented  │
 │   • WWW-Authenticate resource_metadata parameter             │ Implemented  │
@@ -431,6 +431,8 @@ Production-grade OAuth2 built on [openid-client](https://github.com/panva/openid
 │   • UserInfo endpoint (fallback to introspection)            │ Implemented  │
 └──────────────────────────────────────────────────────────────┴──────────────┘
 ```
+
+> \* In path-prefixed deployments (`HttpServer` constructed with a non-empty `pathPrefix`), the framework delegates the two PRM endpoint forms to the upstream reverse proxy — `.well-known` URIs are origin-scoped and cannot be served from inside a sub-path. The `WWW-Authenticate` header still advertises the correct origin-rooted URL. See [OAuth2 Discovery](docs/guides/oauth2-discovery-flow.md).
 
 ```typescript
 import { OAuthService } from 'mcp-kit/oauth2'

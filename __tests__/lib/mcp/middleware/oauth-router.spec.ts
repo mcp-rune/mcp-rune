@@ -248,6 +248,44 @@ describe('lib/mcp/middleware/oauth-router', () => {
           authorization_servers: ['https://mcp.example.com']
         })
       })
+
+      // When mounted under a path prefix, .well-known URIs cannot be served
+      // by the framework (they are origin-scoped per RFC 9728 §3.1) and the
+      // upstream reverse proxy owns them. Skipping registration avoids dead,
+      // wrong-location endpoints inside the prefix.
+      it('should not register PRM routes when serveProtectedResourceMetadata is false', () => {
+        const skipRouter = createOAuthRouter({
+          oauth: mockOauth,
+          baseUrl: 'https://example.com/my-mcp-server',
+          mcpName: 'test-mcp',
+          serveProtectedResourceMetadata: false
+        })
+
+        expect(() =>
+          findRouteHandler(skipRouter, 'get', '/.well-known/oauth-protected-resource')
+        ).toThrow(/Route not found/)
+        expect(() =>
+          findRouteHandler(skipRouter, 'get', '/.well-known/oauth-protected-resource/mcp')
+        ).toThrow(/Route not found/)
+      })
+
+      it('should still register other OAuth routes when serveProtectedResourceMetadata is false', () => {
+        const skipRouter = createOAuthRouter({
+          oauth: mockOauth,
+          baseUrl: 'https://example.com/my-mcp-server',
+          mcpName: 'test-mcp',
+          serveProtectedResourceMetadata: false
+        })
+
+        // These are not origin-scoped; the framework should keep serving them.
+        expect(
+          findRouteHandler(skipRouter, 'get', '/.well-known/oauth-authorization-server')
+        ).toBeDefined()
+        expect(
+          findRouteHandler(skipRouter, 'get', '/.well-known/openid-configuration')
+        ).toBeDefined()
+        expect(findRouteHandler(skipRouter, 'post', '/oauth/token')).toBeDefined()
+      })
     })
 
     describe('GET /.well-known/oauth-authorization-server', () => {
