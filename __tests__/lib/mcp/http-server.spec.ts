@@ -227,6 +227,7 @@ describe('lib/mcp/http-server', () => {
         headers: {
           authorization: 'Bearer valid-token'
         },
+        query: {},
         body: { jsonrpc: '2.0', method: 'tools/list', id: 1 },
         socket: { setTimeout: vi.fn() },
         requestId: 'test-request-id'
@@ -269,6 +270,32 @@ describe('lib/mcp/http-server', () => {
         expect(logger.info).toHaveBeenCalledWith(
           'Token introspection failed - token inactive',
           expect.objectContaining({ service: 'test-mcp' })
+        )
+      })
+
+      it('should reject bearer tokens in URI query parameters (OAuth 2.1 §5.1.2)', async () => {
+        mockReq.query = { access_token: 'leaked-token' }
+
+        await server._handleMcp(mockReq, mockRes)
+
+        expect(mockRes.status).toHaveBeenCalledWith(400)
+        expect(mockRes.json).toHaveBeenCalledWith({
+          error: 'invalid_request',
+          error_description:
+            'Bearer tokens in URI query parameters are not allowed (OAuth 2.1 §5.1.2)'
+        })
+        expect(mockOauth.introspectToken).not.toHaveBeenCalled()
+      })
+
+      it('should reject query param token even with valid Authorization header', async () => {
+        mockReq.query = { access_token: 'leaked-token' }
+        mockReq.headers.authorization = 'Bearer valid-token'
+
+        await server._handleMcp(mockReq, mockRes)
+
+        expect(mockRes.status).toHaveBeenCalledWith(400)
+        expect(mockRes.json).toHaveBeenCalledWith(
+          expect.objectContaining({ error: 'invalid_request' })
         )
       })
     })
@@ -460,6 +487,7 @@ describe('lib/mcp/http-server', () => {
       mockReq = {
         method: 'POST',
         headers: {},
+        query: {},
         body: { jsonrpc: '2.0', method: 'tools/list', id: 1 },
         socket: { setTimeout: vi.fn() },
         requestId: 'test-request-id'
@@ -521,6 +549,7 @@ describe('lib/mcp/http-server', () => {
       mockReq = {
         method: 'POST',
         headers: { authorization: 'Bearer valid-token' },
+        query: {},
         body: { jsonrpc: '2.0', method: 'initialize', id: 1 },
         socket: { setTimeout: vi.fn() },
         requestId: 'test-request-id'
@@ -620,6 +649,7 @@ describe('lib/mcp/http-server', () => {
       mockReq = {
         method: 'POST',
         headers: { authorization: 'Bearer valid-token' },
+        query: {},
         body: {},
         socket: { setTimeout: vi.fn() },
         requestId: 'test-request-id'

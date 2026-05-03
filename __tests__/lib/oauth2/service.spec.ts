@@ -334,6 +334,32 @@ describe('lib/oauth2/service', () => {
 
       expect(client.tokenRevocation).toHaveBeenCalledWith(mockConfig, 'token-to-revoke')
     })
+
+    it('clears introspection cache entry for the revoked token', async () => {
+      client.discovery.mockResolvedValue({})
+      client.tokenRevocation.mockResolvedValue(undefined)
+
+      // Populate cache with the token
+      oauth._cacheIntrospection('token-to-revoke', { active: true, sub: 'user-1' })
+      expect(oauth._introspectionCache.has('token-to-revoke')).toBe(true)
+
+      await oauth.revokeToken('token-to-revoke')
+
+      expect(oauth._introspectionCache.has('token-to-revoke')).toBe(false)
+    })
+
+    it('does not affect other cached tokens on revocation', async () => {
+      client.discovery.mockResolvedValue({})
+      client.tokenRevocation.mockResolvedValue(undefined)
+
+      oauth._cacheIntrospection('token-to-revoke', { active: true })
+      oauth._cacheIntrospection('other-token', { active: true })
+
+      await oauth.revokeToken('token-to-revoke')
+
+      expect(oauth._introspectionCache.has('token-to-revoke')).toBe(false)
+      expect(oauth._introspectionCache.has('other-token')).toBe(true)
+    })
   })
 
   describe('introspectToken', () => {

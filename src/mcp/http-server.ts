@@ -333,6 +333,16 @@ export class HttpServer {
     // Disable socket timeout for long-lived SSE connections
     req.socket.setTimeout(0)
 
+    // OAuth 2.1 §5.1.2: Bearer tokens in URI query parameters are prohibited
+    if (req.query.access_token) {
+      res.status(400).json({
+        error: 'invalid_request',
+        error_description:
+          'Bearer tokens in URI query parameters are not allowed (OAuth 2.1 §5.1.2)'
+      })
+      return
+    }
+
     // --- Authentication ---
     let requestAccessToken: string | null | undefined
 

@@ -393,6 +393,49 @@ describe('lib/mcp/middleware/oauth-router', () => {
           expect.objectContaining({ clientId: 'my-client' })
         )
       })
+
+      it('should reject response_type=token (OAuth 2.1 implicit grant removed)', () => {
+        const handler = findRouteHandler(router, 'get', '/oauth/authorize')
+        mockReq = {
+          query: { response_type: 'token', client_id: 'my-client' }
+        }
+
+        handler(mockReq, mockRes)
+
+        expect(mockRes.status).toHaveBeenCalledWith(400)
+        expect(mockRes.json).toHaveBeenCalledWith({
+          error: 'unsupported_response_type',
+          error_description: 'Only response_type=code is supported (OAuth 2.1)'
+        })
+        expect(mockRes.redirect).not.toHaveBeenCalled()
+      })
+
+      it('should reject hybrid response types (OAuth 2.1)', () => {
+        const handler = findRouteHandler(router, 'get', '/oauth/authorize')
+        mockReq = {
+          query: { response_type: 'code id_token', client_id: 'my-client' }
+        }
+
+        handler(mockReq, mockRes)
+
+        expect(mockRes.status).toHaveBeenCalledWith(400)
+        expect(mockRes.json).toHaveBeenCalledWith(
+          expect.objectContaining({ error: 'unsupported_response_type' })
+        )
+      })
+
+      it('should pass through when response_type is absent', () => {
+        const handler = findRouteHandler(router, 'get', '/oauth/authorize')
+        mockReq = {
+          query: { client_id: 'my-client', scope: 'read' }
+        }
+
+        handler(mockReq, mockRes)
+
+        expect(mockRes.redirect).toHaveBeenCalledWith(
+          expect.stringContaining('https://identity.example.com/oauth/authorize')
+        )
+      })
     })
 
     describe('POST /oauth/token', () => {

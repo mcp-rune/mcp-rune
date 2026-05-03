@@ -271,6 +271,16 @@ export function createOAuthRouter({
 
   /** OAuth2 Authorization Endpoint - Redirect to authorization server */
   router.get('/oauth/authorize', (req: Request, res: Response) => {
+    // OAuth 2.1 §4.1.1: Only response_type=code is permitted (implicit grant removed)
+    const responseType = req.query.response_type as string | undefined
+    if (responseType && responseType !== 'code') {
+      res.status(400).json({
+        error: 'unsupported_response_type',
+        error_description: 'Only response_type=code is supported (OAuth 2.1)'
+      })
+      return
+    }
+
     const targetUrl = new URL(`${oauth.authServerUrl}/oauth/authorize`)
 
     // Forward all query parameters to the authorization server
