@@ -505,6 +505,10 @@ export class OAuthService {
     const config = await this.getConfig()
     await client.tokenRevocation(config, token)
 
+    // Clear introspection cache so a revoked token is not accepted
+    // during the remaining cache TTL window
+    this._introspectionCache.delete(token)
+
     logger.info('Token revoked', { service: 'oauth2' })
   }
 

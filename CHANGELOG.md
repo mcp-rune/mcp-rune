@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.29.0] — 2026-05-03
+
+### Added
+
+- **OAuth 2.1 query parameter token rejection** — The `/mcp` endpoint now explicitly rejects bearer tokens sent via URI query parameters (`?access_token=`) with HTTP 400 `invalid_request`, per OAuth 2.1 §5.1.2. Prevents accidental token leakage via server logs, referrer headers, and browser history.
+- **OAuth 2.1 `response_type` validation on authorize proxy** — The `GET /oauth/authorize` proxy now rejects any `response_type` other than `code` with HTTP 400 `unsupported_response_type`, per OAuth 2.1 §4.1.1 which removes the implicit grant.
+- **OAuth 2.1 compliance contract test suite** — New `oauth21-compliance-contract.spec.ts` with 12 tests validating cross-cutting OAuth 2.1 invariants: PKCE S256 mandatory, no implicit grant, no ROPC grant, bearer token header-only, redirect URI exact matching.
+
+### Fixed
+
+- **Introspection cache invalidation on token revocation** — `revokeToken()` now clears the introspection cache entry for the revoked token, eliminating the 60-second window where a revoked token could still be accepted from cache.
+
+[0.29.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.28.0...v0.29.0
+
 ## [0.28.0] — 2026-05-02
 
 ### Added
