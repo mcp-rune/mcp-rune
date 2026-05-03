@@ -387,6 +387,35 @@ export const onboardNewUser = new WorkflowDefinition({
 })
 ```
 
+<details>
+<summary>JavaScript version</summary>
+
+```javascript
+import { WorkflowDefinition } from 'mcp-kit/domain'
+
+export const onboardNewUser = new WorkflowDefinition({
+  name: 'onboard_new_user',
+  description: 'Complete onboarding for a new team member',
+  steps: [
+    { name: 'create_user', tool: 'create_model', model: 'user' },
+    {
+      name: 'assign_role',
+      tool: 'update_model',
+      model: 'user',
+      description: 'Set the role based on department'
+    },
+    {
+      name: 'send_welcome',
+      tool: 'send_notification',
+      description: 'Trigger the welcome email sequence'
+    }
+  ],
+  tips: ['Always check existing users before creating duplicates']
+})
+```
+
+</details>
+
 ### OAuth 2.1 + PKCE
 
 Production-grade OAuth2 built on [openid-client](https://github.com/panva/openid-client):
@@ -452,6 +481,28 @@ await oauth.revokeToken(token)
 ```
 
 <details>
+<summary>JavaScript version</summary>
+
+```javascript
+import { OAuthService } from 'mcp-kit/oauth2'
+
+const oauth = new OAuthService({
+  authServerUrl: process.env.AUTH_SERVER_URL,
+  clientId: process.env.OAUTH_CLIENT_ID,
+  clientSecret: process.env.OAUTH_CLIENT_SECRET,
+  redirectUri: `${BASE_URL}/oauth/callback`,
+  resourceUri: `${BASE_URL}/mcp`, // RFC 8707: audience-restrict tokens to this server
+  scopes: 'read write'
+})
+
+await oauth.getValidAccessToken(sessionId) // auto-refreshes
+await oauth.introspectToken(token) // cached 60s
+await oauth.revokeToken(token)
+```
+
+</details>
+
+<details>
 <summary><b>Client Registration Strategies</b></summary>
 
 <br>
@@ -480,6 +531,22 @@ new HttpServer({
   }
 })
 ```
+
+<details>
+<summary>JavaScript version</summary>
+
+```javascript
+new HttpServer({
+  // ... other config ...
+  clientMetadata: {
+    redirectUris: ['http://127.0.0.1/callback'],
+    clientName: 'My MCP Server',
+    scope: 'read write'
+  }
+})
+```
+
+</details>
 
 When `clientMetadata` is omitted, the endpoint still serves defaults using the server name and `read` scope.
 
@@ -525,11 +592,33 @@ import { StdioServer } from 'mcp-kit/server'
 new StdioServer({ accessToken: process.env.ACCESS_TOKEN, mcp: mcpConfig }).start()
 ```
 
+<details>
+<summary>JavaScript version</summary>
+
+```javascript
+import { StdioServer } from 'mcp-kit/server'
+// Local development (spawned by Claude Desktop, Cursor, etc.)
+new StdioServer({ accessToken: process.env.ACCESS_TOKEN, mcp: mcpConfig }).start()
+```
+
+</details>
+
 ```typescript
 import { HttpServer } from 'mcp-kit/server'
 // Remote access (multi-user, OAuth-protected)
 new HttpServer({ port: 4100, oauth, mcp: mcpConfig }).start()
 ```
+
+<details>
+<summary>JavaScript version</summary>
+
+```javascript
+import { HttpServer } from 'mcp-kit/server'
+// Remote access (multi-user, OAuth-protected)
+new HttpServer({ port: 4100, oauth, mcp: mcpConfig }).start()
+```
+
+</details>
 
 ### Observability
 
@@ -612,6 +701,47 @@ client.release()
 await pool.end()
 ```
 
+<details>
+<summary>JavaScript version</summary>
+
+```javascript
+import pg from 'pg'
+import { migrations } from 'mcp-kit/db/migrations'
+
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
+const client = await pool.connect()
+
+// Track applied migrations
+await client.query(`
+  CREATE TABLE IF NOT EXISTS schema_migrations (
+    version TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )
+`)
+
+const { rows } = await client.query('SELECT version FROM schema_migrations')
+const applied = new Set(rows.map((r) => r.version))
+
+for (const migration of migrations) {
+  if (applied.has(migration.version)) continue
+
+  await client.query('BEGIN')
+  await client.query(migration.up)
+  await client.query('INSERT INTO schema_migrations (version, name) VALUES ($1, $2)', [
+    migration.version,
+    migration.name
+  ])
+  await client.query('COMMIT')
+  console.log(`Applied: ${migration.version}_${migration.name}`)
+}
+
+client.release()
+await pool.end()
+```
+
+</details>
+
 To apply only a subset (e.g., skip analysis tables when `ANALYSIS_ENABLED` is false):
 
 ```typescript
@@ -619,6 +749,17 @@ const needed = migrations.filter(
   (m) => m.feature === 'core' || process.env.ANALYSIS_ENABLED === 'true'
 )
 ```
+
+<details>
+<summary>JavaScript version</summary>
+
+```javascript
+const needed = migrations.filter(
+  (m) => m.feature === 'core' || process.env.ANALYSIS_ENABLED === 'true'
+)
+```
+
+</details>
 
 ### Environment Variables
 
