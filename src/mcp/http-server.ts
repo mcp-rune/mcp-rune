@@ -244,13 +244,20 @@ export class HttpServer {
   private _registerRoutes(): void {
     const prefix = this.pathPrefix
 
-    // OAuth routes (well-known endpoints, token, register, etc.) -- OAuth mode only
+    // OAuth routes (well-known endpoints, token, register, etc.) -- OAuth mode only.
+    //
+    // When mounted under a non-empty pathPrefix, the framework cannot serve the
+    // RFC 9728 Protected Resource Metadata endpoints itself: `.well-known` URIs
+    // are origin-scoped (RFC 9728 §3.1), so they must live at the origin root
+    // and be served by the upstream reverse proxy. The WWW-Authenticate header
+    // still advertises the correct origin-rooted URL.
     if (this.oauth) {
       const oauthRouter = createOAuthRouter({
         oauth: this.oauth,
         baseUrl: this.baseUrl,
         mcpName: this.mcp.name,
-        clientMetadata: this._clientMetadata
+        clientMetadata: this._clientMetadata,
+        serveProtectedResourceMetadata: this.pathPrefix === ''
       })
       this.app.use(prefix, oauthRouter)
     }

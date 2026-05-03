@@ -109,6 +109,33 @@ GET /.well-known/oauth-protected-resource/mcp   → 404
 
 …the server is advertising the §3.1 URL in `WWW-Authenticate` but not serving it. MCP Inspector hides the problem via its fallback, but strict clients break. The fix is exactly what this repo now does: register both forms with the same handler. See `lib/mcp/middleware/oauth-router.js` around the `protectedResourceHandler` definition and the `__tests__/lib/mcp/middleware/oauth-router.spec.js` spec that covers the §3.1 path.
 
+## Path-Prefixed Deployments (`/my-mcp-server/mcp` rather than `/mcp`)
+
+`.well-known` URIs are **origin-scoped** by RFC 8615 and re-affirmed by RFC 9728 §3.1: they live at the root of the host, with the resource path appended _after_ the well-known segment, never nested inside a sub-path. That means a server reverse-proxied under a non-root path **cannot** serve its own Protected Resource Metadata at the canonical URL — the framework's HTTP listener simply never sees requests for `/.well-known/...` once an upstream proxy is routing only `/my-mcp-server/*` to it.
+
+When `HttpServer` is constructed with a non-empty `pathPrefix`, the OAuth router auto-skips registering the PRM endpoints (`serveProtectedResourceMetadata: false`). The `WWW-Authenticate` header continues to advertise the correct origin-rooted URL via `buildResourceMetadataUrl()`, and the operator is responsible for serving that URL from the reverse proxy.
+
+Example for a deployment at `https://example.com/my-mcp-server/mcp`:
+
+| Element                                        | Value                                                                                                   |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Resource URL                                   | `https://example.com/my-mcp-server/mcp`                                                                 |
+| Canonical PRM URL (RFC 9728 §3.1)              | `https://example.com/.well-known/oauth-protected-resource/my-mcp-server/mcp`                            |
+| `WWW-Authenticate` (emitted by mcp-kit on 401) | `Bearer resource_metadata="https://example.com/.well-known/oauth-protected-resource/my-mcp-server/mcp"` |
+| Served by                                      | **Upstream reverse proxy**, _not_ mcp-kit                                                               |
+
+Minimal nginx snippet to serve the PRM JSON at the origin root:
+
+```nginx
+location = /.well-known/oauth-protected-resource/my-mcp-server/mcp {
+    default_type application/json;
+    add_header Access-Control-Allow-Origin *;
+    return 200 '{"resource":"https://example.com/my-mcp-server/mcp","authorization_servers":["https://example.com"]}';
+}
+```
+
+For the root-mount case (`pathPrefix` empty / unset), nothing changes: mcp-kit serves both PRM forms itself.
+
 ## Unauthorized Response Contract
 
 Every request to `/mcp` without a valid bearer token receives:

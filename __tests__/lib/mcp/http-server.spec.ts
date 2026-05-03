@@ -157,8 +157,41 @@ describe('lib/mcp/http-server', () => {
       expect(createOAuthRouter).toHaveBeenCalledWith({
         oauth: mockOauth,
         baseUrl: 'http://localhost:3000',
-        mcpName: 'test-mcp'
+        mcpName: 'test-mcp',
+        clientMetadata: undefined,
+        serveProtectedResourceMetadata: true
       })
+    })
+
+    // RFC 9728 §3.1: .well-known URIs are origin-scoped. When mounted under a
+    // sub-path, the upstream reverse proxy owns the PRM endpoints — instruct
+    // the OAuth router to skip registration so we don't leave dead endpoints
+    // at the wrong location inside the prefix.
+    it('should disable PRM endpoints when pathPrefix is set', () => {
+      createOAuthRouter.mockClear()
+      new HttpServer({
+        port: 3000,
+        baseUrl: 'https://example.com/my-mcp-server',
+        pathPrefix: '/my-mcp-server',
+        oauth: mockOauth,
+        mcp: mockMcp
+      })
+      expect(createOAuthRouter).toHaveBeenCalledWith(
+        expect.objectContaining({ serveProtectedResourceMetadata: false })
+      )
+    })
+
+    it('should enable PRM endpoints by default (no pathPrefix)', () => {
+      createOAuthRouter.mockClear()
+      new HttpServer({
+        port: 3000,
+        baseUrl: 'https://mcp.example.com',
+        oauth: mockOauth,
+        mcp: mockMcp
+      })
+      expect(createOAuthRouter).toHaveBeenCalledWith(
+        expect.objectContaining({ serveProtectedResourceMetadata: true })
+      )
     })
 
     it('should throw when neither oauth nor accessToken provided', () => {

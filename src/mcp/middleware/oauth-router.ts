@@ -104,6 +104,15 @@ interface OAuthRouterConfig {
   baseUrl: string
   mcpName: string
   clientMetadata?: ClientMetadataConfig
+  /**
+   * Whether this router should serve the RFC 9728 Protected Resource Metadata
+   * endpoints itself. Set to `false` when the framework is mounted under a
+   * non-root path prefix: `.well-known` URIs are origin-scoped, so they can
+   * only be served from the origin root by an upstream reverse proxy. The
+   * `WWW-Authenticate` header still points at the correct origin-rooted URL
+   * via `buildResourceMetadataUrl()` regardless of this flag.
+   */
+  serveProtectedResourceMetadata?: boolean
 }
 
 /** Create OAuth router with all OAuth-related routes */
@@ -111,7 +120,8 @@ export function createOAuthRouter({
   oauth,
   baseUrl,
   mcpName,
-  clientMetadata
+  clientMetadata,
+  serveProtectedResourceMetadata = true
 }: OAuthRouterConfig): Router {
   const router = Router()
 
@@ -131,18 +141,26 @@ export function createOAuthRouter({
    * We register BOTH forms with the same handler:
    *   1. `/.well-known/oauth-protected-resource`      - origin-only (legacy / MCP Inspector fallback)
    *   2. `/.well-known/oauth-protected-resource/mcp`  - RFC 9728 section 3.1 canonical
+   *
+   * When `serveProtectedResourceMetadata` is false (path-prefixed deploys),
+   * we skip registration entirely: the framework cannot serve these at the
+   * origin root from inside a sub-path, so the upstream reverse proxy owns
+   * them. See `docs/guides/oauth2-discovery-flow.md` for the deployment
+   * pattern.
    */
-  const protectedResourceHandler = (_req: Request, res: Response): void => {
-    logger.info('Protected resource metadata requested', {
-      service: mcpName
-    })
-    res.json({
-      resource: `${baseUrl}/mcp`,
-      authorization_servers: [origin]
-    })
+  if (serveProtectedResourceMetadata) {
+    const protectedResourceHandler = (_req: Request, res: Response): void => {
+      logger.info('Protected resource metadata requested', {
+        service: mcpName
+      })
+      res.json({
+        resource: `${baseUrl}/mcp`,
+        authorization_servers: [origin]
+      })
+    }
+    router.get('/.well-known/oauth-protected-resource', protectedResourceHandler)
+    router.get('/.well-known/oauth-protected-resource/mcp', protectedResourceHandler)
   }
-  router.get('/.well-known/oauth-protected-resource', protectedResourceHandler)
-  router.get('/.well-known/oauth-protected-resource/mcp', protectedResourceHandler)
 
   /**
    * Proxy for OAuth 2.0 Authorization Server Metadata
