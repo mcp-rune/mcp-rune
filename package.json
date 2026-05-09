@@ -1,6 +1,10 @@
 {
-  "name": "mcp-kit",
-  "version": "0.30.0",
+  "name": "@dsaenztagarro/mcp-kit",
+  "version": "0.30.1",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
+  },
   "description": "Batteries-included MCP framework. Define models, get CRUD tools, prompt strategies, interactive apps, OAuth, and docs — the Rails of MCP servers.",
   "type": "module",
   "main": "./dist/index.js",
