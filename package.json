@@ -1,6 +1,6 @@
 {
   "name": "@dsaenztagarro/mcp-kit",
-  "version": "0.30.2",
+  "version": "0.30.3",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "restricted"
