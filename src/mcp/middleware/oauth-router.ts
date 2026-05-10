@@ -113,6 +113,22 @@ interface OAuthRouterConfig {
    * via `buildResourceMetadataUrl()` regardless of this flag.
    */
   serveProtectedResourceMetadata?: boolean
+  /**
+   * Canonical resource URI used as:
+   *
+   *   - the PRM `resource` field value (RFC 9728 §2),
+   *   - the `resource` parameter the proxy injects on every `/oauth/authorize`
+   *     redirect and `/oauth/token` request body (RFC 8707 §2),
+   *   - the `aud` value the embedding server's `OAuthService.resourceUri`
+   *     validates against during introspection.
+   *
+   * Defaults to `${baseUrl}/mcp` because that is the MCP endpoint URL by
+   * convention. Override only if the MCP server is mounted at a non-standard
+   * path. Critically: the OAuthService's own `resourceUri` MUST be set to the
+   * same value, otherwise the proxy will inject a `resource` the server then
+   * refuses on audience check.
+   */
+  resourceUri?: string
 }
 
 /** Create OAuth router with all OAuth-related routes */
@@ -121,12 +137,17 @@ export function createOAuthRouter({
   baseUrl,
   mcpName,
   clientMetadata,
-  serveProtectedResourceMetadata = true
+  serveProtectedResourceMetadata = true,
+  resourceUri
 }: OAuthRouterConfig): Router {
   const router = Router()
 
   // Extract origin from baseUrl for authorization_servers
   const origin = new URL(baseUrl).origin
+
+  // Canonical resource URI used in PRM, RFC 8707 injection, and audience
+  // validation. Single source of truth — see OAuthRouterConfig.resourceUri.
+  const canonicalResourceUri = resourceUri ?? `${baseUrl}/mcp`
 
   /** Wrap async route handlers to catch errors and forward to error middleware */
   const asyncHandler =
@@ -168,7 +189,7 @@ export function createOAuthRouter({
         service: mcpName
       })
       res.json({
-        resource: `${baseUrl}/mcp`,
+        resource: canonicalResourceUri,
         authorization_servers: [origin],
         scopes_supported: scopesSupported
       })
@@ -321,9 +342,18 @@ export function createOAuthRouter({
       targetUrl.searchParams.set(key, value as string)
     })
 
+    // RFC 8707 §2: bind the resulting authorization grant — and the access
+    // token issued from it — to this resource server. The client hitting
+    // THIS proxy is by definition trying to access THIS resource, so we
+    // overwrite any client-supplied `resource` rather than appending.
+    // Without this, AS-issued tokens carry no `aud` claim and fail the
+    // audience check at introspection.
+    targetUrl.searchParams.set('resource', canonicalResourceUri)
+
     logger.info('Redirecting OAuth authorize to authorization server', {
       service: mcpName,
-      clientId: req.query.client_id
+      clientId: req.query.client_id,
+      resource: canonicalResourceUri
     })
 
     res.redirect(targetUrl.toString())
@@ -333,8 +363,16 @@ export function createOAuthRouter({
   router.post(
     '/oauth/token',
     asyncHandler(async (req: Request, res: Response) => {
+      // RFC 8707 §2.2: Set `resource` on every token request. For
+      // authorization_code grants the binding already lives on the auth
+      // code, so this is a no-op; for refresh_token grants it ensures the
+      // newly-issued access token is audience-bound to this resource (the
+      // refresh-token's resource set may be a superset of what we want
+      // here). Overwrite rather than append — same reasoning as /authorize.
+      const tokenBody = { ...(req.body as Record<string, unknown>), resource: canonicalResourceUri }
+
       try {
-        const response = await axios.post(`${oauth.authServerUrl}/oauth/token`, req.body, {
+        const response = await axios.post(`${oauth.authServerUrl}/oauth/token`, tokenBody, {
           headers: {
             'Content-Type': req.headers['content-type'] || 'application/x-www-form-urlencoded',
             ...(req.headers.authorization && {
@@ -353,7 +391,8 @@ export function createOAuthRouter({
 
         logger.info('OAuth token request proxied successfully', {
           service: mcpName,
-          grantType: (req.body as Record<string, unknown> | undefined)?.grant_type
+          grantType: (req.body as Record<string, unknown> | undefined)?.grant_type,
+          resource: canonicalResourceUri
         })
 
         res.json(response.data)

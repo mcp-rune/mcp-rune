@@ -457,6 +457,56 @@ describe('lib/mcp/middleware/oauth-router', () => {
         )
       })
 
+      // RFC 8707 §2: the proxy injects the canonical resource URI so AS-issued
+      // tokens are audience-bound to this resource. Without this, tokens carry
+      // no `aud` and fail the audience check at introspection.
+      it('should inject RFC 8707 resource parameter pointing at the resource URI', () => {
+        const handler = findRouteHandler(router, 'get', '/oauth/authorize')
+        mockReq = {
+          query: { client_id: 'my-client', response_type: 'code' }
+        }
+
+        handler(mockReq, mockRes)
+
+        const redirectedTo = mockRes.redirect.mock.calls[0][0] as string
+        const params = new URL(redirectedTo).searchParams
+        expect(params.get('resource')).toBe('https://mcp.example.com/mcp')
+      })
+
+      it('should overwrite a client-supplied resource with the canonical one', () => {
+        const handler = findRouteHandler(router, 'get', '/oauth/authorize')
+        mockReq = {
+          query: {
+            client_id: 'my-client',
+            response_type: 'code',
+            resource: 'https://attacker.example.com/api'
+          }
+        }
+
+        handler(mockReq, mockRes)
+
+        const redirectedTo = mockRes.redirect.mock.calls[0][0] as string
+        const params = new URL(redirectedTo).searchParams
+        expect(params.get('resource')).toBe('https://mcp.example.com/mcp')
+      })
+
+      it('should honour an explicit resourceUri override', () => {
+        const customRouter = createOAuthRouter({
+          oauth: mockOauth,
+          baseUrl: 'https://mcp.example.com',
+          mcpName: 'test-mcp',
+          resourceUri: 'https://mcp.example.com/api/v2/mcp'
+        })
+        const handler = findRouteHandler(customRouter, 'get', '/oauth/authorize')
+
+        handler({ query: { client_id: 'c', response_type: 'code' } }, mockRes)
+
+        const redirectedTo = mockRes.redirect.mock.calls[0][0] as string
+        expect(new URL(redirectedTo).searchParams.get('resource')).toBe(
+          'https://mcp.example.com/api/v2/mcp'
+        )
+      })
+
       it('should reject response_type=token (OAuth 2.1 implicit grant removed)', () => {
         const handler = findRouteHandler(router, 'get', '/oauth/authorize')
         mockReq = {
@@ -526,7 +576,11 @@ describe('lib/mcp/middleware/oauth-router', () => {
 
         expect(mockAxios.post).toHaveBeenCalledWith(
           'https://identity.example.com/oauth/token',
-          mockReq.body,
+          expect.objectContaining({
+            grant_type: 'authorization_code',
+            code: 'auth-code',
+            resource: 'https://mcp.example.com/mcp'
+          }),
           expect.objectContaining({
             headers: expect.objectContaining({
               'Content-Type': 'application/x-www-form-urlencoded'
@@ -539,6 +593,52 @@ describe('lib/mcp/middleware/oauth-router', () => {
           token_type: 'Bearer',
           expires_in: 3600
         })
+      })
+
+      // RFC 8707 §2.2: belt-and-braces alongside the /authorize injection so
+      // refresh_token grants (which never hit /authorize) also produce
+      // audience-bound access tokens.
+      it('should inject RFC 8707 resource on refresh_token grants', async () => {
+        mockAxios.post.mockResolvedValue({ data: { access_token: 'token' } })
+
+        const handler = findRouteHandler(router, 'post', '/oauth/token')
+        mockReq = {
+          body: { grant_type: 'refresh_token', refresh_token: 'rt-1' },
+          headers: { 'content-type': 'application/x-www-form-urlencoded' }
+        }
+
+        await handler(mockReq, mockRes, mockNext)
+
+        expect(mockAxios.post).toHaveBeenCalledWith(
+          'https://identity.example.com/oauth/token',
+          expect.objectContaining({
+            grant_type: 'refresh_token',
+            resource: 'https://mcp.example.com/mcp'
+          }),
+          expect.anything()
+        )
+      })
+
+      it('should overwrite a client-supplied resource with the canonical one', async () => {
+        mockAxios.post.mockResolvedValue({ data: { access_token: 'token' } })
+
+        const handler = findRouteHandler(router, 'post', '/oauth/token')
+        mockReq = {
+          body: {
+            grant_type: 'authorization_code',
+            code: 'c',
+            resource: 'https://attacker.example.com/api'
+          },
+          headers: {}
+        }
+
+        await handler(mockReq, mockRes, mockNext)
+
+        expect(mockAxios.post).toHaveBeenCalledWith(
+          'https://identity.example.com/oauth/token',
+          expect.objectContaining({ resource: 'https://mcp.example.com/mcp' }),
+          expect.anything()
+        )
       })
 
       it('should forward authorization header if present', async () => {
@@ -557,7 +657,10 @@ describe('lib/mcp/middleware/oauth-router', () => {
 
         expect(mockAxios.post).toHaveBeenCalledWith(
           'https://identity.example.com/oauth/token',
-          mockReq.body,
+          expect.objectContaining({
+            grant_type: 'client_credentials',
+            resource: 'https://mcp.example.com/mcp'
+          }),
           expect.objectContaining({
             headers: expect.objectContaining({
               Authorization: 'Basic Y2xpZW50OnNlY3JldA=='
