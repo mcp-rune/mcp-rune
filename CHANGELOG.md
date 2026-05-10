@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.32.0] — 2026-05-11
+
+### Added
+
+- **RFC 8707 resource indicator injection in the OAuth proxy.** `createOAuthRouter()` now ensures every authorization and token exchange routed through the MCP server is bound to this resource via the RFC 8707 `resource` parameter. The `/oauth/authorize` redirect URL and `/oauth/token` request body always carry `resource=<canonical>` — overwriting any client-supplied value, because a client hitting _this proxy_ is by definition trying to access _this resource_; this defends against token-substitution while still working for clients that do not implement RFC 8707 themselves (e.g. Claude Desktop today). Tokens issued through this flow are now audience-bound, so the introspection-side audience check (in `OAuthService`) sees a matching `aud` claim instead of `aud: absent`.
+
+- **`resourceUri` option on `OAuthRouterConfig`.** Single source of truth for the canonical resource URI used in (a) the RFC 9728 PRM `resource` field, (b) the injected `resource` parameter on `/authorize` and `/token`, and (c) the audience check at introspection. Defaults to `${baseUrl}/mcp` (the conventional MCP endpoint path); embedding servers override only for non-standard paths. **Important:** the embedding server's `OAuthService.resourceUri` MUST match this value, otherwise the proxy injects a `resource` the audience check then rejects.
+
+### Why this matters
+
+Identity introspection of Claude Desktop tokens against engineer-mcp was returning `{active: true}` with no `aud` claim, and engineer-mcp's `OAuthService` was downgrading the result to inactive via the RFC 8707 audience check. The tokens had no audience because Claude does not echo the PRM `resource` field on its authorize/token calls. Rather than wait for client-side conformance, the proxy now stamps `resource` server-side so any MCP client gets audience-bound tokens regardless of its RFC 8707 implementation status.
+
+[0.32.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.31.0...v0.32.0
+
 ## [0.31.0] — 2026-05-11
 
 ### Added
