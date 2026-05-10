@@ -1,3 +1,24 @@
+# Publishes @dsaenztagarro/mcp-kit to GitHub Packages on every `v*` tag.
+#
+# How to release a new version:
+#   npm version patch              # bumps package.json + creates tag
+#   git push --follow-tags         # this workflow runs on the tag
+#
+# Auth:
+#   `permissions.packages: write` grants the auto-provisioned GITHUB_TOKEN
+#   the right to publish to npm.pkg.github.com under this repo's scope.
+#   No PAT needed — this is the GH Actions built-in identity.
+#
+# `setup-node` writes the right ~/.npmrc lines so `npm publish` targets the
+# scoped registry. `NODE_AUTH_TOKEN` is the conventional env var that npm
+# reads for the registry's `_authToken` slot.
+#
+# Consumer-side setup (PAT + .npmrc + mise sops): mcp-servers repo,
+# docs/guides/github-packages-setup.md.
+#
+# GitHub Packages npm reference:
+#   https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry
+
 name: Publish to GitHub Packages
 
 on:
@@ -19,6 +40,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
+          # registry-url + scope tell setup-node to write a project .npmrc
+          # that maps the @dsaenztagarro scope to GitHub Packages and reads
+          # the token from $NODE_AUTH_TOKEN at publish time.
           registry-url: https://npm.pkg.github.com
           scope: '@dsaenztagarro'
           cache: npm
@@ -27,9 +51,14 @@ jobs:
         run: npm ci
 
       - name: Build
+        # Builds dist/ (tsc) AND dist/mcp/apps/dist/*.html (Vite single-file
+        # bundles for generic apps that ship with the package).
         run: npm run build:full
 
       - name: Publish
         run: npm publish
         env:
+          # GITHUB_TOKEN is auto-provisioned by Actions. With permissions:
+          # packages: write, it has push rights to npm.pkg.github.com for
+          # this repo's scope.
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
