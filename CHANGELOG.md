@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.31.0] — 2026-05-11
+
+### Added
+
+- **`scopes_supported` in Protected Resource Metadata (RFC 9728 §2)** — `createOAuthRouter()`'s PRM handler now emits the resource-scoped scope catalog, derived from the server-supplied `oauth.scopes` and split on whitespace. The field had been missing, forcing well-behaved clients to fall back to the AS-wide `scopes_supported` (RFC 8414), which legitimately may include scopes that don't apply to a given resource (e.g. `trusted`, `admin`, OIDC scopes for other clients). That fallback was the root cause of spurious `invalid_scope` errors against MCP resources whose accepted scope set was narrower than the AS's catalog. The AS-metadata proxy and `openid-configuration` handler are intentionally left untouched — AS metadata is the AS's own catalog; rewriting it would mask client misbehavior instead of fixing the actual RFC 9728 gap here.
+
+[0.31.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.30.3...v0.31.0
+
 ## [0.30.0] — 2026-05-03
 
 ### Added
