@@ -149,13 +149,28 @@ export function createOAuthRouter({
    * pattern.
    */
   if (serveProtectedResourceMetadata) {
+    // RFC 9728 §2: `scopes_supported` is the list of scope values used in
+    // authorization requests to access THIS resource. It is the
+    // resource-scoped counterpart of RFC 8414's AS-wide
+    // `scopes_supported`. Clients SHOULD consult PRM when authorizing
+    // against a specific resource and request only the scopes listed
+    // here — otherwise they fall back to the AS-wide catalog, which may
+    // legitimately include scopes that don't apply to this resource
+    // (e.g. an AS that supports `trusted`, `admin`, or OIDC scopes for
+    // other clients/resources). Leaving the field absent here forces
+    // that fallback and produces spurious `invalid_scope` errors. We
+    // derive the list from the server-supplied `oauth.scopes`, which is
+    // the authoritative source for what scopes this resource accepts.
+    const scopesSupported = oauth.scopes.split(/\s+/).filter(Boolean)
+
     const protectedResourceHandler = (_req: Request, res: Response): void => {
       logger.info('Protected resource metadata requested', {
         service: mcpName
       })
       res.json({
         resource: `${baseUrl}/mcp`,
-        authorization_servers: [origin]
+        authorization_servers: [origin],
+        scopes_supported: scopesSupported
       })
     }
     router.get('/.well-known/oauth-protected-resource', protectedResourceHandler)

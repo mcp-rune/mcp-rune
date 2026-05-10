@@ -229,7 +229,8 @@ describe('lib/mcp/middleware/oauth-router', () => {
 
         expect(mockRes.json).toHaveBeenCalledWith({
           resource: 'https://mcp.example.com/mcp',
-          authorization_servers: ['https://mcp.example.com']
+          authorization_servers: ['https://mcp.example.com'],
+          scopes_supported: ['read']
         })
       })
 
@@ -245,8 +246,32 @@ describe('lib/mcp/middleware/oauth-router', () => {
 
         expect(mockRes.json).toHaveBeenCalledWith({
           resource: 'https://mcp.example.com/mcp',
-          authorization_servers: ['https://mcp.example.com']
+          authorization_servers: ['https://mcp.example.com'],
+          scopes_supported: ['read']
         })
+      })
+
+      // RFC 9728 §2: scopes_supported is the resource-scoped scope catalog.
+      // Without it, clients fall back to the AS-wide scopes_supported and may
+      // request scopes this resource doesn't accept — the original cause of
+      // the `invalid_scope` reports against engineer-mcp.
+      it('should expose oauth.scopes as scopes_supported, splitting on whitespace', () => {
+        const multiScopeRouter = createOAuthRouter({
+          oauth: { ...mockOauth, scopes: 'read write' },
+          baseUrl: 'https://mcp.example.com',
+          mcpName: 'test-mcp'
+        })
+        const handler = findRouteHandler(
+          multiScopeRouter,
+          'get',
+          '/.well-known/oauth-protected-resource'
+        )
+
+        handler({}, mockRes)
+
+        expect(mockRes.json).toHaveBeenCalledWith(
+          expect.objectContaining({ scopes_supported: ['read', 'write'] })
+        )
       })
 
       // When mounted under a path prefix, .well-known URIs cannot be served
