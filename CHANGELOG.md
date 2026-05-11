@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.32.1] — 2026-05-11
+
+### Fixed
+
+- **Idempotent ingestion for `analysis_ingest`** — `storeRecords` now uses `INSERT ... ON CONFLICT DO UPDATE` against a new partial unique index on `(analysis_id, model, record_id)`. Re-ingesting the same records overwrites instead of duplicating rows, preventing inflated counts in downstream `analysis_query` aggregations and incorrect scheduling duplication in workflows.
+
+- **Deduplicated parent ID resolution** — `getRecordIds` now returns `SELECT DISTINCT record_id`, preventing duplicate parent fetches during nested resource ingestion when historical rows exist from prior retries.
+
+### Added
+
+- **Migration `005`** — `add_ingested_records_unique_index`: partial unique index on `ingested_records(analysis_id, model, record_id) WHERE record_id IS NOT NULL`.
+
+[0.32.1]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.32.0...v0.32.1
+
 ## [0.32.0] — 2026-05-11
 
 ### Added
