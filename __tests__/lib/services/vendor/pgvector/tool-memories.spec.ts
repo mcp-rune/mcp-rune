@@ -59,7 +59,7 @@ describe('lib/services/vendor/pgvector/tool-memories', () => {
       const pool = createMockPool([{ id: 'uuid-456' }])
 
       await storeOperation(pool, testEmbedding, {
-        toolName: 'find_model',
+        toolName: 'find_records',
         summary: 'Found a book'
       })
 
@@ -75,7 +75,7 @@ describe('lib/services/vendor/pgvector/tool-memories', () => {
     it('returns rows above similarity threshold', async () => {
       const pool = createMockPool([
         { id: '1', tool_name: 'create_model', similarity: 0.9, summary: 'High match' },
-        { id: '2', tool_name: 'find_model', similarity: 0.3, summary: 'Low match' }
+        { id: '2', tool_name: 'find_records', similarity: 0.3, summary: 'Low match' }
       ])
 
       const results = await findSimilar(pool, testEmbedding)
@@ -254,7 +254,7 @@ describe('lib/services/vendor/pgvector/tool-memories', () => {
         },
         {
           id: '3',
-          tool_name: 'find_model',
+          tool_name: 'find_records',
           tool_args: {},
           summary: 'Op 3',
           created_at: new Date(),

@@ -63,7 +63,7 @@ new WorkflowDefinition({
   order,           // number — step number (1-based, sequential)
   title,           // string — short step title
   description,     // string — what this step does (LLM reads this)
-  tool,            // string — MCP tool name to call (e.g., 'find_model', 'search_records')
+  tool,            // string — MCP tool name to call (e.g., 'find_records', 'search_records')
   toolArgs,        // object — example arguments (shown as JSON in rendered output)
   decision,        // object — decision point: { question, options: [{label, description}] }
   tips,            // string[] — guidance for the LLM
@@ -89,7 +89,7 @@ The most common type. Tell the LLM which tool to call and provide example argume
   title: 'Find or create the theme',
   description:
     'Search for the top-level learning topic this session belongs to. If the theme does not exist yet, create it.',
-  tool: 'find_model',
+  tool: 'find_records',
   toolArgs: {
     model: 'theme',
     search: { name: '<topic_name>' }
@@ -125,7 +125,7 @@ Present the user with choices that affect workflow direction:
     ]
   },
   tips: [
-    'Use find_model to search for existing books or repositories',
+    'Use find_records to search for existing books or repositories',
     'You can always add links later by updating the activity'
   ]
 }
@@ -243,11 +243,11 @@ The prompt-chaining approach (`suggest_workflow` → `get_workflow_step`) scopes
 
 Data tools and view tools occupy overlapping semantic space:
 
-| Data tool        | View tool             | Shared semantics              |
-| ---------------- | --------------------- | ----------------------------- |
-| `list_models`    | `list_records_view`   | "list", "show", "browse"      |
-| `search_records` | `search_records_view` | "search", "find", "filter"    |
-| `find_model`     | `view_records`        | "view", "see", "show details" |
+| Data tool        | View tool            | Shared semantics              |
+| ---------------- | -------------------- | ----------------------------- |
+| `list_models`    | `list_records_app`   | "list", "show", "browse"      |
+| `search_records` | `search_records_app` | "search", "find", "filter"    |
+| `find_records`   | `find_records_app`   | "view", "see", "show details" |
 
 The LLM treats `_view` tools as strictly better (same data + visual UI), so it will substitute them unless the workflow step explicitly steers it away.
 
@@ -255,11 +255,11 @@ The LLM treats `_view` tools as strictly better (same data + visual UI), so it w
 
 **1. Use data tools in workflow steps, not `_view` tools.**
 
-Data tools (`list_models`, `search_records`, `find_model`) return raw JSON for programmatic use. View tools (`list_records_view`, `search_records_view`, `view_records`) render interactive MCP Apps. Workflows need data, not UI.
+Data tools (`list_models`, `search_records`, `find_records`) return raw JSON for programmatic use. View tools (`list_records_app`, `search_records_app`, `find_records_app`) render interactive MCP Apps. Workflows need data, not UI.
 
 ```javascript
 // WRONG — opens an interactive table when you just need the data
-tool: 'list_records_view'
+tool: 'list_records_app'
 
 // CORRECT — returns raw JSON for the LLM to process
 tool: 'list_models'
@@ -270,7 +270,7 @@ tool: 'list_models'
 The LLM matches step descriptions against tool descriptions. Words like "browse", "visually review", "display" match `_view` tools. Words like "fetch", "retrieve", "get data" match data tools.
 
 ```javascript
-// WRONG — "browse" semantically matches search_records_view
+// WRONG — "browse" semantically matches search_records_app
 description: 'Browse all activities to identify misclassified ones.'
 
 // CORRECT — "retrieve" semantically matches search_records
@@ -342,7 +342,7 @@ Tips are **LLM guidance** — they help the model make better decisions during e
 
 ### Do
 
-- **Reference specific tools:** `'Use find_model to search existing tags before creating new ones'`
+- **Reference specific tools:** `'Use find_records to search existing tags before creating new ones'`
 - **Reference data from previous steps:** `'Use the theme_id from step 1'`
 - **Warn about common mistakes:** `'If more than 25 activities, split into multiple bulk calls'`
 - **Suggest fallback actions:** `'If no matching theme exists, use create_model to create one'`
@@ -508,7 +508,7 @@ export function createEngineerDomainRegistry() {
 - [ ] `models` lists all models the workflow touches
 - [ ] Steps have sequential `order` values starting from 1
 - [ ] Each step has a clear `title` (short) and `description` (what the LLM should do)
-- [ ] Data-fetching steps use data tools (`list_models`, `search_records`, `find_model`), not `_view` tools
+- [ ] Data-fetching steps use data tools (`list_models`, `search_records`, `find_records`), not `_view` tools
 - [ ] Step descriptions use data-tool vocabulary ("fetch", "retrieve") — not "browse", "display", "view"
 - [ ] Data-fetching steps that need ALL records use `exhaustive: true`
 - [ ] Steps that loop per page use `loopGroup` with a shared group ID (adjacent steps only)

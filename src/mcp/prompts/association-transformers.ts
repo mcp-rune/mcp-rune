@@ -191,11 +191,11 @@ get_selection(model: "<selected_model>")
 `
   }
 
-  // Common find_model instructions
+  // Common find_records instructions
   text += `
-Use \`find_model\` to search:
+Use \`find_records\` to search:
 \`\`\`
-find_model(model: "<model_name>", external_id: "<user_provided_id>")
+find_records(model: "<model_name>", external_id: "<user_provided_id>")
 \`\`\``
 
   // After finding content
@@ -227,7 +227,7 @@ function _generateSelectInstructions(transformer: TransformerEntry, appsEnabled:
 
 In guided mode, search for the ${model}:
 \`\`\`
-find_model(model: "${model}", search_params: { name: "<${model}_name>" })
+find_records(model: "${model}", search_params: { name: "<${model}_name>" })
 \`\`\`
 
 Or use autocomplete suggestions:
@@ -241,7 +241,7 @@ After finding, set \`${targetField}\` to the ${model}'s \`${valueField}\`.`
   return `### Finding a ${_titleCase(model!)}
 
 \`\`\`
-find_model(model: "${model}", search_params: { name: "<${model}_name>" })
+find_records(model: "${model}", search_params: { name: "<${model}_name>" })
 \`\`\`
 
 Or use autocomplete suggestions:
@@ -269,7 +269,7 @@ multi_select_picker(model: "${model}")
   } else {
     text += `Search for each ${model} individually:
 \`\`\`
-find_model(model: "${model}", search_params: { name: "<${model}_name>" })
+find_records(model: "${model}", search_params: { name: "<${model}_name>" })
 \`\`\`
 
 Collect the results into the \`${transformer.targetField}\` array.`

@@ -26,7 +26,7 @@ mcp-kit/src/mcp/tools/
 ├── categories.ts             # Tool category definitions
 └── data/                     # Generic CRUD tools (reusable across servers)
     ├── list-models-tool.ts
-    ├── find-model-tool.ts
+    ├── find-records-tool.ts
     ├── create-model-tool.ts
     ├── update-model-tool.ts
     └── delete-model-tool.ts
@@ -53,7 +53,7 @@ The following CRUD tools are provided in `lib/mcp/tools/crud/` and shared across
 | Tool           | Description                                                                                                                                          |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `list_models`  | Lists available models with attributes and associations                                                                                              |
-| `find_model`   | Finds records by ID or search criteria with pagination. Supports compound IDs for nested resources and `parent_path` for listing nested collections. |
+| `find_records` | Finds records by ID or search criteria with pagination. Supports compound IDs for nested resources and `parent_path` for listing nested collections. |
 | `create_model` | Creates records with model-key payload wrapping. Supports `parent_path` for nested model creation.                                                   |
 | `update_model` | Updates records with model-key payload wrapping. Supports compound IDs.                                                                              |
 | `delete_model` | Deletes records by ID. Supports compound IDs.                                                                                                        |
@@ -159,7 +159,7 @@ static associations = {
 }
 ```
 
-The `list_models` tool exposes these associations in its output. Nested resources are accessed via `find_model` with compound IDs (e.g., `titles/42/assets/7`) or the `parent_path` parameter for listing nested collections.
+The `list_models` tool exposes these associations in its output. Nested resources are accessed via `find_records` with compound IDs (e.g., `titles/42/assets/7`) or the `parent_path` parameter for listing nested collections.
 
 ## Generic Validators
 
@@ -387,9 +387,9 @@ export class MyGenericTool extends BaseTool {
 
 ### Naming Conventions
 
-- Tool names: `snake_case` (e.g., `find_model`, `create_model`)
-- Tool classes: `PascalCase` + `Tool` suffix (e.g., `FindModelTool`)
-- File names: `kebab-case` + `-tool.js` (e.g., `find-model-tool.js`)
+- Tool names: `snake_case` (e.g., `find_records`, `create_model`)
+- Tool classes: `PascalCase` + `Tool` suffix (e.g., `FindRecordsTool`)
+- File names: `kebab-case` + `-tool.js` (e.g., `find-records-tool.js`)
 
 ### Descriptions
 
@@ -445,11 +445,11 @@ This is fire-and-forget — it never blocks the tool response. The `sessionId` i
 
 Tools can be organized into tiers for progressive disclosure:
 
-| Tier       | Description                          | Examples                      |
-| ---------- | ------------------------------------ | ----------------------------- |
-| `core`     | Essential tools always visible       | `find_model`, `create_model`  |
-| `standard` | Common tools, visible by default     | `list_models`, `update_model` |
-| `advanced` | Specialized tools, hidden by default | `delete_model`                |
+| Tier       | Description                          | Examples                       |
+| ---------- | ------------------------------------ | ------------------------------ |
+| `core`     | Essential tools always visible       | `find_records`, `create_model` |
+| `standard` | Common tools, visible by default     | `list_models`, `update_model`  |
+| `advanced` | Specialized tools, hidden by default | `delete_model`                 |
 
 ## Checklist for New Tools
 

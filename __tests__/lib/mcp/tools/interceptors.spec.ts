@@ -35,11 +35,11 @@ describe('lib/mcp/tools/interceptors', () => {
   describe('loggingInterceptor', () => {
     it('should log tool call in before hook', () => {
       const interceptor = loggingInterceptor()
-      const ctx = makeCtx({ toolName: 'find_model' })
+      const ctx = makeCtx({ toolName: 'find_records' })
 
       interceptor.before!(ctx)
 
-      expect(logger.info).toHaveBeenCalledWith('Tool called', { tool: 'find_model' })
+      expect(logger.info).toHaveBeenCalledWith('Tool called', { tool: 'find_records' })
     })
 
     it('should include logContext in log entries', () => {

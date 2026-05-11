@@ -47,13 +47,18 @@ describe('lib/services/tracing', () => {
     it('delegates to vendor and returns handler result', async () => {
       const handler = vi.fn().mockResolvedValue('tool-result')
 
-      const result = await traceToolCall('find_model', { model: 'book' }, handler, {
+      const result = await traceToolCall('find_records', { model: 'book' }, handler, {
         sessionId: 's1'
       })
 
-      expect(vendor.traceToolCall).toHaveBeenCalledWith('find_model', { model: 'book' }, handler, {
-        sessionId: 's1'
-      })
+      expect(vendor.traceToolCall).toHaveBeenCalledWith(
+        'find_records',
+        { model: 'book' },
+        handler,
+        {
+          sessionId: 's1'
+        }
+      )
       expect(result).toBe('tool-result')
     })
   })

@@ -821,7 +821,7 @@ LLM Conversation Flow:
        category: "duplicate"
      )
 
-3. LLM calls search_records_view to paginate → page 2
+3. LLM calls search_records_app to paginate → page 2
    (Repeats step 2 for each page)
 
 4. After all 10 pages processed:

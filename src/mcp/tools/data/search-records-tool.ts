@@ -24,7 +24,12 @@ export class SearchRecordsTool extends BaseTool {
 
   override get baseDescription(): string {
     const scope = this.serverContext.name ? ` in the ${this.serverContext.name} API` : ''
-    return `Search records${scope} using filters. Returns raw JSON results. Call get_filters_guide first to learn available filters.`
+    return `Use this when you need raw JSON for records${scope} matching text/filter criteria to process programmatically. Returns paginated results.
+
+For an interactive MCP App where the user can browse, filter, and select records visually, use search_records_app instead.
+For large-scale analysis across many pages, use analysis_ingest.
+
+Call get_filters_guide first to learn available filters for the target model.`
   }
 
   override get annotations(): ToolAnnotations {

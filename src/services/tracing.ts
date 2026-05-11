@@ -14,7 +14,7 @@
  * initTracing({ serviceName: 'my-mcp-server' })
  *
  * // Trace tool calls
- * const result = await traceToolCall('find_model', args, () => handler(args))
+ * const result = await traceToolCall('find_records', args, () => handler(args))
  */
 
 // Vendor implementation - change this import to switch vendors

@@ -242,7 +242,7 @@ async function fetchPage(page) {
     if (currentQuery) args.query = currentQuery
     if (Object.keys(activeFilters).length > 0) args.filters = activeFilters
     const result = await app.callServerTool({
-      name: 'search_records_view',
+      name: 'search_records_app',
       arguments: args
     })
 
@@ -287,7 +287,7 @@ async function openEditForm(recordId) {
   } catch {
     try {
       await app.callServerTool({
-        name: 'find_model',
+        name: 'find_records',
         arguments: { model: modelName, record_id: String(recordId) }
       })
     } catch (err) {

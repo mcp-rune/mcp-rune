@@ -182,7 +182,7 @@ export function validateFilterParams(
       valid: false,
       error: `Model '${model}' does not support search filters.`,
       availableFilters: [],
-      suggestion: `This model does not have filter support configured. Use find_model to retrieve records by ID.`
+      suggestion: `This model does not have filter support configured. Use find_records to retrieve records by ID.`
     }
   }
 

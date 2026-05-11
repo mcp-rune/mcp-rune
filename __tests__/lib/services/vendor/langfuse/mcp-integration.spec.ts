@@ -112,10 +112,10 @@ describe('lib/services/vendor/langfuse/mcp-integration', () => {
     it('should call startActiveObservation with asType tool', async () => {
       const handler = vi.fn(() => ({ content: [{ type: 'text', text: 'ok' }] }))
 
-      await traceToolCall('find_model', { model: 'book' }, handler)
+      await traceToolCall('find_records', { model: 'book' }, handler)
 
       expect(startActiveObservation).toHaveBeenCalledWith(
-        'mcp.tool.find_model',
+        'mcp.tool.find_records',
         expect.any(Function),
         { asType: 'tool' }
       )
@@ -143,7 +143,7 @@ describe('lib/services/vendor/langfuse/mcp-integration', () => {
     it('should return handler result', async () => {
       const handler = vi.fn(() => ({ content: [{ type: 'text', text: 'data' }] }))
 
-      const result = await traceToolCall('find_model', {}, handler)
+      const result = await traceToolCall('find_records', {}, handler)
 
       expect(result).toEqual({ content: [{ type: 'text', text: 'data' }] })
     })
@@ -154,17 +154,17 @@ describe('lib/services/vendor/langfuse/mcp-integration', () => {
         throw error
       })
 
-      await expect(traceToolCall('find_model', {}, handler)).rejects.toThrow('Tool failed')
+      await expect(traceToolCall('find_records', {}, handler)).rejects.toThrow('Tool failed')
     })
 
     it('should pass parentSpanContext when traceContext provided', async () => {
       const handler = vi.fn(() => 'result')
       const traceContext = { traceId: 'a'.repeat(32), spanId: 'b'.repeat(16), traceFlags: 1 }
 
-      await traceToolCall('find_model', {}, handler, { traceContext })
+      await traceToolCall('find_records', {}, handler, { traceContext })
 
       expect(startActiveObservation).toHaveBeenCalledWith(
-        'mcp.tool.find_model',
+        'mcp.tool.find_records',
         expect.any(Function),
         { asType: 'tool', parentSpanContext: traceContext }
       )
@@ -173,7 +173,7 @@ describe('lib/services/vendor/langfuse/mcp-integration', () => {
     it('should include sessionId in metadata', async () => {
       const handler = vi.fn(() => 'result')
 
-      await traceToolCall('find_model', {}, handler, { sessionId: 'session-123' })
+      await traceToolCall('find_records', {}, handler, { sessionId: 'session-123' })
 
       // Verify the callback updates span with sessionId
       const callback = startActiveObservation.mock.calls[0][1]
@@ -190,7 +190,7 @@ describe('lib/services/vendor/langfuse/mcp-integration', () => {
       setConfigured(false)
       const handler = vi.fn(() => 'direct result')
 
-      const result = await traceToolCall('find_model', {}, handler)
+      const result = await traceToolCall('find_records', {}, handler)
 
       expect(startActiveObservation).not.toHaveBeenCalled()
       expect(handler).toHaveBeenCalled()
@@ -201,7 +201,7 @@ describe('lib/services/vendor/langfuse/mcp-integration', () => {
       setSessionContext({ sessionId: 'sess-1', metadata: { transport: 'stdio' } })
       const handler = vi.fn(() => 'result')
 
-      await traceToolCall('find_model', {}, handler)
+      await traceToolCall('find_records', {}, handler)
 
       expect(propagateAttributes).toHaveBeenCalledWith(
         { sessionId: 'sess-1', metadata: { transport: 'stdio' } },
@@ -213,7 +213,7 @@ describe('lib/services/vendor/langfuse/mcp-integration', () => {
     it('should not wrap with propagateAttributes when no session context', async () => {
       const handler = vi.fn(() => 'result')
 
-      await traceToolCall('find_model', {}, handler)
+      await traceToolCall('find_records', {}, handler)
 
       expect(propagateAttributes).not.toHaveBeenCalled()
       expect(startActiveObservation).toHaveBeenCalled()
@@ -223,12 +223,12 @@ describe('lib/services/vendor/langfuse/mcp-integration', () => {
       startActiveObservation.mockRejectedValueOnce(new Error('Tracing broken'))
       const handler = vi.fn(() => 'fallback result')
 
-      const result = await traceToolCall('find_model', {}, handler)
+      const result = await traceToolCall('find_records', {}, handler)
 
       expect(result).toBe('fallback result')
       expect(logger.warn).toHaveBeenCalledWith(
         'Tracing failed, executing without trace',
-        expect.objectContaining({ operation: 'traceToolCall', tool: 'find_model' })
+        expect.objectContaining({ operation: 'traceToolCall', tool: 'find_records' })
       )
     })
   })
@@ -360,7 +360,7 @@ describe('lib/services/vendor/langfuse/mcp-integration', () => {
 
       // Trigger a trace to verify attributes are propagated
       const handler = vi.fn(() => 'result')
-      await traceToolCall('find_model', {}, handler)
+      await traceToolCall('find_records', {}, handler)
 
       expect(propagateAttributes).toHaveBeenCalledWith(
         { sessionId: 'session-abc', metadata: { transport: 'streamable-http' } },
@@ -387,7 +387,7 @@ describe('lib/services/vendor/langfuse/mcp-integration', () => {
       // Re-enable and trace — should NOT have session attributes
       setConfigured(true)
       const handler = vi.fn(() => 'result')
-      await traceToolCall('find_model', {}, handler)
+      await traceToolCall('find_records', {}, handler)
 
       expect(propagateAttributes).not.toHaveBeenCalled()
     })
@@ -417,7 +417,7 @@ describe('lib/services/vendor/langfuse/mcp-integration', () => {
 
       // Trace should NOT wrap with propagateAttributes
       const handler = vi.fn(() => 'result')
-      await traceToolCall('find_model', {}, handler)
+      await traceToolCall('find_records', {}, handler)
 
       expect(propagateAttributes).not.toHaveBeenCalled()
     })

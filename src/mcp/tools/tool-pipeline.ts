@@ -10,7 +10,7 @@
  * @example
  * import { wrapToolHandler } from 'mcp-kit/tools'
  *
- * const handler = wrapToolHandler('find_model', [tracingInterceptor, auditInterceptor], async (args) => {
+ * const handler = wrapToolHandler('find_records', [tracingInterceptor, auditInterceptor], async (args) => {
  *   return tool.execute(args)
  * })
  */
@@ -23,7 +23,7 @@ import type { ToolHandlerExtra, ToolResult } from './base-tool.js'
 
 /** Context passed to interceptor hooks */
 export interface ToolContext {
-  /** Tool name (e.g., 'find_model') */
+  /** Tool name (e.g., 'find_records') */
   toolName: string
   /** Tool arguments (mutable — `before` hooks may modify) */
   args: Record<string, unknown>

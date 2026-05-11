@@ -38,6 +38,19 @@ interface AppDefinition {
   description: string
   toolDescription?: string
   toolInputSchema?: Record<string, unknown>
+  /**
+   * Tool annotations forwarded to registerAppTool. Read-only apps should
+   * advertise `readOnlyHint: true` so hosts can offer them in lower-risk
+   * permission tiers and so the model's tool-selection heuristics align
+   * with MCP / OpenAI Apps SDK guidance.
+   */
+  annotations?: {
+    readOnlyHint?: boolean
+    destructiveHint?: boolean
+    idempotentHint?: boolean
+    openWorldHint?: boolean
+    [key: string]: unknown
+  }
   handleToolCall?(
     args: Record<string, unknown>,
     context: Record<string, unknown>
@@ -119,6 +132,7 @@ export class AppRegistry {
         {
           description: app.toolDescription,
           inputSchema: app.toolInputSchema as Record<string, z.ZodTypeAny>,
+          ...(app.annotations ? { annotations: app.annotations } : {}),
           _meta: app.resourceUri
             ? { ui: { resourceUri: app.resourceUri, visibility } }
             : { ui: { visibility } }

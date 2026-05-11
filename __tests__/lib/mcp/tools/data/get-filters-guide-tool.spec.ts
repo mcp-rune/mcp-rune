@@ -72,7 +72,7 @@ describe('GetFiltersGuideTool', () => {
 
     // Should document relation
     expect(text).toContain('`licensor`')
-    expect(text).toContain('find_model')
+    expect(text).toContain('find_records')
 
     // Should document date_range format
     expect(text).toContain('YYYY-MM-DD')

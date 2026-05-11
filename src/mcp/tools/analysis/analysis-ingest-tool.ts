@@ -60,7 +60,7 @@ export class AnalysisIngestTool extends BaseAnalysisTool {
     const scope = this.serverContext.name ? ` in the ${this.serverContext.name} API` : ''
     return `Ingest model records${scope} into offline storage for large-scale analysis without polluting context.
 
-Use this tool instead of find_model when you need to analyze a large dataset (more than one page of results). Records are stored for querying via analysis_query — only a status summary is returned to context.
+Use this tool instead of find_records when you need to analyze a large dataset (more than one page of results). Records are stored for querying via analysis_query — only a status summary is returned to context.
 
 Top-level ingestion:
 1. Call analysis_ingest with model + filters + ingest_all: true to fetch and store all records
@@ -74,7 +74,7 @@ Nested resource ingestion (for child resources like metadata_errors, conflicts):
 
 Each child record gets a _parent_id field injected for cross-referencing with the parent.
 
-When NOT to use: For quick lookups of specific records by ID or small result sets you need in context immediately, use find_model instead.`
+When NOT to use: For quick lookups of specific records by ID or small result sets you need in context immediately, use find_records instead.`
   }
 
   override get inputSchema(): Record<string, ZodTypeAny> {

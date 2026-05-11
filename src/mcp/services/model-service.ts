@@ -56,7 +56,7 @@ export class ModelReadOnlyError extends Error {
     const desc = description ? `${description} ` : ''
     super(
       `The '${model}' model is read-only and cannot be modified. ` +
-        `${desc}Use find_model to look up existing records.`
+        `${desc}Use find_records to look up existing records.`
     )
     this.name = 'ModelReadOnlyError'
   }

@@ -95,7 +95,7 @@ export class GetFiltersGuideTool extends BaseTool {
       }
       if (config.type === 'relation' && config.relatedModel) {
         parts.push(
-          `\nRelated model: \`${config.relatedModel}\` — use \`find_model\` to look up IDs`
+          `\nRelated model: \`${config.relatedModel}\` — use \`find_records\` to look up IDs`
         )
       }
       if (config.type === 'date_range') {

@@ -15,7 +15,7 @@ const modelClasses = {
 }
 const namespace = 'test'
 
-describe('list_records_view', () => {
+describe('list_records_app', () => {
   const tools = createListViewApp({ modelClasses, namespace })
   const listTool = tools[0]
 
@@ -39,6 +39,23 @@ describe('list_records_view', () => {
     const result = await listTool.handleToolCall({ model: 'book' })
     const hintContent = result.content.find((c) => c.type === 'text' && !c.text.startsWith('{'))
 
-    expect(hintContent.text).toMatch(/\d+ records displayed/)
+    expect(hintContent.text).toMatch(/Displayed \d+/)
+    expect(hintContent.text).toMatch(/Do NOT repeat/)
+    expect(hintContent.text).toMatch(/ids: \[/)
+  })
+
+  it('response tags payload transient via _meta.context.lifecycle', async () => {
+    const result = await listTool.handleToolCall({ model: 'book' })
+    expect(result._meta?.context?.lifecycle).toBe('transient')
+    expect(typeof result._meta?.context?.summary).toBe('string')
+  })
+
+  it('declares readOnlyHint annotation', () => {
+    expect(listTool.annotations?.readOnlyHint).toBe(true)
+  })
+
+  it('uses _app suffix in toolName and resourceUri', () => {
+    expect(listTool.toolName).toBe('list_records_app')
+    expect(listTool.resourceUri).toMatch(/list-records-app$/)
   })
 })
