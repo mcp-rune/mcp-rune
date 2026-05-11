@@ -132,5 +132,15 @@ export const migrations: readonly Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_ingested_records_expires_at
         ON ingested_records(expires_at) WHERE expires_at IS NOT NULL;
     `
+  },
+  {
+    version: '005',
+    name: 'add_ingested_records_unique_index',
+    feature: 'analysis',
+    up: `
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_ingested_records_unique
+        ON ingested_records(analysis_id, model, record_id)
+        WHERE record_id IS NOT NULL;
+    `
   }
 ] as const

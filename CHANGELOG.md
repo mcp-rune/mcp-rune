@@ -29,7 +29,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 LLMs running against mcp-kit servers were repeating record contents in chat even after the data was rendered in an MCP App widget. Two root causes: (1) co-exposed data/app variants with overlapping names and no consistent suffix; (2) indistinguishable response shapes — both halves returned full record JSON, so the LLM had no in-band signal that the user had already seen the data. The refactor closes both: consistent `_app` suffix gives the LLM a pattern-match handle, and the slim block-1 directive plus transient `_meta` mean the app response is structurally a "the data is on screen, do not echo" answer rather than a payload the LLM must summarize. The conventions follow [OpenAI Apps SDK](https://developers.openai.com/apps-sdk/plan/tools)'s data-vs-render-tool guidance and the [MCP Apps extension](https://modelcontextprotocol.io/extensions/apps/overview).
 
-[0.33.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.32.0...v0.33.0
+[0.33.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.32.1...v0.33.0
+
+## [0.32.1] — 2026-05-11
+
+### Fixed
+
+- **Idempotent ingestion for `analysis_ingest`** — `storeRecords` now uses `INSERT ... ON CONFLICT DO UPDATE` against a new partial unique index on `(analysis_id, model, record_id)`. Re-ingesting the same records overwrites instead of duplicating rows, preventing inflated counts in downstream `analysis_query` aggregations and incorrect scheduling duplication in workflows.
+
+- **Deduplicated parent ID resolution** — `getRecordIds` now returns `SELECT DISTINCT record_id`, preventing duplicate parent fetches during nested resource ingestion when historical rows exist from prior retries.
+
+### Added
+
+- **Migration `005`** — `add_ingested_records_unique_index`: partial unique index on `ingested_records(analysis_id, model, record_id) WHERE record_id IS NOT NULL`.
+
+[0.32.1]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.32.0...v0.32.1
 
 ## [0.32.0] — 2026-05-11
 
