@@ -24,13 +24,13 @@ describe('lib/mcp/tools/tool-pipeline', () => {
       const before = vi.fn()
       const interceptor: ToolInterceptor = { before }
       const handler = vi.fn().mockResolvedValue(ok())
-      const wrapped = wrapToolHandler('find_model', [interceptor], handler)
+      const wrapped = wrapToolHandler('find_records', [interceptor], handler)
 
       await wrapped({ model: 'book' })
 
       expect(before).toHaveBeenCalledWith(
         expect.objectContaining({
-          toolName: 'find_model',
+          toolName: 'find_records',
           args: { model: 'book' },
           meta: {}
         })

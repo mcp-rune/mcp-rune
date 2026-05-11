@@ -10,7 +10,7 @@
 import { BulkActionModelsTool } from './bulk-action-models-tool.js'
 import { CreateModelTool } from './create-model-tool.js'
 import { DeleteModelTool } from './delete-model-tool.js'
-import { FindModelTool } from './find-model-tool.js'
+import { FindRecordsTool } from './find-records-tool.js'
 import { GetFiltersGuideTool } from './get-filters-guide-tool.js'
 import { ListModelsTool } from './list-models-tool.js'
 import { ModelActionTool } from './model-action-tool.js'
@@ -21,7 +21,7 @@ export {
   BulkActionModelsTool,
   CreateModelTool,
   DeleteModelTool,
-  FindModelTool,
+  FindRecordsTool,
   GetFiltersGuideTool,
   ListModelsTool,
   ModelActionTool,
@@ -32,7 +32,7 @@ export {
 /** All data tool classes mapped by tool name */
 export const DATA_TOOL_CLASSES = {
   list_models: ListModelsTool,
-  find_model: FindModelTool,
+  find_records: FindRecordsTool,
   create_model: CreateModelTool,
   update_model: UpdateModelTool,
   delete_model: DeleteModelTool,

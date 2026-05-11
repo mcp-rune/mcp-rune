@@ -145,7 +145,7 @@ describe('lib/services/vendor/sentry/mcp-integration', () => {
     })
 
     it('handles empty args', () => {
-      captureToolError(new Error('fail'), 'find_model')
+      captureToolError(new Error('fail'), 'find_records')
       // No error thrown
     })
   })
@@ -193,7 +193,7 @@ describe('lib/services/vendor/sentry/mcp-integration', () => {
     })
 
     it('handles empty args', () => {
-      startToolTransaction('find_model')
+      startToolTransaction('find_records')
       // No error thrown
     })
   })

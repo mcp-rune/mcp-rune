@@ -84,7 +84,7 @@ static sections = {
     groups: ['classification'],
     content: {
       intro: 'Classification determines how activities are organized.',
-      notes: ['Use find_model to look up themes']
+      notes: ['Use find_records to look up themes']
     }
   }
 }

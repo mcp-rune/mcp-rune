@@ -16,19 +16,21 @@ import { validateFilterParams } from '../validators.js'
  * Supports compound IDs (e.g., 'titles/42/assets/7') for nested resources,
  * and parent_path (e.g., 'titles/42/assets') for listing nested collections.
  */
-export class FindModelTool extends BaseTool {
+export class FindRecordsTool extends BaseTool {
   override get name(): string {
-    return 'find_model'
+    return 'find_records'
   }
 
   override get baseDescription(): string {
     const scope = this.serverContext.name ? ` in the ${this.serverContext.name} API` : ''
-    return `Find records${scope} by ID or filter criteria. Returns raw JSON data.
+    return `Use this when you need raw JSON for one or a few records${scope} to act on programmatically (e.g., before update or delete). Returns full record fields.
 
-Use this tool to:
+For an interactive MCP App where the user can view record details visually, use find_records_app instead.
+For large-scale analysis across many pages, use analysis_ingest.
+
+Capabilities:
 - Look up a specific record by ID
 - Query records with specific filters
-- Get raw record data for further processing
 - List nested resources using parent_path (e.g., parent_path="titles/42/assets")`
   }
 
@@ -78,7 +80,7 @@ Use this tool to:
 
   override getUsageRules(): string[] {
     return [
-      'For large-scale analysis (multiple pages of data), prefer analysis_ingest which stores records for offline querying without polluting context. Use find_model only when you need a specific record by ID or a small set of results to act on immediately (e.g., before updating or deleting).'
+      'For large-scale analysis (multiple pages of data), prefer analysis_ingest which stores records for offline querying without polluting context. Use find_records only when you need a specific record by ID or a small set of results to act on immediately (e.g., before updating or deleting).'
     ]
   }
 
@@ -114,7 +116,7 @@ Use this tool to:
       if (this.logger) {
         this.logger.info('Finding model', {
           service: 'mcp-tools',
-          tool: 'find_model',
+          tool: 'find_records',
           model,
           hasId: !!record_id,
           hasParentPath: !!parent_path,

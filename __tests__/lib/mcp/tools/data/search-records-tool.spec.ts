@@ -49,8 +49,8 @@ describe('SearchRecordsTool', () => {
 
   it('should have correct metadata', () => {
     expect(tool.name).toBe('search_records')
-    expect(tool.baseDescription).toContain('using filters')
-    expect(tool.baseDescription).toContain('raw JSON results')
+    expect(tool.baseDescription).toContain('raw JSON')
+    expect(tool.baseDescription).toContain('search_records_app')
   })
 
   it('should have usage rules mentioning get_filters_guide', () => {

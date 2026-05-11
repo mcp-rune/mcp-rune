@@ -13,6 +13,7 @@ import path from 'node:path'
 import { z } from 'zod'
 
 import { resolveDerivedFields } from '#src/mcp/apps/derived-fields.js'
+import { appResponseMeta, extractIds, formatAppSummary } from '#src/mcp/apps/format-summary.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
 import {
   applyColumnSelection,
@@ -50,7 +51,7 @@ export function createSearchViewApp({ modelClasses, namespace }: SearchViewOptio
     Object.entries(modelClasses).filter(([, MC]) => MC.search?.query)
   )
   const modelNames = Object.keys(eligible)
-  const resourceUri = `ui://${namespace}/search-view`
+  const resourceUri = `ui://${namespace}/search-records-app`
 
   if (modelNames.length === 0) return []
 
@@ -60,19 +61,20 @@ export function createSearchViewApp({ modelClasses, namespace }: SearchViewOptio
 
   const searchTool = {
     resourceUri,
-    toolName: 'search_records_view',
+    toolName: 'search_records_app',
     needsAuth: true,
     name: 'Search Results',
     description: 'Display filtered search results with active filter indicators',
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
 
     toolDescription:
-      `Search records by text and/or structured filters, displayed in a visual table with filter/query chips. ` +
-      `Best for: interactive browsing where the user wants to visually review, filter, and select records. ` +
+      `Use this when the user wants to search records by text and/or structured filters and browse the results in an interactive MCP App with filter/query chips. ` +
+      `Renders an MCP App; the tool result contains a summary only — do not repeat record contents in your reply. ` +
+      `For raw JSON suitable for programmatic processing, use search_records instead. ` +
+      `For large-scale analysis use analysis_ingest. ` +
       `Call get_filters_guide first to see available structured filters for a model. ` +
-      `Use this when the user explicitly asks to browse or view records visually. ` +
-      `When a workflow specifies a different tool (e.g., search_records, list_models), use that tool instead. ` +
-      `Results are paginated (${MAX_VIEW_PER_PAGE} per page) -- use page parameter to navigate. ` +
-      `Available columns -- ${columnInfo}. ` +
+      `Results are paginated (${MAX_VIEW_PER_PAGE} per page) — use page parameter to navigate. ` +
+      `Available columns — ${columnInfo}. ` +
       `Choose columns relevant to the user's query, or omit to use defaults.`,
 
     toolInputSchema: {
@@ -179,7 +181,19 @@ export function createSearchViewApp({ modelClasses, namespace }: SearchViewOptio
       const parts: string[] = []
       if (query) parts.push(`query: "${query}"`)
       if (hasFilters) parts.push(`filters: ${Object.keys(filters!).join(', ')}`)
-      const summary = parts.length > 0 ? parts.join(', ') : 'no filters (showing all)'
+      const queryContext = parts.length > 0 ? parts.join(', ') : 'no filters (showing all)'
+
+      const totalPages =
+        pagination.total > 0 ? Math.max(1, Math.ceil(pagination.total / pagination.per_page)) : 1
+      const summary = formatAppSummary({
+        toolName: 'search_records_app',
+        count: records.length,
+        ids: extractIds(records),
+        page: pagination.page,
+        totalPages,
+        totalRecords,
+        context: `Search context: ${queryContext}. Users may select records and click Send Selection — if they later refer to "selected" records, call get_selection to retrieve the stored IDs.`
+      })
 
       return {
         content: [
@@ -196,12 +210,10 @@ export function createSearchViewApp({ modelClasses, namespace }: SearchViewOptio
           },
           {
             type: 'text',
-            text:
-              `Results displayed in the search view above (${totalRecords} records, ${summary}). ` +
-              `Do not repeat or summarize the data. ` +
-              `Users may select records and click Send Selection -- if they later refer to "selected" records, call get_selection to retrieve the stored IDs.`
+            text: summary
           }
-        ]
+        ],
+        _meta: appResponseMeta(summary)
       }
     },
 

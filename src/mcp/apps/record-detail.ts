@@ -5,9 +5,9 @@
  * The schema is generated from model attributes, records are fetched from the API in parallel.
  *
  * Supports three call patterns:
- *   view_records(model, ids: ['1','2','3'])  -- explicit IDs
- *   view_records(model)                      -- reads IDs from selection store
- *   view_records(model, ids: ['1'])          -- single record (visually identical to old view_record)
+ *   find_records_app(model, ids: ['1','2','3'])  -- explicit IDs
+ *   find_records_app(model)                      -- reads IDs from selection store
+ *   find_records_app(model, ids: ['1'])          -- single record
  *
  * Build: npm run build:engineer:apps
  */
@@ -18,6 +18,7 @@ import path from 'node:path'
 import { z } from 'zod'
 
 import { generateDetailSchema } from '#src/mcp/apps/detail-schema.js'
+import { appResponseMeta, formatAppSummary } from '#src/mcp/apps/format-summary.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
 import type { SearchApiClient } from '#src/mcp/search/types.js'
 import * as logger from '#src/services/logger.js'
@@ -120,18 +121,18 @@ export function createRecordDetailApp({
   const modelNames = Object.keys(modelClasses) as [string, ...string[]]
 
   return {
-    resourceUri: `ui://${namespace}/record-detail`,
-    toolName: 'view_records',
+    resourceUri: `ui://${namespace}/find-records-app`,
+    toolName: 'find_records_app',
     needsAuth: true,
     name: 'Record Detail',
     description: 'Read-only detail cards for viewing one or more records',
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
 
     toolDescription:
-      `Show one or more records in visual, read-only detail cards. ` +
-      `Pass explicit IDs, or omit ids to view the current selection from list/search views. ` +
-      `Use when the user explicitly asks to view record details visually. ` +
-      `When a workflow specifies a different tool (e.g., find_model), use that tool instead. ` +
-      `Do NOT call find_model after this -- the cards already display all the data. ` +
+      `Use this when the user wants to view one or more specific records as detail cards in an interactive MCP App. ` +
+      `Pass explicit IDs, or omit ids to view the current selection from list/search apps. ` +
+      `Renders an MCP App; the tool result contains a summary only — do not repeat record contents in your reply, and do NOT call find_records afterwards, the cards already display the data. ` +
+      `For raw JSON suitable for programmatic processing, use find_records instead. ` +
       `Available models: ${modelNames.join(', ')}.`,
 
     toolInputSchema: {
@@ -234,13 +235,32 @@ export function createRecordDetailApp({
       const response: Record<string, unknown> = { schema, records }
       if (cappedMessage) response.cappedMessage = cappedMessage
 
+      const successIds = records
+        .filter((r): r is { data: Record<string, unknown> } => 'data' in r)
+        .map((r) => {
+          const id = r.data.id
+          return typeof id === 'string' || typeof id === 'number' ? id : '?'
+        })
+      const summary = formatAppSummary({
+        toolName: 'find_records_app',
+        count: successIds.length,
+        ids: successIds,
+        totalRecords: ids.length,
+        context: cappedMessage ?? undefined
+      })
+
       return {
         content: [
           {
             type: 'text',
             text: JSON.stringify(response)
+          },
+          {
+            type: 'text',
+            text: summary
           }
-        ]
+        ],
+        _meta: appResponseMeta(summary)
       }
     },
 

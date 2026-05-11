@@ -33,7 +33,7 @@ Client collapses the search_records result → replaces with summary
 
 ## Server-Side: `_meta.context` on Tool Responses
 
-### Data-fetching tools (`search_records`, `find_model`)
+### Data-fetching tools (`search_records`, `find_records`)
 
 When returning 5+ records, attach `_meta.context`:
 

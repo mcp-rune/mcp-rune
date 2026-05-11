@@ -213,7 +213,7 @@ async function fetchPage(page) {
     const args = { model: modelName, page }
     if (Object.keys(activeFilters).length > 0) args.filters = activeFilters
     const result = await app.callServerTool({
-      name: 'list_records_view',
+      name: 'list_records_app',
       arguments: args
     })
 
@@ -260,10 +260,10 @@ async function openEditForm(recordId) {
       arguments: { model: modelName, record_id: String(recordId) }
     })
   } catch {
-    // If update form tool doesn't exist, try find_model as fallback
+    // If update form tool doesn't exist, try find_records as fallback
     try {
       await app.callServerTool({
-        name: 'find_model',
+        name: 'find_records',
         arguments: { model: modelName, record_id: String(recordId) }
       })
     } catch (err) {

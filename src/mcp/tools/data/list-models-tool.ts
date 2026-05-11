@@ -11,7 +11,9 @@ export class ListModelsTool extends BaseTool {
 
   override get baseDescription(): string {
     const scope = this.serverContext.name ? ` in the ${this.serverContext.name} API` : ''
-    return `List all available models/resources${scope} with their attributes and descriptions.`
+    return `Use this when you need to discover the model schemas (data types) available${scope} — their attributes, filterability, and relationships. This is metadata, not records.
+
+For listing the actual records of a model, use list_records_app (visual table) or search_records / find_records (raw JSON).`
   }
 
   override get annotations(): ToolAnnotations {
@@ -69,7 +71,7 @@ export class ListModelsTool extends BaseTool {
           ? {
               available: true,
               filter_count: Object.keys(filters).length,
-              hint: 'Call get_filters_guide for filter docs, then use search_records'
+              hint: 'Call get_filters_guide for filter docs, then use search_records (raw JSON) or search_records_app (interactive)'
             }
           : undefined
       }

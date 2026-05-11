@@ -445,7 +445,7 @@ Each step is a plain object (auto-wrapped in `WorkflowStep`):
   order: 1,                           // Step number (1-based)
   title: 'Find the title',            // Step title
   description: 'Search for the title you want to configure.',
-  tool: 'find_model',                 // Optional: MCP tool to call
+  tool: 'find_records',                 // Optional: MCP tool to call
   toolArgs: {                         // Optional: example arguments
     model: 'title',
     search: { name: '<title_name>' }
@@ -486,7 +486,7 @@ new WorkflowDefinition({
       order: 1,
       title: 'Find the title',
       description: 'Search for the title to set up catch-up VOD for.',
-      tool: 'find_model',
+      tool: 'find_records',
       toolArgs: { model: 'title', search: { name: '<title_name>' } },
       tips: ['You need the title ID for the next step']
     },
@@ -525,7 +525,7 @@ new WorkflowDefinition({
       order: 2,
       title: 'Find a demo title',
       description: 'Search for a recognizable title.',
-      tool: 'find_model',
+      tool: 'find_records',
       toolArgs: { model: 'title', search: { name: 'Breaking Bad' } },
       tips: ['Choose a title the audience will recognize']
     }
@@ -827,7 +827,7 @@ export const myWorkflows = [
         order: 1,
         title: 'Find the parent entity',
         description: 'Search for the entity to configure.',
-        tool: 'find_model',
+        tool: 'find_records',
         toolArgs: { model: 'model_a', search: { name: '<name>' } },
         tips: ['You need the entity ID for the next step']
       },

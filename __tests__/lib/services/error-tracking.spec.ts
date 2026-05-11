@@ -83,7 +83,7 @@ describe('lib/services/error-tracking', () => {
   describe('captureToolError', () => {
     it('should delegate to vendor.captureToolError', () => {
       const error = new Error('Test error')
-      const toolName = 'find_model'
+      const toolName = 'find_records'
       const args = { model: 'book' }
       const context = { requestId: '123' }
 
@@ -179,7 +179,7 @@ describe('lib/services/error-tracking', () => {
     })
 
     it('should delegate addToolBreadcrumb to vendor', () => {
-      const toolName = 'find_model'
+      const toolName = 'find_records'
       const args = { model: 'book' }
       addToolBreadcrumb(toolName, args)
 

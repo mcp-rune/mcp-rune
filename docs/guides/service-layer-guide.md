@@ -517,7 +517,7 @@ async _createAuthenticatedInstance(ToolClass, getAccessToken) {
 | Tool                                  | Service               | Why                                       |
 | ------------------------------------- | --------------------- | ----------------------------------------- |
 | `create_model`                        | ModelService          | Convention payload + endpoint resolution  |
-| `find_model`                          | ModelService          | Record/list endpoint resolution           |
+| `find_records`                        | ModelService          | Record/list endpoint resolution           |
 | `update_model`                        | ModelService          | Convention payload + record endpoint      |
 | `delete_model`                        | ModelService          | Record endpoint resolution                |
 | `model_action`                        | ModelService          | Custom actions with any HTTP method + URL |

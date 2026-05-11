@@ -14,6 +14,7 @@ import { z } from 'zod'
 
 import { defaultConvention } from '#src/mcp/api-conventions/index.js'
 import { resolveDerivedFields } from '#src/mcp/apps/derived-fields.js'
+import { appResponseMeta, extractIds, formatAppSummary } from '#src/mcp/apps/format-summary.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
 import {
   applyColumnSelection,
@@ -47,7 +48,7 @@ interface ListViewOptions {
 /** Create the list view MCP App. */
 export function createListViewApp({ modelClasses, namespace }: ListViewOptions): unknown[] {
   const modelNames = Object.keys(modelClasses) as [string, ...string[]]
-  const resourceUri = `ui://${namespace}/list-records-view`
+  const resourceUri = `ui://${namespace}/list-records-app`
 
   const columnInfo = Object.entries(modelClasses)
     .map(([name, MC]) => `${name}: ${getAvailableColumnNames(MC).join(', ')}`)
@@ -55,19 +56,21 @@ export function createListViewApp({ modelClasses, namespace }: ListViewOptions):
 
   const listTool = {
     resourceUri,
-    toolName: 'list_records_view',
+    toolName: 'list_records_app',
     needsAuth: true,
     name: 'List Records',
     description: 'Interactive table for browsing records with optional filters',
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
 
     toolDescription:
-      `List records in a visual, interactive table with pagination and optional filters. ` +
-      `Use when the user explicitly asks to browse or view records visually in a table. ` +
-      `When a workflow specifies a different tool (e.g., list_models), use that tool instead. ` +
-      `Not suited for text search or nested-only models (e.g. scheduling) that lack a top-level list endpoint. ` +
+      `Use this when the user wants to browse records visually in an interactive, paginated table they can filter and select from. ` +
+      `Renders an MCP App; the tool result contains a summary only — do not repeat record contents in your reply. ` +
+      `For raw JSON suitable for programmatic processing, use search_records or find_records instead. ` +
+      `For large-scale analysis use analysis_ingest. ` +
+      `Not suited for text search (use search_records_app) or nested-only models (e.g. scheduling) that lack a top-level list endpoint. ` +
       `Call get_filters_guide first when the user wants to filter. ` +
       `Available models: ${modelNames.join(', ')}. ` +
-      `Available columns -- ${columnInfo}. ` +
+      `Available columns — ${columnInfo}. ` +
       `Choose columns relevant to what the user wants to see, or omit to use defaults.`,
 
     toolInputSchema: {
@@ -178,6 +181,19 @@ export function createListViewApp({ modelClasses, namespace }: ListViewOptions):
       const totalRecords = pagination.total || records.length
       resolveDerivedFields(records, ModelClass)
 
+      const totalPages =
+        pagination.total > 0 ? Math.max(1, Math.ceil(pagination.total / pagination.per_page)) : 1
+      const summary = formatAppSummary({
+        toolName: 'list_records_app',
+        count: records.length,
+        ids: extractIds(records),
+        page: pagination.page,
+        totalPages,
+        totalRecords,
+        context:
+          'Users may select records and click Send Selection — if they later refer to "selected" records, call get_selection to retrieve the stored IDs.'
+      })
+
       return {
         content: [
           {
@@ -192,11 +208,10 @@ export function createListViewApp({ modelClasses, namespace }: ListViewOptions):
           },
           {
             type: 'text',
-            text:
-              `${totalRecords} records displayed. ` +
-              `Users may select records and click Send Selection -- if they later refer to "selected" records, call get_selection to retrieve the stored IDs.`
+            text: summary
           }
-        ]
+        ],
+        _meta: appResponseMeta(summary)
       }
     },
 

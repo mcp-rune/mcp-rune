@@ -21,7 +21,7 @@ function createTestRegistry() {
             order: 1,
             title: 'Find title',
             description: 'Search for the title',
-            tool: 'find_model'
+            tool: 'find_records'
           },
           { order: 2, title: 'Create rule', description: 'Create the rule', tool: 'create_model' }
         ]
@@ -79,7 +79,7 @@ describe('SuggestWorkflowTool', () => {
     expect(text).toContain('2. Create rule')
     // Step 1 rendered in detail
     expect(text).toContain('Step 1: Find title')
-    expect(text).toContain('find_model')
+    expect(text).toContain('find_records')
     // Step 2 NOT rendered in detail (only in roadmap)
     expect(text).not.toContain('Step 2: Create rule')
     // Mandatory chaining instruction
@@ -141,15 +141,15 @@ describe('SuggestWorkflowTool', () => {
     const toolWithApps = new SuggestWorkflowTool({
       domainRegistry: createTestRegistry(),
       serverContext: {
-        appToolNames: ['search_records_view', 'list_records_view', 'view_records']
+        appToolNames: ['search_records_app', 'list_records_app', 'find_records_app']
       }
     })
     const result = await toolWithApps.execute({ workflow: 'setup_vod' })
     const text = result.content[0].text
     // Should include actual app tool names in exclusion
-    expect(text).toContain('search_records_view')
-    expect(text).toContain('list_records_view')
-    expect(text).toContain('view_records')
+    expect(text).toContain('search_records_app')
+    expect(text).toContain('list_records_app')
+    expect(text).toContain('find_records_app')
     // Should NOT include the old hardcoded name
     expect(text).not.toContain('record_detail_view')
   })
@@ -208,7 +208,7 @@ describe('SuggestWorkflowTool', () => {
               order: 1,
               title: 'Fetch A',
               description: 'Get A',
-              tool: 'find_model',
+              tool: 'find_records',
               parallelGroup: 'init'
             },
             {

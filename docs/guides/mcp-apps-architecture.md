@@ -45,7 +45,7 @@ The tool declares its UI resource via `_meta.ui.resourceUri`. When the LLM calls
 │  │  Outbound tool calls:                          │   │
 │  │    → callServerTool('validate_form', {...})    │   │
 │  │    → callServerTool('create_model', {...})     │   │
-│  │    → callServerTool('list_records_view', {...})   │   │
+│  │    → callServerTool('list_records_app', {...})   │   │
 │  └────────────────────────────────────────────────┘   │
 │                                                       │
 └───────────────────────────────────────────────────────┘
@@ -59,9 +59,9 @@ The tool declares its UI resource via `_meta.ui.resourceUri`. When the LLM calls
 │  App Definitions (tool + resource pairs):             │
 │    ├── create_model_form  → ui://engineer/model-form  │
 │    ├── update_model_form  → ui://engineer/model-form  │
-│    ├── list_records_view     → ui://engineer/list-records-view│
+│    ├── list_records_app     → ui://engineer/list-records-view│
 │    ├── view_record        → ui://engineer/record-detail│
-│    └── search_records_view→ ui://engineer/search-view  │
+│    └── search_records_app→ ui://engineer/search-view  │
 │                                                       │
 │  Schema Generators (pure functions, no API calls):    │
 │    ├── generateFormSchema(Model, Prompt)              │
@@ -100,13 +100,13 @@ The `App` class from `@modelcontextprotocol/ext-apps` provides the communication
 
 ### App Catalog
 
-| App            | Tool Name             | Resource URI                      | Auth | Purpose                                   |
-| -------------- | --------------------- | --------------------------------- | ---- | ----------------------------------------- |
-| Create Form    | `create_model_form`   | `ui://engineer/model-form`        | Yes  | Interactive form to create records        |
-| Update Form    | `update_model_form`   | `ui://engineer/model-form`        | Yes  | Interactive form to edit records          |
-| Browse Records | `list_records_view`   | `ui://engineer/list-records-view` | Yes  | Paginated table with text search          |
-| Record Detail  | `view_record`         | `ui://engineer/record-detail`     | Yes  | Read-only detail card for a single record |
-| Search Results | `search_records_view` | `ui://engineer/search-view`       | Yes  | Filtered search with active filter chips  |
+| App            | Tool Name            | Resource URI                      | Auth | Purpose                                   |
+| -------------- | -------------------- | --------------------------------- | ---- | ----------------------------------------- |
+| Create Form    | `create_model_form`  | `ui://engineer/model-form`        | Yes  | Interactive form to create records        |
+| Update Form    | `update_model_form`  | `ui://engineer/model-form`        | Yes  | Interactive form to edit records          |
+| Browse Records | `list_records_app`   | `ui://engineer/list-records-view` | Yes  | Paginated table with text search          |
+| Record Detail  | `view_record`        | `ui://engineer/record-detail`     | Yes  | Read-only detail card for a single record |
+| Search Results | `search_records_app` | `ui://engineer/search-view`       | Yes  | Filtered search with active filter chips  |
 
 Note: Create Form and Update Form share the same HTML resource (`model-form.html`) — the mode is determined by the tool result data.
 
@@ -151,7 +151,7 @@ App renders pre-filled form → User edits → callServerTool('update_model')
 ```
 User: "Show me all books"
   ↓
-LLM calls list_records_view({ model: 'book' })
+LLM calls list_records_app({ model: 'book' })
   ↓
 Server:
   1. generateListSchema(Book) → { columns, searchFields }
@@ -160,8 +160,8 @@ Server:
 Returns: { schema, records, pagination }
   ↓
 App renders table → Row click → callServerTool('update_model_form')
-                  → Search → callServerTool('list_records_view', { search })
-                  → Paginate → callServerTool('list_records_view', { page })
+                  → Search → callServerTool('list_records_app', { search })
+                  → Paginate → callServerTool('list_records_app', { page })
 ```
 
 #### Record Detail
@@ -187,7 +187,7 @@ User: "Find active titles by licensor X"
   ↓
 LLM calls get_filters_guide({ model: 'title' }) → learns filters
 LLM calls search_records({ model: 'title', filters: { status: 'active', licensor_id: 'X' } })
-LLM calls search_records_view({ model: 'title', filters: { status: 'active', licensor_id: 'X' } })
+LLM calls search_records_app({ model: 'title', filters: { status: 'active', licensor_id: 'X' } })
   ↓
 Server:
   1. generateListSchema(Title) → { columns }
@@ -422,12 +422,12 @@ Fields are grouped into `<fieldset>` elements based on `field.group` matching `s
 
 ### Pagination Pattern
 
-Table-based apps (list_records_view, search_records_view) paginate by calling their own tool:
+Table-based apps (list_records_app, search_records_app) paginate by calling their own tool:
 
 ```javascript
 async function fetchPage(page) {
   await app.callServerTool({
-    name: 'list_records_view', // or 'search_records_view'
+    name: 'list_records_app', // or 'search_records_app'
     arguments: { model: modelName, page, ...extraArgs }
   })
   // ontoolresult fires → re-renders table
@@ -627,21 +627,21 @@ The search view app works alongside the search tool system:
 
 3. LLM calls search_records({ model, filters })   [crud category, auth required]
    → Returns JSON results for LLM processing
-   → Usage rule hints: "call search_records_view to display visually"
+   → Usage rule hints: "call search_records_app to display visually"
 
-4. LLM calls search_records_view({ model, filters })  [app tool, auth required]
+4. LLM calls search_records_app({ model, filters })  [app tool, auth required]
    → Renders visual table with filter chips in the host
 ```
 
 ### Tool Precedence
 
 - `search_records` is the **preferred** tool for models with `filterable_search`
-- `find_model` usage rules direct LLM to prefer `search_records` for filterable models
-- `find_model` remains the tool for ID lookups and simple text search on non-filterable models
+- `find_records` usage rules direct LLM to prefer `search_records` for filterable models
+- `find_records` remains the tool for ID lookups and simple text search on non-filterable models
 
 ### Search View vs Browse Records
 
-| Aspect        | `list_records_view`                      | `search_records_view`                 |
+| Aspect        | `list_records_app`                       | `search_records_app`                  |
 | ------------- | ---------------------------------------- | ------------------------------------- |
 | Data source   | GET `{endpoint}`                         | POST `{endpoint}/search`              |
 | Input         | `model`, `search?`, `page?`              | `model`, `filters`, `page?`           |
@@ -746,7 +746,7 @@ Association options (locations, tags) are fetched when the form opens, not at sc
 
 ### Separate Search App
 
-Search results use a dedicated app (`search_records_view`) rather than overloading `list_records_view`. The split is structural — models with `static filters` are **only** available in `search_records_view`, models without filters are only in `list_records_view`. This eliminates routing ambiguity at the schema level.
+Search results use a dedicated app (`search_records_app`) rather than overloading `list_records_app`. The split is structural — models with `static filters` are **only** available in `search_records_app`, models without filters are only in `list_records_app`. This eliminates routing ambiguity at the schema level.
 
 ### Conditional Registration
 
@@ -832,8 +832,8 @@ app.ontoolresult = async () => {
 
 ### Apps by Strategy
 
-| Strategy      | App                   | LLM Context                                 |
-| ------------- | --------------------- | ------------------------------------------- |
-| A (two-block) | `list_records_view`   | JSON + record count + selection hint        |
-| A (two-block) | `search_records_view` | JSON + record count + filter summary        |
-| B (app-fetch) | `workflow_panel`      | Summary only (N workflows, click to launch) |
+| Strategy      | App                  | LLM Context                                 |
+| ------------- | -------------------- | ------------------------------------------- |
+| A (two-block) | `list_records_app`   | JSON + record count + selection hint        |
+| A (two-block) | `search_records_app` | JSON + record count + filter summary        |
+| B (app-fetch) | `workflow_panel`     | Summary only (N workflows, click to launch) |

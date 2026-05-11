@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.33.0] — 2026-05-11
+
+### Changed (breaking)
+
+- **Tool surface refactor for data tools and MCP Apps.** Paired data/app tools now share a root with the app variant carrying a consistent `_app` suffix; descriptions follow the OpenAI Apps SDK "Use this when…" pattern with explicit cross-references; app-tool responses carry a slim LLM-facing summary that names the App, enumerates record ids, and instructs the model not to repeat record contents in chat; the bulky UI payload is tagged `_meta.context.lifecycle: 'transient'` so harnesses can compress it after the directive is read. Renames:
+
+  | Old                         | New                  |
+  | --------------------------- | -------------------- |
+  | `find_model` (tool)         | `find_records`       |
+  | `view_records` (app)        | `find_records_app`   |
+  | `search_records_view` (app) | `search_records_app` |
+  | `list_records_view` (app)   | `list_records_app`   |
+
+  The `FindModelTool` class is renamed to `FindRecordsTool` and the file moves from `tools/data/find-model-tool.ts` to `tools/data/find-records-tool.ts`. The `DATA_TOOL_CLASSES` registry key updates accordingly. App resource URIs change to `ui://<ns>/find-records-app`, `ui://<ns>/list-records-app`, `ui://<ns>/search-records-app`. The `_meta.ui.resourceUri` discriminator (MCP Apps spec) continues to be advertised on every app tool — clients that key off metadata are unaffected. There are no compatibility shims; downstream consumers must rename their references.
+
+- **`readOnlyHint: true`** is now declared on `find_records_app`, `list_records_app`, and `search_records_app` via a new `annotations` field on `AppDefinition`, aligning the apps with OpenAI Apps SDK / MCP guidance for read-only tools.
+
+### Added
+
+- **`src/mcp/apps/format-summary.ts`** — `formatAppSummary({ toolName, count, ids, page, totalPages, totalRecords, context })` builds the standard block-1 directive; `appResponseMeta(summary)` returns the response-level `_meta` that tags block 0 as transient. Used by all three record-rendering apps to keep wording identical.
+
+### Why this matters
+
+LLMs running against mcp-kit servers were repeating record contents in chat even after the data was rendered in an MCP App widget. Two root causes: (1) co-exposed data/app variants with overlapping names and no consistent suffix; (2) indistinguishable response shapes — both halves returned full record JSON, so the LLM had no in-band signal that the user had already seen the data. The refactor closes both: consistent `_app` suffix gives the LLM a pattern-match handle, and the slim block-1 directive plus transient `_meta` mean the app response is structurally a "the data is on screen, do not echo" answer rather than a payload the LLM must summarize. The conventions follow [OpenAI Apps SDK](https://developers.openai.com/apps-sdk/plan/tools)'s data-vs-render-tool guidance and the [MCP Apps extension](https://modelcontextprotocol.io/extensions/apps/overview).
+
+[0.33.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.32.1...v0.33.0
+
 ## [0.32.1] — 2026-05-11
 
 ### Fixed

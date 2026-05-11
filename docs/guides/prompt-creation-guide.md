@@ -74,8 +74,8 @@ static sections = {
     groups: ['classification'],
     content: {
       notes: [
-        'Use `find_model(model: "theme")` to find the theme',
-        'Use `find_model(model: "category")` to find the category'
+        'Use `find_records(model: "theme")` to find the theme',
+        'Use `find_records(model: "category")` to find the category'
       ]
     }
   },

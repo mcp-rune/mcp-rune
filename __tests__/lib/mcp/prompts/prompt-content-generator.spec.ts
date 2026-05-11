@@ -731,8 +731,8 @@ describe('PromptContentGenerator', () => {
 
       // Transformer-covered section should NOT have the hardcoded intro
       expect(result).not.toContain('This hardcoded intro should be replaced.')
-      // Should have auto-generated find_model instructions from select transformer
-      expect(result).toContain('find_model(model: "licensor"')
+      // Should have auto-generated find_records instructions from select transformer
+      expect(result).toContain('find_records(model: "licensor"')
       expect(result).toContain('get_field_suggestions')
     })
 
@@ -756,7 +756,7 @@ describe('PromptContentGenerator', () => {
 
       // Select transformer with appsEnabled should mention dropdown
       expect(result).toContain('dropdown')
-      expect(result).toContain('find_model(model: "licensor"')
+      expect(result).toContain('find_records(model: "licensor"')
     })
 
     it('generates non-app instructions when appsEnabled is false', () => {
@@ -851,7 +851,7 @@ describe('PromptContentGenerator', () => {
       expect(result).not.toContain('Old hardcoded instructions that should be replaced.')
       // Transformer instructions present
       expect(result).toContain('MUST identify the catalogue')
-      expect(result).toContain('find_model')
+      expect(result).toContain('find_records')
     })
 
     it('renders preamble before transformer instructions', () => {

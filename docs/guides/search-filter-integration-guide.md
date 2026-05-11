@@ -20,7 +20,7 @@ Rails API
   ↓
 { records: [...], pagination: { page, per_page, total } }
   ↓
-search_records_view (MCP App) — OR — analysis memory (map-reduce)
+search_records_app (MCP App) — OR — analysis memory (map-reduce)
 ```
 
 The MCP model's `static filters` is the shared contract. The MCP framework derives it into a prompt (via `get_filters_guide`), and the Rails API implements the same filter keys.
@@ -260,7 +260,7 @@ Once a model has `static filters`, the following happens with zero additional co
 2. **`get_filters_guide` tool** — generates markdown documentation from the filter spec
 3. **`list_models` tool** — shows `filterable_search: { available: true, filter_count: N }`
 4. **Search view MCP App** — `SEARCH_VIEW_MODELS` in `apps/index.js` picks up the model (and `LIST_VIEW_MODELS` excludes it)
-5. **`find_model` tool** — usage rules direct the LLM to use `search_records` for filterable models
+5. **`find_records` tool** — usage rules direct the LLM to use `search_records` for filterable models
 
 ## Step 5: LLM Workflows
 
@@ -271,7 +271,7 @@ User: "Show me activities from last week about React"
   ↓
 LLM: get_filters_guide("activity")  → learns filter spec
 LLM: search_records({ model: "activity", filters: { started_at: { from: "2024-03-05" } } })
-LLM: search_records_view(same args)  → renders paginated table in MCP App
+LLM: search_records_app(same args)  → renders paginated table in MCP App
 ```
 
 ### Analysis (Multi-Page Map-Reduce)
@@ -298,4 +298,4 @@ LLM: clear_analysis_memories({ analysis_id: "q1-review" })
 - [ ] Rails view: Add `search.json.jbuilder` with `{ records, pagination }` shape
 - [ ] Rails tests: Integration tests for search endpoint
 - [ ] MCP tests: Verify filters definition and framework activation
-- [ ] E2E: Call `get_filters_guide` → `search_records` → `search_records_view`
+- [ ] E2E: Call `get_filters_guide` → `search_records` → `search_records_app`

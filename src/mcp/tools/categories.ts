@@ -13,7 +13,7 @@ import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 export const TOOL_CATEGORIES = {
   /** Data tools - require API authentication
    * CRUD operations, bulk operations, search, and discovery on models
-   * Examples: list_models, find_model, create_model, update_model, delete_model
+   * Examples: list_models, find_records, create_model, update_model, delete_model
    */
   DATA: 'data',
 

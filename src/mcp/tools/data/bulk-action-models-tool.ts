@@ -112,7 +112,7 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
         throw new Error(
           `The '${model}' model is read-only and cannot be modified. ` +
             `${modelConfig.description ? modelConfig.description + ' ' : ''}` +
-            'Use find_model to look up existing records.'
+            'Use find_records to look up existing records.'
         )
       }
 

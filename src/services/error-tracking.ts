@@ -17,7 +17,7 @@
  * try {
  *   await tool.execute(args)
  * } catch (error) {
- *   captureToolError(error, 'find_model', args)
+ *   captureToolError(error, 'find_records', args)
  *   throw error
  * }
  */

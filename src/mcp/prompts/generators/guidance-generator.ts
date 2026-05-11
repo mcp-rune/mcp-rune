@@ -96,7 +96,7 @@ This is a CONVERSATION. You MUST follow turn-taking:
 - ❌ Assuming what the user wants without asking
 - ❌ Asking a question then immediately calling tools
 - ❌ Asking a question then asking another question
-- ❌ Calling \`validate_form\` or \`find_model\` after asking a question in the same message
+- ❌ Calling \`validate_form\` or \`find_records\` after asking a question in the same message
 
 **CORRECT BEHAVIOR**:
 - ✅ Present options and ASK the user to choose

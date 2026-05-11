@@ -11,13 +11,13 @@ describe('lib/mcp/domain/workflows', () => {
         order: 1,
         title: 'Find title',
         description: 'Search for the title',
-        tool: 'find_model',
+        tool: 'find_records',
         toolArgs: { model: 'title' },
         tips: ['Use name search']
       })
       expect(step.order).toBe(1)
       expect(step.title).toBe('Find title')
-      expect(step.tool).toBe('find_model')
+      expect(step.tool).toBe('find_records')
       expect(step.toolArgs.model).toBe('title')
       expect(step.tips).toHaveLength(1)
     })

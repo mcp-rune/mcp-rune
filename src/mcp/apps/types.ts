@@ -93,6 +93,7 @@ export interface AppModelInstance {
 export interface ToolResult {
   content: Array<{ type: string; text: string }>
   isError?: boolean
+  _meta?: Record<string, unknown>
 }
 
 /** Context passed to handleToolCall by AppRegistry */

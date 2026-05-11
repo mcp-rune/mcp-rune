@@ -1,17 +1,17 @@
-import { FindModelTool } from '../../../../../src/mcp/tools/data/find-model-tool.js'
+import { FindRecordsTool } from '../../../../../src/mcp/tools/data/find-records-tool.js'
 
-describe('FindModelTool', () => {
+describe('FindRecordsTool', () => {
   it('should have usage rule directing to analysis_ingest for large datasets', () => {
-    const tool = new FindModelTool({ models: {}, serverContext: { appsEnabled: true } })
+    const tool = new FindRecordsTool({ models: {}, serverContext: { appsEnabled: true } })
     const rules = tool.getUsageRules()
     expect(rules).toHaveLength(1)
     expect(rules[0]).toContain('analysis_ingest')
   })
 
   it('should not cross-reference view tools in description', () => {
-    const tool = new FindModelTool({ models: {}, serverContext: { appsEnabled: true } })
-    expect(tool.baseDescription).not.toContain('list_records_view')
-    expect(tool.baseDescription).not.toContain('search_records_view')
+    const tool = new FindRecordsTool({ models: {}, serverContext: { appsEnabled: true } })
+    expect(tool.baseDescription).not.toContain('list_records_app')
+    expect(tool.baseDescription).not.toContain('search_records_app')
   })
 
   // ============================================================================
@@ -34,7 +34,7 @@ describe('FindModelTool', () => {
       mockApiClient = {
         get: vi.fn()
       }
-      tool = new FindModelTool({
+      tool = new FindRecordsTool({
         models: mockModels,
         apiClient: mockApiClient,
         logger: { info: vi.fn() }

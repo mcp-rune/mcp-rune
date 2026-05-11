@@ -9,7 +9,7 @@
  *
  * // ToolRegistry applies these automatically. For manual use:
  * import { loggingInterceptor, tracingInterceptor, errorInterceptor } from 'mcp-kit/tools'
- * const handler = wrapToolHandler('find_model', [loggingInterceptor(), tracingInterceptor()], rawHandler)
+ * const handler = wrapToolHandler('find_records', [loggingInterceptor(), tracingInterceptor()], rawHandler)
  */
 
 import * as logger from '#src/services/logger.js'

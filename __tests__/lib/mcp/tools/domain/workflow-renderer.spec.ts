@@ -14,7 +14,7 @@ import {
   renderWorkflowOverview
 } from '../../../../../src/mcp/tools/domain/workflow-renderer.js'
 
-const APP_TOOL_NAMES = ['search_records_view', 'list_records_view', 'view_records']
+const APP_TOOL_NAMES = ['search_records_app', 'list_records_app', 'find_records_app']
 
 function createWorkflow(overrides = {}) {
   return new WorkflowDefinition({
@@ -24,7 +24,7 @@ function createWorkflow(overrides = {}) {
     tags: ['test'],
     models: ['activity'],
     steps: [
-      { order: 1, title: 'Step one', description: 'First step', tool: 'find_model' },
+      { order: 1, title: 'Step one', description: 'First step', tool: 'find_records' },
       {
         order: 2,
         title: 'Search',
@@ -53,9 +53,9 @@ describe('workflow-renderer', () => {
     it('should list app tool names for data tools', () => {
       const step = { tool: 'search_records' }
       const result = renderToolGuidance(step, { appToolNames: APP_TOOL_NAMES })
-      expect(result).toContain('search_records_view')
-      expect(result).toContain('list_records_view')
-      expect(result).toContain('view_records')
+      expect(result).toContain('search_records_app')
+      expect(result).toContain('list_records_app')
+      expect(result).toContain('find_records_app')
       expect(result).toContain('visual/interactive tool')
     })
 
@@ -63,11 +63,11 @@ describe('workflow-renderer', () => {
       const step = { tool: 'bulk_action_models' }
       const result = renderToolGuidance(step, { appToolNames: APP_TOOL_NAMES })
       expect(result).toContain('Do NOT substitute with any other tool')
-      expect(result).not.toContain('search_records_view')
+      expect(result).not.toContain('search_records_app')
     })
 
     it('should return empty for app tools', () => {
-      const step = { tool: 'search_records_view' }
+      const step = { tool: 'search_records_app' }
       const result = renderToolGuidance(step, { appToolNames: APP_TOOL_NAMES })
       expect(result).toBe('')
     })
@@ -78,7 +78,7 @@ describe('workflow-renderer', () => {
     })
 
     it('should handle empty appToolNames', () => {
-      const step = { tool: 'find_model' }
+      const step = { tool: 'find_records' }
       const result = renderToolGuidance(step, { appToolNames: [] })
       expect(result).toContain('Do NOT substitute with any visual/interactive tool')
     })
@@ -106,10 +106,16 @@ describe('workflow-renderer', () => {
     })
 
     it('should render tool with exclusion guidance', () => {
-      const step = { order: 1, title: 'Test', description: 'A test', tool: 'find_model', tips: [] }
+      const step = {
+        order: 1,
+        title: 'Test',
+        description: 'A test',
+        tool: 'find_records',
+        tips: []
+      }
       const result = renderStepDetail(step, { appToolNames: APP_TOOL_NAMES })
-      expect(result).toContain('**Tool:** `find_model`')
-      expect(result).toContain('search_records_view')
+      expect(result).toContain('**Tool:** `find_records`')
+      expect(result).toContain('search_records_app')
     })
 
     it('should render exhaustive guidance', () => {
@@ -131,7 +137,7 @@ describe('workflow-renderer', () => {
         order: 1,
         title: 'Single',
         description: 'One',
-        tool: 'find_model',
+        tool: 'find_records',
         exhaustive: false,
         tips: []
       }
@@ -208,7 +214,7 @@ describe('workflow-renderer', () => {
         order: 1,
         title: 'T',
         description: 'D',
-        tool: 'find_model',
+        tool: 'find_records',
         toolArgs: { model: 'book', id: '123' },
         tips: []
       }
@@ -242,7 +248,7 @@ describe('workflow-renderer', () => {
     it('should show workflow complete when loop is the last step group', () => {
       const w = createWorkflow({
         steps: [
-          { order: 1, title: 'Intro', description: 'Start', tool: 'find_model' },
+          { order: 1, title: 'Intro', description: 'Start', tool: 'find_records' },
           {
             order: 2,
             title: 'Fetch',
@@ -271,7 +277,7 @@ describe('workflow-renderer', () => {
   describe('renderParallelGroup', () => {
     it('should render parallel header with all steps', () => {
       const steps = [
-        { order: 1, title: 'A', description: 'Do A', tool: 'find_model', tips: [] },
+        { order: 1, title: 'A', description: 'Do A', tool: 'find_records', tips: [] },
         { order: 2, title: 'B', description: 'Do B', tool: 'list_models', tips: [] }
       ]
       const result = renderParallelGroup(steps, { appToolNames: APP_TOOL_NAMES })
@@ -373,7 +379,7 @@ describe('workflow-renderer', () => {
     it('should find parallel group from any member', () => {
       const w = createWorkflow({
         steps: [
-          { order: 1, title: 'A', description: 'A', tool: 'find_model', parallelGroup: 'p1' },
+          { order: 1, title: 'A', description: 'A', tool: 'find_records', parallelGroup: 'p1' },
           { order: 2, title: 'B', description: 'B', tool: 'list_models', parallelGroup: 'p1' },
           { order: 3, title: 'C', description: 'C', tool: 'create_model' }
         ]

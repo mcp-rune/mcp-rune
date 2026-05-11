@@ -28,7 +28,7 @@ export class Book extends BaseModel {
 }
 
 // That's it. You now have:
-//   list_models, find_model, create_model, update_model, delete_model
+//   list_models, find_records, create_model, update_model, delete_model
 //   search_records, bulk_action_models, ...
 //   + compound IDs for nested resources (titles/42/assets/7)
 //   + prompt guide with validation strategy
@@ -135,8 +135,8 @@ mcp-kit works at the **application** level. You describe your domain, the framew
 
 | Tool                 | Description                                |
 | -------------------- | ------------------------------------------ |
-| `list_models`        | Paginated listing with field selection     |
-| `find_model`         | Fetch by ID, list nested via `parent_path` |
+| `list_models`        | List available model schemas               |
+| `find_records`       | Fetch by ID, list nested via `parent_path` |
 | `create_model`       | Create with attribute validation           |
 | `update_model`       | Partial update                             |
 | `delete_model`       | Destroy a record                           |
