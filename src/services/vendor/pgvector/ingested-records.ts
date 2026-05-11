@@ -186,7 +186,9 @@ export async function storeRecords(pool: Pool, params: IngestParams): Promise<nu
 
   await pool.query(
     `INSERT INTO ingested_records (analysis_id, model, record_id, data, expires_at)
-     VALUES ${placeholders.join(', ')}`,
+     VALUES ${placeholders.join(', ')}
+     ON CONFLICT (analysis_id, model, record_id) WHERE record_id IS NOT NULL
+     DO UPDATE SET data = EXCLUDED.data, expires_at = EXCLUDED.expires_at`,
     values
   )
 
@@ -530,7 +532,7 @@ export async function getRecordIds(
   model: string
 ): Promise<string[]> {
   const result = await pool.query(
-    `SELECT record_id FROM ingested_records
+    `SELECT DISTINCT record_id FROM ingested_records
      WHERE analysis_id = $1 AND model = $2
        AND record_id IS NOT NULL
        AND (expires_at IS NULL OR expires_at > NOW())`,
