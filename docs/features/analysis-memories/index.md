@@ -1,6 +1,6 @@
 # Analysis Memories
 
-A four-tool feature for running LLM-driven qualitative analysis over large, paginated datasets without dragging raw rows into the model's context window.
+A five-tool feature for running LLM-driven qualitative analysis over large, paginated datasets without dragging raw rows into the model's context window — and for acting on a subset of that dataset without ever putting the IDs back in context.
 
 The LLM downloads records once into offline storage, stores its own qualitative findings as semantic embeddings, then queries both layers — by meaning, by aggregate, by filter, by stratified sample — until it has enough material to synthesise a final answer.
 
@@ -9,10 +9,11 @@ The LLM downloads records once into offline storage, stores its own qualitative 
 - [Data flow](#data-flow)
 - [When to use it](#when-to-use-it)
 - [Setup (integrators)](#setup-integrators)
-- [The four tools](#the-four-tools)
+- [The five tools](#the-five-tools)
   - [`analysis_ingest`](#analysis_ingest)
   - [`analysis_store`](#analysis_store)
   - [`analysis_query`](#analysis_query)
+  - [`analysis_act`](#analysis_act)
   - [`analysis_clear`](#analysis_clear)
 - [Stratified sampling](#stratified-sampling)
 - [End-to-end workflow](#end-to-end-workflow)
@@ -24,7 +25,7 @@ The LLM downloads records once into offline storage, stores its own qualitative 
 
 ## Data flow
 
-Two tables back the feature. Only one of them stores vectors — the other is plain JSONB. The four tools are stitched together by **the LLM**, which drives the loop: ingest once, then read → reason → store, repeating until it has enough material to answer.
+Two tables back the feature. Only one of them stores vectors — the other is plain JSONB. The five tools are stitched together by **the LLM**, which drives the loop: ingest once, then read → reason → store, optionally act, then clear when done.
 
 ```
 ═══════════════════════════════════════════════════════════════════════════════
@@ -96,6 +97,25 @@ Two tables back the feature. Only one of them stores vectors — the other is pl
   ╰─────────────────────────────────────────────────────────────────────╯
 
 
+  ③.5 ACT — optional: mutate a subset before teardown
+  ────────────────────────────────────────────────────
+  analysis_act(analysis_id, model, where?, action, attributes?, dry_run?)
+       │
+       │  SELECT record_id FROM ingested_records
+       │  WHERE analysis_id = ? AND model = ? AND <where predicate>
+       │           │
+       │           ▼
+       │      resolved IDs (server-side only — never returned to context)
+       │           │
+       │      batches of 50, concurrency 5
+       │           │
+       │           ▼
+       │  PATCH/DELETE /api/<endpoint>/<id>   ── upstream API
+       │
+       └─► response = { summary: { total, succeeded, failed }, sample_errors }
+                                (per-record results stay in the server log)
+
+
   ④ TEARDOWN — once the LLM has its final synthesis
   ─────────────────────────────────────────────────
   analysis_clear(analysis_id)
@@ -107,7 +127,7 @@ Two tables back the feature. Only one of them stores vectors — the other is pl
 
 This is why aggregate/filter/sample queries are cheap and deterministic SQL, while semantic queries pay for a single query-side embed and rank rows by cosine distance.
 
-> **Maintenance note:** keep this diagram in sync with the code. If a future change adds a new write path (e.g. embedding raw rows, a third table, a new tool, or removing the page-summary side-effect), update the diagram in the same PR — the value of a high-level picture collapses the moment it stops matching the code. The authoritative sources are `analysis-ingest-tool.ts`, `analysis-store-tool.ts`, `analysis-query-tool.ts`, `analysis-clear-tool.ts`, and the two pgvector backend files listed under [File reference](#file-reference).
+> **Maintenance note:** keep this diagram in sync with the code. If a future change adds a new write path (e.g. embedding raw rows, a third table, a new tool, or removing the page-summary side-effect), update the diagram in the same PR — the value of a high-level picture collapses the moment it stops matching the code. The authoritative sources are `analysis-ingest-tool.ts`, `analysis-store-tool.ts`, `analysis-query-tool.ts`, `analysis-act-tool.ts`, `analysis-clear-tool.ts`, and the two pgvector backend files listed under [File reference](#file-reference).
 
 ---
 
@@ -170,11 +190,15 @@ initVectorStorage({
   pool, // required — pool injection only; mcp-kit never creates pools
   serviceName: 'my-mcp-server',
   version: '1.0.0',
-  retentionDays: 30 // default: 30 — used for the tool_memories cleanup sweep at boot
+  retentionDays: 30, // default: 30 — sweep window for tool_memories (operations feature)
+  ingestedRecordsRetentionDays: 7, // default: 7 — TTL for ingested_records (analysis feature)
+  backgroundCleanupIntervalMs: 6 * 60 * 60 * 1000 // optional — periodic cleanup across all three tables; omit to disable
 })
 ```
 
-If `options.pool` is omitted, vector storage stays disabled and the four analysis tools simply won't show up in the tool list. There's no error path — the gate is silent by design.
+If `options.pool` is omitted, vector storage stays disabled and the five analysis tools simply won't show up in the tool list. There's no error path — the gate is silent by design.
+
+`backgroundCleanupIntervalMs` is opt-in because short-lived processes (test runs, single-shot scripts) don't need it; the boot-time sweep already evicts expired rows on startup. Set it for long-running servers where on-access eviction alone may leave orphaned rows behind.
 
 ### 4. Embeddings
 
@@ -182,9 +206,9 @@ Embeddings run **locally** via `@huggingface/transformers` using `sentence-trans
 
 ---
 
-## The four tools
+## The five tools
 
-All four belong to the `ANALYSIS` tool category, gated by `requiresVectorStorage`. Only `analysis_ingest` calls the upstream API; the others operate purely on the local pgvector tables.
+All five belong to the `ANALYSIS` tool category, gated by `requiresVectorStorage`. `analysis_ingest` and `analysis_act` call the upstream API; the others operate purely on the local pgvector tables.
 
 ### `analysis_ingest`
 
@@ -252,6 +276,57 @@ Single unified tool with five modes. Mode is the only required discriminator bey
 ```
 
 Operators: `$gt`, `$gte`, `$lt`, `$lte`. The cast (`::numeric` vs `::timestamptz`) is inferred from the value type. Field names are validated against `^[a-zA-Z_][a-zA-Z0-9_]*$` before being interpolated into SQL.
+
+### `analysis_act`
+
+Applies a bulk update or delete to records previously ingested in the session. Resolves matching record IDs server-side from `ingested_records` using the same `where` vocabulary as `analysis_query mode: "filter"`, then runs the mutation in batches against the upstream API. **Only an aggregate summary returns to context — per-record IDs and results are never echoed back to the LLM.**
+
+Annotated `destructiveHint: true`, `requiresAuth: true`. Same risk profile as `bulk_action_models`.
+
+**Inputs:**
+
+| Field         | Notes                                                                                                                                                                           |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `analysis_id` | Required. Must match a prior `analysis_ingest` call.                                                                                                                            |
+| `model`       | Required. Must be a writable model present in the analysis session.                                                                                                             |
+| `where`       | Optional. Same operator vocabulary as `analysis_query mode: "filter"`: exact match plus `$gt`/`$gte`/`$lt`/`$lte`. Omit to match every record of `model` in the session.        |
+| `action`      | Required. `"update"` or `"delete"`.                                                                                                                                             |
+| `attributes`  | Required when `action: "update"`, ignored when `action: "delete"`. Applied uniformly to every matched record.                                                                   |
+| `dry_run`     | Optional. When `true`, returns `{ matched_count, sample_ids, sample_data, ingestedAtRange }` without calling the API. Use it to confirm scope and snapshot age before mutating. |
+| `user_id`     | Service-account impersonation.                                                                                                                                                  |
+
+**Batching:** internal batches of 50, concurrency cap of 5. Higher than `bulk_action_models` (25) because batches are never surfaced to the LLM — only the aggregate summary is.
+
+**Response (live):**
+
+```jsonc
+{
+  "summary": { "total": 312, "succeeded": 308, "failed": 4, "action": "update" },
+  "sample_errors": [
+    /* first 5 failed records, with status_code and message */
+  ]
+}
+```
+
+**Response (dry-run):**
+
+```jsonc
+{
+  "matched_count": 312,
+  "sample_ids": ["d-1", "d-2", ...],            // first 10
+  "sample_data": [ /* first 3 rows, each with ingestedAt */ ],
+  "ingestedAtRange": {
+    "earliest": "2026-05-13T08:14:22Z",
+    "latest":   "2026-05-13T08:15:01Z"
+  }
+}
+```
+
+**Snapshot staleness.** `ingested_records` is a point-in-time copy. A long gap between ingest and act means the upstream state may have drifted. The `ingestedAt` timestamp on the dry-run sample and `ingestedAtRange` exist so the LLM (and the operator reviewing the call) can judge whether to re-ingest first. There is no automatic revalidation pass — that's intentional, to keep the cost model predictable.
+
+**Failure model.** Batches are not atomic across the whole set (same as `bulk_action_models`). A partial failure mid-run leaves earlier batches applied. `sample_errors` carries enough information to diagnose patterns; the server log carries the full per-record outcome.
+
+**Progress.** When the MCP client supplies a `progressToken`, `analysis_act` emits one `notifications/progress` event per completed record.
 
 ### `analysis_clear`
 
@@ -409,18 +484,20 @@ analysis_clear({ analysis_id: "library-audit-2026-05" })
 
 ## Lifecycle & retention
 
-| Layer                              | Expiry                                   | Eviction                                                           |
-| ---------------------------------- | ---------------------------------------- | ------------------------------------------------------------------ |
-| `analysis_memories` (ephemeral)    | 1 hour from creation                     | On-access: every `recallMemories` call deletes expired rows first. |
-| `analysis_memories` (persistent)   | Never (until explicit clear)             | Set with `persistent: true` at store time.                         |
-| `ingested_records`                 | 1 hour from store                        | On-access: every `queryRecords` call deletes expired rows first.   |
-| `tool_memories` (separate feature) | `retentionDays` from `initVectorStorage` | Boot-time sweep + on-access.                                       |
+| Layer                              | Expiry                                                              | Eviction                                                                                                    |
+| ---------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `analysis_memories` (ephemeral)    | 1 hour from creation                                                | On-access: every `recallMemories` call deletes expired rows first.                                          |
+| `analysis_memories` (persistent)   | Never (until explicit clear)                                        | Set with `persistent: true` at store time.                                                                  |
+| `ingested_records`                 | 7 days from store (configurable via `ingestedRecordsRetentionDays`) | On-access: every `queryRecords` call deletes expired rows first. Boot-time sweep on init.                   |
+| `tool_memories` (separate feature) | `retentionDays` from `initVectorStorage`                            | Boot-time sweep + on-access.                                                                                |
+| Background sweep (opt-in)          | Every `backgroundCleanupIntervalMs` ms                              | Periodic cleanup across all three tables. Off by default — set the option to enable for long-lived servers. |
 
 **Practical implications:**
 
-- A long-running analysis session that idles for over an hour will lose its ingested records. Re-run `analysis_ingest` with `resume: true` — page summaries will be regenerated, but the LLM's stored findings (if ephemeral) may also be gone.
+- The 7-day TTL on `ingested_records` is the **realistic working window** for an analysis session — long enough to ingest in the morning and `analysis_act` in the afternoon (or after a weekend), short enough that an abandoned session eventually frees its disk.
+- `analysis_memories` is split deliberately: ephemeral findings are throw-away by design; the `persistent: true` flag is the explicit opt-in for findings that should outlive a session.
+- A session whose `ingested_records` have expired will return an empty match set from `analysis_act` and `analysis_query`. Re-run `analysis_ingest` with `resume: true` to rebuild — page summaries will be regenerated.
 - `analysis_clear` is the explicit teardown for a session that finished cleanly. Don't rely on TTL for cleanup if you store findings persistently.
-- Findings carry their own expiry per-row; querying touches the same eviction sweep regardless of which `analysis_id` you're hitting.
 
 ---
 
@@ -452,6 +529,7 @@ analysis_clear({ analysis_id: "library-audit-2026-05" })
 | `src/mcp/tools/analysis/analysis-ingest-tool.ts`    | `analysis_ingest` tool                                                                                     |
 | `src/mcp/tools/analysis/analysis-store-tool.ts`     | `analysis_store` tool                                                                                      |
 | `src/mcp/tools/analysis/analysis-query-tool.ts`     | `analysis_query` tool (all five modes)                                                                     |
+| `src/mcp/tools/analysis/analysis-act-tool.ts`       | `analysis_act` tool (server-side ID resolution + batched mutation)                                         |
 | `src/mcp/tools/analysis/analysis-clear-tool.ts`     | `analysis_clear` tool                                                                                      |
 | `src/mcp/tools/analysis/base-analysis-tool.ts`      | Category binding (`ANALYSIS`, `requiresVectorStorage`)                                                     |
 | `src/services/vector-storage.ts`                    | Vendor-agnostic facade — `initVectorStorage`, `isVectorStorageEnabled`, all store/query/clear entry points |
@@ -466,3 +544,5 @@ Related guides:
 - [`proximity-sampling.md`](./proximity-sampling.md) — deeper treatment of date-windowed sampling.
 - [`tool-creation-guide.md`](../../guides/tool-creation-guide.md) — how the `ANALYSIS` category fits into the broader tool/category model.
 - [`transient-context-protocol.md`](../../guides/transient-context-protocol.md) — how `analysis_store` consumes transient context from upstream tools.
+
+**Out of scope for this iteration** (tracked separately): a read-only `analysis_export` companion that returns filtered records to a downloadable artefact; an opt-in revalidation pass that re-fetches each candidate record before `analysis_act` mutates it to detect drift since ingest. See [issue #80](https://github.com/dsaenztagarro/mcp-kit/issues/80) for context.

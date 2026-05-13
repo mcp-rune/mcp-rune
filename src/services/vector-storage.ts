@@ -31,7 +31,12 @@ import * as operations from './vendor/pgvector/tool-memories.js'
 export interface VectorStorageOptions {
   serviceName?: string
   version?: string
+  /** Retention for tool_memories (operations feature). Default 30 days. */
   retentionDays?: number
+  /** Retention for ingested_records (analysis feature). Default 7 days. */
+  ingestedRecordsRetentionDays?: number
+  /** When set, periodic cleanup across all three tables fires on this interval (ms). */
+  backgroundCleanupIntervalMs?: number
 }
 
 export interface StoreOperationParams {
@@ -308,6 +313,57 @@ export async function getIngestedRecordIds(analysisId: string, model: string): P
   if (!pool) return []
 
   return ingestedRecords.getRecordIds(pool, analysisId, model)
+}
+
+/**
+ * Get record IDs matching an optional WHERE predicate.
+ *
+ * Same operator vocabulary as analysis_query mode: "filter". Returns IDs only,
+ * so callers (analysis_act) can resolve a mutation set server-side without
+ * round-tripping rows through context.
+ */
+export async function getIngestedRecordIdsFiltered(
+  analysisId: string,
+  model: string,
+  where?: Record<string, unknown>
+): Promise<string[]> {
+  if (!vendor.isConfigured()) return []
+
+  const pool = vendor.getPool()
+  if (!pool) return []
+
+  return ingestedRecords.getRecordIdsFiltered(pool, analysisId, model, where)
+}
+
+/** Preview a filtered set without mutating — for analysis_act dry_run. */
+export async function getIngestedRecordDryRun(
+  analysisId: string,
+  model: string,
+  where?: Record<string, unknown>,
+  sampleLimit?: number
+): Promise<ingestedRecords.DryRunResult> {
+  if (!vendor.isConfigured()) {
+    return {
+      matchedCount: 0,
+      sampleIds: [],
+      sampleData: [],
+      earliestIngestedAt: null,
+      latestIngestedAt: null
+    }
+  }
+
+  const pool = vendor.getPool()
+  if (!pool) {
+    return {
+      matchedCount: 0,
+      sampleIds: [],
+      sampleData: [],
+      earliestIngestedAt: null,
+      latestIngestedAt: null
+    }
+  }
+
+  return ingestedRecords.getRecordsForDryRun(pool, analysisId, model, where, sampleLimit)
 }
 
 /** Clear ingested records by analysis ID */

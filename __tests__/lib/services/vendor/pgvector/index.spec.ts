@@ -5,8 +5,15 @@ vi.mock('../../../../../src/services/logger.js', () => ({
   error: vi.fn()
 }))
 
-// Mock tool-memories to prevent real DB calls
+// Mock all three table modules to prevent real DB calls
 vi.mock('../../../../../src/services/vendor/pgvector/tool-memories.js', () => ({
+  cleanupExpired: vi.fn(() => Promise.resolve(0))
+}))
+vi.mock('../../../../../src/services/vendor/pgvector/ingested-records.js', () => ({
+  cleanupExpired: vi.fn(() => Promise.resolve(0)),
+  setRetentionDays: vi.fn()
+}))
+vi.mock('../../../../../src/services/vendor/pgvector/analysis-memories.js', () => ({
   cleanupExpired: vi.fn(() => Promise.resolve(0))
 }))
 
@@ -64,6 +71,121 @@ describe('lib/services/vendor/pgvector/index', () => {
       await vi.waitFor(() => {
         expect(cleanupExpired).toHaveBeenCalledWith(mockPool, 14)
       })
+    })
+
+    it('should sweep all three tables on boot', async () => {
+      const toolMemories =
+        await import('../../../../../src/services/vendor/pgvector/tool-memories.js')
+      const ingested =
+        await import('../../../../../src/services/vendor/pgvector/ingested-records.js')
+      const memories =
+        await import('../../../../../src/services/vendor/pgvector/analysis-memories.js')
+
+      initialize({ pool: mockPool, serviceName: 'test' })
+
+      await vi.waitFor(() => {
+        expect(toolMemories.cleanupExpired).toHaveBeenCalledWith(mockPool, 30)
+        expect(ingested.cleanupExpired).toHaveBeenCalledWith(mockPool)
+        expect(memories.cleanupExpired).toHaveBeenCalledWith(mockPool)
+      })
+    })
+
+    it('should configure ingestedRecords retention from options', async () => {
+      const ingested =
+        await import('../../../../../src/services/vendor/pgvector/ingested-records.js')
+
+      initialize({
+        pool: mockPool,
+        serviceName: 'test',
+        ingestedRecordsRetentionDays: 14
+      })
+
+      expect(ingested.setRetentionDays).toHaveBeenCalledWith(14)
+    })
+
+    it('should default ingestedRecords retention to 7 days', async () => {
+      const ingested =
+        await import('../../../../../src/services/vendor/pgvector/ingested-records.js')
+
+      initialize({ pool: mockPool, serviceName: 'test' })
+
+      expect(ingested.setRetentionDays).toHaveBeenCalledWith(7)
+    })
+  })
+
+  describe('background cleanup interval', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(async () => {
+      vi.useRealTimers()
+      await close()
+    })
+
+    it('should not schedule an interval by default', async () => {
+      initialize({ pool: mockPool, serviceName: 'test' })
+
+      const toolMemories =
+        await import('../../../../../src/services/vendor/pgvector/tool-memories.js')
+      const beforeCalls = (toolMemories.cleanupExpired as ReturnType<typeof vi.fn>).mock.calls
+        .length
+
+      vi.advanceTimersByTime(60_000)
+
+      expect((toolMemories.cleanupExpired as ReturnType<typeof vi.fn>).mock.calls.length).toBe(
+        beforeCalls
+      )
+    })
+
+    it('should schedule periodic sweeps when backgroundCleanupIntervalMs is set', async () => {
+      const ingested =
+        await import('../../../../../src/services/vendor/pgvector/ingested-records.js')
+
+      initialize({
+        pool: mockPool,
+        serviceName: 'test',
+        backgroundCleanupIntervalMs: 5000
+      })
+
+      // Drain the async boot sweep (queued via Promise.all in runCleanupSweep)
+      await vi.waitFor(() => {
+        expect(ingested.cleanupExpired).toHaveBeenCalledTimes(1)
+      })
+
+      vi.advanceTimersByTime(5000)
+      await vi.waitFor(() => {
+        expect(ingested.cleanupExpired).toHaveBeenCalledTimes(2)
+      })
+
+      vi.advanceTimersByTime(5000)
+      await vi.waitFor(() => {
+        expect(ingested.cleanupExpired).toHaveBeenCalledTimes(3)
+      })
+    })
+
+    it('close() should clear the interval', async () => {
+      const ingested =
+        await import('../../../../../src/services/vendor/pgvector/ingested-records.js')
+
+      initialize({
+        pool: mockPool,
+        serviceName: 'test',
+        backgroundCleanupIntervalMs: 5000
+      })
+
+      await vi.waitFor(() => {
+        expect(ingested.cleanupExpired).toHaveBeenCalledTimes(1)
+      })
+
+      await close()
+
+      const callsBeforeAdvance = (ingested.cleanupExpired as ReturnType<typeof vi.fn>).mock.calls
+        .length
+      vi.advanceTimersByTime(15000)
+      expect((ingested.cleanupExpired as ReturnType<typeof vi.fn>).mock.calls.length).toBe(
+        callsBeforeAdvance
+      )
     })
   })
 
