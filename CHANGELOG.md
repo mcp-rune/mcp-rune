@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.34.1] — 2026-05-13
+
+### Fixed
+
+- **CI Build step on master.** `npm run build` produced an incomplete artifact when run from a clean checkout: it copied `src/mcp/apps/dist/*.html` into `dist/`, but those HTML files are Vite outputs gitignored under `dist/` — so on CI (no prior `build:apps` run) the copy failed with `cp: cannot stat 'src/mcp/apps/dist/*.html': No such file or directory`. The repo had a separate `build:full` script that chained `build:all-apps && build` and was used by `prepublishOnly`, but CI invoked `npm run build` directly and never ran the apps build.
+
+### Changed
+
+- **`npm run build` now produces the complete publishable artifact.** Added a `prebuild` npm lifecycle hook that runs `build:all-apps` before `build`, matching the [Astro pattern](https://github.com/withastro/astro/blob/main/packages/astro/package.json) for pre-stringifying runtime assets. Any caller — CI, contributors, `prepublishOnly` — gets the full build from a single command.
+- **`build:full` script removed.** It is now identical to `build` thanks to the `prebuild` hook, so keeping both would be a footgun (which one is "really" the full build?). `prepublishOnly` now calls `npm run build`.
+
+### Why this matters
+
+The split between `build` and `build:full` was a hidden invariant: "use `build` for TS-only iteration, `build:full` for publish/CI". CI didn't get the memo, and master CI went red after #81 merged. The conventional pattern across published-to-npm libraries (Vite, Astro, TanStack Query, Next.js, Mantine, esbuild) is that `npm run build` always produces the complete artifact; fast inner-loop iteration uses `dev` (`tsc --watch`) or `build:check` (`tsc --noEmit`), not `build`. This release adopts that convention.
+
+[0.34.1]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.34.0...v0.34.1
+
 ## [0.34.0] — 2026-05-13
 
 ### Added
