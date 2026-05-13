@@ -1,6 +1,6 @@
 {
   "name": "@dsaenztagarro/mcp-kit",
-  "version": "0.34.0",
+  "version": "0.34.1",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "restricted"
@@ -72,11 +72,11 @@
   ],
   "scripts": {
     "dev": "tsc --watch",
+    "prebuild": "npm run build:all-apps",
     "build": "tsc && mkdir -p dist/mcp/apps/dist && cp src/mcp/apps/dist/*.html dist/mcp/apps/dist/",
     "build:check": "tsc --noEmit",
     "build:apps": "vite build -c src/mcp/apps/vite.config.js",
     "build:all-apps": "BUILD_TARGET=model-form npm run build:apps && SKIP_CLEAN=1 BUILD_TARGET=list-view npm run build:apps && SKIP_CLEAN=1 BUILD_TARGET=record-detail npm run build:apps && SKIP_CLEAN=1 BUILD_TARGET=search-view npm run build:apps && SKIP_CLEAN=1 BUILD_TARGET=autocomplete-picker npm run build:apps && SKIP_CLEAN=1 BUILD_TARGET=multi-select npm run build:apps",
-    "build:full": "npm run build:all-apps && npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -84,7 +84,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepublishOnly": "npm run build:full",
+    "prepublishOnly": "npm run build",
     "prepare": "husky"
   },
   "engines": {
