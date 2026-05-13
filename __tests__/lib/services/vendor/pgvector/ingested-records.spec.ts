@@ -1,4 +1,10 @@
-import { queryRecords } from '../../../../../src/services/vendor/pgvector/ingested-records.js'
+import {
+  getRecordIdsFiltered,
+  getRecordsForDryRun,
+  queryRecords,
+  setRetentionDays,
+  storeRecords
+} from '../../../../../src/services/vendor/pgvector/ingested-records.js'
 
 describe('lib/services/vendor/pgvector/ingested-records', () => {
   let mockPool: { query: ReturnType<typeof vi.fn> }
@@ -220,6 +226,194 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
       expect(sql).toContain('data @>')
       expect(sql).toContain("(data->>'duration_minutes')::numeric >=")
       expect(sql).toContain('LIMIT')
+    })
+  })
+
+  describe('getRecordIdsFiltered', () => {
+    beforeEach(() => {
+      // Override the cleanupExpired pre-mock from outer beforeEach — this helper
+      // doesn't call cleanupExpired so the test should start with a clean queue.
+      mockPool.query.mockReset()
+    })
+
+    it('returns IDs scoped by analysis + model with no where clause', async () => {
+      mockPool.query.mockResolvedValueOnce({
+        rows: [{ record_id: 'a' }, { record_id: 'b' }]
+      })
+
+      const ids = await getRecordIdsFiltered(mockPool as any, 'test-analysis', 'deal')
+
+      expect(ids).toEqual(['a', 'b'])
+      const [sql, params] = mockPool.query.mock.calls[0]
+      expect(sql).toContain('SELECT DISTINCT record_id')
+      expect(sql).toContain('analysis_id = $1')
+      expect(sql).toContain('model = $2')
+      expect(sql).toContain('record_id IS NOT NULL')
+      expect(params).toEqual(['test-analysis', 'deal'])
+    })
+
+    it('applies exact match where conditions via JSONB containment', async () => {
+      mockPool.query.mockResolvedValueOnce({ rows: [{ record_id: 'd-1' }] })
+
+      await getRecordIdsFiltered(mockPool as any, 'test-analysis', 'deal', {
+        status: 'stalled'
+      })
+
+      const [sql, params] = mockPool.query.mock.calls[0]
+      expect(sql).toContain('data @>')
+      expect(params).toEqual(['test-analysis', 'deal', JSON.stringify({ status: 'stalled' })])
+    })
+
+    it('applies range operators with type casting', async () => {
+      mockPool.query.mockResolvedValueOnce({ rows: [] })
+
+      await getRecordIdsFiltered(mockPool as any, 'test-analysis', 'deal', {
+        amount: { $gte: 10000 }
+      })
+
+      const [sql] = mockPool.query.mock.calls[0]
+      expect(sql).toContain("(data->>'amount')::numeric >=")
+    })
+  })
+
+  describe('getRecordsForDryRun', () => {
+    beforeEach(() => {
+      mockPool.query.mockReset()
+    })
+
+    it('returns matched count, sample IDs, sample data, and ingestedAt range', async () => {
+      mockPool.query
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              count: 312,
+              earliest: '2026-05-13T08:14:22Z',
+              latest: '2026-05-13T08:15:01Z'
+            }
+          ]
+        })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              record_id: 'd-1',
+              data: { id: 'd-1', status: 'stalled', amount: 5000 },
+              created_at: '2026-05-13T08:14:22Z'
+            },
+            {
+              record_id: 'd-2',
+              data: { id: 'd-2', status: 'stalled', amount: 7500 },
+              created_at: '2026-05-13T08:14:45Z'
+            },
+            {
+              record_id: 'd-3',
+              data: { id: 'd-3', status: 'stalled', amount: 12000 },
+              created_at: '2026-05-13T08:15:01Z'
+            }
+          ]
+        })
+
+      const result = await getRecordsForDryRun(
+        mockPool as any,
+        'audit-2026-q2',
+        'deal',
+        { status: 'stalled' },
+        3
+      )
+
+      expect(result.matchedCount).toBe(312)
+      expect(result.earliestIngestedAt).toBe('2026-05-13T08:14:22Z')
+      expect(result.latestIngestedAt).toBe('2026-05-13T08:15:01Z')
+      expect(result.sampleIds).toEqual(['d-1', 'd-2', 'd-3'])
+      expect(result.sampleData).toHaveLength(3)
+      expect(result.sampleData[0]).toMatchObject({
+        id: 'd-1',
+        status: 'stalled',
+        ingestedAt: '2026-05-13T08:14:22Z'
+      })
+    })
+
+    it('handles empty result set', async () => {
+      mockPool.query
+        .mockResolvedValueOnce({ rows: [{ count: 0, earliest: null, latest: null }] })
+        .mockResolvedValueOnce({ rows: [] })
+
+      const result = await getRecordsForDryRun(mockPool as any, 'audit-2026-q2', 'deal', {
+        status: 'never_match'
+      })
+
+      expect(result.matchedCount).toBe(0)
+      expect(result.sampleIds).toEqual([])
+      expect(result.sampleData).toEqual([])
+      expect(result.earliestIngestedAt).toBeNull()
+    })
+
+    it('caps sampleIds at 10', async () => {
+      const rows = Array.from({ length: 12 }, (_, i) => ({
+        record_id: `d-${i}`,
+        data: { id: `d-${i}` },
+        created_at: '2026-05-13T08:14:22Z'
+      }))
+      mockPool.query
+        .mockResolvedValueOnce({ rows: [{ count: 12, earliest: 'x', latest: 'y' }] })
+        .mockResolvedValueOnce({ rows })
+
+      const result = await getRecordsForDryRun(mockPool as any, 'a', 'deal', undefined, 3)
+
+      expect(result.sampleIds).toHaveLength(10)
+      expect(result.sampleData).toHaveLength(3)
+    })
+  })
+
+  describe('setRetentionDays', () => {
+    let originalDateNow: () => number
+
+    beforeEach(() => {
+      mockPool.query.mockReset()
+      originalDateNow = Date.now
+      Date.now = () => new Date('2026-05-13T12:00:00Z').getTime()
+    })
+
+    afterEach(() => {
+      Date.now = originalDateNow
+      // Restore default for isolation across describe blocks
+      setRetentionDays(7)
+    })
+
+    it('rejects non-positive values', () => {
+      expect(() => setRetentionDays(0)).toThrow(/Invalid retentionDays/)
+      expect(() => setRetentionDays(-1)).toThrow(/Invalid retentionDays/)
+      expect(() => setRetentionDays(Number.NaN)).toThrow(/Invalid retentionDays/)
+    })
+
+    it('affects expires_at on subsequent storeRecords inserts', async () => {
+      mockPool.query.mockResolvedValueOnce({})
+
+      setRetentionDays(14)
+      await storeRecords(mockPool as any, {
+        analysisId: 'a',
+        model: 'deal',
+        records: [{ id: 'd-1', data: { id: 'd-1' } }]
+      })
+
+      const params = mockPool.query.mock.calls[0][1] as unknown[]
+      const expiresAt = params[4] as Date
+      const expectedMs = Date.now() + 14 * 86_400_000
+      expect(expiresAt.getTime()).toBe(expectedMs)
+    })
+
+    it('defaults to 7 days', async () => {
+      mockPool.query.mockResolvedValueOnce({})
+
+      setRetentionDays(7)
+      await storeRecords(mockPool as any, {
+        analysisId: 'a',
+        model: 'deal',
+        records: [{ id: 'd-1', data: { id: 'd-1' } }]
+      })
+
+      const params = mockPool.query.mock.calls[0][1] as unknown[]
+      const expiresAt = params[4] as Date
+      expect(expiresAt.getTime()).toBe(Date.now() + 7 * 86_400_000)
     })
   })
 })

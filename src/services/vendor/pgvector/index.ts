@@ -11,9 +11,12 @@
 import type { Pool } from 'pg'
 
 import * as logger from '../../logger.js'
+import * as analysisMemories from './analysis-memories.js'
+import * as ingestedRecords from './ingested-records.js'
 import * as operations from './tool-memories.js'
 
 let pool: Pool | null = null
+let cleanupInterval: ReturnType<typeof setInterval> | null = null
 
 /** Check if pgvector is configured (pool injected) */
 export function isConfigured(): boolean {
@@ -29,7 +32,16 @@ export interface PgvectorOptions {
   pool?: Pool
   serviceName?: string
   version?: string
+  /** Retention for tool_memories (operations feature). Default 30 days. */
   retentionDays?: number
+  /** Retention for ingested_records (analysis feature). Default 7 days. */
+  ingestedRecordsRetentionDays?: number
+  /**
+   * If set, run cleanup across all three tables every N ms. Default off so
+   * tests and short-lived processes aren't affected. setInterval's native
+   * unit is ms; sub-minute intervals are useful for tests.
+   */
+  backgroundCleanupIntervalMs?: number
 }
 
 /**
@@ -47,23 +59,50 @@ export function initialize(options: PgvectorOptions = {}): boolean {
 
   pool = options.pool
 
-  // Cleanup expired records asynchronously (don't block startup)
   const retentionDays = options.retentionDays || 30
-  operations.cleanupExpired(pool, retentionDays).catch((err: Error) => {
-    logger.error('pgvector cleanup failed', {
+  const ingestedRetention = options.ingestedRecordsRetentionDays ?? 7
+  ingestedRecords.setRetentionDays(ingestedRetention)
+
+  // Boot-time sweep across all three tables (async, non-blocking).
+  runCleanupSweep(pool, retentionDays).catch((err: Error) => {
+    logger.error('pgvector boot cleanup failed', {
       service: 'pgvector',
       error: err.message
     })
   })
 
+  if (options.backgroundCleanupIntervalMs && options.backgroundCleanupIntervalMs > 0) {
+    cleanupInterval = setInterval(() => {
+      const currentPool = pool
+      if (!currentPool) return
+      runCleanupSweep(currentPool, retentionDays).catch((err: Error) => {
+        logger.error('pgvector periodic cleanup failed', {
+          service: 'pgvector',
+          error: err.message
+        })
+      })
+    }, options.backgroundCleanupIntervalMs)
+    if (typeof cleanupInterval.unref === 'function') cleanupInterval.unref()
+  }
+
   logger.info('pgvector initialized', {
     service: 'pgvector',
     serviceName: options.serviceName,
     version: options.version,
-    retentionDays
+    retentionDays,
+    ingestedRecordsRetentionDays: ingestedRetention,
+    backgroundCleanupIntervalMs: options.backgroundCleanupIntervalMs ?? null
   })
 
   return true
+}
+
+async function runCleanupSweep(p: Pool, toolMemoriesRetentionDays: number): Promise<void> {
+  await Promise.all([
+    operations.cleanupExpired(p, toolMemoriesRetentionDays),
+    ingestedRecords.cleanupExpired(p),
+    analysisMemories.cleanupExpired(p)
+  ])
 }
 
 /** Flush pending writes (drain pool) */
@@ -79,6 +118,10 @@ export async function flush(_timeout = 5000): Promise<void> {
  * the pool is owned by src/engineer/db.js.
  */
 export async function close(_timeout = 5000): Promise<void> {
+  if (cleanupInterval) {
+    clearInterval(cleanupInterval)
+    cleanupInterval = null
+  }
   if (!pool) return
 
   pool = null

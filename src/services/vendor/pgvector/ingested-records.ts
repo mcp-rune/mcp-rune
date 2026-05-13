@@ -62,6 +62,20 @@ interface IngestedRow {
   created_at: string
 }
 
+/**
+ * Retention window for ingested records (in days). Set at init time via
+ * setRetentionDays(); multiplied to ms at the INSERT site.
+ */
+let retentionDays = 7
+
+/** Configure how long newly-ingested records survive before eviction. */
+export function setRetentionDays(days: number): void {
+  if (!Number.isFinite(days) || days <= 0) {
+    throw new Error(`Invalid retentionDays: ${days}. Must be a positive number.`)
+  }
+  retentionDays = days
+}
+
 // --- Comparison operator support for range queries ---
 
 const COMPARISON_OPS = {
@@ -169,7 +183,7 @@ function buildWhereConditions(
 export async function storeRecords(pool: Pool, params: IngestParams): Promise<number> {
   if (params.records.length === 0) return 0
 
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+  const expiresAt = new Date(Date.now() + retentionDays * 86_400_000)
 
   // Build a multi-row INSERT for efficiency
   const values: unknown[] = []
@@ -539,6 +553,119 @@ export async function getRecordIds(
     [analysisId, model]
   )
   return (result.rows as Array<{ record_id: string }>).map((r) => r.record_id)
+}
+
+/**
+ * Get record IDs matching an optional WHERE predicate.
+ *
+ * Reuses buildWhereConditions for the same operator vocabulary as queryFilter,
+ * but returns IDs only — used by analysis_act to resolve a mutation set without
+ * shipping rows back to the LLM.
+ */
+export async function getRecordIdsFiltered(
+  pool: Pool,
+  analysisId: string,
+  model: string,
+  where?: Record<string, unknown>
+): Promise<string[]> {
+  const conditions = [
+    'analysis_id = $1',
+    'model = $2',
+    'record_id IS NOT NULL',
+    '(expires_at IS NULL OR expires_at > NOW())'
+  ]
+  const params: unknown[] = [analysisId, model]
+
+  if (where && Object.keys(where).length > 0) {
+    const built = buildWhereConditions(where, params, 3)
+    conditions.push(...built.conditions)
+  }
+
+  const result = await pool.query(
+    `SELECT DISTINCT record_id FROM ingested_records
+     WHERE ${conditions.join(' AND ')}`,
+    params
+  )
+  return (result.rows as Array<{ record_id: string }>).map((r) => r.record_id)
+}
+
+export interface DryRunResult {
+  matchedCount: number
+  sampleIds: string[]
+  sampleData: Array<Record<string, unknown> & { ingestedAt: string }>
+  earliestIngestedAt: string | null
+  latestIngestedAt: string | null
+}
+
+/**
+ * Preview a filtered set without mutating: returns total match count, the first
+ * few IDs, a small sample of full rows annotated with their ingestion timestamp,
+ * and the ingestedAt range so the caller can judge snapshot staleness.
+ */
+export async function getRecordsForDryRun(
+  pool: Pool,
+  analysisId: string,
+  model: string,
+  where?: Record<string, unknown>,
+  sampleLimit = 3
+): Promise<DryRunResult> {
+  const conditions = [
+    'analysis_id = $1',
+    'model = $2',
+    '(expires_at IS NULL OR expires_at > NOW())'
+  ]
+  const params: unknown[] = [analysisId, model]
+
+  if (where && Object.keys(where).length > 0) {
+    const built = buildWhereConditions(where, params, 3)
+    conditions.push(...built.conditions)
+  }
+
+  const whereClause = conditions.join(' AND ')
+
+  const countResult = await pool.query(
+    `SELECT COUNT(*)::integer AS count,
+            MIN(created_at) AS earliest,
+            MAX(created_at) AS latest
+     FROM ingested_records WHERE ${whereClause}`,
+    params
+  )
+  const countRow = countResult.rows[0] as {
+    count: number
+    earliest: string | null
+    latest: string | null
+  }
+
+  const sampleResult = await pool.query(
+    `SELECT record_id, data, created_at FROM ingested_records
+     WHERE ${whereClause}
+     ORDER BY created_at ASC
+     LIMIT $${params.length + 1}`,
+    [...params, Math.max(sampleLimit, 10)]
+  )
+  const rows = sampleResult.rows as Array<{
+    record_id: string | null
+    data: Record<string, unknown>
+    created_at: string
+  }>
+
+  const sampleIds = rows
+    .map((r) => r.record_id)
+    .filter((id): id is string => id !== null)
+    .slice(0, 10)
+
+  const sampleData = rows.slice(0, sampleLimit).map((r) => ({
+    ...r.data,
+    ingestedAt: r.created_at
+  }))
+
+  return {
+    matchedCount: countRow.count,
+    sampleIds,
+    sampleData,
+    earliestIngestedAt: countRow.earliest,
+    latestIngestedAt: countRow.latest
+  }
 }
 
 /** Clear ingested records by analysis ID */

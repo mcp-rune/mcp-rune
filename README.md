@@ -859,21 +859,21 @@ mcp-kit/                              (the framework)
 
 ### Guides
 
-| Guide                                                                           | Description                                  |
-| ------------------------------------------------------------------------------- | -------------------------------------------- |
-| [Tool Creation](docs/guides/tool-creation-guide.md)                             | Build custom tools with category-based auth  |
-| [Prompt Creation](docs/guides/prompt-creation-guide.md)                         | Create prompts with the derivation framework |
-| [Prompt Derivation Framework](docs/guides/prompt-derivation-framework-guide.md) | Deep dive into the generator pipeline        |
-| [MCP Apps](docs/guides/mcp-apps-guide.md)                                       | Interactive UI forms and views               |
-| [MCP Apps Architecture](docs/guides/mcp-apps-architecture.md)                   | Schema-driven app internals                  |
-| [Model Form Customization](docs/guides/model-form-customization-guide.md)       | Customize form rendering                     |
-| [Service Layer](docs/guides/service-layer-guide.md)                             | ModelService, EndpointResolver, namespaces   |
-| [Search & Filters](docs/guides/search-filter-integration-guide.md)              | Search adapters and filter transformation    |
-| [Domain Knowledge](docs/guides/domain-knowledge-guide.md)                       | Business rules, knowledge, workflows         |
-| [Workflow Creation](docs/guides/workflow-creation-guide.md)                     | Multi-step operational workflows             |
-| [OAuth2 Discovery](docs/guides/oauth2-discovery-flow.md)                        | OAuth2 server discovery (RFC 8414/9728)      |
-| [Memory Architecture](docs/guides/analysis-memory-architecture.md)              | Operation memory and analysis caching        |
-| [Transient Context](docs/guides/transient-context-protocol.md)                  | Stateless context handling protocol          |
+| Guide                                                                           | Description                                    |
+| ------------------------------------------------------------------------------- | ---------------------------------------------- |
+| [Tool Creation](docs/guides/tool-creation-guide.md)                             | Build custom tools with category-based auth    |
+| [Prompt Creation](docs/guides/prompt-creation-guide.md)                         | Create prompts with the derivation framework   |
+| [Prompt Derivation Framework](docs/guides/prompt-derivation-framework-guide.md) | Deep dive into the generator pipeline          |
+| [MCP Apps](docs/guides/mcp-apps-guide.md)                                       | Interactive UI forms and views                 |
+| [MCP Apps Architecture](docs/guides/mcp-apps-architecture.md)                   | Schema-driven app internals                    |
+| [Model Form Customization](docs/guides/model-form-customization-guide.md)       | Customize form rendering                       |
+| [Service Layer](docs/guides/service-layer-guide.md)                             | ModelService, EndpointResolver, namespaces     |
+| [Search & Filters](docs/guides/search-filter-integration-guide.md)              | Search adapters and filter transformation      |
+| [Domain Knowledge](docs/guides/domain-knowledge-guide.md)                       | Business rules, knowledge, workflows           |
+| [Workflow Creation](docs/guides/workflow-creation-guide.md)                     | Multi-step operational workflows               |
+| [OAuth2 Discovery](docs/guides/oauth2-discovery-flow.md)                        | OAuth2 server discovery (RFC 8414/9728)        |
+| [Analysis Memories](docs/features/analysis-memories/index.md)                   | Map-reduce over large datasets with embeddings |
+| [Transient Context](docs/guides/transient-context-protocol.md)                  | Stateless context handling protocol            |
 
 ### Operations
 

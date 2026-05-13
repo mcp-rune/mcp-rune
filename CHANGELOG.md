@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.34.0] — 2026-05-13
+
+### Added
+
+- **`analysis_act` tool** — fifth member of the analysis tool family. Resolves matching record IDs server-side from `ingested_records` using the same `where` vocabulary as `analysis_query mode: "filter"`, then runs batched PATCH/DELETE against the upstream API. Only an aggregate `{ summary, sample_errors }` envelope returns to context — per-record IDs and results never echo back to the LLM. Supports `dry_run` for previewing match count, a small sample, and the `ingestedAt` range before mutating. Internal batches of 50 (higher than `bulk_action_models` because batches are never surfaced to the LLM); concurrency cap of 5. Emits MCP progress notifications when the client supplies a `progressToken`.
+- **`getIngestedRecordIdsFiltered`, `getIngestedRecordDryRun`** facade functions on `vector-storage.ts` — extend the storage layer with filtered ID resolution and dry-run preview, reusing the existing `buildWhereConditions` predicate builder.
+- **`setRetentionDays(days)`** on the `ingested-records` vendor module — configures TTL for newly stored rows.
+- **`ingestedRecordsRetentionDays`, `backgroundCleanupIntervalMs`** options on `initVectorStorage` — first knob configures the analysis snapshot retention; second opt-in option schedules a periodic cleanup sweep across all three pgvector tables for long-lived servers.
+- **"Tool responses stay concise"** design principle in `AGENTS.md` — codifies the no-per-record-arrays invariant so future bulk tools don't regress context bloat.
+
+### Changed
+
+- **`ingested_records` TTL defaults to 7 days** (was 1 hour). Covers morning-ingest / afternoon-act and weekend-pause workflows. `analysis_memories` is unchanged at 1 h ephemeral — the `persistent: true` flag already covers long-lived findings. Existing rows keep their original `expires_at` until evicted on schedule; only freshly stored rows get the new TTL.
+- **Boot-time cleanup** in `pgvector/initialize` now sweeps all three tables (`tool_memories`, `ingested_records`, `analysis_memories`) instead of just `tool_memories`.
+- **`pgvector/close`** clears the periodic cleanup interval when one is active, preventing hanging timers in test processes.
+
+### Why this matters
+
+The four-tool analysis family was built around the principle that raw rows never enter the LLM context window. Acting on a subset broke that — `analysis_query mode: "filter"` had to return IDs to context so the LLM could feed them to `bulk_action_models`. For a 5,000-record session that's O(N) context tokens spent on ID ferrying alone. `analysis_act` keeps the IDs server-side end-to-end; the LLM sees only the aggregate outcome. The retention bump is the matching change: a 1-hour TTL meant an LLM that ingested in the morning and decided to act in the afternoon hit a silently empty session. Closes #80.
+
+[0.34.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.33.0...v0.34.0
+
 ## [0.33.0] — 2026-05-11
 
 ### Changed (breaking)

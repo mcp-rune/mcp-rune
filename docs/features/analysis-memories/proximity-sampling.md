@@ -1,5 +1,7 @@
 # Proximity Sampling Guide
 
+> Sub-topic of the [Analysis Memories](./index.md) feature.
+
 Date-windowed, bucket-stratified sampling for the `analysis_query` tool. Enables temporal proximity analysis when investigating data quality issues around specific dates.
 
 ---
