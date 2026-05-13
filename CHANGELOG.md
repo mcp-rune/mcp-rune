@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.34.3] — 2026-05-13
+
+### Changed
+
+- **GitHub Actions consolidated into one workflow.** `publish.yml` is folded into `ci.yml` as a `publish` job that `needs: ci` and runs only on tag pushes (`if: startsWith(github.ref, 'refs/tags/v')`). Publish is now provably gated on CI green — a red CI on a tag push aborts publish via `needs:` dependency, eliminating the `v0.34.1`-style silent broken-publish.
+- **`pull_request` trigger removed from CI.** PRs no longer consume Actions minutes. Pre-merge checks shift left to husky + lint-staged (already configured: `eslint --fix` + `prettier --write` on staged files). Premise: a brief red master after a bad merge is acceptable as long as publish is gated; husky catches the lint/format class locally, and master CI catches anything that slips before tag/publish.
+- **`main` branch dropped from triggers.** Repo uses `master` only; `main` was dead config.
+
+### Removed
+
+- **`.github/workflows/publish.yml`** — single workflow file; logic moved into the `publish` job in `ci.yml`.
+
+### Why this matters
+
+After `v0.34.1` shipped a "tag-only" release (publish silently failed because of a refactor downstream caller), the missing gate was that publish was a separate workflow with no dependency on CI succeeding. The `needs: ci` chain in a single workflow makes the gate explicit and impossible to bypass. Separately, every PR was paying for a full Actions run — for a solo project with husky already configured, that's spend that buys very little. The new shape trades pre-merge feedback latency for cost; master CI is the canonical gate before any release.
+
+[0.34.3]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.34.2...v0.34.3
+
 ## [0.34.2] — 2026-05-13
 
 ### Fixed

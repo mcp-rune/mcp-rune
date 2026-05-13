@@ -1,10 +1,20 @@
+# CI for @dsaenztagarro/mcp-kit.
+#
+# Triggers:
+#   - push to master         → runs `ci` job
+#   - push of a `v*` tag     → runs `ci`, and on success runs `publish`
+#
+# No `pull_request` trigger. PRs do not consume Actions minutes. Pre-merge
+# checks happen locally via husky + lint-staged (see package.json). If
+# something slips past local checks, master CI catches it on push; tag/publish
+# is gated by `needs: ci` so a red master cannot publish.
+
 name: CI
 
 on:
   push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
+    branches: [master]
+    tags: ['v*']
 
 jobs:
   ci:
@@ -40,3 +50,42 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  publish:
+    needs: ci
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          # registry-url + scope tell setup-node to write a project .npmrc
+          # that maps the @dsaenztagarro scope to GitHub Packages and reads
+          # the token from $NODE_AUTH_TOKEN at publish time.
+          registry-url: https://npm.pkg.github.com
+          scope: '@dsaenztagarro'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        # The `prebuild` lifecycle hook runs `build:all-apps` before `tsc`,
+        # so a single `npm run build` produces the complete publishable
+        # artifact (dist/ + dist/mcp/apps/dist/*.html).
+        run: npm run build
+
+      - name: Publish
+        run: npm publish
+        env:
+          # GITHUB_TOKEN is auto-provisioned by Actions. With permissions:
+          # packages: write, it has push rights to npm.pkg.github.com for
+          # this repo's scope.
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
