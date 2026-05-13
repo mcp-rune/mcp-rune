@@ -52,8 +52,10 @@ jobs:
 
       - name: Build
         # Builds dist/ (tsc) AND dist/mcp/apps/dist/*.html (Vite single-file
-        # bundles for generic apps that ship with the package).
-        run: npm run build:full
+        # bundles for generic apps that ship with the package). The `prebuild`
+        # lifecycle hook runs `build:all-apps` before `tsc`, so a single
+        # `npm run build` produces the complete publishable artifact.
+        run: npm run build
 
       - name: Publish
         run: npm publish

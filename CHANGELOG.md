@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.34.2] — 2026-05-13
+
+### Fixed
+
+- **`Publish to GitHub Packages` workflow.** The `Build` step in `.github/workflows/publish.yml` invoked `npm run build:full`, but v0.34.1 removed that script (folded into `build` via the `prebuild` hook). On the `v0.34.1` tag push, the publish workflow failed with `npm error Missing script: "build:full"` and v0.34.1 never reached GitHub Packages — the git tag exists but the registry never received the artifact. `publish.yml` now calls `npm run build`, matching the new convention.
+
+### Why this matters
+
+v0.34.1 was supposed to make `npm run build` produce the complete publishable artifact — and it does — but the publish workflow was still pinned to the old script name. This is the missed downstream caller from the v0.34.1 refactor. v0.34.1 is a tag-only release; v0.34.2 is the first version of the new build flow that actually reaches the registry.
+
+A secondary lesson, captured in tooling rather than this changelog: the `/ship` skill previously gated only on the master CI workflow after merge; it didn't watch the tag-triggered publish workflow, which is what allowed v0.34.1 to be declared "shipped" while the registry publish was failing. The skill now waits on every tag-triggered workflow before reporting success.
+
+[0.34.2]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.34.1...v0.34.2
+
 ## [0.34.1] — 2026-05-13
 
 ### Fixed
