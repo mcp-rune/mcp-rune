@@ -436,7 +436,8 @@ Production-grade OAuth2 built on [openid-client](https://github.com/panva/openid
 │ RFC 7591 — Dynamic Client Registration (DCR)                 │              │
 │   • Registration proxy with fallback to pre-configured       │ Implemented  │
 ├──────────────────────────────────────────────────────────────┼──────────────┤
-│ CIMD — Client ID Metadata Document (MCP Auth Spec)           │              │
+│ CIMD — Client ID Metadata Document (IETF Draft)              │              │
+│   • draft-ietf-oauth-client-id-metadata-document             │              │
 │   • Metadata endpoint at /oauth/client-metadata.json         │ Implemented  │
 ├──────────────────────────────────────────────────────────────┼──────────────┤
 │ RFC 6749 — OAuth 2.0 Authorization Framework                 │              │
@@ -513,13 +514,13 @@ MCP clients must identify themselves to the authorization server before obtainin
 | ----------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------- | ---------------------- |
 | **Pre-registered (CC)** | Admin creates the OAuth app upfront; client uses known `clientId`/`clientSecret`    | `OAuthService` with `clientId` + `clientSecret`                 | Confidential           |
 | **DCR (RFC 7591)**      | Client auto-registers on first connection via `/oauth/register`                     | `OAuthService` with `clientId` + `clientSecret` (for the proxy) | Public or confidential |
-| **CIMD**                | Client uses an HTTPS URL as `client_id`; auth server fetches metadata from that URL | `HttpServer` with `clientMetadata` config                       | Public                 |
+| **CIMD (IETF Draft)**   | Client uses an HTTPS URL as `client_id`; auth server fetches metadata from that URL | `HttpServer` with `clientMetadata` config                       | Public                 |
 
 **Pre-registered (Client Credentials)** — The traditional approach. An admin creates an OAuth application in the authorization server and distributes the `clientId` and `clientSecret` to the MCP client. The client includes these credentials in the OAuth flow.
 
 **DCR (Dynamic Client Registration)** — The MCP server proxies registration requests to the authorization server at `/oauth/register`. Clients that support RFC 7591 auto-register on first connection without any pre-configuration.
 
-**CIMD (Client ID Metadata Document)** — The MCP server serves a JSON metadata document at `/oauth/client-metadata.json`. MCP clients use this URL as their `client_id`. When the authorization server receives this URL-based `client_id`, it fetches the metadata document, validates it, and creates the application record automatically. Configure the metadata via `clientMetadata` on `HttpServer`:
+**CIMD (Client ID Metadata Document)** — Specified in the active OAuth WG draft [`draft-ietf-oauth-client-id-metadata-document`](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) (no RFC yet). The MCP server serves a JSON metadata document at `/oauth/client-metadata.json`. MCP clients use this URL as their `client_id`. When the authorization server receives this URL-based `client_id`, it fetches the metadata document, validates it, and creates the application record automatically. Configure the metadata via `clientMetadata` on `HttpServer`:
 
 ```typescript
 new HttpServer({
@@ -769,13 +770,14 @@ const needed = migrations.filter(
 | `ANALYSIS_ENABLED` | `false` | Enable analysis tools (`analysis_ingest`, `analysis_query`, `analysis_store`, `analysis_clear`). Requires `DATABASE_URL`. |
 | `LOG_LEVEL`        | `info`  | Logging verbosity: `debug`, `info`, `warn`, `error`.                                                                      |
 | `LOG_FORMAT`       | `text`  | Console log format: `text` (human-readable key=value pairs) or `json` (structured JSON for Loki/Grafana).                 |
-| `FORCE_COLOR`      | —       | Set to `1` to enable colorized console output.                                                                            |
 | `LOG_FILE_ENABLED` | `false` | Set to `true` to enable daily-rotated file logging (7-day retention).                                                     |
 
-> **Tip:** For local development, run with verbose colorized output:
+Colorized console output is auto-detected: on when stderr is a TTY, off when captured by a host app or piped to a log collector. The standard [`NO_COLOR`](https://no-color.org) and [`FORCE_COLOR`](https://force-color.org) env vars override detection — set `FORCE_COLOR=1` when running under wrappers like `concurrently` that pipe stderr.
+
+> **Tip:** For local development, run with verbose output:
 >
 > ```bash
-> FORCE_COLOR=1 LOG_LEVEL=debug npx tsx examples/bookshelf/server.ts
+> LOG_LEVEL=debug npx tsx examples/bookshelf/server.ts
 > ```
 
 ---

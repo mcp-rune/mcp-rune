@@ -1,6 +1,6 @@
 {
   "name": "@dsaenztagarro/mcp-kit",
-  "version": "0.34.3",
+  "version": "0.35.0",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "restricted"
@@ -133,6 +133,7 @@
     "openid-client": "^6.8.1",
     "pg": "^8.18.0",
     "sharp": "file:./vendor/sharp-noop",
+    "supports-color": "^10.2.2",
     "winston": "^3.18.3",
     "winston-daily-rotate-file": "^5.0.0",
     "zod": "^4.4.2"

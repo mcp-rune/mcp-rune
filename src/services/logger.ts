@@ -1,3 +1,4 @@
+import supportsColor from 'supports-color'
 import winston from 'winston'
 import DailyRotateFile from 'winston-daily-rotate-file'
 
@@ -15,10 +16,10 @@ const STRUCTURED_FILES =
   (process.env.LOG_FILE_FORMAT ?? process.env.LOG_FORMAT) === 'json' ||
   process.env.NODE_ENV === 'production'
 
-// MCP servers default to plain output — stderr is typically captured by host
-// apps (Claude Desktop, OpenCode) or piped to log collectors (Promtail).
-// Set FORCE_COLOR=1 to enable colorized output (e.g. via concurrently).
-const COLORIZE = 'FORCE_COLOR' in process.env
+// Auto-detect color: on for TTY stderr, off when captured by host apps
+// (Claude Desktop, OpenCode) or piped to log collectors (Promtail).
+// FORCE_COLOR forces on (useful under `concurrently`); NO_COLOR forces off.
+const COLORIZE = Boolean(supportsColor.stderr)
 
 /** Format a metadata value for logfmt-style text output */
 function formatValue(v: unknown): string {

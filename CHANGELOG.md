@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.35.0] — 2026-05-18
+
+### Changed
+
+- **Console color is auto-detected.** Replaced the `FORCE_COLOR`-presence check in `src/services/logger.ts` with `supports-color`'s stderr probe. Colors now turn on automatically in a TTY and stay off when stderr is captured by a host app or log collector. The standard `FORCE_COLOR` (force on, useful under `concurrently`) and `NO_COLOR` (force off) overrides are honored. The `FORCE_COLOR` row is removed from the README env-var table since it's no longer an mcp-kit-specific knob.
+
+### Dependencies
+
+- Add `supports-color@^10.2.2` as a direct dependency (already transitive; promoted to direct so the logger can call it explicitly).
+
+### Why this matters
+
+The old gate (`'FORCE_COLOR' in process.env`) required every developer to set an env var to get readable output in their terminal, and quietly misbehaved for values like `FORCE_COLOR=0` (presence-only check enabled colors regardless of value). Switching to `supports-color` brings mcp-kit in line with the rest of the JS ecosystem (chalk, debug, mocha, jest, pino-pretty all use it), gives users `NO_COLOR` support for free, and keeps `FORCE_COLOR` working as the standard override for piping wrappers like `concurrently`.
+
+[0.35.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.34.3...v0.35.0
+
 ## [0.34.3] — 2026-05-13
 
 ### Changed
