@@ -741,10 +741,11 @@ describe('lib/mcp/http-server', () => {
 
   describe('start', () => {
     it('should start HTTP server on configured port', () => {
-      // Mock listen to not actually start server
+      // Mock listen to not actually start server. `.on` is needed because
+      // start() attaches an 'error' listener to surface bind failures.
       const mockListen = vi.fn((port, callback) => {
         callback()
-        return { close: vi.fn() }
+        return { close: vi.fn(), on: vi.fn() }
       })
       server.app.listen = mockListen
 
@@ -760,6 +761,41 @@ describe('lib/mcp/http-server', () => {
           healthEndpoint: 'http://localhost:3000/health'
         })
       )
+    })
+
+    it('should log ERROR and exit when listen fails (EADDRINUSE)', async () => {
+      const { EventEmitter } = await import('node:events')
+      const fakeServer = new EventEmitter() as EventEmitter & { close: () => void }
+      fakeServer.close = vi.fn()
+
+      // Return the emitter without invoking the success callback — simulates
+      // bind starting, then failing asynchronously.
+      server.app.listen = vi.fn(() => fakeServer) as unknown as typeof server.app.listen
+
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as never)
+
+      server.start()
+
+      const err = Object.assign(new Error('listen EADDRINUSE: address already in use :::3000'), {
+        code: 'EADDRINUSE',
+        syscall: 'listen'
+      })
+      fakeServer.emit('error', err)
+
+      // Let the async handler flush its microtasks.
+      await new Promise((r) => setImmediate(r))
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.stringContaining('HTTP server failed to bind on port 3000'),
+        expect.objectContaining({
+          code: 'EADDRINUSE',
+          port: 3000,
+          syscall: 'listen'
+        })
+      )
+      expect(exitSpy).toHaveBeenCalledWith(1)
+
+      exitSpy.mockRestore()
     })
   })
 

@@ -24,6 +24,12 @@ import express from 'express'
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
 
 import type { OAuthService } from '#src/oauth2/service.js'
+import {
+  captureException,
+  ErrorCategory,
+  flushErrorTracking,
+  isErrorTrackingEnabled
+} from '#src/services/error-tracking.js'
 import * as logger from '#src/services/logger.js'
 import { closeTracing, flushTracing } from '#src/services/tracing.js'
 
@@ -502,6 +508,7 @@ export class HttpServer {
   /** Start the server */
   start(): void {
     const authMode = this.oauth ? 'oauth' : 'token'
+
     this.httpServer = this.app.listen(this.port, () => {
       logger.info(`${this.mcp.name} (Streamable HTTP, ${authMode}) started`, {
         service: this.mcp.name,
@@ -512,12 +519,50 @@ export class HttpServer {
       })
     })
 
+    // Without this handler, a bind failure (EADDRINUSE, EACCES, …) raises
+    // an unhandled 'error' event on the net.Server and Node exits the process
+    // silently — no log line, no Sentry report. That makes a port-conflicted
+    // prod container indistinguishable from "never started" in Loki/Grafana.
+    this.httpServer.on('error', (err: NodeJS.ErrnoException) => {
+      void this._handleListenError(err)
+    })
+
     process.on('SIGTERM', () => {
       void this._shutdown()
     })
     process.on('SIGINT', () => {
       void this._shutdown()
     })
+  }
+
+  private async _handleListenError(err: NodeJS.ErrnoException): Promise<void> {
+    logger.error(`HTTP server failed to bind on port ${this.port}: ${err.message}`, {
+      service: this.mcp.name,
+      port: this.port,
+      code: err.code,
+      syscall: err.syscall,
+      stack: err.stack
+    })
+
+    if (isErrorTrackingEnabled()) {
+      captureException(err, {
+        tags: {
+          'error.category': ErrorCategory.INTERNAL,
+          'startup.phase': 'http_listen',
+          'error.code': err.code ?? 'unknown'
+        },
+        extra: {
+          port: this.port,
+          service: this.mcp.name,
+          syscall: err.syscall
+        },
+        level: 'fatal'
+      })
+      // Bounded wait so a wedged Sentry transport can't hang a prod restart loop.
+      await flushErrorTracking(2000).catch(() => false)
+    }
+
+    process.exit(1)
   }
 
   /** Graceful shutdown */
