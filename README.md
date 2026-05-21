@@ -514,16 +514,16 @@ MCP clients must identify themselves to the authorization server before obtainin
 | ----------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------- | ---------------------- |
 | **Pre-registered (CC)** | Admin creates the OAuth app upfront; client uses known `clientId`/`clientSecret`    | `OAuthService` with `clientId` + `clientSecret`                 | Confidential           |
 | **DCR (RFC 7591)**      | Client auto-registers on first connection via `/oauth/register`                     | `OAuthService` with `clientId` + `clientSecret` (for the proxy) | Public or confidential |
-| **CIMD (IETF Draft)**   | Client uses an HTTPS URL as `client_id`; auth server fetches metadata from that URL | `HttpServer` with `clientMetadata` config                       | Public                 |
+| **CIMD (IETF Draft)**   | Client uses an HTTPS URL as `client_id`; auth server fetches metadata from that URL | `OAuthService` with `clientMetadata` config                     | Public                 |
 
 **Pre-registered (Client Credentials)** — The traditional approach. An admin creates an OAuth application in the authorization server and distributes the `clientId` and `clientSecret` to the MCP client. The client includes these credentials in the OAuth flow.
 
 **DCR (Dynamic Client Registration)** — The MCP server proxies registration requests to the authorization server at `/oauth/register`. Clients that support RFC 7591 auto-register on first connection without any pre-configuration.
 
-**CIMD (Client ID Metadata Document)** — Specified in the active OAuth WG draft [`draft-ietf-oauth-client-id-metadata-document`](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) (no RFC yet). The MCP server serves a JSON metadata document at `/oauth/client-metadata.json`. MCP clients use this URL as their `client_id`. When the authorization server receives this URL-based `client_id`, it fetches the metadata document, validates it, and creates the application record automatically. Configure the metadata via `clientMetadata` on `HttpServer`:
+**CIMD (Client ID Metadata Document)** — Specified in the active OAuth WG draft [`draft-ietf-oauth-client-id-metadata-document`](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) (no RFC yet). The MCP server serves a JSON metadata document at `/oauth/client-metadata.json`. MCP clients use this URL as their `client_id`. When the authorization server receives this URL-based `client_id`, it fetches the metadata document, validates it, and creates the application record automatically. Configure the metadata via `clientMetadata` on `OAuthService` — it sits alongside DCR's `authServerUrl` because both describe the same OAuth client identity:
 
 ```typescript
-new HttpServer({
+new OAuthService({
   // ... other config ...
   clientMetadata: {
     redirectUris: ['http://127.0.0.1/callback'],
@@ -537,7 +537,7 @@ new HttpServer({
 <summary>JavaScript version</summary>
 
 ```javascript
-new HttpServer({
+new OAuthService({
   // ... other config ...
   clientMetadata: {
     redirectUris: ['http://127.0.0.1/callback'],
