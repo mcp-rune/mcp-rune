@@ -1,4 +1,5 @@
 import { createRequestIdMiddleware } from '../../../../src/mcp/middleware/request-id.js'
+import { getRequestId } from '../../../../src/services/request-context.js'
 
 describe('lib/mcp/middleware/request-id', () => {
   let middleware
@@ -94,6 +95,28 @@ describe('lib/mcp/middleware/request-id', () => {
       }
 
       expect(ids.size).toBe(100) // All unique
+    })
+
+    // The middleware wraps `next()` in `requestContext.run(...)` so that any
+    // downstream handler (tool, OAuth flow, API client, logger) can read the
+    // current request's ID via AsyncLocalStorage — without explicit threading.
+    it('binds requestId into AsyncLocalStorage for the downstream chain', () => {
+      mockReq.get.mockReturnValue('ctx-test-id')
+      let observed: string | undefined
+      const downstream = vi.fn(() => {
+        observed = getRequestId()
+      })
+
+      middleware(mockReq, mockRes, downstream)
+
+      expect(downstream).toHaveBeenCalledTimes(1)
+      expect(observed).toBe('ctx-test-id')
+    })
+
+    it('unbinds the AsyncLocalStorage scope after the chain returns', () => {
+      mockReq.get.mockReturnValue('temp-id')
+      middleware(mockReq, mockRes, mockNext)
+      expect(getRequestId()).toBeUndefined()
     })
   })
 })

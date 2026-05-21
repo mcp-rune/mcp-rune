@@ -18,6 +18,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { Express, NextFunction, Request, Response } from 'express'
 import express from 'express'
 
+import { hintForError } from '#src/core/error-hints.js'
 import type { OAuthService } from '#src/oauth2/service.js'
 import {
   captureException,
@@ -298,12 +299,15 @@ export class HttpServer {
   }
 
   private async _handleListenError(err: NodeJS.ErrnoException): Promise<void> {
-    logger.error(`HTTP server failed to bind on port ${this.port}: ${err.message}`, {
+    const hint = hintForError(err)
+    const suffix = hint ? ` — ${hint}` : ''
+    logger.error(`HTTP server failed to bind on port ${this.port}: ${err.message}${suffix}`, {
       service: this.mcp.name,
       port: this.port,
       code: err.code,
       syscall: err.syscall,
-      stack: err.stack
+      stack: err.stack,
+      ...(hint && { hint })
     })
 
     if (isErrorTrackingEnabled()) {

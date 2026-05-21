@@ -2,6 +2,7 @@
 export { BaseModel } from './core/base-model.js'
 export { loadConfig } from './core/config.js'
 export { boolEnv, intEnv, optionalEnv, requireEnv } from './core/env.js'
+export { hintForError } from './core/error-hints.js'
 export {
   coerceToObject,
   formatErrorResponse,

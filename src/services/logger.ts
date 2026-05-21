@@ -2,6 +2,8 @@ import supportsColor from 'supports-color'
 import winston from 'winston'
 import DailyRotateFile from 'winston-daily-rotate-file'
 
+import { getRequestId } from './request-context.js'
+
 const { combine, timestamp, printf, json } = winston.format
 
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info'
@@ -58,30 +60,69 @@ function formatLevel(level: string, colored: boolean): string {
   return color ? `${color}${word}${ANSI_RESET}` : word
 }
 
+const ANSI_DIM = '\x1b[2m'
+
+/** Indent every line of `stack` and dim it if colors are enabled. */
+function renderStack(stack: string, colored: boolean): string {
+  const open = colored ? ANSI_DIM : ''
+  const close = colored ? ANSI_RESET : ''
+  return stack
+    .split('\n')
+    .map((line) => `    ${open}${line}${close}`)
+    .join('\n')
+}
+
 // Human-readable format. `colored` is captured at format-construction time so
 // the console transport can emit ANSI codes while the file transport stays plain.
 function makeTextFormat(colored: boolean) {
-  return printf(({ level, message, timestamp: ts, service, ...metadata }) => {
-    const meta = toLogfmt(metadata)
-    const svc = service ? `[${service}]` : ''
-    return `${ts} ${formatLevel(level as string, colored)} ${svc} ${message}${meta ? ' ' + meta : ''}`
-  })
+  return printf(
+    ({ level, message, timestamp: ts, service, requestId, stack, causeStack, ...metadata }) => {
+      const meta = toLogfmt(metadata)
+      const svc = service ? `[${service}]` : ''
+      // requestId rendered as a compact `[req:abcd1234]` prefix so it stands
+      // out at a glance and doesn't clutter the logfmt metadata tail.
+      const req = requestId ? ` [req:${String(requestId).slice(0, 8)}]` : ''
+      const head = `${ts} ${formatLevel(level as string, colored)} ${svc}${req} ${message}${meta ? ' ' + meta : ''}`
+      if (typeof stack !== 'string' || !stack) return head
+      const stackBlock = renderStack(stack, colored)
+      if (typeof causeStack === 'string' && causeStack) {
+        return `${head}\n${stackBlock}\n  caused by:\n${renderStack(causeStack, colored)}`
+      }
+      return `${head}\n${stackBlock}`
+    }
+  )
 }
 
 const consoleTextFormat = makeTextFormat(COLORIZE)
 const fileTextFormat = makeTextFormat(false)
 
+// Inject the current request's ID into every log entry (unless the caller
+// already provided one). Reads from AsyncLocalStorage so any code path
+// running inside an Express request — tool handlers, API clients, OAuth
+// flows — auto-correlates without explicit threading.
+const injectRequestId = winston.format((info) => {
+  if (!info.requestId) {
+    const id = getRequestId()
+    if (id) info.requestId = id
+  }
+  return info
+})()
+
 // JSON format for Loki/Grafana (matches Rails lograge output)
-const jsonFormat = combine(timestamp({ format: 'YYYY-MM-DDTHH:mm:ss.SSSZ' }), json())
+const jsonFormat = combine(
+  injectRequestId,
+  timestamp({ format: 'YYYY-MM-DDTHH:mm:ss.SSSZ' }),
+  json()
+)
 
 const consoleFormat = STRUCTURED_CONSOLE
   ? jsonFormat
-  : combine(timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), consoleTextFormat)
+  : combine(injectRequestId, timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }), consoleTextFormat)
 
 // File format: JSON in production, text in development (independently configurable)
 const fileFormat = STRUCTURED_FILES
   ? jsonFormat
-  : combine(timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), fileTextFormat)
+  : combine(injectRequestId, timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }), fileTextFormat)
 
 const transports: winston.transport[] = [
   new winston.transports.Console({
