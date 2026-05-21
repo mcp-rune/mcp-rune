@@ -37,7 +37,6 @@ import axios from 'axios'
 import type { NextFunction, Request, Response } from 'express'
 import { Router } from 'express'
 
-import type { ClientMetadataConfig } from '#src/mcp/http-server.js'
 import type { OAuthService } from '#src/oauth2/service.js'
 import * as logger from '#src/services/logger.js'
 
@@ -103,7 +102,6 @@ interface OAuthRouterConfig {
   oauth: OAuthService
   baseUrl: string
   mcpName: string
-  clientMetadata?: ClientMetadataConfig
   /**
    * Whether this router should serve the RFC 9728 Protected Resource Metadata
    * endpoints itself. Set to `false` when the framework is mounted under a
@@ -136,7 +134,6 @@ export function createOAuthRouter({
   oauth,
   baseUrl,
   mcpName,
-  clientMetadata,
   serveProtectedResourceMetadata = true,
   resourceUri
 }: OAuthRouterConfig): Router {
@@ -463,6 +460,11 @@ export function createOAuthRouter({
    */
   router.get('/oauth/client-metadata.json', (_req: Request, res: Response) => {
     const metadataUrl = `${baseUrl}/oauth/client-metadata.json`
+    // CIMD is a public manifestation of the OAuth client's identity, so it
+    // lives on OAuthService alongside DCR's authServerUrl — not on the HTTP
+    // server. Falls back to oauth.scopes / mcpName / baseUrl-derived callback
+    // when the embedding server didn't configure overrides.
+    const clientMetadata = oauth.clientMetadata
 
     logger.info('CIMD metadata document requested', {
       service: mcpName,

@@ -53,13 +53,6 @@ interface PromptRegistryWithStats {
   getStats?: () => Record<string, unknown>
 }
 
-export interface ClientMetadataConfig {
-  redirectUris: string[]
-  clientName?: string
-  scope?: string
-  cacheMaxAge?: number // Cache-Control max-age in seconds (default: 3600)
-}
-
 interface HttpServerConfig {
   port: number
   baseUrl?: string
@@ -69,7 +62,6 @@ interface HttpServerConfig {
   mcp: McpConfig
   isProduction?: boolean
   corsOrigins?: string
-  clientMetadata?: ClientMetadataConfig
 }
 
 /** Extended request with requestId from request-id middleware. */
@@ -88,7 +80,6 @@ export class HttpServer {
   private _isProduction: boolean
   private _isDevelopment: boolean
   private _corsOrigins: string | undefined
-  private _clientMetadata: ClientMetadataConfig | undefined
   app: Express
   private httpServer: ReturnType<Express['listen']> | null
 
@@ -100,8 +91,7 @@ export class HttpServer {
     accessToken,
     mcp,
     isProduction,
-    corsOrigins,
-    clientMetadata
+    corsOrigins
   }: HttpServerConfig) {
     if (!oauth && !accessToken) {
       throw new Error('HttpServer requires either oauth (OAuth mode) or accessToken (token mode)')
@@ -129,7 +119,6 @@ export class HttpServer {
     this._isProduction = isProduction ?? false
     this._isDevelopment = !this._isProduction
     this._corsOrigins = corsOrigins
-    this._clientMetadata = clientMetadata
 
     // Express app
     this.app = express()
@@ -191,7 +180,6 @@ export class HttpServer {
         oauth: this.oauth,
         baseUrl: this.baseUrl,
         mcpName: this.mcp.name,
-        clientMetadata: this._clientMetadata,
         serveProtectedResourceMetadata: this.pathPrefix === ''
       })
       this.app.use(prefix, oauthRouter)
