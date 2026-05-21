@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.36.1] — 2026-05-22
+
+### Fixed
+
+- **HTTP server bind failures are now logged and reported instead of crashing silently.** Previously, a port-conflict (`EADDRINUSE`), permissions error (`EACCES`), or any other `net.Server` `error` event raised an unhandled exception and Node exited with no log line or Sentry report — making a port-conflicted prod container indistinguishable from "never started" in Loki/Grafana. `HttpServer.start()` now subscribes to `listening` / `error` explicitly (separated paths instead of `listen(port, callback)` which Express turns into an ambiguous `once(callback)` for both success and failure), and the new `_handleListenError` writes a structured `logger.error`, captures to Sentry with `error.category=internal`, `startup.phase=http_listen`, `level=fatal`, flushes with a 2s bound, then exits with code 1.
+
+### Changed
+
+- **Split `src/mcp/http-server.ts` (~593 lines) into an orchestrator + per-concern middleware modules** following the established `createOAuthRouter` / `createRequestIdMiddleware` factory pattern. New files under `src/mcp/middleware/`: `security-headers.ts`, `cors.ts`, `rate-limit.ts`, `mcp-auth.ts` (auth resolution sets `req.requestAccessToken`), `mcp-handler.ts` (POST/GET/DELETE dispatcher), `status-router.ts` (`/health` + `/cache-stats`). New `src/mcp/session-manager.ts` owns the `Map<sessionId, SessionEntry>` and `closeAll`. `HttpServer` shrinks to ~350 lines and is now a thin orchestrator over those factories, retaining only constructor wiring, the legacy `/sse` 410 handler, and the lifecycle methods (`start`, `_handleListenError`, `_shutdown`) that are inherently bound to `this.httpServer` and `process`.
+
+### Why this matters
+
+The silent bind-failure path was a real production hazard: a restart loop that never came up looked identical to a healthy-but-quiet container on observability dashboards, defeating the point of having structured logging at all. Fixing it surfaced how mixed the HttpServer class had become — auth, session storage, transport dispatch, middleware setup, and lifecycle all in one ~600-line file with no per-concern test seams (the existing spec covered only handler internals; security headers, CORS, rate limiting, and the error middleware had no direct tests). The split mirrors the pre-existing factory pattern, gives each concern its own spec file (7 new test files, +400 tests), and leaves public API and observable behaviour identical — every invariant (HSTS-in-prod, JSON-RPC rate-limit body, dual MCP mount for Claude Desktop, OAuth token-refresh on existing sessions, shutdown ordering) is preserved.
+
+[0.36.1]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.36.0...v0.36.1
+
 ## [0.36.0] — 2026-05-21
 
 ### Changed

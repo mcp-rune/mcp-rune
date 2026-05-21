@@ -14,26 +14,30 @@
  * - RFC8707: Resource Indicators for OAuth 2.0 (OAuth mode only)
  */
 
-import { createHash, randomUUID } from 'node:crypto'
-
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
-import cors from 'cors'
 import type { Express, NextFunction, Request, Response } from 'express'
 import express from 'express'
-import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
 
 import type { OAuthService } from '#src/oauth2/service.js'
+import {
+  captureException,
+  ErrorCategory,
+  flushErrorTracking,
+  isErrorTrackingEnabled
+} from '#src/services/error-tracking.js'
 import * as logger from '#src/services/logger.js'
 import { closeTracing, flushTracing } from '#src/services/tracing.js'
 
-import {
-  createOAuthRouter,
-  extractBearerToken,
-  sendUnauthorized
-} from './middleware/oauth-router.js'
+import { createCorsMiddleware } from './middleware/cors.js'
+import { createMcpAuthMiddleware } from './middleware/mcp-auth.js'
+import { createMcpRequestHandler } from './middleware/mcp-handler.js'
+import { createOAuthRouter } from './middleware/oauth-router.js'
+import { createMcpRateLimitMiddleware } from './middleware/rate-limit.js'
 import { createRequestIdMiddleware } from './middleware/request-id.js'
 import { createRequestLoggerMiddleware } from './middleware/request-logger.js'
+import { createSecurityHeadersMiddleware } from './middleware/security-headers.js'
+import { createStatusRouter } from './middleware/status-router.js'
+import { SessionManager } from './session-manager.js'
 
 interface McpConfig {
   name: string
@@ -47,12 +51,6 @@ interface McpConfig {
 
 interface PromptRegistryWithStats {
   getStats?: () => Record<string, unknown>
-}
-
-interface SessionEntry {
-  transport: StreamableHTTPServerTransport
-  server: McpServer | null
-  accessToken: string | null | undefined
 }
 
 export interface ClientMetadataConfig {
@@ -74,7 +72,7 @@ interface HttpServerConfig {
   clientMetadata?: ClientMetadataConfig
 }
 
-/** Extended request with requestId from request-id middleware */
+/** Extended request with requestId from request-id middleware. */
 interface McpRequest extends Request {
   requestId?: string
 }
@@ -86,7 +84,7 @@ export class HttpServer {
   private mcp: McpConfig
   private pathPrefix: string
   private baseUrl: string
-  private sessions: Map<string, SessionEntry>
+  sessions: SessionManager
   private _isProduction: boolean
   private _isDevelopment: boolean
   private _corsOrigins: string | undefined
@@ -125,7 +123,7 @@ export class HttpServer {
     this.baseUrl = baseUrl || `http://localhost:${this.port}`
 
     // Session storage: sessionId -> { transport, server, accessToken }
-    this.sessions = new Map()
+    this.sessions = new SessionManager()
 
     // Environment flags -- injected, no process.env reads
     this._isProduction = isProduction ?? false
@@ -143,80 +141,17 @@ export class HttpServer {
 
   /** Setup Express middleware */
   private _setupMiddleware(): void {
-    // Security headers - protect against common web vulnerabilities
-    this.app.use((_req: Request, res: Response, next: NextFunction) => {
-      // Prevent clickjacking attacks
-      res.setHeader('X-Frame-Options', 'DENY')
-      // Prevent MIME type sniffing
-      res.setHeader('X-Content-Type-Options', 'nosniff')
-      // Enable XSS filter in browsers
-      res.setHeader('X-XSS-Protection', '1; mode=block')
-      // Enforce HTTPS in production (HSTS)
-      if (this._isProduction) {
-        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
-      }
-      next()
-    })
-
-    // CORS: Configure cross-origin requests
-    const corsOriginsList = this._corsOrigins
-      ? this._corsOrigins.split(',').map((o) => o.trim())
-      : undefined
-    let corsOriginConfig: string[] | boolean | undefined
-    if (corsOriginsList) {
-      corsOriginConfig = corsOriginsList
-    } else if (this._isProduction) {
-      logger.warn('CORS_ORIGINS not set in production -- cross-origin requests will be blocked', {
-        service: this.mcp?.name
-      })
-      corsOriginConfig = false
-    } else {
-      corsOriginConfig = true
-    }
+    this.app.use(createSecurityHeadersMiddleware({ isProduction: this._isProduction }))
 
     this.app.use(
-      cors({
-        origin: corsOriginConfig,
-        // Don't send credentials (cookies) in cross-origin requests
-        credentials: false,
-        // Allowed methods for MCP
-        methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-        // Allowed headers
-        allowedHeaders: [
-          'Authorization',
-          'Content-Type',
-          'X-Request-ID',
-          'Mcp-Session-Id',
-          'MCP-Protocol-Version'
-        ],
-        // Expose headers to browser JavaScript
-        exposedHeaders: ['mcp-session-id', 'X-Request-ID']
+      createCorsMiddleware({
+        corsOrigins: this._corsOrigins,
+        isProduction: this._isProduction,
+        serviceName: this.mcp.name
       })
     )
 
-    // Rate limiting: Prevent abuse and DoS attacks
-    // Limits per user/IP: 100 requests per 15 minutes for MCP endpoint
-    const mcpLimiter = rateLimit({
-      windowMs: 15 * 60 * 1000, // 15 minutes
-      limit: 100,
-      standardHeaders: 'draft-7',
-      legacyHeaders: false,
-      message: {
-        jsonrpc: '2.0',
-        error: { code: -32000, message: 'Too many requests, please try again later' },
-        id: null
-      },
-      keyGenerator: (req: Request) => {
-        // Use SHA-256 hash of Bearer token for per-user limiting, otherwise IP
-        const token = req.headers['authorization']?.slice(7)
-        if (token) {
-          const hash = createHash('sha256').update(token).digest('hex').slice(0, 16)
-          return `token:${hash}`
-        }
-        return ipKeyGenerator(req.ip!)
-      }
-    })
-    this.app.use(`${this.pathPrefix}/mcp`, mcpLimiter)
+    this.app.use(`${this.pathPrefix}/mcp`, createMcpRateLimitMiddleware())
 
     // Body parsers with size limits to prevent DoS via large payloads
     // 100kb should be sufficient for MCP JSON-RPC requests
@@ -233,10 +168,10 @@ export class HttpServer {
 
   /** Wrap async route handlers to catch errors and forward to error middleware */
   private _asyncHandler(
-    fn: (req: McpRequest, res: Response, next: NextFunction) => Promise<void>
+    fn: (req: Request, res: Response, next: NextFunction) => unknown
   ): (req: Request, res: Response, next: NextFunction) => void {
     return (req: Request, res: Response, next: NextFunction): void => {
-      Promise.resolve(fn(req as McpRequest, res, next)).catch(next)
+      Promise.resolve(fn(req, res, next)).catch(next)
     }
   }
 
@@ -262,21 +197,37 @@ export class HttpServer {
       this.app.use(prefix, oauthRouter)
     }
 
-    // Health check
-    this.app.get(`${prefix}/health`, this._handleHealth.bind(this))
+    // Health + cache-stats endpoints
+    this.app.use(
+      prefix,
+      createStatusRouter({
+        serviceName: this.mcp.name,
+        getActiveSessions: () => this.sessions.size,
+        promptRegistry: this.mcp.promptRegistry
+      })
+    )
 
-    // Cache stats (optional, only if prompt registry supports it)
-    if (this.mcp.promptRegistry?.getStats) {
-      this.app.get(`${prefix}/cache-stats`, this._handleCacheStats.bind(this))
-    }
-
-    // MCP transport endpoint
-    this.app.all(`${prefix}/mcp`, this._asyncHandler(this._handleMcp.bind(this)))
+    // MCP transport endpoint — auth runs as a route-scoped middleware so it
+    // does not affect oauth-router / health / cache-stats.
+    const mcpAuth = createMcpAuthMiddleware({
+      oauth: this.oauth,
+      accessToken: this.accessToken,
+      baseUrl: this.baseUrl,
+      serviceName: this.mcp.name
+    })
+    const mcpHandler = createMcpRequestHandler({
+      sessionManager: this.sessions,
+      serviceName: this.mcp.name,
+      isOAuthMode: this.oauth !== null,
+      staticAccessToken: this.accessToken,
+      createMcpServer: this.mcp.createServer
+    })
+    this.app.all(`${prefix}/mcp`, mcpAuth, this._asyncHandler(mcpHandler))
 
     // Also handle MCP requests at the base path (for Claude Desktop compatibility)
     // Claude Desktop expects MCP endpoint at the base URL, not /mcp subpath
     if (prefix) {
-      this.app.all(prefix, this._asyncHandler(this._handleMcp.bind(this)))
+      this.app.all(prefix, mcpAuth, this._asyncHandler(mcpHandler))
     }
 
     // Legacy SSE endpoint - deprecated
@@ -300,196 +251,6 @@ export class HttpServer {
     })
   }
 
-  /** Health check endpoint */
-  private _handleHealth(_req: Request, res: Response): void {
-    const health: Record<string, unknown> = {
-      status: 'ok',
-      service: this.mcp.name,
-      transport: 'streamable-http',
-      activeSessions: this.sessions.size
-    }
-
-    // Include cache stats if available
-    if (this.mcp.promptRegistry?.getStats) {
-      health.promptCache = this.mcp.promptRegistry.getStats()
-    }
-
-    res.json(health)
-  }
-
-  /** Cache statistics endpoint */
-  private _handleCacheStats(_req: Request, res: Response): void {
-    if (!this.mcp.promptRegistry?.getStats) {
-      res.status(404).json({ error: 'Cache stats not available' })
-      return
-    }
-
-    res.json({
-      service: this.mcp.name,
-      cache: this.mcp.promptRegistry.getStats()
-    })
-  }
-
-  /**
-   * MCP endpoint - Streamable HTTP transport
-   *
-   * In OAuth mode: authorization MUST be included in every HTTP request (per MCP spec).
-   * In token mode: no MCP auth; static ACCESS_TOKEN used for API calls only.
-   */
-  private async _handleMcp(req: McpRequest, res: Response): Promise<void> {
-    // Disable socket timeout for long-lived SSE connections
-    req.socket.setTimeout(0)
-
-    // OAuth 2.1 §5.1.2: Bearer tokens in URI query parameters are prohibited
-    if (req.query.access_token) {
-      res.status(400).json({
-        error: 'invalid_request',
-        error_description:
-          'Bearer tokens in URI query parameters are not allowed (OAuth 2.1 §5.1.2)'
-      })
-      return
-    }
-
-    // --- Authentication ---
-    let requestAccessToken: string | null | undefined
-
-    if (this.oauth) {
-      // OAuth mode: validate Bearer token via introspection
-      const bearerToken = extractBearerToken(req)
-      if (!bearerToken) {
-        logger.info('No Bearer token in request', {
-          service: this.mcp.name,
-          method: req.method,
-          requestId: req.requestId
-        })
-        sendUnauthorized(req, res, this.baseUrl)
-        return
-      }
-
-      const introspection = await this.oauth.introspectToken(bearerToken)
-      if (!introspection.active) {
-        logger.info('Token introspection failed - token inactive', {
-          service: this.mcp.name,
-          method: req.method,
-          requestId: req.requestId
-        })
-        sendUnauthorized(req, res, this.baseUrl)
-        return
-      }
-
-      requestAccessToken = bearerToken
-    } else {
-      // Token mode: no MCP auth, use static token for API calls
-      requestAccessToken = this.accessToken
-    }
-
-    const sessionId = req.headers['mcp-session-id'] as string | undefined
-
-    if (req.method === 'POST') {
-      // Log the MCP method being called (JSON-RPC method from body)
-      const mcpMethod = (req.body as Record<string, unknown> | undefined)?.method
-      if (mcpMethod) {
-        logger.info('MCP request', {
-          service: this.mcp.name,
-          method: mcpMethod,
-          sessionId: sessionId || 'new',
-          requestId: req.requestId
-        })
-      }
-
-      const session = sessionId ? this.sessions.get(sessionId) : undefined
-
-      if (session) {
-        // Update access token if it changed (e.g., token refresh) -- OAuth mode only
-        if (this.oauth && requestAccessToken !== session.accessToken) {
-          session.accessToken = requestAccessToken
-          logger.debug('Session access token updated', {
-            service: this.mcp.name,
-            sessionId,
-            requestId: req.requestId
-          })
-        }
-        await session.transport.handleRequest(req, res, req.body)
-        return
-      }
-
-      const currentRequestId = req.requestId
-      const transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => randomUUID(),
-        onsessioninitialized: async (newSessionId: string) => {
-          // Create a session object that will hold the mutable accessToken
-          const sessionEntry: SessionEntry = {
-            transport,
-            server: null,
-            accessToken: requestAccessToken
-          }
-
-          // getAccessToken: in OAuth mode reads from session (allows token updates),
-          // in token mode returns the static token
-          const getAccessToken = this.oauth
-            ? async () => this.sessions.get(newSessionId)?.accessToken
-            : async () => this.accessToken
-
-          const mcpServer = this.mcp.createServer({
-            sessionId: newSessionId,
-            transport: 'streamable-http',
-            getAccessToken
-          })
-          await mcpServer.connect(transport)
-
-          // Store session with server reference
-          sessionEntry.server = mcpServer
-          this.sessions.set(newSessionId, sessionEntry)
-
-          logger.info('New MCP session created', {
-            service: this.mcp.name,
-            sessionId: newSessionId,
-            requestId: currentRequestId
-          })
-        }
-      })
-
-      transport.onclose = () => {
-        const sid = transport.sessionId
-        if (sid) {
-          logger.info('MCP session closed', { service: this.mcp.name, sessionId: sid })
-          this.sessions.delete(sid)
-        }
-      }
-
-      await transport.handleRequest(req, res, req.body)
-    } else if (req.method === 'GET') {
-      const session = sessionId ? this.sessions.get(sessionId) : undefined
-
-      if (!session) {
-        res.status(400).json({
-          jsonrpc: '2.0',
-          error: { code: -32000, message: 'Bad Request: Session not found or not initialized' },
-          id: null
-        })
-        return
-      }
-
-      await session.transport.handleRequest(req, res)
-    } else if (req.method === 'DELETE') {
-      if (sessionId && this.sessions.has(sessionId)) {
-        const session = this.sessions.get(sessionId)!
-        await session.transport.close()
-        this.sessions.delete(sessionId)
-        logger.info('MCP session terminated', {
-          service: this.mcp.name,
-          sessionId,
-          requestId: req.requestId
-        })
-        res.status(200).end()
-      } else {
-        res.status(404).json({ error: 'Session not found' })
-      }
-    } else {
-      res.status(405).json({ error: 'Method not allowed' })
-    }
-  }
-
   /** Legacy SSE endpoint - deprecated */
   private _handleLegacySse(_req: Request, res: Response): void {
     res.status(410).json({
@@ -502,7 +263,15 @@ export class HttpServer {
   /** Start the server */
   start(): void {
     const authMode = this.oauth ? 'oauth' : 'token'
-    this.httpServer = this.app.listen(this.port, () => {
+
+    // Don't pass a success callback to app.listen. Express wraps it with
+    // `once(callback)` and registers it as `once('error', done)`, which means a
+    // bind failure invokes the callback with an error argument — silently
+    // mis-firing our "started" log path. Subscribing to 'listening' / 'error'
+    // explicitly keeps the two outcomes cleanly separated.
+    this.httpServer = this.app.listen(this.port)
+
+    this.httpServer.on('listening', () => {
       logger.info(`${this.mcp.name} (Streamable HTTP, ${authMode}) started`, {
         service: this.mcp.name,
         port: this.port,
@@ -510,6 +279,14 @@ export class HttpServer {
         mcpEndpoint: `http://localhost:${this.port}/mcp`,
         healthEndpoint: `http://localhost:${this.port}/health`
       })
+    })
+
+    // Without this handler, a bind failure (EADDRINUSE, EACCES, …) raises
+    // an unhandled 'error' event on the net.Server and Node exits the process
+    // silently — no log line, no Sentry report. That makes a port-conflicted
+    // prod container indistinguishable from "never started" in Loki/Grafana.
+    this.httpServer.on('error', (err: NodeJS.ErrnoException) => {
+      void this._handleListenError(err)
     })
 
     process.on('SIGTERM', () => {
@@ -520,19 +297,42 @@ export class HttpServer {
     })
   }
 
+  private async _handleListenError(err: NodeJS.ErrnoException): Promise<void> {
+    logger.error(`HTTP server failed to bind on port ${this.port}: ${err.message}`, {
+      service: this.mcp.name,
+      port: this.port,
+      code: err.code,
+      syscall: err.syscall,
+      stack: err.stack
+    })
+
+    if (isErrorTrackingEnabled()) {
+      captureException(err, {
+        tags: {
+          'error.category': ErrorCategory.INTERNAL,
+          'startup.phase': 'http_listen',
+          'error.code': err.code ?? 'unknown'
+        },
+        extra: {
+          port: this.port,
+          service: this.mcp.name,
+          syscall: err.syscall
+        },
+        level: 'fatal'
+      })
+      // Bounded wait so a wedged Sentry transport can't hang a prod restart loop.
+      await flushErrorTracking(2000).catch(() => false)
+    }
+
+    process.exit(1)
+  }
+
   /** Graceful shutdown */
   private async _shutdown(): Promise<void> {
     logger.info('Shutting down...', { service: this.mcp.name })
 
     // Close all MCP sessions
-    for (const [sessionId, session] of this.sessions) {
-      try {
-        await session.server?.close()
-      } catch (err) {
-        const error = err as Error
-        logger.error('Error closing session', { sessionId, error: error.message })
-      }
-    }
+    await this.sessions.closeAll()
 
     // Flush and close tracing
     await flushTracing()
