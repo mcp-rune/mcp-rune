@@ -2,7 +2,7 @@ import supportsColor from 'supports-color'
 import winston from 'winston'
 import DailyRotateFile from 'winston-daily-rotate-file'
 
-const { combine, timestamp, printf, colorize, json } = winston.format
+const { combine, timestamp, printf, json } = winston.format
 
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info'
 
@@ -40,29 +40,48 @@ function toLogfmt(metadata: Record<string, unknown>): string {
   return pairs.join(' ')
 }
 
-// Human-readable format for development
-const textFormat = printf(({ level, message, timestamp: ts, service, ...metadata }) => {
-  const meta = toLogfmt(metadata)
-  const svc = service ? `[${service}]` : ''
-  return `${ts} [${level}] ${svc} ${message}${meta ? ' ' + meta : ''}`
-})
+// ANSI colors applied inline rather than via winston's `colorize()` — colorize
+// wraps the lowercase level string, and uppercasing afterwards would mangle the
+// `m` terminator of the ANSI escape sequence.
+const LEVEL_COLOR: Record<string, string> = {
+  error: '\x1b[31m', // red
+  warn: '\x1b[33m', // yellow
+  info: '\x1b[32m', // green
+  debug: '\x1b[36m' // cyan
+}
+const ANSI_RESET = '\x1b[0m'
+
+function formatLevel(level: string, colored: boolean): string {
+  const word = level.toUpperCase().padEnd(5)
+  if (!colored) return word
+  const color = LEVEL_COLOR[level]
+  return color ? `${color}${word}${ANSI_RESET}` : word
+}
+
+// Human-readable format. `colored` is captured at format-construction time so
+// the console transport can emit ANSI codes while the file transport stays plain.
+function makeTextFormat(colored: boolean) {
+  return printf(({ level, message, timestamp: ts, service, ...metadata }) => {
+    const meta = toLogfmt(metadata)
+    const svc = service ? `[${service}]` : ''
+    return `${ts} ${formatLevel(level as string, colored)} ${svc} ${message}${meta ? ' ' + meta : ''}`
+  })
+}
+
+const consoleTextFormat = makeTextFormat(COLORIZE)
+const fileTextFormat = makeTextFormat(false)
 
 // JSON format for Loki/Grafana (matches Rails lograge output)
 const jsonFormat = combine(timestamp({ format: 'YYYY-MM-DDTHH:mm:ss.SSSZ' }), json())
 
-// Console format: JSON in production, colorized text in development
-const textParts = COLORIZE
-  ? [colorize(), timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), textFormat]
-  : [timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), textFormat]
-
 const consoleFormat = STRUCTURED_CONSOLE
-  ? combine(timestamp({ format: 'YYYY-MM-DDTHH:mm:ss.SSSZ' }), json())
-  : combine(...textParts)
+  ? jsonFormat
+  : combine(timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), consoleTextFormat)
 
 // File format: JSON in production, text in development (independently configurable)
 const fileFormat = STRUCTURED_FILES
   ? jsonFormat
-  : combine(timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), textFormat)
+  : combine(timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), fileTextFormat)
 
 const transports: winston.transport[] = [
   new winston.transports.Console({

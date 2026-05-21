@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.36.0] — 2026-05-21
+
+### Changed
+
+- **Text-mode log level format.** Replaced the `[info]` bracket slot in `src/services/logger.ts` with an uppercased, 5-char-padded level word (`INFO `, `WARN `, `ERROR`, `DEBUG`) — matches logback's `%-5level` convention and brings mcp-kit in line with pino, Go's slog, Serilog, and Python logging. On TTY (color available), ANSI codes wrap the level word only (green/yellow/red/cyan); on piped stderr, files, and `NO_COLOR=1`, the same uppercase word is emitted without color. The double-bracket pairing `[info] [startup]` becomes the cleaner `INFO  [startup]`.
+- **Split text printf into two instances.** `consoleTextFormat` (colored when `COLORIZE` is true) and `fileTextFormat` (always plain) — guarantees file logs never receive ANSI codes even when stderr is a TTY. JSON output unaffected: `level` remains lowercase as a structured field.
+
+### Why this matters
+
+The `[level]` bracket was a winston-default artifact, not an industry convention. Now that v0.35.0 brought reliable TTY color detection via `supports-color`, the bracket adds noise without information — color tells you "warning" at a glance, and the uppercase padded word survives in non-color contexts so file logs and piped stderr still let you spot warn/error among info lines. The visible double bracket (`[info] [startup]`) was also visually heavy; dropping it makes the `[service]` namespace prefix do the work it's meant to do.
+
+[0.36.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.35.1...v0.36.0
+
 ## [0.35.1] — 2026-05-21
 
 ### Security
