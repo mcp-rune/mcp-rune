@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.35.1] — 2026-05-21
+
+### Security
+
+- **Cleared all 12 open `npm audit` advisories** (1 critical, 4 high, 7 moderate). `npm audit` now reports `found 0 vulnerabilities`.
+- Bumped `@opentelemetry/sdk-node` from `^0.213.0` to `^0.218.0` in `package.json` to pull in `@opentelemetry/exporter-prometheus >=0.217.0`, which fixes the prometheus exporter process-crash advisory ([GHSA-q7rr-3cgh-j5r3](https://github.com/advisories/GHSA-q7rr-3cgh-j5r3), high). This was the only fix that required a direct `package.json` change — npm flagged it as a breaking change because the SDK minor was below `^0.217.0`.
+- Ran `npm audit fix` to pick up patched transitives for `axios` (multiple high/moderate — prototype pollution, SSRF, CRLF injection, etc.), `protobufjs` (critical RCE + DoS chain), `@protobufjs/utf8`, `brace-expansion`, `fast-uri`, `follow-redirects`, `hono`, `ip-address` (+ `express-rate-limit` dependent), and `postcss`.
+
+### Why this matters
+
+The opentelemetry prometheus exporter CVE was the only advisory that couldn't be cleared by lockfile-only updates — `@opentelemetry/sdk-node@^0.213.0` resolved to a sub-`0.217.0` exporter no matter how the lockfile was regenerated, so the manifest range had to move up. The other 11 advisories were addressable purely through transitive updates and were resolved by a plain `npm audit fix`. Net result: clean audit with no functional changes to mcp-kit source code, no semver-major bumps to direct dependencies, and the prometheus exporter back on a supported, patched line.
+
+[0.35.1]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.35.0...v0.35.1
+
 ## [0.35.0] — 2026-05-18
 
 ### Changed
