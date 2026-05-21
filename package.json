@@ -1,6 +1,6 @@
 {
   "name": "@dsaenztagarro/mcp-kit",
-  "version": "0.35.0",
+  "version": "0.35.1",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "restricted"
@@ -123,7 +123,7 @@
     "@langfuse/tracing": "^4.0.0",
     "@modelcontextprotocol/ext-apps": "^1.7.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@opentelemetry/sdk-node": "^0.213.0",
+    "@opentelemetry/sdk-node": "^0.218.0",
     "@sentry/node": "^10.36.0",
     "axios": "^1.13.6",
     "cors": "^2.8.5",
