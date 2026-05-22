@@ -194,6 +194,76 @@ describe('lib/services/logger', () => {
       // Plain text mode (no ANSI) — exact match.
       expect(result).toBe('2026-04-26 16:25:01.123 INFO  [test] No metadata')
     })
+
+    it('omits durationMs from logfmt tail (already embedded in the message)', () => {
+      const formatter = getTextFormatter()
+      if (!formatter) return
+
+      const result = formatter({
+        level: 'info',
+        message: '✓ Load configuration (42ms)',
+        timestamp: '2026-04-26 16:25:01.123',
+        service: 'startup',
+        durationMs: 42
+      })
+
+      // The message keeps the human-readable (42ms); the field doesn't leak
+      // into the logfmt tail and duplicate it. JSON output (winston.format.json)
+      // serializes the full info object unchanged, so structured queries on
+      // durationMs still work.
+      expect(result).toBe('2026-04-26 16:25:01.123 INFO  [startup] ✓ Load configuration (42ms)')
+      expect(result).not.toContain('durationMs=')
+    })
+
+    it('renders single inter-token space when service tag is absent', () => {
+      const formatter = getTextFormatter()
+      if (!formatter) return
+
+      // Pre-fix bug: `${svc}${req} ${message}` left a dangling space when svc
+      // was empty, producing `INFO   [Sentry]…` (three spaces). The array-join
+      // composition skips empty parts so the line stays tidy.
+      const result = formatter({
+        level: 'info',
+        message: '[Sentry] Initialized for engineer-mcp@4.3.3',
+        timestamp: '2026-04-26 16:25:01.123'
+      })
+
+      expect(result).toBe(
+        '2026-04-26 16:25:01.123 INFO  [Sentry] Initialized for engineer-mcp@4.3.3'
+      )
+      expect(result).not.toMatch(/INFO {3,}/)
+    })
+  })
+
+  describe('TTY color helpers', () => {
+    it('dim() wraps text in ANSI dim+reset only when colored=true', () => {
+      expect(logger.dim('hello', true)).toBe('\x1b[2mhello\x1b[0m')
+      expect(logger.dim('hello', false)).toBe('hello')
+    })
+
+    it('colorizePhaseSymbol() colors a leading ▸/✓/✗/⊖ marker', () => {
+      expect(logger.colorizePhaseSymbol('▸ Load configuration', true)).toBe(
+        '\x1b[36m▸\x1b[0m Load configuration'
+      )
+      expect(logger.colorizePhaseSymbol('✓ Load configuration (42ms)', true)).toBe(
+        '\x1b[32m✓\x1b[0m Load configuration (42ms)'
+      )
+      expect(logger.colorizePhaseSymbol('✗ Database — boom', true)).toBe(
+        '\x1b[31m✗\x1b[0m Database — boom'
+      )
+      expect(logger.colorizePhaseSymbol('⊖ Tracing — disabled', true)).toBe(
+        '\x1b[2m⊖\x1b[0m Tracing — disabled'
+      )
+    })
+
+    it('colorizePhaseSymbol() leaves messages without a phase marker untouched', () => {
+      expect(logger.colorizePhaseSymbol('Plain message', true)).toBe('Plain message')
+      expect(logger.colorizePhaseSymbol('', true)).toBe('')
+    })
+
+    it('colorizePhaseSymbol() is a no-op when colored=false', () => {
+      expect(logger.colorizePhaseSymbol('✓ done', false)).toBe('✓ done')
+    })
   })
 
   describe('text format — requestId prefix', () => {

@@ -62,13 +62,33 @@ function formatLevel(level: string, colored: boolean): string {
 
 const ANSI_DIM = '\x1b[2m'
 
+export function dim(text: string, colored: boolean): string {
+  return colored ? `${ANSI_DIM}${text}${ANSI_RESET}` : text
+}
+
+// Phase markers carry their own semantic color independent of the log level
+// (a skipped ✓ is wrong; ⊖ should always read as dim). Only the leading
+// character of the message is rewritten so mid-message uses are untouched.
+const SYMBOL_COLOR: Record<string, string> = {
+  '▸': '\x1b[36m', // cyan  — in-progress
+  '✓': '\x1b[32m', // green — success
+  '✗': '\x1b[31m', // red   — failure
+  '⊖': ANSI_DIM // dim   — skipped
+}
+
+export function colorizePhaseSymbol(message: string, colored: boolean): string {
+  if (!colored) return message
+  const symbol = message.charAt(0)
+  const color = SYMBOL_COLOR[symbol]
+  if (!color) return message
+  return `${color}${symbol}${ANSI_RESET}${message.slice(1)}`
+}
+
 /** Indent every line of `stack` and dim it if colors are enabled. */
 function renderStack(stack: string, colored: boolean): string {
-  const open = colored ? ANSI_DIM : ''
-  const close = colored ? ANSI_RESET : ''
   return stack
     .split('\n')
-    .map((line) => `    ${open}${line}${close}`)
+    .map((line) => `    ${dim(line, colored)}`)
     .join('\n')
 }
 
@@ -76,13 +96,35 @@ function renderStack(stack: string, colored: boolean): string {
 // the console transport can emit ANSI codes while the file transport stays plain.
 function makeTextFormat(colored: boolean) {
   return printf(
-    ({ level, message, timestamp: ts, service, requestId, stack, causeStack, ...metadata }) => {
+    ({
+      level,
+      message,
+      timestamp: ts,
+      service,
+      requestId,
+      stack,
+      causeStack,
+      // Phase/summary lines already render the duration inside the message
+      // (e.g. `✓ Load configuration (42ms)`). Pull durationMs out of the
+      // logfmt tail so it doesn't show twice in text mode; JSON output is
+      // untouched (it serializes the full info object) so structured queries
+      // on per-phase durations still work.
+      durationMs: _durationMs,
+      ...metadata
+    }) => {
       const meta = toLogfmt(metadata)
-      const svc = service ? `[${service}]` : ''
       // requestId rendered as a compact `[req:abcd1234]` prefix so it stands
       // out at a glance and doesn't clutter the logfmt metadata tail.
-      const req = requestId ? ` [req:${String(requestId).slice(0, 8)}]` : ''
-      const head = `${ts} ${formatLevel(level as string, colored)} ${svc}${req} ${message}${meta ? ' ' + meta : ''}`
+      const req = requestId ? `[req:${String(requestId).slice(0, 8)}]` : ''
+      // Build the line from non-empty parts so absent service/requestId
+      // don't leave dangling separator spaces (was `INFO   [Sentry]…` when
+      // service was unset).
+      const parts: string[] = [dim(ts as string, colored), formatLevel(level as string, colored)]
+      if (service) parts.push(dim(`[${service}]`, colored))
+      if (req) parts.push(req)
+      parts.push(colorizePhaseSymbol(message as string, colored))
+      let head = parts.join(' ')
+      if (meta) head += ' ' + dim(meta, colored)
       if (typeof stack !== 'string' || !stack) return head
       const stackBlock = renderStack(stack, colored)
       if (typeof causeStack === 'string' && causeStack) {
