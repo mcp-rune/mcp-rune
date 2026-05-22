@@ -159,7 +159,6 @@ describe('lib/mcp/http-server', () => {
         oauth: mockOauth,
         baseUrl: 'http://localhost:3000',
         mcpName: 'test-mcp',
-        clientMetadata: undefined,
         serveProtectedResourceMetadata: true
       })
     })

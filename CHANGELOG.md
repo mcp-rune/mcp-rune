@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.37.0] — 2026-05-22
+
+### Changed (BREAKING)
+
+- **CIMD config moves from `HttpServer` to `OAuthService`.** The `clientMetadata` constructor parameter is removed from `HttpServer` and added to `OAuthService` (and the `ClientMetadataConfig` type moves with it, now exported from `@dsaenztagarro/mcp-kit/oauth2`). The `/oauth/client-metadata.json` endpoint now reads `oauth.clientMetadata` directly; behavior and defaults are unchanged.
+
+  Migration:
+
+  ```diff
+  -new HttpServer({
+  -  // ...
+  -  oauth: new OAuthService({ ... }),
+  -  clientMetadata: { redirectUris, clientName, scope }
+  -})
+  +new HttpServer({
+  +  // ...
+  +  oauth: new OAuthService({
+  +    // ...
+  +    clientMetadata: { redirectUris, clientName, scope }
+  +  })
+  +})
+  ```
+
+### Why this matters
+
+CIMD (Client ID Metadata Document) and DCR (Dynamic Client Registration, RFC 7591) are sibling OAuth client-registration mechanisms — DCR registers dynamically via `POST /oauth/register`, CIMD publishes a JSON metadata document the AS fetches on demand. DCR already lived entirely on `OAuthService` (via `authServerUrl`); CIMD being a top-level `HttpServer` parameter was asymmetric and leaked an OAuth concern into the HTTP server's constructor. Co-locating both under `OAuthService` matches the actual concept ("this is who the OAuth client is") and removes a parameter from `HttpServer` that always had to be plumbed through to the OAuth router anyway. No runtime behavior changes — same endpoint, same defaults, same cache headers.
+
+[0.37.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.36.1...v0.37.0
+
 ## [0.36.1] — 2026-05-22
 
 ### Fixed

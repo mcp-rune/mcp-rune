@@ -816,13 +816,15 @@ describe('lib/mcp/middleware/oauth-router', () => {
 
       it('should use clientName from config when provided', () => {
         const routerWithConfig = createOAuthRouter({
-          oauth: mockOauth,
+          oauth: {
+            ...mockOauth,
+            clientMetadata: {
+              redirectUris: ['https://app.example.com/callback'],
+              clientName: 'My Custom App'
+            }
+          },
           baseUrl: 'https://mcp.example.com',
-          mcpName: 'test-mcp',
-          clientMetadata: {
-            redirectUris: ['https://app.example.com/callback'],
-            clientName: 'My Custom App'
-          }
+          mcpName: 'test-mcp'
         })
 
         const handler = findRouteHandler(routerWithConfig, 'get', '/oauth/client-metadata.json')
@@ -839,12 +841,14 @@ describe('lib/mcp/middleware/oauth-router', () => {
 
       it('should use redirectUris from config when provided', () => {
         const routerWithConfig = createOAuthRouter({
-          oauth: mockOauth,
+          oauth: {
+            ...mockOauth,
+            clientMetadata: {
+              redirectUris: ['https://app.example.com/callback', 'https://app.example.com/cb2']
+            }
+          },
           baseUrl: 'https://mcp.example.com',
-          mcpName: 'test-mcp',
-          clientMetadata: {
-            redirectUris: ['https://app.example.com/callback', 'https://app.example.com/cb2']
-          }
+          mcpName: 'test-mcp'
         })
 
         const handler = findRouteHandler(routerWithConfig, 'get', '/oauth/client-metadata.json')
@@ -874,13 +878,15 @@ describe('lib/mcp/middleware/oauth-router', () => {
 
       it('should use scope from config when provided', () => {
         const routerWithConfig = createOAuthRouter({
-          oauth: mockOauth,
+          oauth: {
+            ...mockOauth,
+            clientMetadata: {
+              redirectUris: ['https://app.example.com/callback'],
+              scope: 'read write admin'
+            }
+          },
           baseUrl: 'https://mcp.example.com',
-          mcpName: 'test-mcp',
-          clientMetadata: {
-            redirectUris: ['https://app.example.com/callback'],
-            scope: 'read write admin'
-          }
+          mcpName: 'test-mcp'
         })
 
         const handler = findRouteHandler(routerWithConfig, 'get', '/oauth/client-metadata.json')
@@ -948,13 +954,15 @@ describe('lib/mcp/middleware/oauth-router', () => {
 
       it('should use custom cacheMaxAge from config when provided', () => {
         const routerWithConfig = createOAuthRouter({
-          oauth: mockOauth,
+          oauth: {
+            ...mockOauth,
+            clientMetadata: {
+              redirectUris: ['https://app.example.com/callback'],
+              cacheMaxAge: 7200
+            }
+          },
           baseUrl: 'https://mcp.example.com',
-          mcpName: 'test-mcp',
-          clientMetadata: {
-            redirectUris: ['https://app.example.com/callback'],
-            cacheMaxAge: 7200
-          }
+          mcpName: 'test-mcp'
         })
 
         const handler = findRouteHandler(routerWithConfig, 'get', '/oauth/client-metadata.json')

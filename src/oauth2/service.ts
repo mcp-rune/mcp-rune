@@ -14,6 +14,30 @@ interface IntrospectionCacheEntry {
   timestamp: number
 }
 
+/**
+ * CIMD (Client ID Metadata Document) configuration.
+ *
+ * Sibling of DCR: both are OAuth client-registration mechanisms. DCR registers
+ * the client dynamically via POST /oauth/register; CIMD publishes a JSON
+ * metadata document the authorization server fetches on demand. Because this is
+ * a manifestation of the OAuth client's identity, it lives on OAuthService
+ * alongside clientId / redirectUri / scopes — not on the HTTP server.
+ *
+ * Consumed by the /oauth/client-metadata.json endpoint in oauth-router.
+ *
+ * Note: `redirectUris` (plural, list) and `scope` (advertised) are intentionally
+ * distinct from OAuthService's `redirectUri` (the single callback the client
+ * actually uses) and `scopes` (what the client requests at auth time). They
+ * describe the full surface advertised to the AS, which can be broader than
+ * what any single flow uses.
+ */
+export interface ClientMetadataConfig {
+  redirectUris: string[]
+  clientName?: string
+  scope?: string
+  cacheMaxAge?: number // Cache-Control max-age in seconds (default: 3600)
+}
+
 interface OAuthServiceOptions {
   authServerUrl: string
   clientId: string
@@ -22,6 +46,7 @@ interface OAuthServiceOptions {
   scopes?: string
   resourceUri?: string
   isProduction?: boolean
+  clientMetadata?: ClientMetadataConfig
 }
 
 interface TokenResponse {
@@ -95,6 +120,7 @@ export class OAuthService {
   redirectUri: string
   scopes: string
   resourceUri: string | null
+  readonly clientMetadata: ClientMetadataConfig | null
   config: client.Configuration | null
 
   private _isInsecure: boolean
@@ -114,6 +140,7 @@ export class OAuthService {
     if (this.resourceUri) {
       validateResourceUri(this.resourceUri)
     }
+    this.clientMetadata = options.clientMetadata ?? null
     this.config = null
 
     // Security: HTTP is only allowed for local development
