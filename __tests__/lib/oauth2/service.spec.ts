@@ -135,6 +135,41 @@ describe('lib/oauth2/service', () => {
     })
   })
 
+  // HttpServer calls this so the OAuth proxy's RFC 8707 `resource` injection
+  // and OAuthService's introspection audience check share the same value.
+  // The method must be idempotent (multiple wires-up shouldn't change a
+  // caller-supplied value) and must reject invalid URIs (otherwise the
+  // validation guarantees from the constructor would no longer hold).
+  describe('applyDefaultResourceUri', () => {
+    it('sets resourceUri when it was unset at construction', () => {
+      const svc = new OAuthService(defaultOptions)
+      expect(svc.resourceUri).toBeNull()
+
+      svc.applyDefaultResourceUri('https://mcp.example.com/mcp')
+
+      expect(svc.resourceUri).toBe('https://mcp.example.com/mcp')
+    })
+
+    it('does not overwrite a caller-supplied resourceUri', () => {
+      const svc = new OAuthService({
+        ...defaultOptions,
+        resourceUri: 'https://mcp.example.com/api/v2/mcp'
+      })
+
+      svc.applyDefaultResourceUri('https://mcp.example.com/mcp')
+
+      expect(svc.resourceUri).toBe('https://mcp.example.com/api/v2/mcp')
+    })
+
+    it('validates the default value per RFC 8707', () => {
+      const svc = new OAuthService(defaultOptions)
+      expect(() => svc.applyDefaultResourceUri('https://mcp.example.com#frag')).toThrow(
+        'MUST NOT include a fragment'
+      )
+      expect(svc.resourceUri).toBeNull()
+    })
+  })
+
   describe('_getExecuteOptions', () => {
     it('returns allowInsecureRequests for HTTP URLs', () => {
       const opts = oauth._getExecuteOptions()

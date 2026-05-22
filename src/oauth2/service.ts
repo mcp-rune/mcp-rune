@@ -166,6 +166,22 @@ export class OAuthService {
   }
 
   /**
+   * Set resourceUri to `uri` only when the constructor caller didn't supply
+   * one. Idempotent. Used by HttpServer to inject the canonical
+   * `${baseUrl}/mcp` after construction so a single value flows into:
+   *   - the RFC 8707 `resource` param the OAuth proxy injects on
+   *     `/oauth/authorize` and `/oauth/token`,
+   *   - the RFC 9728 PRM `resource` field,
+   *   - the audience check in `introspectToken` (which silently no-ops when
+   *     `this.resourceUri` is null — the bug this method exists to prevent).
+   */
+  applyDefaultResourceUri(uri: string): void {
+    if (this.resourceUri) return
+    validateResourceUri(uri)
+    this.resourceUri = uri
+  }
+
+  /**
    * Get execute options for openid-client functions
    * Allows HTTP requests when identity URL is not HTTPS (local development)
    */

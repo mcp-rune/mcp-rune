@@ -93,6 +93,10 @@ describe('lib/mcp/http-server', () => {
 
     mockOauth = {
       authServerUrl: 'https://identity.example.com',
+      resourceUri: null,
+      applyDefaultResourceUri: vi.fn(function (uri) {
+        if (!this.resourceUri) this.resourceUri = uri
+      }),
       introspectToken: vi.fn()
     }
 
@@ -152,6 +156,46 @@ describe('lib/mcp/http-server', () => {
     it('should setup middleware', () => {
       expect(createRequestIdMiddleware).toHaveBeenCalled()
       expect(createRequestLoggerMiddleware).toHaveBeenCalled()
+    })
+
+    // RFC 8707 single source of truth: HttpServer is the one place that knows
+    // baseUrl, so it injects `${baseUrl}/mcp` into OAuthService. Without this
+    // the proxy injects a resource the introspection audience check then
+    // silently no-ops on, because OAuthService.resourceUri is still null.
+    it('should inject default resourceUri into OAuthService from baseUrl', () => {
+      const oauth = {
+        authServerUrl: 'https://identity.example.com',
+        resourceUri: null,
+        applyDefaultResourceUri: vi.fn(function (uri) {
+          if (!this.resourceUri) this.resourceUri = uri
+        }),
+        introspectToken: vi.fn()
+      }
+      new HttpServer({
+        port: 3000,
+        baseUrl: 'https://mcp.example.com',
+        oauth,
+        mcp: mockMcp
+      })
+      expect(oauth.applyDefaultResourceUri).toHaveBeenCalledWith('https://mcp.example.com/mcp')
+    })
+
+    it('should not overwrite an explicitly configured resourceUri on OAuthService', () => {
+      const oauth = {
+        authServerUrl: 'https://identity.example.com',
+        resourceUri: 'https://mcp.example.com/api/v2/mcp',
+        applyDefaultResourceUri: vi.fn(function (uri) {
+          if (!this.resourceUri) this.resourceUri = uri
+        }),
+        introspectToken: vi.fn()
+      }
+      new HttpServer({
+        port: 3000,
+        baseUrl: 'https://mcp.example.com',
+        oauth,
+        mcp: mockMcp
+      })
+      expect(oauth.resourceUri).toBe('https://mcp.example.com/api/v2/mcp')
     })
 
     it('should register OAuth router', () => {
