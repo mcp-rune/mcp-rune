@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.38.0] — 2026-05-22
 
 ### Changed (BREAKING)
 
@@ -32,7 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 `${baseUrl}/mcp` previously lived in two places — `OAuthRouterConfig` (with a `?? \`${baseUrl}/mcp\``fallback) and`OAuthService.resourceUri`(no default). Consumers had to wire both for the audience check to actually run; the only document calling that out was a fragile comment in each consumer's bootstrap file. The two values can no longer drift: the proxy reads from`OAuthService.resourceUri`, the audience check validates against the same field, and `HttpServer`is the one place that knows`baseUrl` and seeds the default before any route is registered.
 
-[Unreleased]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.37.0...HEAD
+[0.38.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.37.0...v0.38.0
 
 ## [0.37.0] — 2026-05-22
 
