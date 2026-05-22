@@ -4,32 +4,6 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [0.38.0] — 2026-05-22
-
-### Added
-
-- **Phase-timed startup tracker with semantic colors.** `StartupTracker.phase()` now records `performance.now()` at entry and renders the elapsed time on the success line (`✓ Tools (87ms)`); `done()` reports total wall-clock (`Startup complete: 9 phases (9 ok) in 1.24s`). Phase markers `▸`/`✓`/`✗`/`⊖` are colored independently of the log level (cyan / green / red / dim) so a skipped phase no longer renders green just because INFO is green. The previous per-phase debug listing in `done()` is dropped — each ✓/⊖/✗ already appeared inline as the phase finished, so the second listing was pure duplication.
-
-- **Request-ID propagation via AsyncLocalStorage.** New `services/request-context.ts` exports `requestContext` (an `AsyncLocalStorage<{ requestId }>`) plus `runWithRequestId` / `getRequestId`. The HTTP request-id middleware wraps `next()` in `requestContext.run({ requestId }, next)` so any downstream code path — tool handlers, API clients, OAuth flows — runs inside the bound scope. The logger format pipeline reads the current ID from ALS and injects it into every log entry that doesn't already carry one, so tool/API/OAuth logs are auto-correlated without call-site changes. Text mode surfaces the ID as a compact `[req:a1b2c3d4]` prefix; JSON mode keeps the full UUID as a structured field.
-
-- **Error hints for common POSIX `err.code` values.** New `core/error-hints.ts` maps codes like `EADDRINUSE`, `ECONNREFUSED`, `EACCES` to a one-line human suggestion (`another process is using that port`, `is the service running?`, etc.) that's appended to the failure marker (`✗ HTTP server — listen EADDRINUSE :::4100 — another process is using that port`) and surfaced as a structured `hint` field in the scoped error log so Loki/Grafana can filter on it.
-
-### Changed
-
-- **Multi-line stack rendering in text logs.** The text formatter lifts `stack` and `causeStack` out of the logfmt metadata tail and renders them on indented continuation lines below the message, dimmed via ANSI when colors are on. Inline `stack="Error: …\n at …"` was unreadable in a terminal. JSON format is unchanged — stacks stay structured fields. Errors with a `cause` get a second `caused by:` block beneath the primary stack.
-
-- **TTY chrome (timestamp, service tag, logfmt tail) now dimmed.** Inside the text formatter, `<ts>`, `[service]`, and the trailing `key=value` logfmt block are wrapped in ANSI dim so the message + colored level + colored phase symbol stay bright. File-mode text logs are unaffected (constructed with `colored=false`); JSON output is untouched.
-
-- **`durationMs` no longer duplicates in text logs.** The success and summary lines already render `(42ms)` / `in 1.24s` inside the message body; the field used to also appear in the logfmt tail as `durationMs=42`. `makeTextFormat` now destructures `durationMs` out of the logfmt rendering (the same pattern already used for `stack`/`requestId`). JSON output still carries `durationMs` as a top-level field so Loki/Grafana queries on per-phase durations keep working.
-
-- **Empty-service lines render with a single inter-token space.** The text formatter previously emitted `INFO   [Sentry] …` (three spaces) when `service` was unset because `${svc}${req}` left a dangling separator. The head is now composed via an array-join that skips empty parts.
-
-### Why this matters
-
-These changes collectively close the gap between "the server logged something" and "an operator can read those logs at 2am during an incident." Phase durations + error hints make startup failures self-diagnosing (the line tells you both _what_ broke and the most common _why_); request-ID propagation closes the correlation gap where a tool-handler error log couldn't be tied back to the inbound HTTP request without manual threading; multi-line stack rendering means a stack trace in `kubectl logs` is actually readable instead of being a JSON-escaped one-liner; and the TTY polish (semantic symbol colors, dim chrome, no-more-duplicated-duration) lets the eye scan a busy startup at a glance. JSON output stays untouched throughout, so Loki/Grafana queries and the production log pipeline see zero change.
-
-[0.38.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.37.0...v0.38.0
-
 ## [0.37.0] — 2026-05-22
 
 ### Changed (BREAKING)
