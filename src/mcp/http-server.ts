@@ -113,6 +113,16 @@ export class HttpServer {
     // In production, this should be the public URL (e.g., 'https://example.com/mcp')
     this.baseUrl = baseUrl || `http://localhost:${this.port}`
 
+    // RFC 8707 single source of truth: the OAuth router will inject this same
+    // `${baseUrl}/mcp` on authorize/token redirects, and OAuthService validates
+    // it as the audience on introspection. Previously the OAuth router had its
+    // own fallback while OAuthService.resourceUri stayed null when the caller
+    // omitted it — which silently skipped the audience check in
+    // OAuthService.introspectToken. Inject here so the two halves cannot drift.
+    if (this.oauth) {
+      this.oauth.applyDefaultResourceUri(`${this.baseUrl}/mcp`)
+    }
+
     // Session storage: sessionId -> { transport, server, accessToken }
     this.sessions = new SessionManager()
 

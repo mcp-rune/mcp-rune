@@ -195,6 +195,10 @@ describe('lib/mcp/middleware/oauth-router', () => {
       mockOauth = {
         authServerUrl: 'https://identity.example.com',
         scopes: 'read',
+        // HttpServer normally injects this; tests construct the router
+        // directly so they must set it themselves. See the
+        // `requires oauth.resourceUri` describe block below.
+        resourceUri: 'https://mcp.example.com/mcp',
         getClientCredentialsToken: vi.fn()
       }
 
@@ -218,6 +222,20 @@ describe('lib/mcp/middleware/oauth-router', () => {
     it('should return an Express router', () => {
       expect(router).toBeDefined()
       expect(typeof router).toBe('function')
+    })
+
+    // The router has no fallback for resourceUri anymore — single source of
+    // truth lives on OAuthService. Throwing at router-construction time
+    // surfaces the misconfiguration loudly instead of letting it manifest as
+    // a silent audience-check bypass at runtime.
+    it('should throw when oauth.resourceUri is not set', () => {
+      expect(() =>
+        createOAuthRouter({
+          oauth: { ...mockOauth, resourceUri: null },
+          baseUrl: 'https://mcp.example.com',
+          mcpName: 'test-mcp'
+        })
+      ).toThrow(/oauth\.resourceUri/)
     })
 
     describe('GET /.well-known/oauth-protected-resource', () => {
@@ -490,12 +508,16 @@ describe('lib/mcp/middleware/oauth-router', () => {
         expect(params.get('resource')).toBe('https://mcp.example.com/mcp')
       })
 
-      it('should honour an explicit resourceUri override', () => {
+      // The router has no resourceUri knob of its own anymore — overrides flow
+      // through OAuthService.resourceUri so introspection's audience check
+      // matches the value injected on /authorize and /token. Without this
+      // single source of truth the proxy could inject an audience the server
+      // then silently refuses.
+      it('should use oauth.resourceUri verbatim when set to a non-default value', () => {
         const customRouter = createOAuthRouter({
-          oauth: mockOauth,
+          oauth: { ...mockOauth, resourceUri: 'https://mcp.example.com/api/v2/mcp' },
           baseUrl: 'https://mcp.example.com',
-          mcpName: 'test-mcp',
-          resourceUri: 'https://mcp.example.com/api/v2/mcp'
+          mcpName: 'test-mcp'
         })
         const handler = findRouteHandler(customRouter, 'get', '/oauth/authorize')
 

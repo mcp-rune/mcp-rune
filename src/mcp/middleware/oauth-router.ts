@@ -111,40 +111,37 @@ interface OAuthRouterConfig {
    * via `buildResourceMetadataUrl()` regardless of this flag.
    */
   serveProtectedResourceMetadata?: boolean
-  /**
-   * Canonical resource URI used as:
-   *
-   *   - the PRM `resource` field value (RFC 9728 §2),
-   *   - the `resource` parameter the proxy injects on every `/oauth/authorize`
-   *     redirect and `/oauth/token` request body (RFC 8707 §2),
-   *   - the `aud` value the embedding server's `OAuthService.resourceUri`
-   *     validates against during introspection.
-   *
-   * Defaults to `${baseUrl}/mcp` because that is the MCP endpoint URL by
-   * convention. Override only if the MCP server is mounted at a non-standard
-   * path. Critically: the OAuthService's own `resourceUri` MUST be set to the
-   * same value, otherwise the proxy will inject a `resource` the server then
-   * refuses on audience check.
-   */
-  resourceUri?: string
 }
 
-/** Create OAuth router with all OAuth-related routes */
+/**
+ * Create OAuth router with all OAuth-related routes.
+ *
+ * The canonical resource URI used for RFC 8707 injection (authorize/token),
+ * RFC 9728 PRM, and introspection audience validation comes from
+ * `oauth.resourceUri`. HttpServer guarantees this is populated by calling
+ * `oauth.applyDefaultResourceUri(\`${baseUrl}/mcp\`)` in its constructor;
+ * callers wiring this router directly must set it themselves.
+ */
 export function createOAuthRouter({
   oauth,
   baseUrl,
   mcpName,
-  serveProtectedResourceMetadata = true,
-  resourceUri
+  serveProtectedResourceMetadata = true
 }: OAuthRouterConfig): Router {
+  if (!oauth.resourceUri) {
+    throw new Error(
+      'createOAuthRouter requires oauth.resourceUri to be set. ' +
+        'Use HttpServer (which injects `${baseUrl}/mcp` automatically), or ' +
+        'pass resourceUri when constructing OAuthService.'
+    )
+  }
+
   const router = Router()
 
   // Extract origin from baseUrl for authorization_servers
   const origin = new URL(baseUrl).origin
 
-  // Canonical resource URI used in PRM, RFC 8707 injection, and audience
-  // validation. Single source of truth — see OAuthRouterConfig.resourceUri.
-  const canonicalResourceUri = resourceUri ?? `${baseUrl}/mcp`
+  const canonicalResourceUri = oauth.resourceUri
 
   /** Wrap async route handlers to catch errors and forward to error middleware */
   const asyncHandler =
