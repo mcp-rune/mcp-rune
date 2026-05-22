@@ -7,11 +7,17 @@
  * - Uses incoming X-Request-ID header if present (from upstream services)
  * - Generates UUID v4 if not present
  * - Sets X-Request-ID response header for downstream correlation
+ * - Binds the ID into AsyncLocalStorage so any downstream code (tool handlers,
+ *   API clients, OAuth flows) can read it via `getRequestId()` without
+ *   threading it through every signature, and the logger format pipeline
+ *   auto-injects it into every log entry for the request's lifetime.
  */
 
 import { randomUUID } from 'node:crypto'
 
 import type { NextFunction, Request, Response } from 'express'
+
+import { requestContext } from '#src/services/request-context.js'
 
 /** Express middleware that attaches a request ID to each request */
 export function createRequestIdMiddleware(): (
@@ -24,7 +30,7 @@ export function createRequestIdMiddleware(): (
     ;(req as Request & { requestId: string }).requestId = requestId
     res.set('X-Request-ID', requestId)
 
-    next()
+    requestContext.run({ requestId }, next)
   }
 }
 

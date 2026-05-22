@@ -60,14 +60,16 @@ describe('lib/core/startup-tracker', () => {
       expect(received).toBe(logger._childInstance)
     })
 
-    it('logs success marker after callback', () => {
+    it('logs success marker after callback with duration suffix', () => {
       tracker.phase('config', 'Load configuration', () => {})
 
       const successCall = logger.info.mock.calls.find(([msg]) =>
         msg.includes('\u2713 Load configuration')
       )
       expect(successCall).toBeDefined()
-      expect(successCall[1]).toEqual({ service: 'startup' })
+      // Success line carries the phase duration as a `(<N>ms)` or `(<N>s)` suffix.
+      expect(successCall[0]).toMatch(/\u2713 Load configuration \((\d+ms|\d+\.\d+s)\)/)
+      expect(successCall[1]).toEqual({ service: 'startup', durationMs: expect.any(Number) })
     })
 
     it('returns callback return value', () => {
@@ -93,9 +95,45 @@ describe('lib/core/startup-tracker', () => {
         expect.objectContaining({
           errorType: 'Error',
           code: 'ECONNREFUSED',
-          stack: expect.stringContaining('connect ECONNREFUSED')
+          stack: expect.stringContaining('connect ECONNREFUSED'),
+          durationMs: expect.any(Number)
         })
       )
+    })
+
+    it('appends a human-readable hint when err.code is a known POSIX code', () => {
+      const err = new Error('listen EADDRINUSE :::4100')
+      err.code = 'EADDRINUSE'
+      try {
+        tracker.phase('http', 'HTTP server', () => {
+          throw err
+        })
+      } catch {
+        /* expected */
+      }
+
+      const failCall = logger.error.mock.calls.find(([msg]) => msg.includes('✗ HTTP server'))
+      expect(failCall[0]).toMatch(/EADDRINUSE.*another process is using that port/)
+
+      // Scoped logger also gets the hint in metadata so structured queries can filter on it.
+      const [, scopedMeta] = logger._childInstance.error.mock.calls[0]
+      expect(scopedMeta.hint).toMatch(/another process is using that port/)
+    })
+
+    it('does not append a hint for errors without a known code', () => {
+      const err = new Error('unmapped error')
+      err.code = 'EWHATEVER'
+      try {
+        tracker.phase('thing', 'Thing', () => {
+          throw err
+        })
+      } catch {
+        /* expected */
+      }
+
+      const failCall = logger.error.mock.calls.find(([msg]) => msg.includes('✗ Thing'))
+      // No trailing — hint clause.
+      expect(failCall[0]).toBe('✗ Thing — unmapped error')
     })
 
     it('preserves custom error type in errorType metadata', () => {
@@ -190,13 +228,18 @@ describe('lib/core/startup-tracker', () => {
   })
 
   describe('done()', () => {
+    // Each \u2713/\u2296/\u2717 already logged as phases finished, so done() emits one
+    // summary line with counts and total duration \u2014 no redundant phase list.
+    const matchSummary = (counts: string) =>
+      new RegExp(`^Startup complete: \\d+ phases \\(${counts}\\) in (\\d+ms|\\d+\\.\\d+s)$`)
+
     it('logs summary with correct counts for ok phases', () => {
       tracker.phase('config', 'Load configuration', () => {})
       tracker.phase('tools', 'Register tools', () => {})
       tracker.done()
 
       const summaryCall = logger.info.mock.calls.find(([msg]) => msg.includes('Startup complete'))
-      expect(summaryCall[0]).toBe('Startup complete: 2 phases (2 ok)')
+      expect(summaryCall[0]).toMatch(matchSummary('2 ok'))
     })
 
     it('logs summary with ok and skipped counts', () => {
@@ -205,7 +248,7 @@ describe('lib/core/startup-tracker', () => {
       tracker.done()
 
       const summaryCall = logger.info.mock.calls.find(([msg]) => msg.includes('Startup complete'))
-      expect(summaryCall[0]).toBe('Startup complete: 2 phases (1 ok, 1 skipped)')
+      expect(summaryCall[0]).toMatch(matchSummary('1 ok, 1 skipped'))
     })
 
     it('logs summary with ok, skipped, and failed counts', () => {
@@ -221,10 +264,10 @@ describe('lib/core/startup-tracker', () => {
       tracker.done()
 
       const summaryCall = logger.info.mock.calls.find(([msg]) => msg.includes('Startup complete'))
-      expect(summaryCall[0]).toBe('Startup complete: 3 phases (1 ok, 1 skipped, 1 failed)')
+      expect(summaryCall[0]).toMatch(matchSummary('1 ok, 1 skipped, 1 failed'))
     })
 
-    it('logs per-phase debug listing with all status markers', () => {
+    it('does not emit a per-phase debug listing (each \u2713/\u2296/\u2717 already appeared inline)', () => {
       tracker.phase('config', 'Load configuration', () => {})
       tracker.skip('tracing', 'Tracing', 'keys not set')
       try {
@@ -236,37 +279,25 @@ describe('lib/core/startup-tracker', () => {
       }
       tracker.done()
 
-      const debugCalls = logger.debug.mock.calls.filter(
-        ([msg]) => typeof msg === 'string' && msg.startsWith('  ')
+      // No `  \u2713 \u2026` / `  \u2296 \u2026` / `  \u2717 \u2026` debug entries should be emitted.
+      const indentedDebugCalls = logger.debug.mock.calls.filter(
+        ([msg]) => typeof msg === 'string' && /^ {2}[\u2713\u2296\u2717]/.test(msg)
       )
-      expect(debugCalls).toHaveLength(3)
-      expect(debugCalls[0][0]).toBe('  \u2713 Load configuration')
-      expect(debugCalls[1][0]).toBe('  \u2296 Tracing')
-      expect(debugCalls[2][0]).toBe('  \u2717 Database')
-    })
-
-    it('logs per-phase debug listing with startup service tag', () => {
-      tracker.phase('config', 'Load configuration', () => {})
-      tracker.done()
-
-      const debugCalls = logger.debug.mock.calls.filter(
-        ([msg]) => typeof msg === 'string' && msg.startsWith('  ')
-      )
-      expect(debugCalls[0][1]).toEqual({ service: 'startup' })
+      expect(indentedDebugCalls).toHaveLength(0)
     })
 
     it('logs summary with zero phases', () => {
       tracker.done()
 
       const summaryCall = logger.info.mock.calls.find(([msg]) => msg.includes('Startup complete'))
-      expect(summaryCall[0]).toBe('Startup complete: 0 phases (0 ok)')
+      expect(summaryCall[0]).toMatch(matchSummary('0 ok'))
     })
 
-    it('logs summary info with startup service tag', () => {
+    it('logs summary with startup service tag and durationMs metadata', () => {
       tracker.done()
 
       const summaryCall = logger.info.mock.calls.find(([msg]) => msg.includes('Startup complete'))
-      expect(summaryCall[1]).toEqual({ service: 'startup' })
+      expect(summaryCall[1]).toEqual({ service: 'startup', durationMs: expect.any(Number) })
     })
   })
 })
