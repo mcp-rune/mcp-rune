@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.39.0] — 2026-05-24
+
+### Changed (BREAKING)
+
+- **Log output collapses paired start/end lines into one completion line per operation.** Startup phases and inbound HTTP requests now emit a single `✓ name (Xms)` / `← METHOD path STATUS (totalMs[, upstream Xms])` line on completion instead of separate "started"/"completed" pairs. Slow operations get a deferred `▸` line only after a threshold (250ms for async phases, 1s for requests), so a hung process still surfaces what was in flight. Ops queries or runbooks keyed on the literal strings `Request started`, `Request completed`, or `…proxied successfully` will need updating.
+
+- **`StartupTracker.phase()` splits into sync `phase()` + new `phaseAsync()`.** The sync variant has no `▸` start marker at all (a sync block holds the event loop, so a deferred timer could never fire before the phase returns). The async variant arms a `setTimeout(..., 250).unref()` that emits `▸` only when a phase is genuinely slow. Existing sync call sites continue to work unchanged; async phases must opt into `phaseAsync` to get the deferred-start behavior.
+
+- **`RequestContext` interface gains a required `upstream: { totalMs, calls }` accumulator.** External code calling `requestContext.run({ requestId }, fn)` directly must now pass `{ requestId, upstream: { totalMs: 0, calls: 0 } }`. The bundled `runWithRequestId` helper and the `request-id` middleware do this for you.
+
+### Added
+
+- **`src/services/instrumented-axios.ts` — `createInstrumentedAxios()` factory.** Cross-cutting primitive that returns an axios instance whose interceptors emit one `→ METHOD url status (Xms) k=v` line per completed call. Each instance carries its own per-endpoint allowlist (`EndpointLogConfig[]`) for surfacing domain fields like `grantType` or `clientName`, while a `GLOBAL_REDACT` set masks well-known secret keys (`client_secret`, `access_token`, `refresh_token`, `id_token`, `authorization`, `password`, `code`) regardless of allowlist. Each completed call also feeds the request-scoped `addUpstreamDuration` accumulator so inbound logs can render proxy overhead. Endpoints not in the allowlist log transport-only — a new endpoint cannot accidentally leak a sensitive field until someone opts it in.
+
+- **Direction glyphs `←` (inbound, cyan) and `→` (outbound, magenta)** in the logger symbol table. CI/JSON consumers still see the glyph; TTY users get the color reinforcement.
+
+- **OAuth-instrumented axios instance (`src/oauth2/oauth-axios.ts`).** Built from the factory with an allowlist for `/oauth/token`, `/oauth/register`, and the well-known metadata endpoints. The OAuth router swaps its `import axios` for this instance — handler code stays as plain `axios.post(...)` calls and the interceptor handles all logging non-invasively.
+
+### Removed
+
+- **Per-handler `…proxied successfully` log calls in `oauth-router.ts`.** The axios interceptor covers them with richer info (method, full upstream URL, status, duration, allowlisted domain fields). Error logs are kept because they carry diagnostic context (`mcpName`, request shape) the interceptor cannot reach.
+
+### Why this matters
+
+A 10-phase startup that previously took 20 log lines now takes 10. Each proxied OAuth request that previously took 3 lines (`Request started` + `…proxied successfully` + `Request completed`) now takes 2 (`→` upstream + `←` inbound), and proxy overhead is derivable from `totalMs − upstreamMs` shown on the inbound line. The factory generalizes the same `→`-line behavior so downstream MCPs' tool API clients can adopt it for their own `createApiClient` factories without per-call-site changes.
+
+[0.39.0]: https://github.com/dsaenztagarro/mcp-kit/compare/v0.38.0...v0.39.0
+
 ## [0.38.0] — 2026-05-22
 
 ### Changed (BREAKING)

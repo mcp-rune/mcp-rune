@@ -70,10 +70,12 @@ export function dim(text: string, colored: boolean): string {
 // (a skipped ✓ is wrong; ⊖ should always read as dim). Only the leading
 // character of the message is rewritten so mid-message uses are untouched.
 const SYMBOL_COLOR: Record<string, string> = {
-  '▸': '\x1b[36m', // cyan  — in-progress
-  '✓': '\x1b[32m', // green — success
-  '✗': '\x1b[31m', // red   — failure
-  '⊖': ANSI_DIM // dim   — skipped
+  '▸': '\x1b[36m', // cyan    — in-progress
+  '✓': '\x1b[32m', // green   — success
+  '✗': '\x1b[31m', // red     — failure
+  '⊖': ANSI_DIM, //   dim     — skipped
+  '←': '\x1b[36m', // cyan    — inbound response
+  '→': '\x1b[35m' //  magenta — outbound request
 }
 
 export function colorizePhaseSymbol(message: string, colored: boolean): string {
@@ -104,12 +106,16 @@ function makeTextFormat(colored: boolean) {
       requestId,
       stack,
       causeStack,
-      // Phase/summary lines already render the duration inside the message
-      // (e.g. `✓ Load configuration (42ms)`). Pull durationMs out of the
-      // logfmt tail so it doesn't show twice in text mode; JSON output is
+      // Phase/HTTP lines render duration, status, and per-request upstream
+      // totals inline in the message (e.g. `✓ Load configuration (42ms)` or
+      // `← POST /oauth/token 200 (157ms, upstream 132ms)`). Pull these out of
+      // the logfmt tail so they don't show twice in text mode; JSON output is
       // untouched (it serializes the full info object) so structured queries
-      // on per-phase durations still work.
+      // on these fields still work.
       durationMs: _durationMs,
+      status: _status,
+      upstreamMs: _upstreamMs,
+      upstreamCalls: _upstreamCalls,
       ...metadata
     }) => {
       const meta = toLogfmt(metadata)

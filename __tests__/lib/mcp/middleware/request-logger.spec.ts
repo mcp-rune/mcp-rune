@@ -1,26 +1,27 @@
 /**
- * Request Logger — Structured Log Shape Tests
+ * Request Logger — one-line-per-request output
  *
- * The request-logger middleware produces the "generic" per-request log lines:
- * - "Request started"  → { service, method, path, requestId [, body] }
- * - "Request completed" → { service, method, path, statusCode, duration, requestId }
- *
- * The requestId field ties all log lines for the same HTTP request together
- * when queried in Loki/Grafana.
+ * The middleware emits a single `← METHOD path STATUS (totalMs[, upstream Xms])`
+ * line on `res.finish`. Slow requests get a deferred `▸` line at 1s.
+ * Domain context comes from the inbound endpoint-log allowlist for paths
+ * like /oauth/token and /oauth/register; other paths log transport-only.
  */
 
-// Define mock logger using vi.hoisted()
-const { mockLogger } = vi.hoisted(() => ({
+const { mockLogger, mockGetUpstream } = vi.hoisted(() => ({
   mockLogger: {
     debug: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn()
-  }
+  },
+  mockGetUpstream: vi.fn()
 }))
 
-// Mock logger
 vi.mock('#src/services/logger.js', () => mockLogger)
+vi.mock('#src/services/request-context.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return { ...actual, getUpstream: mockGetUpstream }
+})
 
 import * as logger from '#src/services/logger.js'
 
@@ -35,301 +36,207 @@ describe('lib/mcp/middleware/request-logger', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockGetUpstream.mockReturnValue({ totalMs: 0, calls: 0 })
 
     middleware = createRequestLoggerMiddleware()
 
     mockReq = {
       method: 'GET',
       path: '/test',
-      requestId: 'test-request-id'
+      body: undefined
     }
 
     finishHandler = null
     mockRes = {
       statusCode: 200,
       on: vi.fn((event, handler) => {
-        if (event === 'finish') {
-          finishHandler = handler
-        }
+        if (event === 'finish') finishHandler = handler
       })
     }
 
     mockNext = vi.fn()
   })
 
-  describe('createRequestLoggerMiddleware', () => {
-    it('should return a middleware function', () => {
+  describe('middleware shape', () => {
+    it('returns a 3-arg express handler', () => {
       expect(typeof middleware).toBe('function')
-      expect(middleware.length).toBe(3) // req, res, next
+      expect(middleware.length).toBe(3)
     })
 
-    it('should log request start with method, path, and requestId', () => {
+    it('calls next() to continue the middleware chain', () => {
       middleware(mockReq, mockRes, mockNext)
-
-      expect(logger.info).toHaveBeenCalledWith('Request started', {
-        service: 'express',
-        method: 'GET',
-        path: '/test',
-        requestId: 'test-request-id'
-      })
-    })
-
-    it('should include body in start log for POST requests', () => {
-      mockReq.method = 'POST'
-      mockReq.body = { name: 'test' }
-
-      middleware(mockReq, mockRes, mockNext)
-
-      expect(logger.info).toHaveBeenCalledWith('Request started', {
-        service: 'express',
-        method: 'POST',
-        path: '/test',
-        requestId: 'test-request-id',
-
-        body: { name: 'test' }
-      })
-    })
-
-    it('should include body in start log for PUT requests', () => {
-      mockReq.method = 'PUT'
-      mockReq.body = { id: 1, name: 'updated' }
-
-      middleware(mockReq, mockRes, mockNext)
-
-      expect(logger.info).toHaveBeenCalledWith('Request started', {
-        service: 'express',
-        method: 'PUT',
-        path: '/test',
-        requestId: 'test-request-id',
-
-        body: { id: 1, name: 'updated' }
-      })
-    })
-
-    it('should include body in start log for PATCH requests', () => {
-      mockReq.method = 'PATCH'
-      mockReq.body = { name: 'patched' }
-
-      middleware(mockReq, mockRes, mockNext)
-
-      expect(logger.info).toHaveBeenCalledWith('Request started', {
-        service: 'express',
-        method: 'PATCH',
-        path: '/test',
-        requestId: 'test-request-id',
-
-        body: { name: 'patched' }
-      })
-    })
-
-    it('should not include body for GET requests', () => {
-      mockReq.method = 'GET'
-      mockReq.body = { ignored: 'data' }
-
-      middleware(mockReq, mockRes, mockNext)
-
-      expect(logger.info).toHaveBeenCalledWith('Request started', {
-        service: 'express',
-        method: 'GET',
-        path: '/test',
-        requestId: 'test-request-id'
-      })
-    })
-
-    it('should not include body for DELETE requests', () => {
-      mockReq.method = 'DELETE'
-      mockReq.body = { ignored: 'data' }
-
-      middleware(mockReq, mockRes, mockNext)
-
-      expect(logger.info).toHaveBeenCalledWith('Request started', {
-        service: 'express',
-        method: 'DELETE',
-        path: '/test',
-        requestId: 'test-request-id'
-      })
-    })
-
-    it('should call next() to continue middleware chain', () => {
-      middleware(mockReq, mockRes, mockNext)
-
       expect(mockNext).toHaveBeenCalledTimes(1)
     })
 
-    it('should register finish event handler', () => {
+    it('registers a finish handler on the response', () => {
       middleware(mockReq, mockRes, mockNext)
-
       expect(mockRes.on).toHaveBeenCalledWith('finish', expect.any(Function))
     })
+
+    it('does not log on entry (one-line-per-request contract)', () => {
+      middleware(mockReq, mockRes, mockNext)
+      expect(logger.info).not.toHaveBeenCalled()
+      expect(logger.warn).not.toHaveBeenCalled()
+      expect(logger.error).not.toHaveBeenCalled()
+    })
   })
 
-  describe('response finish handler', () => {
-    it('should log info for successful responses (2xx)', () => {
+  describe('finish handler — single line per request', () => {
+    it('emits one ← info line for 2xx with method/path/status/duration', () => {
       mockRes.statusCode = 200
-
       middleware(mockReq, mockRes, mockNext)
       finishHandler()
 
-      expect(logger.info).toHaveBeenCalledWith(
-        'Request completed',
-        expect.objectContaining({
-          service: 'express',
-          method: 'GET',
-          path: '/test',
-          statusCode: 200,
-          requestId: 'test-request-id'
-        })
-      )
-    })
-
-    it('should log info for redirect responses (3xx)', () => {
-      mockRes.statusCode = 302
-
-      middleware(mockReq, mockRes, mockNext)
-      finishHandler()
-
-      expect(logger.info).toHaveBeenCalledWith(
-        'Request completed',
-        expect.objectContaining({
-          statusCode: 302
-        })
-      )
-    })
-
-    it('should log warn for client error responses (4xx)', () => {
-      mockRes.statusCode = 404
-
-      middleware(mockReq, mockRes, mockNext)
-      finishHandler()
-
-      expect(logger.warn).toHaveBeenCalledWith(
-        'Request error',
-        expect.objectContaining({
-          statusCode: 404
-        })
-      )
-    })
-
-    it('should log warn for 400 Bad Request', () => {
-      mockRes.statusCode = 400
-
-      middleware(mockReq, mockRes, mockNext)
-      finishHandler()
-
-      expect(logger.warn).toHaveBeenCalledWith(
-        'Request error',
-        expect.objectContaining({
-          statusCode: 400
-        })
-      )
-    })
-
-    it('should log warn for 401 Unauthorized', () => {
-      mockRes.statusCode = 401
-
-      middleware(mockReq, mockRes, mockNext)
-      finishHandler()
-
-      expect(logger.warn).toHaveBeenCalledWith(
-        'Request error',
-        expect.objectContaining({
-          statusCode: 401
-        })
-      )
-    })
-
-    it('should log error for server error responses (5xx)', () => {
-      mockRes.statusCode = 500
-
-      middleware(mockReq, mockRes, mockNext)
-      finishHandler()
-
-      expect(logger.error).toHaveBeenCalledWith(
-        'Request failed',
-        expect.objectContaining({
-          statusCode: 500
-        })
-      )
-    })
-
-    it('should log error for 502 Bad Gateway', () => {
-      mockRes.statusCode = 502
-
-      middleware(mockReq, mockRes, mockNext)
-      finishHandler()
-
-      expect(logger.error).toHaveBeenCalledWith(
-        'Request failed',
-        expect.objectContaining({
-          statusCode: 502
-        })
-      )
-    })
-
-    it('should include duration in log', () => {
-      middleware(mockReq, mockRes, mockNext)
-      finishHandler()
-
-      expect(logger.info).toHaveBeenCalledWith(
-        'Request completed',
-        expect.objectContaining({
-          duration: expect.stringMatching(/^\d+ms$/)
-        })
-      )
-    })
-
-    it('should include all required fields in completion log', () => {
-      mockRes.statusCode = 201
-
-      middleware(mockReq, mockRes, mockNext)
-      finishHandler()
-
-      expect(logger.info).toHaveBeenCalledWith('Request completed', {
+      expect(logger.info).toHaveBeenCalledTimes(1)
+      const [message, meta] = logger.info.mock.calls[0]
+      expect(message).toMatch(/^← GET \/test 200 \(\d+ms\)$/)
+      expect(meta).toEqual({
         service: 'express',
-        method: 'GET',
-        path: '/test',
-        statusCode: 201,
-        duration: expect.stringMatching(/^\d+ms$/),
-        requestId: 'test-request-id'
+        durationMs: expect.any(Number),
+        status: 200
       })
     })
+
+    it('emits one ← info line for 3xx', () => {
+      mockRes.statusCode = 302
+      middleware(mockReq, mockRes, mockNext)
+      finishHandler()
+
+      const [message] = logger.info.mock.calls[0]
+      expect(message).toMatch(/^← GET \/test 302 \(\d+ms\)$/)
+    })
+
+    it('uses warn level for 4xx', () => {
+      mockRes.statusCode = 404
+      middleware(mockReq, mockRes, mockNext)
+      finishHandler()
+
+      expect(logger.warn).toHaveBeenCalledTimes(1)
+      const [message] = logger.warn.mock.calls[0]
+      expect(message).toMatch(/^← GET \/test 404 \(\d+ms\)$/)
+    })
+
+    it('uses error level for 5xx', () => {
+      mockRes.statusCode = 503
+      middleware(mockReq, mockRes, mockNext)
+      finishHandler()
+
+      expect(logger.error).toHaveBeenCalledTimes(1)
+      const [message] = logger.error.mock.calls[0]
+      expect(message).toMatch(/^← GET \/test 503 \(\d+ms\)$/)
+    })
   })
 
-  describe('structured log shape (exact keys, no extras)', () => {
-    it('should produce start log with exactly the expected keys for GET', () => {
+  describe('upstream segment', () => {
+    it('omits the upstream segment when no upstream calls happened', () => {
+      mockGetUpstream.mockReturnValue({ totalMs: 0, calls: 0 })
       middleware(mockReq, mockRes, mockNext)
+      finishHandler()
 
-      const startCall = logger.info.mock.calls.find((c) => c[0] === 'Request started')
-      const logData = startCall[1]
-
-      const expectedKeys = ['service', 'method', 'path', 'requestId']
-      expect(Object.keys(logData).sort()).toEqual(expectedKeys.sort())
+      const [message, meta] = logger.info.mock.calls[0]
+      expect(message).not.toMatch(/upstream/)
+      expect(meta).not.toHaveProperty('upstreamMs')
+      expect(meta).not.toHaveProperty('upstreamCalls')
     })
 
-    it('should produce start log with body key added for POST', () => {
+    it('includes upstream segment + structured fields when calls > 0', () => {
+      mockGetUpstream.mockReturnValue({ totalMs: 132, calls: 1 })
+      middleware(mockReq, mockRes, mockNext)
+      finishHandler()
+
+      const [message, meta] = logger.info.mock.calls[0]
+      expect(message).toMatch(/^← GET \/test 200 \(\d+ms, upstream 132ms\)$/)
+      expect(meta).toMatchObject({ upstreamMs: 132, upstreamCalls: 1 })
+    })
+  })
+
+  describe('inbound endpoint allowlist', () => {
+    it('extracts grant_type and resource for POST /oauth/token', () => {
       mockReq.method = 'POST'
-      mockReq.body = { name: 'test' }
-
-      middleware(mockReq, mockRes, mockNext)
-
-      const startCall = logger.info.mock.calls.find((c) => c[0] === 'Request started')
-      const logData = startCall[1]
-
-      const expectedKeys = ['service', 'method', 'path', 'requestId', 'body']
-      expect(Object.keys(logData).sort()).toEqual(expectedKeys.sort())
-    })
-
-    it('should produce completion log with exactly the expected keys', () => {
-      mockRes.statusCode = 200
+      mockReq.path = '/oauth/token'
+      mockReq.body = {
+        grant_type: 'authorization_code',
+        resource: 'https://mcp.example/mcp',
+        code: 'super-secret'
+      }
 
       middleware(mockReq, mockRes, mockNext)
       finishHandler()
 
-      const completionCall = logger.info.mock.calls.find((c) => c[0] === 'Request completed')
-      const logData = completionCall[1]
+      const [, meta] = logger.info.mock.calls[0]
+      expect(meta).toMatchObject({
+        grantType: 'authorization_code',
+        resource: 'https://mcp.example/mcp'
+      })
+      // `code` is in GLOBAL_REDACT — never surfaced (not in allowlist either).
+      expect(meta).not.toHaveProperty('code')
+    })
 
-      const expectedKeys = ['service', 'method', 'path', 'statusCode', 'duration', 'requestId']
-      expect(Object.keys(logData).sort()).toEqual(expectedKeys.sort())
+    it('extracts client_name for POST /oauth/register', () => {
+      mockReq.method = 'POST'
+      mockReq.path = '/oauth/register'
+      mockReq.body = { client_name: 'Claude-Desktop', redirect_uris: ['x'] }
+
+      middleware(mockReq, mockRes, mockNext)
+      finishHandler()
+
+      const [, meta] = logger.info.mock.calls[0]
+      expect(meta).toMatchObject({ clientName: 'Claude-Desktop' })
+      expect(meta).not.toHaveProperty('redirectUris')
+    })
+
+    it('does not extract any domain fields for unregistered paths', () => {
+      mockReq.path = '/some/random/endpoint'
+      mockReq.body = { anything: 'goes' }
+
+      middleware(mockReq, mockRes, mockNext)
+      finishHandler()
+
+      const [, meta] = logger.info.mock.calls[0]
+      expect(meta).not.toHaveProperty('anything')
+    })
+  })
+
+  describe('deferred-start ▸ line', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('does not emit ▸ for a fast request (finishes before 1s)', () => {
+      middleware(mockReq, mockRes, mockNext)
+      vi.advanceTimersByTime(500)
+      finishHandler()
+
+      const startCall = logger.info.mock.calls.find(
+        ([msg]) => typeof msg === 'string' && msg.startsWith('▸')
+      )
+      expect(startCall).toBeUndefined()
+    })
+
+    it('emits ▸ METHOD path after 1s if the request is still pending', () => {
+      middleware(mockReq, mockRes, mockNext)
+      vi.advanceTimersByTime(1500)
+
+      const startCall = logger.info.mock.calls.find(
+        ([msg]) => typeof msg === 'string' && msg === '▸ GET /test'
+      )
+      expect(startCall).toBeDefined()
+      expect(startCall[1]).toEqual({ service: 'express' })
+    })
+
+    it('clears the deferred-start timer on finish so ▸ never fires after completion', () => {
+      middleware(mockReq, mockRes, mockNext)
+      finishHandler()
+      vi.advanceTimersByTime(5000)
+
+      const startCall = logger.info.mock.calls.find(
+        ([msg]) => typeof msg === 'string' && msg.startsWith('▸')
+      )
+      expect(startCall).toBeUndefined()
     })
   })
 })

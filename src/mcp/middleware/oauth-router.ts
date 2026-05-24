@@ -33,10 +33,10 @@ import { createHash } from 'node:crypto'
 import { URLSearchParams } from 'node:url'
 
 import type { AxiosError } from 'axios'
-import axios from 'axios'
 import type { NextFunction, Request, Response } from 'express'
 import { Router } from 'express'
 
+import { oauthAxios as axios } from '#src/oauth2/oauth-axios.js'
 import type { OAuthService } from '#src/oauth2/service.js'
 import * as logger from '#src/services/logger.js'
 
@@ -222,10 +222,6 @@ export function createOAuthRouter({
           metadata.introspection_endpoint = `${oauth.authServerUrl}/oauth/introspect`
         }
 
-        logger.info('Authorization server metadata proxied', {
-          service: mcpName
-        })
-
         res.json(metadata)
       } catch (err) {
         const error = err as Error
@@ -262,10 +258,6 @@ export function createOAuthRouter({
         if (metadata.introspection_endpoint) {
           metadata.introspection_endpoint = `${oauth.authServerUrl}/oauth/introspect`
         }
-
-        logger.info('OpenID configuration proxied', {
-          service: mcpName
-        })
 
         res.json(metadata)
       } catch (err) {
@@ -383,12 +375,6 @@ export function createOAuthRouter({
           ]
         })
 
-        logger.info('OAuth token request proxied successfully', {
-          service: mcpName,
-          grantType: (req.body as Record<string, unknown> | undefined)?.grant_type,
-          resource: canonicalResourceUri
-        })
-
         res.json(response.data)
       } catch (err) {
         const axiosErr = err as AxiosError
@@ -421,11 +407,6 @@ export function createOAuthRouter({
               Authorization: req.headers.authorization
             })
           }
-        })
-
-        logger.info('OAuth client registration proxied successfully', {
-          service: mcpName,
-          clientName: (req.body as Record<string, unknown> | undefined)?.client_name
         })
 
         res.status(response.status).json(response.data)
