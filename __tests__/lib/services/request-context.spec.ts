@@ -1,6 +1,12 @@
 import { setTimeout as delay } from 'node:timers/promises'
 
-import { getRequestId, requestContext, runWithRequestId } from '#src/services/request-context.js'
+import {
+  addUpstreamDuration,
+  getRequestId,
+  getUpstream,
+  requestContext,
+  runWithRequestId
+} from '#src/services/request-context.js'
 
 describe('lib/services/request-context', () => {
   it('returns undefined outside any request scope', () => {
@@ -57,5 +63,47 @@ describe('lib/services/request-context', () => {
     expect(requestContext).toBeDefined()
     expect(typeof requestContext.run).toBe('function')
     expect(typeof requestContext.getStore).toBe('function')
+  })
+
+  describe('upstream accumulator', () => {
+    it('initializes upstream to { totalMs: 0, calls: 0 } inside a request scope', () => {
+      runWithRequestId('req-1', () => {
+        expect(getUpstream()).toEqual({ totalMs: 0, calls: 0 })
+      })
+    })
+
+    it('returns undefined for getUpstream outside a request scope', () => {
+      expect(getUpstream()).toBeUndefined()
+    })
+
+    it('accumulates durations and call counts additively', () => {
+      runWithRequestId('req-2', () => {
+        addUpstreamDuration(132)
+        addUpstreamDuration(50)
+        expect(getUpstream()).toEqual({ totalMs: 182, calls: 2 })
+      })
+    })
+
+    it('addUpstreamDuration is a no-op outside a request scope', () => {
+      // Should not throw and should not affect any future scope.
+      expect(() => addUpstreamDuration(99)).not.toThrow()
+      runWithRequestId('req-3', () => {
+        expect(getUpstream()).toEqual({ totalMs: 0, calls: 0 })
+      })
+    })
+
+    it('isolates upstream accumulators across concurrent scopes', async () => {
+      const accumulate = (id: string, ms: number) =>
+        runWithRequestId(id, async () => {
+          await delay(1)
+          addUpstreamDuration(ms)
+          await delay(1)
+          return getUpstream()
+        })
+
+      const [a, b] = await Promise.all([accumulate('id-a', 100), accumulate('id-b', 200)])
+      expect(a).toEqual({ totalMs: 100, calls: 1 })
+      expect(b).toEqual({ totalMs: 200, calls: 1 })
+    })
   })
 })

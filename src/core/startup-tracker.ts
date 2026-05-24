@@ -1,10 +1,20 @@
 /**
  * StartupTracker -- Phase-based startup logging
  *
- * Wraps each startup phase with clear boundary markers so failures
- * are dead-simple to isolate. Passes a scoped child logger into
- * each phase callback. Each phase is timed; the success line includes
- * its duration, the summary line includes the total.
+ * Wraps each startup phase with a single completion marker (✓/✗/⊖) so
+ * the happy path is one line per phase. The phase name lives in the
+ * completion message, so no separate start marker is needed in the
+ * common case.
+ *
+ * For async phases (`phaseAsync`), if a phase runs longer than
+ * DEFERRED_START_MS without settling, a deferred `▸ name` line is
+ * emitted so a slow phase doesn't look like a hang. Sync phases never
+ * emit `▸` — a sync block holds the event loop, so the deferred timer
+ * could never fire before the phase returns anyway.
+ *
+ * Each phase callback receives a scoped child logger
+ * (`service: startup:<slug>`) and the total duration is reported via
+ * `done()`.
  *
  * @example
  *   const startup = new StartupTracker(logger)
@@ -13,7 +23,10 @@
  *     log.debug(cfg.toString())
  *     return cfg
  *   })
- *   startup.skip('database', 'Database', 'DATABASE_URL not set')
+ *   await startup.phaseAsync('database', 'Database', async (log) => {
+ *     await connect()
+ *   })
+ *   startup.skip('cache', 'Cache', 'CACHE_URL not set')
  *   startup.done()
  */
 
@@ -37,6 +50,7 @@ interface Phase {
 }
 
 const SERVICE = 'startup'
+const DEFERRED_START_MS = 250
 
 function formatDuration(ms: number): string {
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(2)}s`
@@ -53,43 +67,51 @@ export class StartupTracker {
   }
 
   /**
-   * Execute a synchronous startup phase with boundary markers.
+   * Execute a synchronous startup phase. Emits only the completion
+   * marker (`✓ name (Xms)` on success, `✗ name — err` on failure).
+   * Sync phases never get a deferred `▸` — the event loop is blocked
+   * for the duration, so a setTimeout couldn't fire before the phase
+   * returns.
    *
    * @throws Re-throws any error from fn after logging it
    */
   phase<T>(slug: string, name: string, fn: (log: Logger) => T): T {
-    this.#logger.info(`▸ ${name}`, { service: SERVICE })
-
     const scopedLog = this.#logger.child({ service: `${SERVICE}:${slug}` })
     const t0 = performance.now()
 
     try {
       const result = fn(scopedLog)
-      const durationMs = Math.round(performance.now() - t0)
-      this.#phases.push({ slug, name, status: 'ok', durationMs })
-      this.#logger.info(`✓ ${name} (${formatDuration(durationMs)})`, {
-        service: SERVICE,
-        durationMs
-      })
+      this.#emitOk(slug, name, t0)
       return result
     } catch (err) {
-      const durationMs = Math.round(performance.now() - t0)
-      this.#phases.push({ slug, name, status: 'failed', durationMs })
-      const error = err as Error & { code?: string; cause?: Error }
-      const hint = hintForError(error)
-      scopedLog.error(error.message, {
-        errorType: error.constructor.name,
-        code: error.code,
-        stack: error.stack,
-        durationMs,
-        ...(hint && { hint }),
-        ...(error.cause && {
-          cause: error.cause.message,
-          causeStack: error.cause.stack
-        })
-      })
-      const suffix = hint ? ` — ${hint}` : ''
-      this.#logger.error(`✗ ${name} — ${error.message}${suffix}`, { service: SERVICE })
+      this.#emitFail(slug, name, t0, err, scopedLog)
+      throw err
+    }
+  }
+
+  /**
+   * Execute an asynchronous startup phase. Same completion semantics
+   * as `phase`, plus a deferred `▸ name` start line if the phase
+   * hasn't settled after DEFERRED_START_MS (so a slow phase is
+   * visible while in flight). The timer is `unref`'d so a hung phase
+   * never holds the process open.
+   */
+  async phaseAsync<T>(slug: string, name: string, fn: (log: Logger) => Promise<T>): Promise<T> {
+    const scopedLog = this.#logger.child({ service: `${SERVICE}:${slug}` })
+    const t0 = performance.now()
+    const startTimer = setTimeout(() => {
+      this.#logger.info(`▸ ${name}`, { service: SERVICE })
+    }, DEFERRED_START_MS)
+    startTimer.unref()
+
+    try {
+      const result = await fn(scopedLog)
+      clearTimeout(startTimer)
+      this.#emitOk(slug, name, t0)
+      return result
+    } catch (err) {
+      clearTimeout(startTimer)
+      this.#emitFail(slug, name, t0, err, scopedLog)
       throw err
     }
   }
@@ -122,5 +144,37 @@ export class StartupTracker {
       `Startup complete: ${total} phases (${parts.join(', ')}) in ${formatDuration(durationMs)}`,
       { service: SERVICE, durationMs }
     )
+  }
+
+  #emitOk(slug: string, name: string, t0: number): void {
+    const durationMs = Math.round(performance.now() - t0)
+    this.#phases.push({ slug, name, status: 'ok', durationMs })
+    this.#logger.info(`✓ ${name} (${formatDuration(durationMs)})`, {
+      service: SERVICE,
+      durationMs
+    })
+  }
+
+  #emitFail(slug: string, name: string, t0: number, err: unknown, scopedLog: Logger): void {
+    const durationMs = Math.round(performance.now() - t0)
+    this.#phases.push({ slug, name, status: 'failed', durationMs })
+    const error = err as Error & { code?: string; cause?: Error }
+    const hint = hintForError(error)
+    scopedLog.error(error.message, {
+      errorType: error.constructor.name,
+      code: error.code,
+      stack: error.stack,
+      durationMs,
+      ...(hint && { hint }),
+      ...(error.cause && {
+        cause: error.cause.message,
+        causeStack: error.cause.stack
+      })
+    })
+    const suffix = hint ? ` — ${hint}` : ''
+    this.#logger.error(`✗ ${name} — ${error.message}${suffix} (${formatDuration(durationMs)})`, {
+      service: SERVICE,
+      durationMs
+    })
   }
 }

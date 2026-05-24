@@ -27,24 +27,14 @@ describe('lib/core/startup-tracker', () => {
     tracker = new StartupTracker(logger)
   })
 
-  describe('phase()', () => {
-    it('logs start marker before callback executes', () => {
-      let startLogged = false
-      tracker.phase('config', 'Load configuration', () => {
-        startLogged = logger.info.mock.calls.some(([msg]) =>
-          msg.includes('\u25B8 Load configuration')
-        )
-      })
-      expect(startLogged).toBe(true)
-    })
-
-    it('logs start marker with startup service tag', () => {
+  describe('phase() (sync)', () => {
+    it('does not emit a ▸ start marker (sync phases block the loop)', () => {
       tracker.phase('config', 'Load configuration', () => {})
 
-      const startCall = logger.info.mock.calls.find(([msg]) =>
-        msg.includes('\u25B8 Load configuration')
+      const startCall = logger.info.mock.calls.find(
+        ([msg]) => typeof msg === 'string' && msg.includes('▸ Load configuration')
       )
-      expect(startCall[1]).toEqual({ service: 'startup' })
+      expect(startCall).toBeUndefined()
     })
 
     it('creates child logger with service startup:<slug>', () => {
@@ -64,11 +54,10 @@ describe('lib/core/startup-tracker', () => {
       tracker.phase('config', 'Load configuration', () => {})
 
       const successCall = logger.info.mock.calls.find(([msg]) =>
-        msg.includes('\u2713 Load configuration')
+        msg.includes('✓ Load configuration')
       )
       expect(successCall).toBeDefined()
-      // Success line carries the phase duration as a `(<N>ms)` or `(<N>s)` suffix.
-      expect(successCall[0]).toMatch(/\u2713 Load configuration \((\d+ms|\d+\.\d+s)\)/)
+      expect(successCall[0]).toMatch(/✓ Load configuration \((\d+ms|\d+\.\d+s)\)/)
       expect(successCall[1]).toEqual({ service: 'startup', durationMs: expect.any(Number) })
     })
 
@@ -132,8 +121,8 @@ describe('lib/core/startup-tracker', () => {
       }
 
       const failCall = logger.error.mock.calls.find(([msg]) => msg.includes('✗ Thing'))
-      // No trailing — hint clause.
-      expect(failCall[0]).toBe('✗ Thing — unmapped error')
+      // No trailing — hint clause, but trailing duration suffix is present.
+      expect(failCall[0]).toMatch(/^✗ Thing — unmapped error \((\d+ms|\d+\.\d+s)\)$/)
     })
 
     it('preserves custom error type in errorType metadata', () => {
@@ -186,7 +175,7 @@ describe('lib/core/startup-tracker', () => {
       expect(meta).not.toHaveProperty('causeStack')
     })
 
-    it('logs failure marker when callback throws', () => {
+    it('logs failure marker with duration metadata when callback throws', () => {
       try {
         tracker.phase('database', 'Database', () => {
           throw new Error('connect ECONNREFUSED')
@@ -195,10 +184,11 @@ describe('lib/core/startup-tracker', () => {
         /* expected */
       }
 
-      const failCall = logger.error.mock.calls.find(([msg]) => msg.includes('\u2717 Database'))
+      const failCall = logger.error.mock.calls.find(([msg]) => msg.includes('✗ Database'))
       expect(failCall).toBeDefined()
       expect(failCall[0]).toContain('connect ECONNREFUSED')
-      expect(failCall[1]).toEqual({ service: 'startup' })
+      expect(failCall[0]).toMatch(/\((\d+ms|\d+\.\d+s)\)$/)
+      expect(failCall[1]).toEqual({ service: 'startup', durationMs: expect.any(Number) })
     })
 
     it('re-throws the original error', () => {
@@ -211,11 +201,105 @@ describe('lib/core/startup-tracker', () => {
     })
   })
 
+  describe('phaseAsync()', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('does not emit ▸ for a fast async phase that settles before 250ms', async () => {
+      await tracker.phaseAsync('config', 'Load configuration', async () => {})
+
+      const startCall = logger.info.mock.calls.find(
+        ([msg]) => typeof msg === 'string' && msg.includes('▸ Load configuration')
+      )
+      expect(startCall).toBeUndefined()
+    })
+
+    it('emits ▸ then ✓ when an async phase exceeds 250ms', async () => {
+      let resolve
+      const work = new Promise((r) => {
+        resolve = r
+      })
+      const phasePromise = tracker.phaseAsync('slow', 'Slow phase', async () => await work)
+
+      // Advance past the deferred-start threshold; the ▸ should fire.
+      await vi.advanceTimersByTimeAsync(300)
+      const startCall = logger.info.mock.calls.find(
+        ([msg]) => typeof msg === 'string' && msg.includes('▸ Slow phase')
+      )
+      expect(startCall).toBeDefined()
+      expect(startCall[1]).toEqual({ service: 'startup' })
+
+      resolve()
+      await phasePromise
+
+      const successCall = logger.info.mock.calls.find(
+        ([msg]) => typeof msg === 'string' && msg.includes('✓ Slow phase')
+      )
+      expect(successCall).toBeDefined()
+    })
+
+    it('emits ▸ then ✗ when a slow async phase rejects', async () => {
+      let reject
+      const work = new Promise((_r, rj) => {
+        reject = rj
+      })
+      const phasePromise = tracker
+        .phaseAsync('slow', 'Slow phase', async () => await work)
+        .catch(() => undefined)
+
+      await vi.advanceTimersByTimeAsync(300)
+      reject(new Error('blew up'))
+      await phasePromise
+
+      const startCall = logger.info.mock.calls.find(
+        ([msg]) => typeof msg === 'string' && msg.includes('▸ Slow phase')
+      )
+      expect(startCall).toBeDefined()
+
+      const failCall = logger.error.mock.calls.find(
+        ([msg]) => typeof msg === 'string' && msg.includes('✗ Slow phase')
+      )
+      expect(failCall).toBeDefined()
+      expect(failCall[0]).toContain('blew up')
+    })
+
+    it('clears the deferred-start timer when an async phase settles early', async () => {
+      await tracker.phaseAsync('fast', 'Fast phase', async () => {})
+
+      // Advance well past 250ms — no ▸ should arrive because the timer was cleared.
+      await vi.advanceTimersByTimeAsync(1000)
+      const startCall = logger.info.mock.calls.find(
+        ([msg]) => typeof msg === 'string' && msg.includes('▸ Fast phase')
+      )
+      expect(startCall).toBeUndefined()
+    })
+
+    it('returns the resolved value of the callback', async () => {
+      const result = await tracker.phaseAsync('config', 'Load configuration', async () => ({
+        ok: true
+      }))
+      expect(result).toEqual({ ok: true })
+    })
+
+    it('re-throws the rejection reason', async () => {
+      await expect(
+        tracker.phaseAsync('database', 'Database', async () => {
+          throw new Error('boom')
+        })
+      ).rejects.toThrow('boom')
+    })
+  })
+
   describe('skip()', () => {
     it('logs at debug level with reason', () => {
       tracker.skip('database', 'Database', 'DATABASE_URL not set')
 
-      expect(logger.debug).toHaveBeenCalledWith('\u2296 Database \u2014 DATABASE_URL not set', {
+      expect(logger.debug).toHaveBeenCalledWith('⊖ Database — DATABASE_URL not set', {
         service: 'startup'
       })
     })
@@ -223,13 +307,13 @@ describe('lib/core/startup-tracker', () => {
     it('logs at debug level without reason', () => {
       tracker.skip('database', 'Database')
 
-      expect(logger.debug).toHaveBeenCalledWith('\u2296 Database', { service: 'startup' })
+      expect(logger.debug).toHaveBeenCalledWith('⊖ Database', { service: 'startup' })
     })
   })
 
   describe('done()', () => {
-    // Each \u2713/\u2296/\u2717 already logged as phases finished, so done() emits one
-    // summary line with counts and total duration \u2014 no redundant phase list.
+    // Each ✓/⊖/✗ already logged as phases finished, so done() emits one
+    // summary line with counts and total duration — no redundant phase list.
     const matchSummary = (counts: string) =>
       new RegExp(`^Startup complete: \\d+ phases \\(${counts}\\) in (\\d+ms|\\d+\\.\\d+s)$`)
 
@@ -267,7 +351,7 @@ describe('lib/core/startup-tracker', () => {
       expect(summaryCall[0]).toMatch(matchSummary('1 ok, 1 skipped, 1 failed'))
     })
 
-    it('does not emit a per-phase debug listing (each \u2713/\u2296/\u2717 already appeared inline)', () => {
+    it('does not emit a per-phase debug listing (each ✓/⊖/✗ already appeared inline)', () => {
       tracker.phase('config', 'Load configuration', () => {})
       tracker.skip('tracing', 'Tracing', 'keys not set')
       try {
@@ -279,9 +363,9 @@ describe('lib/core/startup-tracker', () => {
       }
       tracker.done()
 
-      // No `  \u2713 \u2026` / `  \u2296 \u2026` / `  \u2717 \u2026` debug entries should be emitted.
+      // No `  ✓ …` / `  ⊖ …` / `  ✗ …` debug entries should be emitted.
       const indentedDebugCalls = logger.debug.mock.calls.filter(
-        ([msg]) => typeof msg === 'string' && /^ {2}[\u2713\u2296\u2717]/.test(msg)
+        ([msg]) => typeof msg === 'string' && /^ {2}[✓⊖✗]/.test(msg)
       )
       expect(indentedDebugCalls).toHaveLength(0)
     })

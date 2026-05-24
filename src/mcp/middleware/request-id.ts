@@ -30,7 +30,7 @@ export function createRequestIdMiddleware(): (
     ;(req as Request & { requestId: string }).requestId = requestId
     res.set('X-Request-ID', requestId)
 
-    requestContext.run({ requestId }, next)
+    requestContext.run({ requestId, upstream: { totalMs: 0, calls: 0 } }, next)
   }
 }
 

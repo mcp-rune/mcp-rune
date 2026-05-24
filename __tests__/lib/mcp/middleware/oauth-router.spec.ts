@@ -6,8 +6,9 @@
  *
  * Express middleware pipeline:
  *   1. request-id middleware: sets req.requestId and X-Request-ID response header
- *   2. request-logger middleware: logs "Request started" / "Request completed"
- *   3. Route handlers (this file): handle OAuth proxy logic
+ *   2. request-logger middleware: emits one `← METHOD path STATUS (...)` line on res.finish
+ *   3. Route handlers (this file): handle OAuth proxy logic via the oauthAxios instance,
+ *      which auto-emits `→` upstream lines through its interceptor.
  */
 
 // Define mocks using vi.hoisted()
@@ -24,9 +25,9 @@ const { mockAxios, mockLogger } = vi.hoisted(() => ({
   }
 }))
 
-// Mock axios
-vi.mock('axios', () => ({
-  default: mockAxios
+// Mock the OAuth-instrumented axios instance used by the router for upstream calls.
+vi.mock('#src/oauth2/oauth-axios.js', () => ({
+  oauthAxios: mockAxios
 }))
 
 // Mock logger
