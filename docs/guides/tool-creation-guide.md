@@ -13,10 +13,10 @@ Tools are the primary way MCP servers expose functionality to AI agents. Each to
 
 ## Tool Architecture
 
-Tools follow a two-layer architecture: **generic tools** in mcp-kit for cross-server reuse, and **server-specific tools** in your server's `tools/` directory.
+Tools follow a two-layer architecture: **generic tools** in mcp-rune for cross-server reuse, and **server-specific tools** in your server's `tools/` directory.
 
 ```
-mcp-kit/src/mcp/tools/
+mcp-rune/src/mcp/tools/
 ├── base-tool.ts              # BaseTool — root base class (with serverContext)
 ├── save-model-base-tool.ts   # SaveModelBaseTool — base for create/update tools
 ├── tool-registry.ts          # ToolRegistry — convention-based tool registration
@@ -32,16 +32,16 @@ mcp-kit/src/mcp/tools/
     └── delete-model-tool.ts
 
 your-server/tools/
-├── base-tool.js              # ServerBaseTool — extends mcp-kit BaseTool
-├── registry.js               # Factory using mcp-kit ToolRegistry
+├── base-tool.js              # ServerBaseTool — extends mcp-rune BaseTool
+├── registry.js               # Factory using mcp-rune ToolRegistry
 └── {custom}-tool.js          # Server-specific tools only
 ```
 
 ### Inheritance Chain
 
 ```
-BaseTool (mcp-kit)
-  ├── data/*.ts (generic CRUD tools, from mcp-kit)
+BaseTool (mcp-rune)
+  ├── data/*.ts (generic CRUD tools, from mcp-rune)
   └── ServerBaseTool (your server)
         └── {custom}-tool.js (server-specific tools)
 ```
@@ -118,7 +118,7 @@ Tools are organized by category which determines authentication requirements:
 Override the static `category` property:
 
 ```javascript
-import { TOOL_CATEGORIES } from 'mcp-kit/tools'
+import { TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
 
 export class MyTool extends ServerBaseTool {
   static get category() {
@@ -174,11 +174,11 @@ The `list_models` tool exposes these associations in its output. Nested resource
 
 ### ToolRegistry
 
-`ToolRegistry` from `mcp-kit/tools` handles all registration boilerplate: schema validation, auth wrapping per tool category, tracing, logging, and error catching.
+`ToolRegistry` from `@mcp-rune/mcp-rune/tools` handles all registration boilerplate: schema validation, auth wrapping per tool category, tracing, logging, and error catching.
 
 ```javascript
-import { ToolRegistry, DATA_TOOL_CLASSES, TOOL_CATEGORIES } from 'mcp-kit/tools'
-import { STRATEGY_TOOL_CLASSES } from 'mcp-kit/prompts'
+import { ToolRegistry, DATA_TOOL_CLASSES, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
+import { STRATEGY_TOOL_CLASSES } from '@mcp-rune/mcp-rune/prompts'
 
 const toolRegistry = new ToolRegistry({
   toolClasses: {
@@ -257,7 +257,7 @@ Tracing via `traceToolCall()` wraps the entire interceptor chain externally.
 **Manual composition** — for tools registered outside ToolRegistry:
 
 ```javascript
-import { wrapToolHandler, loggingInterceptor, errorInterceptor } from 'mcp-kit/tools'
+import { wrapToolHandler, loggingInterceptor, errorInterceptor } from '@mcp-rune/mcp-rune/tools'
 
 const handler = wrapToolHandler(
   'my_tool',
@@ -337,7 +337,7 @@ const toolRegistry = new ToolRegistry({
 
 Create `__tests__/tools/my-new-tool.spec.js`.
 
-### Generic Tools (in mcp-kit)
+### Generic Tools (in mcp-rune)
 
 For tools that are reusable across servers, create them in `src/mcp/tools/`:
 
@@ -458,5 +458,5 @@ Tools can be organized into tiers for progressive disclosure:
 - [ ] Add to `toolClasses` in your ToolRegistry configuration
 - [ ] Add comprehensive tests
 - [ ] Document in tool descriptions what it does, when to use it, and constraints
-- [ ] If generic/reusable, place in `src/mcp/tools/` in mcp-kit
+- [ ] If generic/reusable, place in `src/mcp/tools/` in mcp-rune
 - [ ] If server-specific, extend the server's base tool

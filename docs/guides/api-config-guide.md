@@ -519,7 +519,7 @@ Each convention knows its API's error response shape. `BaseTool.formatError()` d
 The method receives an `ErrorResponse` object (`{ status?, data? }`) and returns a flat `string[]` of error messages:
 
 ```typescript
-import type { ErrorResponse } from 'mcp-kit/prompts'
+import type { ErrorResponse } from '@mcp-rune/mcp-rune/prompts'
 
 // Base implementation: extracts from response.data, JSON dump for objects
 parseErrorResponse(response: ErrorResponse): string[] {
@@ -593,7 +593,7 @@ await modelService.action('asset', 'publish', { recordId: 'titles/42/assets/7' }
 The `compound-id` module provides utilities:
 
 ```typescript
-import { buildCompoundId, buildCollectionPath, parseId } from 'mcp-kit/services'
+import { buildCompoundId, buildCollectionPath, parseId } from '@mcp-rune/mcp-rune/services'
 
 buildCompoundId('titles', '42', 'assets', '7') // → 'titles/42/assets/7'
 buildCollectionPath('titles', '42', 'assets') // → 'titles/42/assets'

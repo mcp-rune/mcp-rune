@@ -1,4 +1,4 @@
-// mcp-kit/services — logging, tracing, error tracking, embeddings, vector storage
+// mcp-rune/services — logging, tracing, error tracking, embeddings, vector storage
 export * as embeddings from './services/embeddings.js'
 export * as errorTracking from './services/error-tracking.js'
 export * as logger from './services/logger.js'

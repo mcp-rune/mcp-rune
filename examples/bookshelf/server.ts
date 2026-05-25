@@ -1,4 +1,4 @@
-import { StdioServer } from 'mcp-kit/server'
+import { StdioServer } from '@mcp-rune/mcp-rune/server'
 import { mcpConfig } from './config.js'
 
 // For local dev, provide a dummy token (no real API backend in this example)

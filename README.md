@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/dsaenztagarro/mcp-kit/actions/workflows/ci.yml"><img src="https://github.com/dsaenztagarro/mcp-kit/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/mcp-rune/mcp-rune/actions/workflows/ci.yml"><img src="https://github.com/mcp-rune/mcp-rune/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <img src="https://img.shields.io/badge/MCP-2025--11--25-blue" alt="MCP Spec" />
   <img src="https://img.shields.io/badge/node-%3E%3D24-green" alt="Node.js" />
   <img src="https://img.shields.io/badge/tests-2139%20passing-brightgreen" alt="Tests" />
@@ -7,15 +7,15 @@
   <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License" />
 </p>
 
-# mcp-kit
+# mcp-rune
 
 **Batteries-included MCP framework.** Define models, get CRUD tools, prompt strategies, interactive apps, OAuth, and docs — the Rails of MCP servers.
 
-mcp-kit is an opinionated, model-driven framework for building [Model Context Protocol](https://modelcontextprotocol.io/) servers. Like Rails was extracted from Basecamp, mcp-kit was extracted from production MCP servers that power real workflows daily.
+mcp-rune is an opinionated, model-driven framework for building [Model Context Protocol](https://modelcontextprotocol.io/) servers. Like Rails was extracted from Basecamp, mcp-rune was extracted from production MCP servers that power real workflows daily.
 
 ```typescript
-import { BaseModel } from 'mcp-kit/core'
-import type { AttributeDefinition } from 'mcp-kit/core'
+import { BaseModel } from '@mcp-rune/mcp-rune/core'
+import type { AttributeDefinition } from '@mcp-rune/mcp-rune/core'
 
 export class Book extends BaseModel {
   static override endpoint = 'books'
@@ -43,7 +43,7 @@ export class Book extends BaseModel {
 <summary>JavaScript version</summary>
 
 ```javascript
-import { BaseModel } from 'mcp-kit/core'
+import { BaseModel } from '@mcp-rune/mcp-rune/core'
 
 export class Book extends BaseModel {
   static api = { endpoint: 'books' }
@@ -60,9 +60,29 @@ export class Book extends BaseModel {
 
 ---
 
+## Why "mcp-rune"?
+
+A rune is a compact, declarative symbol that produces powerful effects far larger than itself. In mcp-rune, **everything you write is a rune**.
+
+You inscribe declarations:
+
+- a **model** — what your domain looks like
+- a **prompt** — how the LLM should reason about it
+- an **app** — how humans interact with it
+- a **workflow** — how operations chain together
+
+Each inscription fits on one screen. The framework is the runic system: an alphabet of conventions (`BaseModel`, `BasePrompt`, `AppRegistry`, `DomainRegistry`) and a casting engine that turns those inscriptions into a complete MCP server — tools, validation pipelines, UI, OAuth, observability, documentation.
+
+The model is the foundational rune — prompts and apps derive their structure from it (the framework's single source of truth). But each kind of inscription adds its own dimension: prompts add reasoning, apps add interaction, workflows add orchestration.
+
+_Inscribe small. Cast large._
+
+---
+
 ## Table of Contents
 
-- [Why mcp-kit?](#why-mcp-kit)
+- [Why "mcp-rune"?](#why-mcp-rune)
+- [Why use mcp-rune?](#why-use-mcp-rune)
 - [Features](#features)
   - [Polymorphic CRUD Tools](#polymorphic-crud-tools)
   - [Prompt Strategies](#prompt-strategies)
@@ -86,14 +106,14 @@ export class Book extends BaseModel {
 
 ---
 
-## Why mcp-kit?
+## Why use mcp-rune?
 
 Every MCP framework today works at the **transport/tool** level. You register tools, handle HTTP, write one handler per operation per model. 10 models x 5 CRUD operations = 50 hand-written tool handlers. Tool lists bloat, LLM tool selection degrades, and you're maintaining boilerplate across every model.
 
-mcp-kit works at the **application** level. You describe your domain, the framework builds the MCP surface:
+mcp-rune works at the **application** level. You describe your domain, the framework builds the MCP surface:
 
 ```
-  You write                         mcp-kit generates
+  You write                         mcp-rune generates
  ┌──────────────────┐     ┌────────────────────────────────────────┐
  │  Model           │────▶│  Polymorphic CRUD tools (8 tools       │
  │  attributesConfig│     │    serve ALL models, not N x 5)        │
@@ -111,19 +131,19 @@ mcp-kit works at the **application** level. You describe your domain, the framew
 
 ### How It Compares
 
-|                                     | Protocol Wrappers | API Converters | **mcp-kit** |
-| ----------------------------------- | :---------------: | :------------: | :---------: |
-| Transport (stdio + HTTP)            |        ✅         |       ✅       |     ✅      |
-| Tool registration & schema          |        ✅         |       ✅       |     ✅      |
-| OAuth 2.1 + PKCE                    |        ⚠️         |       ❌       |     ✅      |
-| Polymorphic CRUD from model config  |        ❌         |       ⚠️       |     ✅      |
-| Bulk operations (batch CRUD)        |        ❌         |       ❌       |     ✅      |
-| API convention abstraction          |        ❌         |       ❌       |     ✅      |
-| Prompt strategies (form validation) |        ❌         |       ❌       |     ✅      |
-| Schema-driven interactive Apps      |        ⚠️         |       ❌       |     ✅      |
-| Search adapters                     |        ❌         |       ❌       |     ✅      |
-| Domain workflows & business rules   |        ❌         |       ❌       |     ✅      |
-| Documentation generation pipeline   |        ❌         |       ❌       |     ✅      |
+|                                     | Protocol Wrappers | API Converters | **mcp-rune** |
+| ----------------------------------- | :---------------: | :------------: | :----------: |
+| Transport (stdio + HTTP)            |        ✅         |       ✅       |      ✅      |
+| Tool registration & schema          |        ✅         |       ✅       |      ✅      |
+| OAuth 2.1 + PKCE                    |        ⚠️         |       ❌       |      ✅      |
+| Polymorphic CRUD from model config  |        ❌         |       ⚠️       |      ✅      |
+| Bulk operations (batch CRUD)        |        ❌         |       ❌       |      ✅      |
+| API convention abstraction          |        ❌         |       ❌       |      ✅      |
+| Prompt strategies (form validation) |        ❌         |       ❌       |      ✅      |
+| Schema-driven interactive Apps      |        ⚠️         |       ❌       |      ✅      |
+| Search adapters                     |        ❌         |       ❌       |      ✅      |
+| Domain workflows & business rules   |        ❌         |       ❌       |      ✅      |
+| Documentation generation pipeline   |        ❌         |       ❌       |      ✅      |
 
 ---
 
@@ -149,7 +169,7 @@ Nested resources use **compound IDs** (`titles/42/assets/7`) — no separate nes
 Tools declare a **category** and the framework infers auth requirements automatically:
 
 ```typescript
-import { BaseTool, TOOL_CATEGORIES } from 'mcp-kit'
+import { BaseTool, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune'
 
 export class ArchiveProjectTool extends BaseTool {
   static override get category() {
@@ -170,7 +190,7 @@ export class ArchiveProjectTool extends BaseTool {
 <summary>JavaScript version</summary>
 
 ```javascript
-import { BaseTool, TOOL_CATEGORIES } from 'mcp-kit'
+import { BaseTool, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune'
 
 export class ArchiveProjectTool extends BaseTool {
   static get category() {
@@ -201,7 +221,7 @@ export class ArchiveProjectTool extends BaseTool {
 
 ### Prompt Strategies
 
-How does an LLM correctly fill out a 25-field form? Most MCP servers don't try. mcp-kit provides three strategies that adapt validation UX to form complexity:
+How does an LLM correctly fill out a 25-field form? Most MCP servers don't try. mcp-rune provides three strategies that adapt validation UX to form complexity:
 
 | Strategy      | Fields | Operations                                              | Use Case      |
 | ------------- | ------ | ------------------------------------------------------- | ------------- |
@@ -210,8 +230,8 @@ How does an LLM correctly fill out a 25-field form? Most MCP servers don't try. 
 | **Stateful**  | 20+    | All above + `validateSection`, `getProgress`            | Complex forms |
 
 ```typescript
-import { BasePrompt, derivePromptSchema, PromptContentGenerator } from 'mcp-kit/prompts'
-import type { PromptContent } from 'mcp-kit/prompts'
+import { BasePrompt, derivePromptSchema, PromptContentGenerator } from '@mcp-rune/mcp-rune/prompts'
+import type { PromptContent } from '@mcp-rune/mcp-rune/prompts'
 import { Book } from '../models/book.js'
 
 export class BookPrompt extends BasePrompt {
@@ -244,7 +264,7 @@ export class BookPrompt extends BasePrompt {
 <summary>JavaScript version</summary>
 
 ```javascript
-import { BasePrompt, derivePromptSchema, PromptContentGenerator } from 'mcp-kit/prompts'
+import { BasePrompt, derivePromptSchema, PromptContentGenerator } from '@mcp-rune/mcp-rune/prompts'
 import { Book } from '../models/book.js'
 
 export class BookPrompt extends BasePrompt {
@@ -278,7 +298,7 @@ The `PromptContentGenerator` pipeline assembles documentation from your model co
 
 ### API-Agnostic Integration
 
-mcp-kit connects to any REST API through pluggable **API conventions**:
+mcp-rune connects to any REST API through pluggable **API conventions**:
 
 | Convention   | `belongsTo`               | `hasMany`          |
 | ------------ | ------------------------- | ------------------ |
@@ -295,10 +315,10 @@ Per-action override → Collection override → Parent path → Namespace → Ba
 
 Configure per-model namespaces, per-action endpoint overrides, or subclass `EndpointResolver` for full URL control — without changing model definitions or tool code.
 
-**Search adapters** bridge mcp-kit's generic filter format to whatever the backend expects:
+**Search adapters** bridge mcp-rune's generic filter format to whatever the backend expects:
 
 ```typescript
-import { SearchAdapter } from 'mcp-kit/search'
+import { SearchAdapter } from '@mcp-rune/mcp-rune/search'
 
 export class ActivitySearchAdapter extends SearchAdapter {
   override buildBody(query: string | null, filters?: Record<string, unknown>) {
@@ -322,7 +342,7 @@ export class ActivitySearchAdapter extends SearchAdapter {
 <summary>JavaScript version</summary>
 
 ```javascript
-import { SearchAdapter } from 'mcp-kit/search'
+import { SearchAdapter } from '@mcp-rune/mcp-rune/search'
 
 export class ActivitySearchAdapter extends SearchAdapter {
   buildBody(query, filters) {
@@ -364,7 +384,7 @@ Generated from the same `attributesConfig` that drives the tools and prompts. Ad
 Encode business knowledge, rules, and operational workflows that guide the LLM:
 
 ```typescript
-import { WorkflowDefinition } from 'mcp-kit/domain'
+import { WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
 
 export const onboardNewUser = new WorkflowDefinition({
   name: 'onboard_new_user',
@@ -391,7 +411,7 @@ export const onboardNewUser = new WorkflowDefinition({
 <summary>JavaScript version</summary>
 
 ```javascript
-import { WorkflowDefinition } from 'mcp-kit/domain'
+import { WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
 
 export const onboardNewUser = new WorkflowDefinition({
   name: 'onboard_new_user',
@@ -465,7 +485,7 @@ Production-grade OAuth2 built on [openid-client](https://github.com/panva/openid
 > \* In path-prefixed deployments (`HttpServer` constructed with a non-empty `pathPrefix`), the framework delegates the two PRM endpoint forms to the upstream reverse proxy — `.well-known` URIs are origin-scoped and cannot be served from inside a sub-path. The `WWW-Authenticate` header still advertises the correct origin-rooted URL. See [OAuth2 Discovery](docs/guides/oauth2-discovery-flow.md).
 
 ```typescript
-import { OAuthService } from 'mcp-kit/oauth2'
+import { OAuthService } from '@mcp-rune/mcp-rune/oauth2'
 
 const oauth = new OAuthService({
   authServerUrl: process.env.AUTH_SERVER_URL,
@@ -485,7 +505,7 @@ await oauth.revokeToken(token)
 <summary>JavaScript version</summary>
 
 ```javascript
-import { OAuthService } from 'mcp-kit/oauth2'
+import { OAuthService } from '@mcp-rune/mcp-rune/oauth2'
 
 const oauth = new OAuthService({
   authServerUrl: process.env.AUTH_SERVER_URL,
@@ -508,7 +528,7 @@ await oauth.revokeToken(token)
 
 <br>
 
-MCP clients must identify themselves to the authorization server before obtaining tokens. mcp-kit supports three registration strategies, matching the [MCP Authorization Spec (November 2025)](https://modelcontextprotocol.io/specification/draft/basic/authorization):
+MCP clients must identify themselves to the authorization server before obtaining tokens. mcp-rune supports three registration strategies, matching the [MCP Authorization Spec (November 2025)](https://modelcontextprotocol.io/specification/draft/basic/authorization):
 
 | Strategy                | How it works                                                                        | Config needed                                                   | Client type            |
 | ----------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------- | ---------------------- |
@@ -560,7 +580,7 @@ When `clientMetadata` is omitted, the endpoint still serves defaults using the s
 
 Without audience restriction, a token issued for Service A could be replayed against Service B (token confusion attack). RFC 8707 Resource Indicators solve this by binding tokens to a specific resource server.
 
-**How it works in mcp-kit:**
+**How it works in mcp-rune:**
 
 ```
 1. Authorization Request
@@ -577,9 +597,9 @@ Without audience restriction, a token issued for Service A could be replayed aga
    The MCP server checks that `aud` matches its own resource URI
 ```
 
-The `resourceUri` constructor option controls this. When set, mcp-kit includes the `resource` parameter in both the authorization and token exchange requests. The authorization server must honor it by scoping the token's `aud` claim to the requested resource.
+The `resourceUri` constructor option controls this. When set, mcp-rune includes the `resource` parameter in both the authorization and token exchange requests. The authorization server must honor it by scoping the token's `aud` claim to the requested resource.
 
-mcp-kit also implements [RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728) (Protected Resource Metadata) — it serves `/.well-known/oauth-protected-resource/mcp` so MCP clients can discover which authorization server protects this resource and what the canonical resource URI is.
+mcp-rune also implements [RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728) (Protected Resource Metadata) — it serves `/.well-known/oauth-protected-resource/mcp` so MCP clients can discover which authorization server protects this resource and what the canonical resource URI is.
 
 </details>
 
@@ -588,7 +608,7 @@ mcp-kit also implements [RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728
 Both transports share the same server factory — your tools, prompts, and apps work identically:
 
 ```typescript
-import { StdioServer } from 'mcp-kit/server'
+import { StdioServer } from '@mcp-rune/mcp-rune/server'
 // Local development (spawned by Claude Desktop, Cursor, etc.)
 new StdioServer({ accessToken: process.env.ACCESS_TOKEN, mcp: mcpConfig }).start()
 ```
@@ -597,7 +617,7 @@ new StdioServer({ accessToken: process.env.ACCESS_TOKEN, mcp: mcpConfig }).start
 <summary>JavaScript version</summary>
 
 ```javascript
-import { StdioServer } from 'mcp-kit/server'
+import { StdioServer } from '@mcp-rune/mcp-rune/server'
 // Local development (spawned by Claude Desktop, Cursor, etc.)
 new StdioServer({ accessToken: process.env.ACCESS_TOKEN, mcp: mcpConfig }).start()
 ```
@@ -605,7 +625,7 @@ new StdioServer({ accessToken: process.env.ACCESS_TOKEN, mcp: mcpConfig }).start
 </details>
 
 ```typescript
-import { HttpServer } from 'mcp-kit/server'
+import { HttpServer } from '@mcp-rune/mcp-rune/server'
 // Remote access (multi-user, OAuth-protected)
 new HttpServer({ port: 4100, oauth, mcp: mcpConfig }).start()
 ```
@@ -614,7 +634,7 @@ new HttpServer({ port: 4100, oauth, mcp: mcpConfig }).start()
 <summary>JavaScript version</summary>
 
 ```javascript
-import { HttpServer } from 'mcp-kit/server'
+import { HttpServer } from '@mcp-rune/mcp-rune/server'
 // Remote access (multi-user, OAuth-protected)
 new HttpServer({ port: 4100, oauth, mcp: mcpConfig }).start()
 ```
@@ -634,8 +654,8 @@ new HttpServer({ port: 4100, oauth, mcp: mcpConfig }).start()
 ## Quick Start
 
 ```bash
-git clone https://github.com/dsaenztagarro/mcp-kit.git
-cd mcp-kit/examples/bookshelf
+git clone https://github.com/mcp-rune/mcp-rune.git
+cd mcp-rune/examples/bookshelf
 npm install
 npx @modelcontextprotocol/inspector -- npx tsx server.ts
 ```
@@ -651,7 +671,7 @@ See the [bookshelf example](examples/bookshelf/) for the full source (~150 lines
 
 ## Database
 
-mcp-kit uses PostgreSQL with the [pgvector](https://github.com/pgvector/pgvector) extension for token storage, operation memory, and analysis features. Database features are **opt-in** — if `DATABASE_URL` is not set, everything works without a database.
+mcp-rune uses PostgreSQL with the [pgvector](https://github.com/pgvector/pgvector) extension for token storage, operation memory, and analysis features. Database features are **opt-in** — if `DATABASE_URL` is not set, everything works without a database.
 
 ### Tables
 
@@ -664,11 +684,11 @@ mcp-kit uses PostgreSQL with the [pgvector](https://github.com/pgvector/pgvector
 
 ### Running Migrations
 
-mcp-kit exports migration SQL via `mcp-kit/db/migrations`. Write a migration runner that suits your project — here's a minimal example:
+mcp-rune exports migration SQL via `mcp-rune/db/migrations`. Write a migration runner that suits your project — here's a minimal example:
 
 ```typescript
 import pg from 'pg'
-import { migrations } from 'mcp-kit/db/migrations'
+import { migrations } from '@mcp-rune/mcp-rune/db/migrations'
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
 const client = await pool.connect()
@@ -707,7 +727,7 @@ await pool.end()
 
 ```javascript
 import pg from 'pg'
-import { migrations } from 'mcp-kit/db/migrations'
+import { migrations } from '@mcp-rune/mcp-rune/db/migrations'
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
 const client = await pool.connect()
@@ -784,43 +804,58 @@ Colorized console output is auto-detected: on when stderr is a TTY, off when cap
 
 ## Subpath Imports
 
-mcp-kit exposes modules via subpath imports for targeted usage:
+mcp-rune exposes modules via subpath imports for targeted usage:
 
 ```typescript
-import { BaseModel } from 'mcp-kit/core'
-import type { AttributeDefinition } from 'mcp-kit/core'
-import { StdioServer, HttpServer, createServer } from 'mcp-kit/server'
-import { BaseTool, ToolRegistry, TOOL_CATEGORIES, DATA_TOOL_CLASSES } from 'mcp-kit/tools'
-import { wrapToolHandler, loggingInterceptor, errorInterceptor } from 'mcp-kit/tools'
-import type { ApiClient, ToolInterceptor, ToolContext, ToolRegistryConfig } from 'mcp-kit/tools'
-import { ModelService, EndpointResolver } from 'mcp-kit/lib/mcp/services/index.js'
-import { BasePrompt, PromptContentGenerator, derivePromptSchema } from 'mcp-kit/prompts'
-import { AppRegistry, createCreateFormApp } from 'mcp-kit/apps'
-import { SearchService, SearchAdapter } from 'mcp-kit/search'
-import { DomainRegistry, WorkflowDefinition } from 'mcp-kit/domain'
-import { OAuthService } from 'mcp-kit/oauth2'
-import { logger, tracing, errorTracking } from 'mcp-kit/services'
-import { setPool, query } from 'mcp-kit/db'
-import { migrations } from 'mcp-kit/db/migrations'
+import { BaseModel } from '@mcp-rune/mcp-rune/core'
+import type { AttributeDefinition } from '@mcp-rune/mcp-rune/core'
+import { StdioServer, HttpServer, createServer } from '@mcp-rune/mcp-rune/server'
+import {
+  BaseTool,
+  ToolRegistry,
+  TOOL_CATEGORIES,
+  DATA_TOOL_CLASSES
+} from '@mcp-rune/mcp-rune/tools'
+import { wrapToolHandler, loggingInterceptor, errorInterceptor } from '@mcp-rune/mcp-rune/tools'
+import type {
+  ApiClient,
+  ToolInterceptor,
+  ToolContext,
+  ToolRegistryConfig
+} from '@mcp-rune/mcp-rune/tools'
+import { ModelService, EndpointResolver } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
+import { BasePrompt, PromptContentGenerator, derivePromptSchema } from '@mcp-rune/mcp-rune/prompts'
+import { AppRegistry, createCreateFormApp } from '@mcp-rune/mcp-rune/apps'
+import { SearchService, SearchAdapter } from '@mcp-rune/mcp-rune/search'
+import { DomainRegistry, WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
+import { OAuthService } from '@mcp-rune/mcp-rune/oauth2'
+import { logger, tracing, errorTracking } from '@mcp-rune/mcp-rune/services'
+import { setPool, query } from '@mcp-rune/mcp-rune/db'
+import { migrations } from '@mcp-rune/mcp-rune/db/migrations'
 ```
 
 <details>
 <summary>JavaScript version</summary>
 
 ```javascript
-import { BaseModel } from 'mcp-kit/core'
-import { StdioServer, HttpServer, createServer } from 'mcp-kit/server'
-import { BaseTool, ToolRegistry, TOOL_CATEGORIES, DATA_TOOL_CLASSES } from 'mcp-kit/tools'
-import { wrapToolHandler, loggingInterceptor, errorInterceptor } from 'mcp-kit/tools'
-import { ModelService, EndpointResolver } from 'mcp-kit/lib/mcp/services/index.js'
-import { BasePrompt, PromptContentGenerator, derivePromptSchema } from 'mcp-kit/prompts'
-import { AppRegistry, createCreateFormApp } from 'mcp-kit/apps'
-import { SearchService, SearchAdapter } from 'mcp-kit/search'
-import { DomainRegistry, WorkflowDefinition } from 'mcp-kit/domain'
-import { OAuthService } from 'mcp-kit/oauth2'
-import { logger, tracing, errorTracking } from 'mcp-kit/services'
-import { setPool, query } from 'mcp-kit/db'
-import { migrations } from 'mcp-kit/db/migrations'
+import { BaseModel } from '@mcp-rune/mcp-rune/core'
+import { StdioServer, HttpServer, createServer } from '@mcp-rune/mcp-rune/server'
+import {
+  BaseTool,
+  ToolRegistry,
+  TOOL_CATEGORIES,
+  DATA_TOOL_CLASSES
+} from '@mcp-rune/mcp-rune/tools'
+import { wrapToolHandler, loggingInterceptor, errorInterceptor } from '@mcp-rune/mcp-rune/tools'
+import { ModelService, EndpointResolver } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
+import { BasePrompt, PromptContentGenerator, derivePromptSchema } from '@mcp-rune/mcp-rune/prompts'
+import { AppRegistry, createCreateFormApp } from '@mcp-rune/mcp-rune/apps'
+import { SearchService, SearchAdapter } from '@mcp-rune/mcp-rune/search'
+import { DomainRegistry, WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
+import { OAuthService } from '@mcp-rune/mcp-rune/oauth2'
+import { logger, tracing, errorTracking } from '@mcp-rune/mcp-rune/services'
+import { setPool, query } from '@mcp-rune/mcp-rune/db'
+import { migrations } from '@mcp-rune/mcp-rune/db/migrations'
 ```
 
 </details>
@@ -840,7 +875,7 @@ your-server/                          (you write this)
         ├─ local.ts                    StdioServer entry point
         └─ remote.ts                   HttpServer entry point
 
-mcp-kit/                              (the framework)
+mcp-rune/                              (the framework)
     │
     ├─ core                            BaseModel, ApiConfig, helpers, validators
     ├─ server                          StdioServer, HttpServer, createServer
@@ -903,19 +938,19 @@ mcp-kit/                              (the framework)
 
 ### vs. `@modelcontextprotocol/sdk`
 
-The official SDK provides protocol primitives. mcp-kit builds on top — same protocol compliance plus an application framework. Use the SDK for a single custom tool. Use mcp-kit when you have models, CRUD, forms, and documentation.
+The official SDK provides protocol primitives. mcp-rune builds on top — same protocol compliance plus an application framework. Use the SDK for a single custom tool. Use mcp-rune when you have models, CRUD, forms, and documentation.
 
 ### vs. `mcp-framework`
 
-mcp-framework adds CLI scaffolding and directory-based tool discovery. mcp-kit adds a full model-driven architecture — one tool per operation serving all models, prompt strategies, interactive apps, search adapters.
+mcp-framework adds CLI scaffolding and directory-based tool discovery. mcp-rune adds a full model-driven architecture — one tool per operation serving all models, prompt strategies, interactive apps, search adapters.
 
 ### vs. FastMCP (Python)
 
-FastMCP is the dominant Python framework with excellent DX. mcp-kit is the Node.js counterpart with a higher-level model-driven approach. FastMCP wraps functions as tools. mcp-kit derives entire tool suites from model definitions. They complement each other — FastMCP for Python, mcp-kit for Node.js.
+FastMCP is the dominant Python framework with excellent DX. mcp-rune is the Node.js counterpart with a higher-level model-driven approach. FastMCP wraps functions as tools. mcp-rune derives entire tool suites from model definitions. They complement each other — FastMCP for Python, mcp-rune for Node.js.
 
 ### vs. Stainless / FastAPI-MCP
 
-API converters generate tools from OpenAPI specs. mcp-kit goes the other direction — you define models and the framework handles both the MCP surface and the API communication, including payload conventions and search adapters.
+API converters generate tools from OpenAPI specs. mcp-rune goes the other direction — you define models and the framework handles both the MCP surface and the API communication, including payload conventions and search adapters.
 
 ---
 
@@ -932,8 +967,8 @@ API converters generate tools from OpenAPI specs. mcp-kit goes the other directi
 ### Setup
 
 ```bash
-git clone https://github.com/dsaenztagarro/mcp-kit.git
-cd mcp-kit
+git clone https://github.com/mcp-rune/mcp-rune.git
+cd mcp-rune
 npm install
 npm run build:full
 ```
@@ -987,7 +1022,7 @@ Add to your `claude_desktop_config.json`:
   "mcpServers": {
     "bookshelf": {
       "command": "npx",
-      "args": ["tsx", "/path/to/mcp-kit/examples/bookshelf/server.ts"]
+      "args": ["tsx", "/path/to/mcp-rune/examples/bookshelf/server.ts"]
     }
   }
 }
@@ -1012,7 +1047,7 @@ Add to your `claude_desktop_config.json`:
 
 ## Contributing
 
-mcp-kit is extracted from production. Contributions welcome — especially:
+mcp-rune is extracted from production. Contributions welcome — especially:
 
 - Search adapters (Elasticsearch, Algolia, Typesense)
 - API conventions (GraphQL, gRPC)

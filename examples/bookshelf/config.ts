@@ -1,6 +1,6 @@
-import { createServer } from 'mcp-kit/server'
-import { DATA_TOOL_CLASSES } from 'mcp-kit/tools'
-import { STRATEGY_TOOL_CLASSES } from 'mcp-kit/prompts'
+import { createServer } from '@mcp-rune/mcp-rune/server'
+import { DATA_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
+import { STRATEGY_TOOL_CLASSES } from '@mcp-rune/mcp-rune/prompts'
 import { Book } from './models/book.js'
 import { BookPrompt } from './prompts/book-prompt.js'
 

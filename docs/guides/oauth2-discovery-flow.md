@@ -117,12 +117,12 @@ When `HttpServer` is constructed with a non-empty `pathPrefix`, the OAuth router
 
 Example for a deployment at `https://example.com/my-mcp-server/mcp`:
 
-| Element                                        | Value                                                                                                   |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Resource URL                                   | `https://example.com/my-mcp-server/mcp`                                                                 |
-| Canonical PRM URL (RFC 9728 §3.1)              | `https://example.com/.well-known/oauth-protected-resource/my-mcp-server/mcp`                            |
-| `WWW-Authenticate` (emitted by mcp-kit on 401) | `Bearer resource_metadata="https://example.com/.well-known/oauth-protected-resource/my-mcp-server/mcp"` |
-| Served by                                      | **Upstream reverse proxy**, _not_ mcp-kit                                                               |
+| Element                                         | Value                                                                                                   |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Resource URL                                    | `https://example.com/my-mcp-server/mcp`                                                                 |
+| Canonical PRM URL (RFC 9728 §3.1)               | `https://example.com/.well-known/oauth-protected-resource/my-mcp-server/mcp`                            |
+| `WWW-Authenticate` (emitted by mcp-rune on 401) | `Bearer resource_metadata="https://example.com/.well-known/oauth-protected-resource/my-mcp-server/mcp"` |
+| Served by                                       | **Upstream reverse proxy**, _not_ mcp-rune                                                              |
 
 Minimal nginx snippet to serve the PRM JSON at the origin root:
 
@@ -134,7 +134,7 @@ location = /.well-known/oauth-protected-resource/my-mcp-server/mcp {
 }
 ```
 
-For the root-mount case (`pathPrefix` empty / unset), nothing changes: mcp-kit serves both PRM forms itself.
+For the root-mount case (`pathPrefix` empty / unset), nothing changes: mcp-rune serves both PRM forms itself.
 
 ## Unauthorized Response Contract
 

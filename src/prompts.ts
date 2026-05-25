@@ -1,4 +1,4 @@
-// mcp-kit/prompts — base prompt, strategies, pipeline, strategy tools
+// mcp-rune/prompts — base prompt, strategies, pipeline, strategy tools
 export {
   BaseConvention,
   defaultConvention,

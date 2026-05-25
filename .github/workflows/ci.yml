@@ -1,4 +1,4 @@
-# CI for @dsaenztagarro/mcp-kit.
+# CI for @mcp-rune/mcp-rune.
 #
 # Triggers:
 #   - push to master         → runs `ci` job
@@ -67,10 +67,10 @@ jobs:
         with:
           node-version: 24
           # registry-url + scope tell setup-node to write a project .npmrc
-          # that maps the @dsaenztagarro scope to GitHub Packages and reads
+          # that maps the @mcp-rune scope to GitHub Packages and reads
           # the token from $NODE_AUTH_TOKEN at publish time.
           registry-url: https://npm.pkg.github.com
-          scope: '@dsaenztagarro'
+          scope: '@mcp-rune'
           cache: npm
 
       - name: Install dependencies

@@ -1,6 +1,6 @@
 # Bookshelf Example
 
-A minimal mcp-kit server with one model (Book) showing the full framework surface: tools, prompts, validation, and documentation — all generated from a single model definition.
+A minimal mcp-rune server with one model (Book) showing the full framework surface: tools, prompts, validation, and documentation — all generated from a single model definition.
 
 ## Quick Start
 
@@ -17,7 +17,7 @@ Or configure Claude Desktop (`claude_desktop_config.json`):
   "mcpServers": {
     "bookshelf": {
       "command": "npx",
-      "args": ["tsx", "/path/to/mcp-kit/examples/bookshelf/server.ts"]
+      "args": ["tsx", "/path/to/mcp-rune/examples/bookshelf/server.ts"]
     }
   }
 }
@@ -48,7 +48,7 @@ From a **30-line model definition**, the framework registers these tools automat
 | `search_records`     | Search with filters        |
 | `bulk_action_models` | Batch create/update/delete |
 
-The strategy tools are the most interesting part — they showcase what mcp-kit does that other frameworks don't: **guided form filling with validation feedback, no API calls needed**.
+The strategy tools are the most interesting part — they showcase what mcp-rune does that other frameworks don't: **guided form filling with validation feedback, no API calls needed**.
 
 ---
 
@@ -389,7 +389,7 @@ function createApiClient(token: string): ApiClient {
 }
 ```
 
-mcp-kit doesn't care what API you talk to. It formats payloads according to the configured convention (JSON:API by default, HAL also supported) and normalizes responses automatically.
+mcp-rune doesn't care what API you talk to. It formats payloads according to the configured convention (JSON:API by default, HAL also supported) and normalizes responses automatically.
 
 ## Next Steps
 

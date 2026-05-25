@@ -5,10 +5,10 @@
  * These replace the manual wrapping pattern found in integrator tool registries.
  *
  * @example
- * import { ToolRegistry } from 'mcp-kit/tools'
+ * import { ToolRegistry } from '@mcp-rune/mcp-rune/tools'
  *
  * // ToolRegistry applies these automatically. For manual use:
- * import { loggingInterceptor, tracingInterceptor, errorInterceptor } from 'mcp-kit/tools'
+ * import { loggingInterceptor, tracingInterceptor, errorInterceptor } from '@mcp-rune/mcp-rune/tools'
  * const handler = wrapToolHandler('find_records', [loggingInterceptor(), tracingInterceptor()], rawHandler)
  */
 

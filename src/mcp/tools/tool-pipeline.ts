@@ -8,7 +8,7 @@
  * (outermost wrapper sees the final result or first error).
  *
  * @example
- * import { wrapToolHandler } from 'mcp-kit/tools'
+ * import { wrapToolHandler } from '@mcp-rune/mcp-rune/tools'
  *
  * const handler = wrapToolHandler('find_records', [tracingInterceptor, auditInterceptor], async (args) => {
  *   return tool.execute(args)

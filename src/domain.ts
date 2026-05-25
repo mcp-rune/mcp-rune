@@ -1,4 +1,4 @@
-// mcp-kit/domain — workflows, knowledge, business rules
+// mcp-rune/domain — workflows, knowledge, business rules
 export { BusinessRule, RuleSet } from './mcp/domain/business-rules.js'
 export { DomainConcept, DomainKnowledge } from './mcp/domain/knowledge.js'
 export { DomainRegistry } from './mcp/domain/registry.js'

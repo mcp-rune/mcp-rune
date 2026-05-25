@@ -4,6 +4,38 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.40.0] — 2026-05-25
+
+### Changed (BREAKING)
+
+- **Package renamed from `mcp-kit` (and the prior `@dsaenztagarro/mcp-kit`) to `@mcp-rune/mcp-rune`.** All import paths change accordingly: `mcp-kit/server` → `@mcp-rune/mcp-rune/server`, and the same for every subpath export (`/core`, `/tools`, `/prompts`, `/apps`, `/search`, `/domain`, `/oauth2`, `/services`, `/db`, `/db/migrations`, `/lib/*`). The GitHub repository moved from `dsaenztagarro/mcp-kit` to `mcp-rune/mcp-rune`, and the GitHub Packages publish scope changed from `@dsaenztagarro` to `@mcp-rune`. The brand/short name is now `mcp-rune` (used in prose, source-file header comments, log messages).
+
+  Migration for consumers:
+
+  ```diff
+  -import { createServer } from 'mcp-kit/server'
+  -import { DATA_TOOL_CLASSES } from 'mcp-kit/tools'
+  +import { createServer } from '@mcp-rune/mcp-rune/server'
+  +import { DATA_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
+  ```
+
+  ```diff
+  -"@dsaenztagarro/mcp-kit": "^0.39.0"
+  +"@mcp-rune/mcp-rune": "^0.40.0"
+  ```
+
+  CHANGELOG entries for prior releases keep their original `@dsaenztagarro/mcp-kit` references and compare-URLs against the old GitHub path — those are historical and intentionally not rewritten.
+
+### Added
+
+- **`ConfigDescriptor` accepts `type: 'array'` with an optional `separator` (default `,`).** Consumers can declare an env var as a typed array directly in the descriptor instead of hand-splitting a CSV at the call site. `formatLines` renders non-empty, non-sensitive arrays in YAML block style (indented bullet per item), matching Spring Boot Actuator / Rails / `kubectl describe` conventions, which makes long lists (e.g. nine CIMD redirect URIs) scannable in TTY startup logs.
+
+### Why this matters
+
+The repo move to its own GitHub org (`mcp-rune`) and the matching npm scope (`@mcp-rune`) give the project a stable home decoupled from the original maintainer's personal account. The brand split — short name `mcp-rune` for prose, full id `@mcp-rune/mcp-rune` for installs and imports — keeps narrative readable while the package id stays unambiguous in `package.json` and import statements. The array-env-var support removes one of the last surface areas where every consumer was writing the same `value.split(',').map(s => s.trim())` boilerplate.
+
+[0.40.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.39.0...v0.40.0
+
 ## [0.39.0] — 2026-05-24
 
 ### Changed (BREAKING)
