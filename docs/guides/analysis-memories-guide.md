@@ -361,7 +361,7 @@ Date-windowed sampling around an origin date, with optional bucket stratificatio
 - Without `bucket`: uniform random sampling within the window.
 - With `bucket`: PostgreSQL `date_bin(bucket, value, origin)` creates origin-anchored buckets, and the same `ROW_NUMBER()` budget allocation distributes slots across buckets.
 
-For deeper detail (use cases, edge cases, performance notes), see [`proximity-sampling.md`](./proximity-sampling.md).
+For deeper detail (use cases, edge cases, performance notes), see [`proximity-sampling-guide.md`](./proximity-sampling-guide.md).
 
 ### 3. Pre-filter: `where`
 
@@ -541,8 +541,8 @@ analysis_clear({ analysis_id: "library-audit-2026-05" })
 
 Related guides:
 
-- [`proximity-sampling.md`](./proximity-sampling.md) — deeper treatment of date-windowed sampling.
-- [`tool-creation-guide.md`](../../guides/tool-creation-guide.md) — how the `ANALYSIS` category fits into the broader tool/category model.
-- [`transient-context-protocol.md`](../../guides/transient-context-protocol.md) — how `analysis_store` consumes transient context from upstream tools.
+- [`proximity-sampling-guide.md`](./proximity-sampling-guide.md) — deeper treatment of date-windowed sampling.
+- [`tool-creation-guide.md`](./tool-creation-guide.md) — how the `ANALYSIS` category fits into the broader tool/category model.
+- [`transient-context-protocol.md`](./transient-context-protocol.md) — how `analysis_store` consumes transient context from upstream tools.
 
 **Out of scope for this iteration** (tracked separately): a read-only `analysis_export` companion that returns filtered records to a downloadable artefact; an opt-in revalidation pass that re-fetches each candidate record before `analysis_act` mutates it to detect drift since ingest. See [issue #80](https://github.com/mcp-rune/mcp-rune/issues/80) for context.
