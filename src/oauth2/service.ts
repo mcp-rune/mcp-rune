@@ -30,6 +30,13 @@ interface IntrospectionCacheEntry {
  * actually uses) and `scopes` (what the client requests at auth time). They
  * describe the full surface advertised to the AS, which can be broader than
  * what any single flow uses.
+ *
+ * Note: this is a "server-hosted CIMD" pattern — the MCP server publishes a
+ * single static document identifying itself as the OAuth client to the upstream
+ * AS. The spec's CIMD model instead has the MCP client host its own document,
+ * so a spec-conformant flow would show the MCP client's name on the consent
+ * screen. With server-hosted CIMD the consent screen displays `clientName` for
+ * every downstream MCP client. See README §"Client Registration Strategies".
  */
 export interface ClientMetadataConfig {
   redirectUris: string[]

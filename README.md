@@ -571,6 +571,8 @@ new OAuthService({
 
 When `clientMetadata` is omitted, the endpoint still serves defaults using the server name and `read` scope.
 
+**Server-hosted vs client-hosted CIMD.** The MCP spec's CIMD model has the _MCP client_ publish its own metadata document at a URL it controls (e.g. `https://app.example.com/oauth/client-metadata.json`), so the upstream auth server's consent screen shows that client's name. mcp-rune does the inverse — the MCP server hosts one static document identifying itself. This is convenient for standing up a stable upstream client ID without DCR, and for exercising an upstream CIMD validator end-to-end without each MCP client needing to publish its own document; but it means the consent screen displays `clientName` for every downstream MCP client (Opencode, Claude Desktop, etc.) regardless of which one initiated the flow. For per-downstream-client identity on the consent screen, prefer DCR. For a spec-conformant proxy deployment, the spec's [Confused-Deputy section](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization#confused-deputy-problem) additionally requires per-downstream-client consent at the proxy layer, which mcp-rune does not surface today.
+
 </details>
 
 <details>
