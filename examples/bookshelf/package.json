@@ -1,9 +1,9 @@
 {
   "name": "bookshelf-mcp",
   "version": "1.0.0",
-  "description": "Example MCP server built with mcp-kit",
+  "description": "Example MCP server built with mcp-rune",
   "type": "module",
   "dependencies": {
-    "mcp-kit": "file:../../"
+    "@mcp-rune/mcp-rune": "file:../../"
   }
 }

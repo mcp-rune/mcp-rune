@@ -1,5 +1,5 @@
-import { BasePrompt, PromptContentGenerator, derivePromptSchema } from 'mcp-kit/prompts'
-import type { PromptContent } from 'mcp-kit/prompts'
+import { BasePrompt, PromptContentGenerator, derivePromptSchema } from '@mcp-rune/mcp-rune/prompts'
+import type { PromptContent } from '@mcp-rune/mcp-rune/prompts'
 import { Book } from '../models/book.js'
 
 export class BookPrompt extends BasePrompt {

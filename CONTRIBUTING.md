@@ -1,6 +1,6 @@
-# Contributing to mcp-kit
+# Contributing to mcp-rune
 
-Thanks for your interest in contributing! mcp-kit is extracted from production MCP servers and welcomes contributions that extend the framework.
+Thanks for your interest in contributing! mcp-rune is extracted from production MCP servers and welcomes contributions that extend the framework.
 
 ## Prerequisites
 
@@ -10,8 +10,8 @@ Thanks for your interest in contributing! mcp-kit is extracted from production M
 ## Setup
 
 ```bash
-git clone https://github.com/dsaenztagarro/mcp-kit.git
-cd mcp-kit
+git clone https://github.com/mcp-rune/mcp-rune.git
+cd mcp-rune
 npm install
 npm test
 ```
@@ -62,7 +62,7 @@ These are areas where contributions are particularly welcome:
 
 ### Search Adapters
 
-New adapters that transform mcp-kit's generic filter format into specific API shapes:
+New adapters that transform mcp-rune's generic filter format into specific API shapes:
 
 - Elasticsearch / OpenSearch
 - Algolia

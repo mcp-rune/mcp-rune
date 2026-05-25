@@ -10,10 +10,13 @@
 /** Leaf descriptor for a single config value. */
 export interface ConfigDescriptor {
   env: string
-  type?: 'string' | 'integer' | 'boolean'
-  default?: string | number | boolean
+  type?: 'string' | 'integer' | 'boolean' | 'array'
+  default?: string | number | boolean | string[]
+  /** Only meaningful when type === 'array'. Defaults to ','. */
+  separator?: string
   required?: boolean
   sensitive?: boolean
+  /** For type 'array', validated per-item; otherwise against the scalar value. */
   format?: string[]
   doc?: string
 }
@@ -45,7 +48,7 @@ function resolveField(
   descriptor: ConfigDescriptor,
   errors: string[],
   path: string
-): string | number | boolean | undefined {
+): string | number | boolean | string[] | undefined {
   const { env, type = 'string', required = false, format } = descriptor
   const hasDefault = 'default' in descriptor
   const raw = process.env[env]
@@ -62,7 +65,7 @@ function resolveField(
   }
 
   // Type coercion
-  let value: string | number | boolean
+  let value: string | number | boolean | string[]
   switch (type) {
     case 'integer': {
       const parsed = parseInt(raw, 10)
@@ -76,6 +79,14 @@ function resolveField(
     case 'boolean':
       value = raw === 'true' || raw === '1'
       break
+    case 'array': {
+      const separator = descriptor.separator ?? ','
+      value = raw
+        .split(separator)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0)
+      break
+    }
     case 'string':
     default:
       value = raw
@@ -84,7 +95,15 @@ function resolveField(
 
   // Format/enum validation
   if (format && Array.isArray(format) && format.length > 0) {
-    if (!format.includes(value as string)) {
+    if (Array.isArray(value)) {
+      const bad = value.filter((it) => !format.includes(it))
+      if (bad.length > 0) {
+        errors.push(
+          `${path}: env var ${env} contains invalid items [${bad.join(', ')}], allowed: [${format.join(', ')}]`
+        )
+        return undefined
+      }
+    } else if (!format.includes(value as string)) {
       errors.push(`${path}: env var ${env} must be one of [${format.join(', ')}], got "${value}"`)
       return undefined
     }
@@ -146,16 +165,30 @@ function formatLines(
       const isEmpty = raw === undefined || raw === ''
       const usedDefault = isEmpty && hasDefault
 
+      const suffix = usedDefault ? ' (default)' : ''
+
+      // YAML-style block rendering for non-empty, non-sensitive arrays:
+      // each item on its own indented bullet line. Matches Spring Boot
+      // Actuator / Rails / kubectl describe / YAML conventions.
+      if (value !== undefined && !isSensitive && Array.isArray(value) && value.length > 0) {
+        lines.push(`  ${path}:${suffix}`)
+        for (const item of value) {
+          lines.push(`    - ${item}`)
+        }
+        continue
+      }
+
       let display: string
       if (value === undefined) {
         display = '(not set)'
       } else if (isSensitive) {
         display = '***'
+      } else if (Array.isArray(value)) {
+        // Empty array — render inline; non-empty arrays handled above.
+        display = '[]'
       } else {
         display = String(value)
       }
-
-      const suffix = usedDefault ? ' (default)' : ''
       lines.push(`  ${path}: ${display}${suffix}`)
     } else if (node !== null && typeof node === 'object') {
       lines.push(

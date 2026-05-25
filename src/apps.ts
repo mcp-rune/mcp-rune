@@ -1,4 +1,4 @@
-// mcp-kit/apps — registry, factories, schema generators
+// mcp-rune/apps — registry, factories, schema generators
 export { createAutocompletePickerApp } from './mcp/apps/autocomplete-picker.js'
 export { BaseForm } from './mcp/apps/base-form.js'
 export { generateDetailSchema } from './mcp/apps/detail-schema.js'

@@ -176,7 +176,11 @@ resolver.resolveCollection({ model: 'asset', modelConfig, parentPath: 'titles/42
 The `compound-id` module provides utilities for building these paths:
 
 ```typescript
-import { buildCompoundId, buildCollectionPath, parseId } from 'mcp-kit/lib/mcp/services/index.js'
+import {
+  buildCompoundId,
+  buildCollectionPath,
+  parseId
+} from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
 
 buildCompoundId('titles', '42', 'assets', '7') // → 'titles/42/assets/7'
 buildCollectionPath('titles', '42', 'assets') // → 'titles/42/assets'
@@ -208,7 +212,7 @@ resolver.resolveCollection(...) // → 'api/v1/book-items'
 ### Setup
 
 ```typescript
-import { ModelService } from 'mcp-kit/lib/mcp/services/index.js'
+import { ModelService } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
 
 const modelService = new ModelService({
   apiClient, // Required — HTTP client implementing ApiClient
@@ -281,7 +285,7 @@ ModelService throws typed errors that tools catch and format for the MCP protoco
 | `UnknownActionError`         | Custom action not declared on model    | —                           |
 
 ```typescript
-import { MissingRequiredFieldsError } from 'mcp-kit/lib/mcp/services/index.js'
+import { MissingRequiredFieldsError } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
 
 try {
   await modelService.create('book', { title: 'Test' }) // missing 'author'
@@ -301,7 +305,7 @@ try {
 ### Setup
 
 ```typescript
-import { SearchService, SearchAdapter, RailsSearchAdapter } from 'mcp-kit/search'
+import { SearchService, SearchAdapter, RailsSearchAdapter } from '@mcp-rune/mcp-rune/search'
 
 const searchService = new SearchService(apiClient, {
   searchGroups: {
@@ -433,7 +437,7 @@ Request bodies are built by pluggable adapters. The adapter is selected at three
 The base `SearchAdapter` spreads filters flat into the body. For Rails APIs that nest filters, use `RailsSearchAdapter`:
 
 ```typescript
-import { RailsSearchAdapter } from 'mcp-kit/search'
+import { RailsSearchAdapter } from '@mcp-rune/mcp-rune/search'
 
 // Nests filters under a key + flattens range mappings
 const adapter = new RailsSearchAdapter({ filtersParam: 'filters' })
@@ -480,8 +484,8 @@ interface SearchResult {
 Construct both services in your tool registry and pass them as dependencies:
 
 ```typescript
-import { ModelService } from 'mcp-kit/lib/mcp/services/index.js'
-import { SearchService, RailsSearchAdapter } from 'mcp-kit/search'
+import { ModelService } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
+import { SearchService, RailsSearchAdapter } from '@mcp-rune/mcp-rune/search'
 
 async _createAuthenticatedInstance(ToolClass, getAccessToken) {
   const token = await getAccessToken()

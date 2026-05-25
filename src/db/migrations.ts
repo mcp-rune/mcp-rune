@@ -1,11 +1,11 @@
 /**
  * Database Migrations
  *
- * Exported SQL definitions for all tables required by mcp-kit features.
+ * Exported SQL definitions for all tables required by mcp-rune features.
  * Consumers import these and feed them to their own migration runner.
  *
  * @example
- * import { migrations } from 'mcp-kit/db/migrations'
+ * import { migrations } from '@mcp-rune/mcp-rune/db/migrations'
  *
  * for (const migration of migrations) {
  *   await client.query(migration.up)
@@ -24,7 +24,7 @@ export interface Migration {
 }
 
 /**
- * All mcp-kit database migrations, ordered by version.
+ * All mcp-rune database migrations, ordered by version.
  *
  * Feature groups:
  * - **core**: Required when DATABASE_URL is set (OAuth token storage, operation memory)

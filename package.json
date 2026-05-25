@@ -1,6 +1,6 @@
 {
-  "name": "@dsaenztagarro/mcp-kit",
-  "version": "0.39.0",
+  "name": "@mcp-rune/mcp-rune",
+  "version": "0.40.0",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "restricted"
@@ -109,11 +109,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dsaenztagarro/mcp-kit.git"
+    "url": "git+https://github.com/mcp-rune/mcp-rune.git"
   },
-  "homepage": "https://github.com/dsaenztagarro/mcp-kit#readme",
+  "homepage": "https://github.com/mcp-rune/mcp-rune#readme",
   "bugs": {
-    "url": "https://github.com/dsaenztagarro/mcp-kit/issues"
+    "url": "https://github.com/mcp-rune/mcp-rune/issues"
   },
   "author": "David Saenz",
   "license": "MIT",

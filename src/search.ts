@@ -1,4 +1,4 @@
-// mcp-kit/search — services, adapters, and shared types
+// mcp-rune/search — services, adapters, and shared types
 export type { RailsAdapterConfig } from './mcp/search/rails-search-adapter.js'
 export { RailsSearchAdapter } from './mcp/search/rails-search-adapter.js'
 export { SearchAdapter } from './mcp/search/search-adapter.js'

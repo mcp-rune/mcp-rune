@@ -1,4 +1,4 @@
-// mcp-kit/core — config, env, helpers, validators, base model
+// mcp-rune/core — config, env, helpers, validators, base model
 export { BaseModel } from './core/base-model.js'
 export { loadConfig } from './core/config.js'
 export { boolEnv, intEnv, optionalEnv, requireEnv } from './core/env.js'

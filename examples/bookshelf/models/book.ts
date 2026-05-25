@@ -1,5 +1,5 @@
-import { BaseModel } from 'mcp-kit/core'
-import type { AttributeDefinition } from 'mcp-kit/core'
+import { BaseModel } from '@mcp-rune/mcp-rune/core'
+import type { AttributeDefinition } from '@mcp-rune/mcp-rune/core'
 
 export class Book extends BaseModel {
   static override description = 'A book in the library'

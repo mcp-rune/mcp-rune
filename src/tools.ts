@@ -1,4 +1,4 @@
-// mcp-kit/tools — base classes, categories, data, domain, analysis, operations, pipeline, registry
+// mcp-rune/tools — base classes, categories, data, domain, analysis, operations, pipeline, registry
 export * from './mcp/tools/analysis/index.js'
 export type { ToolAnnotations, ToolHandlerExtra } from './mcp/tools/base-tool.js'
 export { BaseTool } from './mcp/tools/base-tool.js'

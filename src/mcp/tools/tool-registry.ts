@@ -7,7 +7,7 @@
  * Replaces ~100 lines of duplicated registry code per server with a constructor call.
  *
  * @example
- * import { ToolRegistry, DATA_TOOL_CLASSES } from 'mcp-kit/tools'
+ * import { ToolRegistry, DATA_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
  *
  * const toolRegistry = new ToolRegistry({
  *   toolClasses: DATA_TOOL_CLASSES,
@@ -81,7 +81,7 @@ export interface ToolRegistryConfig {
   /** Server context for disambiguation (passed to all tool instances) */
   serverContext?: ServerContext
 
-  /** Logger instance (defaults to mcp-kit logger) */
+  /** Logger instance (defaults to mcp-rune logger) */
   logger?: ToolLogger
 
   /** Prompt registry (passed to tools that need it, e.g., strategy tools) */

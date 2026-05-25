@@ -64,6 +64,54 @@ describe('lib/core/config', () => {
       expect(config.enabled).toBe(false)
     })
 
+    it('should resolve array types with default CSV separator', () => {
+      setEnv('TEST_CFG_LIST', 'a,b,c')
+      const config = loadConfig({
+        list: { env: 'TEST_CFG_LIST', type: 'array' }
+      })
+      expect(config.list).toEqual(['a', 'b', 'c'])
+    })
+
+    it('should trim whitespace around array items', () => {
+      setEnv('TEST_CFG_LIST', 'a, b , c')
+      const config = loadConfig({
+        list: { env: 'TEST_CFG_LIST', type: 'array' }
+      })
+      expect(config.list).toEqual(['a', 'b', 'c'])
+    })
+
+    it('should resolve array with custom separator', () => {
+      setEnv('TEST_CFG_LIST', 'a|b|c')
+      const config = loadConfig({
+        list: { env: 'TEST_CFG_LIST', type: 'array', separator: '|' }
+      })
+      expect(config.list).toEqual(['a', 'b', 'c'])
+    })
+
+    it('should resolve only-separator value as empty array', () => {
+      setEnv('TEST_CFG_LIST', ',,')
+      const config = loadConfig({
+        list: { env: 'TEST_CFG_LIST', type: 'array' }
+      })
+      expect(config.list).toEqual([])
+    })
+
+    it('should apply array default when env var is absent', () => {
+      clearEnv('TEST_CFG_LIST_MISSING')
+      const config = loadConfig({
+        list: { env: 'TEST_CFG_LIST_MISSING', type: 'array', default: ['x', 'y'] }
+      })
+      expect(config.list).toEqual(['x', 'y'])
+    })
+
+    it('should return undefined for optional array without default', () => {
+      clearEnv('TEST_CFG_LIST_OPT')
+      const config = loadConfig({
+        list: { env: 'TEST_CFG_LIST_OPT', type: 'array' }
+      })
+      expect(config.list).toBeUndefined()
+    })
+
     it('should apply defaults when env var is absent', () => {
       clearEnv('TEST_CFG_MISSING')
       const config = loadConfig({
@@ -149,6 +197,15 @@ describe('lib/core/config', () => {
       })
       expect(config.a).toBe('present')
     })
+
+    it('should throw for missing required array vars', () => {
+      clearEnv('TEST_CFG_REQ_LIST')
+      expect(() =>
+        loadConfig({
+          list: { env: 'TEST_CFG_REQ_LIST', type: 'array', required: true }
+        })
+      ).toThrow(/TEST_CFG_REQ_LIST/)
+    })
   })
 
   describe('format/enum validation', () => {
@@ -176,6 +233,29 @@ describe('lib/core/config', () => {
           port: { env: 'TEST_CFG_INT', type: 'integer' }
         })
       ).toThrow(/must be an integer/)
+    })
+
+    it('should validate array items per element against format allow-list', () => {
+      setEnv('TEST_CFG_LIST_FMT', 'a,b')
+      const config = loadConfig({
+        list: { env: 'TEST_CFG_LIST_FMT', type: 'array', format: ['a', 'b', 'c'] }
+      })
+      expect(config.list).toEqual(['a', 'b'])
+    })
+
+    it('should throw when array contains items outside format allow-list', () => {
+      setEnv('TEST_CFG_LIST_FMT', 'a,bad')
+      let caught: Error | null = null
+      try {
+        loadConfig({
+          list: { env: 'TEST_CFG_LIST_FMT', type: 'array', format: ['a', 'b'] }
+        })
+      } catch (e) {
+        caught = e as Error
+      }
+      expect(caught).not.toBeNull()
+      expect(caught!.message).toContain('bad')
+      expect(caught!.message).toContain('allowed')
     })
   })
 
@@ -240,6 +320,55 @@ describe('lib/core/config', () => {
         name: { env: 'TEST_CFG_NOTSET_HDR', default: 'x' }
       })
       expect(config.toString()).toMatch(/^Configuration:/)
+    })
+
+    it('should render non-empty arrays YAML-block style, one item per line', () => {
+      setEnv('TEST_CFG_LIST_PRINT', 'one,two,three')
+      const config = loadConfig({
+        list: { env: 'TEST_CFG_LIST_PRINT', type: 'array' }
+      })
+      const lines = config.toString().split('\n')
+      expect(lines).toContain('  list:')
+      expect(lines).toContain('    - one')
+      expect(lines).toContain('    - two')
+      expect(lines).toContain('    - three')
+      // Ensure the inline rendering is gone
+      expect(config.toString()).not.toContain('[one, two, three]')
+    })
+
+    it('should render empty arrays inline as []', () => {
+      setEnv('TEST_CFG_LIST_EMPTY', ',,')
+      const config = loadConfig({
+        list: { env: 'TEST_CFG_LIST_EMPTY', type: 'array' }
+      })
+      expect(config.toString()).toContain('list: []')
+    })
+
+    it('should annotate default-sourced arrays on the header line only', () => {
+      clearEnv('TEST_CFG_LIST_DEFAULTED')
+      const config = loadConfig({
+        list: { env: 'TEST_CFG_LIST_DEFAULTED', type: 'array', default: ['x', 'y'] }
+      })
+      const lines = config.toString().split('\n')
+      expect(lines).toContain('  list: (default)')
+      expect(lines).toContain('    - x')
+      expect(lines).toContain('    - y')
+      // The (default) marker must NOT appear on item lines
+      expect(
+        lines.filter((l) => l.startsWith('    -')).every((l) => !l.includes('(default)'))
+      ).toBe(true)
+    })
+
+    it('should mask sensitive arrays with ***', () => {
+      setEnv('TEST_CFG_SECRET_LIST', 'alpha,bravo,charlie')
+      const config = loadConfig({
+        tokens: { env: 'TEST_CFG_SECRET_LIST', type: 'array', sensitive: true }
+      })
+      const output = config.toString()
+      expect(output).toContain('***')
+      expect(output).not.toContain('alpha')
+      expect(output).not.toContain('bravo')
+      expect(output).not.toContain('charlie')
     })
   })
 })

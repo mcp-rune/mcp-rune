@@ -154,7 +154,7 @@ The dividing line: if you need the raw data **in context**, use the data tools. 
 ### Prerequisites
 
 - PostgreSQL with the [`pgvector`](https://github.com/pgvector/pgvector) extension installed.
-- `pg` connection pool you own and inject into mcp-kit.
+- `pg` connection pool you own and inject into mcp-rune.
 
 ### 1. Environment variables
 
@@ -165,10 +165,10 @@ The dividing line: if you need the raw data **in context**, use the data tools. 
 
 ### 2. Run migrations
 
-mcp-kit ships migrations as data under the `mcp-kit/db/migrations` subpath import. The analysis tables (`analysis_memories`, `ingested_records`) are tagged `feature: 'analysis'` — apply them conditionally:
+mcp-rune ships migrations as data under the `@mcp-rune/mcp-rune/db/migrations` subpath import. The analysis tables (`analysis_memories`, `ingested_records`) are tagged `feature: 'analysis'` — apply them conditionally:
 
 ```typescript
-import { migrations } from 'mcp-kit/db/migrations'
+import { migrations } from '@mcp-rune/mcp-rune/db/migrations'
 
 const needed = migrations.filter(
   (m) => m.feature === 'core' || process.env.ANALYSIS_ENABLED === 'true'
@@ -182,12 +182,12 @@ See the **Database** section of the root README for the full migration runner sn
 
 ```typescript
 import pg from 'pg'
-import { initVectorStorage } from 'mcp-kit/services'
+import { initVectorStorage } from '@mcp-rune/mcp-rune/services'
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
 
 initVectorStorage({
-  pool, // required — pool injection only; mcp-kit never creates pools
+  pool, // required — pool injection only; mcp-rune never creates pools
   serviceName: 'my-mcp-server',
   version: '1.0.0',
   retentionDays: 30, // default: 30 — sweep window for tool_memories (operations feature)
@@ -545,4 +545,4 @@ Related guides:
 - [`tool-creation-guide.md`](../../guides/tool-creation-guide.md) — how the `ANALYSIS` category fits into the broader tool/category model.
 - [`transient-context-protocol.md`](../../guides/transient-context-protocol.md) — how `analysis_store` consumes transient context from upstream tools.
 
-**Out of scope for this iteration** (tracked separately): a read-only `analysis_export` companion that returns filtered records to a downloadable artefact; an opt-in revalidation pass that re-fetches each candidate record before `analysis_act` mutates it to detect drift since ingest. See [issue #80](https://github.com/dsaenztagarro/mcp-kit/issues/80) for context.
+**Out of scope for this iteration** (tracked separately): a read-only `analysis_export` companion that returns filtered records to a downloadable artefact; an opt-in revalidation pass that re-fetches each candidate record before `analysis_act` mutates it to detect drift since ingest. See [issue #80](https://github.com/mcp-rune/mcp-rune/issues/80) for context.
