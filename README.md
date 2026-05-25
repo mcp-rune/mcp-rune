@@ -909,7 +909,7 @@ mcp-rune/                              (the framework)
 | [Domain Knowledge](docs/guides/domain-knowledge-guide.md)                       | Business rules, knowledge, workflows           |
 | [Workflow Creation](docs/guides/workflow-creation-guide.md)                     | Multi-step operational workflows               |
 | [OAuth2 Discovery](docs/guides/oauth2-discovery-flow.md)                        | OAuth2 server discovery (RFC 8414/9728)        |
-| [Analysis Memories](docs/features/analysis-memories/index.md)                   | Map-reduce over large datasets with embeddings |
+| [Analysis Memories](docs/guides/analysis-memories-guide.md)                     | Map-reduce over large datasets with embeddings |
 | [Transient Context](docs/guides/transient-context-protocol.md)                  | Stateless context handling protocol            |
 
 ### Operations

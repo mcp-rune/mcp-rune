@@ -71,6 +71,8 @@ static {
 
 **File**: Prompt class static properties
 
+> **Detailed reference:** [Sections & Field Groups guide](./sections-groups-guide.md). This section presents grouping as a layer of the derivation pipeline; the linked guide is the canonical reference for the two structures themselves.
+
 Two complementary structures organize fields:
 
 ### Sections (User-facing)

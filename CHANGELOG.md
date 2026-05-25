@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.40.1] — 2026-05-25
+
+### Added
+
+- **`docs/guides/quickstart-guide.md`** — single-source-of-truth quickstart, ported from the root `README.md`'s Quick Start section plus the Claude Desktop config snippet from `examples/bookshelf/README.md`. ~80 lines, no fabricated CLI: the framework is consumed via `git clone` + run the example, as documented today.
+- **`docs/guides/project-structure-guide.md`** — canonical reference for the user-server / framework directory split. Pulls the two directory trees from the root `README.md` and the concrete layout from `examples/bookshelf/README.md`.
+- **`docs/guides/sections-groups-guide.md`** — extracted from `prompt-creation-guide.md` (Sections Architecture, ~135 lines). Covers the user-facing-sections vs validation-fieldGroups split, section content enrichment, per-group content for multi-group sections, helper methods, and flow-diagram generation.
+- **`docs/guides/stateful-strategies-guide.md`** — extracted from `prompt-creation-guide.md` (Stateful Prompts + StatefulStrategy API, ~130 lines). Covers mode configuration (`guided` / `quick`), the stateful prompt structure, BasePrompt helpers, the validation flow, and the full `StatefulStrategy.getSections()` / `getProgress()` API reference.
+
+### Changed
+
+- **`docs/guides/prompt-creation-guide.md` slimmed from ~615 to ~310 lines.** The two extracted blocks are replaced by one-paragraph stubs that cross-link to the new standalone guides, so the parent reads as a coherent narrative about the strategy DSL without being trapped under embedded reference material. The table of contents at the top of the guide is updated to match the new section list.
+- **`docs/guides/prompt-derivation-framework-guide.md`** — Layer 2 now opens with a one-line cross-link to `sections-groups-guide.md`. No content removed: the derivation guide presents _the layer_; the new guide presents _the concept_.
+- **`docs/guides/analysis-memories-guide.md`** and **`docs/guides/proximity-sampling-guide.md`** — promoted from `docs/features/analysis-memories/{index,proximity-sampling}.md` (via `git mv`) into `docs/guides/`. Internal cross-links repointed (`./index.md` → `./analysis-memories-guide.md`; `../../guides/...` → `./...`). The external link in `README.md` repointed to the new path.
+
+### Removed
+
+- **`docs/features/` directory** — emptied by the analysis-memories promotion and deleted. Every documented topic now has a single canonical home under `docs/guides/`.
+
+### Why this matters
+
+The companion documentation site (`mcp-rune-site`) drives its sidebar, routing, and pager off a single `guides.ts` data file mirroring the 7-section structure. Before this release, six sidebar entries had no canonical markdown and rendered as disabled "wip" links. With these changes the on-disk surface in `docs/guides/` matches that structure exactly — 19 files, one per topic, each the unique source of truth for what it covers. Long-term, this also means: editors touch one file per change (no "is the canonical version in the README, the bookshelf example, or the embedded section inside prompt-creation?"), and cross-guide links resolve to the same file on GitHub and on the site.
+
+[0.40.1]: https://github.com/mcp-rune/mcp-rune/compare/v0.40.0...v0.40.1
+
 ## [0.40.0] — 2026-05-25
 
 ### Changed (BREAKING)
