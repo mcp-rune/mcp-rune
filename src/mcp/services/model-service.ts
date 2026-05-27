@@ -232,64 +232,6 @@ export class ModelService {
     return await this._apiClient.delete(endpoint, options)
   }
 
-  /**
-   * Execute a custom action declared on a model.
-   *
-   * Resolves the endpoint and HTTP method from the model's actions config,
-   * builds the payload using the model's convention (unless rawPayload), and
-   * dispatches through ApiClient.
-   */
-  async action(
-    model: string,
-    actionName: string,
-    options?: {
-      recordId?: string
-      /** Named path parameters for :param_name substitution. */
-      pathParams?: Record<string, string>
-      attributes?: Record<string, unknown>
-      params?: Record<string, unknown>
-      requestOptions?: ModelRequestOptions
-    }
-  ): Promise<Record<string, unknown>> {
-    const modelConfig = this._validateModel(model)
-
-    const { url, method } = this._resolver.resolveAction({
-      model,
-      modelConfig,
-      action: actionName,
-      recordId: options?.recordId,
-      pathParams: options?.pathParams,
-      parentPath: options?.requestOptions?.parentPath
-    })
-
-    // Build payload for body-bearing methods
-    let payload: Record<string, unknown> | undefined
-    if (options?.attributes && ['POST', 'PUT', 'PATCH'].includes(method)) {
-      payload = modelConfig.api?.actions?.[actionName]?.rawPayload
-        ? options.attributes
-        : this.buildPayload(model, modelConfig, options.attributes)
-    }
-
-    this._log('info', 'Executing action', {
-      model,
-      action: actionName,
-      method,
-      url,
-      impersonating: options?.requestOptions?.userId ?? null
-    })
-
-    const result = await this.dispatch(
-      method,
-      url,
-      payload,
-      options?.params,
-      options?.requestOptions
-    )
-
-    this._log('info', 'Action completed', { model, action: actionName })
-    return result
-  }
-
   // --- Accessors ---
 
   /** Access the underlying endpoint resolver (for advanced use cases). */
@@ -300,6 +242,14 @@ export class ModelService {
   /** Access the underlying API client. */
   get apiClient(): ApiClient {
     return this._apiClient
+  }
+
+  /**
+   * Read-only view of the models registry the service was constructed with.
+   * Part of the `ApiExtension` mixin contract.
+   */
+  get models(): ModelsRegistry {
+    return this._models
   }
 
   // --- Extension contract (stable; ApiExtension mixins compose these) ---

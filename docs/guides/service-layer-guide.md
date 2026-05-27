@@ -2,6 +2,8 @@
 
 This guide covers the two services that sit between MCP tools and the API client: `ModelService` for CRUD operations, and `SearchService` for search, lookup, and listing. Both compose lower-level primitives (EndpointResolver, Convention, SearchAdapter) into clean interfaces that tools delegate to.
 
+> **`ModelService.action()` moved to the [`custom-actions` ApiExtension](./api-extensions.md) in v0.44.0.** It's still callable on the same instance — but only when `customActionsExtension()` is registered on `ToolRegistry`, which contributes it as a mixin. The signature and behavior are unchanged.
+
 ## Table of Contents
 
 - [Overview](#overview)

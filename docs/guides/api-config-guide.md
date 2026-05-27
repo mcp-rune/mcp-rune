@@ -1,6 +1,8 @@
 # API Configuration Guide
 
-This guide covers the complete `static api` configuration on models and the services that consume it: EndpointResolver, ModelService, and ModelActionTool. It is the single reference for configuring how a model maps to API endpoints, HTTP methods, payload conventions, and custom actions.
+This guide covers the `static api` configuration on models and the services that consume it: EndpointResolver and ModelService. It is the single reference for configuring how a model maps to API endpoints, HTTP methods, and payload conventions.
+
+> **Custom actions (non-CRUD verbs) moved to the [`custom-actions` ApiExtension](./api-extensions.md) in v0.44.0.** Sections in this guide that reference `api.actions`, `ActionDefinition`, or `ModelActionTool` describe behavior that now lives in the extension. The configuration shape is unchanged — only the registration site moved. Register `customActionsExtension()` on `ToolRegistry` and declare actions on `static extensions['custom-actions']` via the `customActionsConfig()` helper.
 
 ## Table of Contents
 

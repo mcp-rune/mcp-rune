@@ -4,6 +4,61 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.44.0] — 2026-05-27
+
+### Added
+
+- **Built-in `customActionsExtension`** at `@mcp-rune/mcp-rune/api-extensions/custom-actions` — the first concrete `ApiExtension`, the opt-in replacement for the prior in-core custom-actions support. Same `ActionDefinition` shape, same Rails-style path resolution, same `:id` / `:param_name` substitution. Contributes the `model_action` MCP tool and the `action()` method on `ModelService` (as a registered mixin). Exports `customActionsExtension()`, `customActionsConfig()`, `getActionsConfig()`, `ActionDefinition`, `ActionResolver`, `UnknownActionError`, `ModelActionTool`.
+- **`EndpointResolver.applyNamespace()`** promoted from private to public — the stable namespace-application helper that the extension's `ActionResolver` composes alongside `pathForType()`. No behavior change.
+
+### Changed (BREAKING)
+
+- **Custom actions (non-CRUD verbs on models) move from core to an opt-in `ApiExtension`.** The `ActionDefinition` type, `api.actions` field on `ApiConfig`, `EndpointResolver.resolveAction()` (and `ActionContext`, `UnknownActionError`), `ModelService.action()`, and the `model_action` MCP tool are removed from the core entry points. The `model_action` tool is no longer registered unless `customActionsExtension()` is explicitly added to `ToolRegistry`, and per-model action config moves from `api.actions` to `extensions['custom-actions']`.
+
+  This is a deliberate framing change, not a refactor. `BaseModel` was bootstrapped to describe pure REST/CRUD; custom verbs were later bolted onto core, which meant every server — even one with no custom verbs — paid for the surface area, the tool registration, and the conceptual weight of the capability. Keeping it in core implied a model layer that does not exist (every API has actions); as an opt-in extension, the capability is explicit at the call site. This is the same framing change the v0.41.0 CIMD extraction made for the HTTP layer.
+
+  Migration:
+
+  ```diff
+   import { BaseModel } from '@mcp-rune/mcp-rune/core'
+  -// (no extension import needed previously)
+  +import {
+  +  customActionsExtension,
+  +  customActionsConfig
+  +} from '@mcp-rune/mcp-rune/api-extensions/custom-actions'
+
+   class Book extends BaseModel {
+     static api = { endpoint: 'books' }
+  -  static api.actions = {
+  -    publish: { path: ':id/publish' },
+  -    archive: { path: ':id/archive', method: 'PATCH' }
+  -  }
+  +  static extensions = {
+  +    'custom-actions': customActionsConfig({
+  +      actions: {
+  +        publish: { path: ':id/publish' },
+  +        archive: { path: ':id/archive', method: 'PATCH' }
+  +      }
+  +    })
+  +  }
+   }
+
+   new ToolRegistry({
+     toolClasses: DATA_TOOL_CLASSES,
+     models: MODEL_CLASSES,
+     createApiClient,
+  +  apiExtensions: {
+  +    'custom-actions': customActionsExtension()
+  +  }
+   })
+  ```
+
+  Resolution and dispatch behavior are unchanged when registered. Omit the extension to drop the `model_action` tool entirely; `list_models` will then omit the `actions` field on every model whose `extensions['custom-actions']` slice it would otherwise have read. Mixin-contributed `ModelService.action()` is also absent when the extension is omitted — calls throw `TypeError: service.action is not a function`.
+
+  See [`docs/guides/api-extensions.md`](docs/guides/api-extensions.md) for the authoring guide and stability promise.
+
+[0.44.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.43.0...v0.44.0
+
 ## [0.43.0] — 2026-05-27
 
 ### Added
