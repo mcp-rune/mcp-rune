@@ -3,13 +3,13 @@
  *
  * Logs inbound HTTP requests with one line per completed request:
  *
- *   ← POST /oauth/token 200 (157ms, upstream 132ms) grantType=authorization_code
+ *   ← [200] POST /oauth/token 157ms       grantType=authorization_code
  *
- * The `upstream Xms` segment appears only when the request triggered
- * at least one outbound call (tracked via the request-scoped
- * accumulator in `request-context.ts`). The handler -> upstream ->
- * response chain is therefore visible as: outbound `→` line, then this
- * inbound `←` line, with proxy overhead = total − upstream.
+ * The bracketed status code is colorized at format time (green 2xx,
+ * cyan 3xx, yellow 4xx, red 5xx). Upstream timing — when the request
+ * triggered at least one outbound call — moves to the logfmt tail
+ * (`upstreamMs=132 upstreamCalls=1`) where it sits with other dim
+ * metadata. Proxy overhead = total − upstreamMs.
  *
  * Slow requests get a deferred `▸ METHOD path` line after
  * DEFERRED_START_MS so a stalled request doesn't look like a hang.
@@ -47,16 +47,8 @@ function formatDuration(ms: number): string {
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(2)}s`
 }
 
-function formatLine(
-  method: string,
-  path: string,
-  status: number,
-  totalMs: number,
-  upstreamMs: number,
-  upstreamCalls: number
-): string {
-  const upstream = upstreamCalls > 0 ? `, upstream ${formatDuration(upstreamMs)}` : ''
-  return `← ${method} ${path} ${status} (${formatDuration(totalMs)}${upstream})`
+function formatLine(method: string, path: string, status: number, totalMs: number): string {
+  return `← [${status}] ${method} ${path} ${formatDuration(totalMs)}`
 }
 
 /** Express middleware that logs one line per request on `res.finish`. */
@@ -93,7 +85,7 @@ export function createRequestLoggerMiddleware(): (
         ...fields
       }
 
-      const message = formatLine(method, path, statusCode, totalMs, upstreamMs, upstreamCalls)
+      const message = formatLine(method, path, statusCode, totalMs)
 
       if (statusCode >= 500) {
         logger.error(message, meta)

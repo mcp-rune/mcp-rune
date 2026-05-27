@@ -43,6 +43,8 @@ import { SessionManager } from './session-manager.js'
 
 interface McpConfig {
   name: string
+  /** Optional version shown in the startup banner (Astro-style "vX.Y.Z" suffix). */
+  version?: string
   createServer: (options: {
     sessionId: string
     transport: string
@@ -337,13 +339,33 @@ export class HttpServer {
     this.httpServer = this.app.listen(this.port)
 
     this.httpServer.on('listening', () => {
-      logger.info(`${this.mcp.name} (Streamable HTTP, ${authMode}) started`, {
-        service: this.mcp.name,
-        port: this.port,
-        authMode,
-        mcpEndpoint: `http://localhost:${this.port}/mcp`,
-        healthEndpoint: `http://localhost:${this.port}/health`
-      })
+      const base = `http://localhost:${this.port}${this.pathPrefix}`
+      const mcpEndpoint = `${base}/mcp`
+      const healthEndpoint = `${base}/health`
+
+      if (logger.canPrintBanner()) {
+        const rows: Array<readonly [string, string]> = [
+          ['MCP', mcpEndpoint],
+          ['Health', healthEndpoint]
+        ]
+        if (this.oauth) {
+          rows.push(['OAuth', `${base}/.well-known/oauth-protected-resource`])
+        }
+        logger.printBanner({
+          name: this.mcp.name,
+          version: this.mcp.version,
+          readyMs: Math.round(process.uptime() * 1000),
+          rows
+        })
+      } else {
+        logger.info(`${this.mcp.name} (Streamable HTTP, ${authMode}) started`, {
+          service: this.mcp.name,
+          port: this.port,
+          authMode,
+          mcpEndpoint,
+          healthEndpoint
+        })
+      }
     })
 
     // Without this handler, a bind failure (EADDRINUSE, EACCES, …) raises

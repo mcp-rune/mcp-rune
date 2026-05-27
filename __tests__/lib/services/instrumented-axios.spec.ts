@@ -154,7 +154,7 @@ describe('lib/services/instrumented-axios', () => {
 
       expect(logger.info).toHaveBeenCalledTimes(1)
       const [message, meta] = logger.info.mock.calls[0]
-      expect(message).toMatch(/^→ POST https:\/\/auth\.example\/oauth\/token 200 \(\d+ms\)$/)
+      expect(message).toMatch(/^→ \[200] POST https:\/\/auth\.example\/oauth\/token \d+ms$/)
       expect(meta).toMatchObject({
         service: 'test',
         durationMs: expect.any(Number),
@@ -187,7 +187,7 @@ describe('lib/services/instrumented-axios', () => {
 
       expect(logger.error).toHaveBeenCalledTimes(1)
       const [message, meta] = logger.error.mock.calls[0]
-      expect(message).toMatch(/^✗ POST https:\/\/auth\.example\/oauth\/token 401 — .* \(\d+ms\)$/)
+      expect(message).toMatch(/^✗ \[401] POST https:\/\/auth\.example\/oauth\/token — .+ \d+ms$/)
       expect(meta).toMatchObject({ service: 'test', status: 401, durationMs: expect.any(Number) })
     })
 
@@ -203,7 +203,7 @@ describe('lib/services/instrumented-axios', () => {
       await expect(instance.post('https://auth.example/oauth/token', {})).rejects.toThrow()
 
       const [message] = logger.error.mock.calls[0]
-      expect(message).toMatch(/^✗ POST .* ERR — Network down \(\d+ms\)$/)
+      expect(message).toMatch(/^✗ \[ERR] POST .* — Network down \d+ms$/)
     })
 
     it('accumulates upstream duration inside a request scope', async () => {

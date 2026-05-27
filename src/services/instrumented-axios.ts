@@ -5,11 +5,15 @@
  * instance produced by `createInstrumentedAxios` emits one log line
  * per completed request:
  *
- *   → POST https://auth.example/oauth/token 200 (132ms) grantType=authorization_code
+ *   → [200] POST https://auth.example/oauth/token 132ms       grantType=authorization_code
  *
  * Failures (4xx/5xx or network error) render as:
  *
- *   ✗ POST https://auth.example/oauth/token 401 — Unauthorized (132ms)
+ *   ✗ [401] POST https://auth.example/oauth/token — Unauthorized 132ms
+ *   ✗ [ERR] POST https://auth.example/oauth/token — Network down 5ms
+ *
+ * The bracketed status badge is colorized at format time (green 2xx,
+ * cyan 3xx, yellow 4xx, red 5xx, dim ERR).
  *
  * Each instance carries its own `endpointLogs` allowlist describing
  * which request/response body fields to surface per endpoint. URLs not
@@ -164,7 +168,7 @@ function urlOf(config: AxiosRequestConfig | undefined): string {
 }
 
 function formatSuccessLine(config: AxiosRequestConfig, status: number, durationMs: number): string {
-  return `→ ${methodOf(config)} ${urlOf(config)} ${status} (${formatDuration(durationMs)})`
+  return `→ [${status}] ${methodOf(config)} ${urlOf(config)} ${formatDuration(durationMs)}`
 }
 
 function formatErrorLine(
@@ -174,7 +178,7 @@ function formatErrorLine(
   message: string
 ): string {
   const statusPart = status > 0 ? `${status}` : 'ERR'
-  return `✗ ${methodOf(config)} ${urlOf(config)} ${statusPart} — ${message} (${formatDuration(durationMs)})`
+  return `✗ [${statusPart}] ${methodOf(config)} ${urlOf(config)} — ${message} ${formatDuration(durationMs)}`
 }
 
 export function createInstrumentedAxios(opts: InstrumentedAxiosOptions = {}): AxiosInstance {

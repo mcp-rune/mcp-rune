@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.42.0] — 2026-05-27
+
+### Added
+
+- **Astro-style startup banner.** On TTY consoles, the `listening` handler now prints a multi-line banner — bold server name, dim `vX.Y.Z`, green `ready in Xms`, indented endpoint rows under a dim `┃` pipe — instead of the previous single-line `… started` info log. The structured "started" event is still emitted in JSON mode and under `NO_COLOR`, so Loki/Grafana queries are unaffected. `McpConfig` accepts an optional `version` field shown in the banner. New exports from `@mcp-rune/mcp-rune/services`: `canPrintBanner()`, `printBanner()`, `BannerInput`.
+- **Per-service tag colors.** Recurring service tags (`[startup]`, `[express]`, `[Sentry]`, `[oauth]`, `[langfuse]`) get curated colors that match their semantic role. Unknown tags fall through to a deterministic hash-based palette so new services pick up a stable color without registry maintenance. Scoped services (e.g. `startup:db`) share their parent's color so bursts read as one visual block. New export: `formatService()`.
+- **Bracketed status badges on HTTP lines.** Inbound and outbound HTTP log lines lead with `[200]` / `[3xx]` / `[4xx]` / `[5xx]` / `[ERR]` badges, colored green / cyan / yellow / red / dim respectively. Colorization is applied inside the text format (not at call sites), so file transports and JSON output remain ANSI-free. New export: `colorizeStatusBadge()`.
+
+### Changed
+
+- **Console log format trimmed for live-tail readability.** Console-only changes: the timestamp shrinks to `HH:mm:ss.SSS` (file/JSON keep the full date for archival queries), and the `INFO` / `DEBUG` level word is dropped from every line. `WARN` and `ERROR` keep a colored badge so severity stays visible even under `NO_COLOR`. JSON output and file transports are unchanged.
+- **HTTP request line format.** Inbound `← POST /oauth/token 200 (157ms, upstream 132ms)` becomes `← [200] POST /oauth/token 157ms`, with `upstreamMs` / `upstreamCalls` moving to the logfmt metadata tail (still structured in JSON). Outbound axios success lines are similarly reshaped to `→ [200] METHOD url Xms`; the error variant becomes `✗ [401] METHOD url — message Xms` (or `[ERR]` when no HTTP response was received). The leading `←` / `→` / `✗` symbols stay so direction remains readable at a glance.
+
+[0.42.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.41.1...v0.42.0
+
 ## [0.41.1] — 2026-05-27
 
 ### Docs

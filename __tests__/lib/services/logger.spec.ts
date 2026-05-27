@@ -138,7 +138,9 @@ describe('lib/services/logger', () => {
         app: 'engineer-mcp'
       })
 
-      expect(result).toContain('INFO')
+      // info-level lines no longer emit a `INFO` word (Astro-style: only
+      // warn/error carry a visible badge). Color does the level signaling.
+      expect(result).not.toContain('INFO')
       expect(result).toContain('[express]')
       expect(result).toContain('Request completed')
       expect(result).toContain('method=POST')
@@ -191,8 +193,8 @@ describe('lib/services/logger', () => {
         app: 'mcp-servers' // app is skipped, so metadata is effectively empty
       })
 
-      // Plain text mode (no ANSI) — exact match.
-      expect(result).toBe('2026-04-26 16:25:01.123 INFO  [test] No metadata')
+      // Plain text mode (no ANSI) — exact match. No `INFO` word on info lines.
+      expect(result).toBe('2026-04-26 16:25:01.123 [test] No metadata')
     })
 
     it('omits durationMs from logfmt tail (already embedded in the message)', () => {
@@ -211,7 +213,7 @@ describe('lib/services/logger', () => {
       // into the logfmt tail and duplicate it. JSON output (winston.format.json)
       // serializes the full info object unchanged, so structured queries on
       // durationMs still work.
-      expect(result).toBe('2026-04-26 16:25:01.123 INFO  [startup] ✓ Load configuration (42ms)')
+      expect(result).toBe('2026-04-26 16:25:01.123 [startup] ✓ Load configuration (42ms)')
       expect(result).not.toContain('durationMs=')
     })
 
@@ -219,19 +221,42 @@ describe('lib/services/logger', () => {
       const formatter = getTextFormatter()
       if (!formatter) return
 
-      // Pre-fix bug: `${svc}${req} ${message}` left a dangling space when svc
-      // was empty, producing `INFO   [Sentry]…` (three spaces). The array-join
-      // composition skips empty parts so the line stays tidy.
+      // The array-join composition skips empty parts so the line stays tidy
+      // even when service / requestId / level are all absent.
       const result = formatter({
         level: 'info',
         message: '[Sentry] Initialized for engineer-mcp@4.3.3',
         timestamp: '2026-04-26 16:25:01.123'
       })
 
-      expect(result).toBe(
-        '2026-04-26 16:25:01.123 INFO  [Sentry] Initialized for engineer-mcp@4.3.3'
-      )
-      expect(result).not.toMatch(/INFO {3,}/)
+      expect(result).toBe('2026-04-26 16:25:01.123 [Sentry] Initialized for engineer-mcp@4.3.3')
+      expect(result).not.toMatch(/ {2,}\[Sentry]/)
+    })
+
+    it('emits WARN badge only for warn-level lines', () => {
+      const formatter = getTextFormatter()
+      if (!formatter) return
+
+      const warnLine = formatter({
+        level: 'warn',
+        message: 'cache miss',
+        timestamp: '2026-04-26 16:25:01.123',
+        service: 'cache'
+      })
+      expect(warnLine).toBe('2026-04-26 16:25:01.123 WARN [cache] cache miss')
+    })
+
+    it('emits ERROR badge only for error-level lines', () => {
+      const formatter = getTextFormatter()
+      if (!formatter) return
+
+      const errLine = formatter({
+        level: 'error',
+        message: 'boom',
+        timestamp: '2026-04-26 16:25:01.123',
+        service: 'db'
+      })
+      expect(errLine).toBe('2026-04-26 16:25:01.123 ERROR [db] boom')
     })
   })
 
@@ -263,6 +288,108 @@ describe('lib/services/logger', () => {
 
     it('colorizePhaseSymbol() is a no-op when colored=false', () => {
       expect(logger.colorizePhaseSymbol('✓ done', false)).toBe('✓ done')
+    })
+
+    it('formatService() wraps the tag in brackets and colors known services', () => {
+      // Known services use the curated color map (deterministic).
+      expect(logger.formatService('express', true)).toBe('\x1b[32m[express]\x1b[0m')
+      expect(logger.formatService('startup', true)).toBe('\x1b[36m[startup]\x1b[0m')
+      // colored=false strips ANSI but still wraps in brackets.
+      expect(logger.formatService('express', false)).toBe('[express]')
+    })
+
+    it('formatService() shares the parent color for scoped services like startup:db', () => {
+      const parent = logger.formatService('startup', true)
+      const scoped = logger.formatService('startup:db', true)
+      // Same leading ANSI color, just a different tag body.
+      expect(parent.slice(0, 5)).toBe(scoped.slice(0, 5))
+      expect(scoped).toContain('[startup:db]')
+    })
+
+    it('formatService() falls back to a stable palette color for unknown services', () => {
+      const a1 = logger.formatService('random-service-xyz', true)
+      const a2 = logger.formatService('random-service-xyz', true)
+      expect(a1).toBe(a2) // deterministic across calls
+      expect(a1).toContain('[random-service-xyz]')
+      // Wrapped in some ANSI color escape from the palette.
+      // eslint-disable-next-line no-control-regex
+      expect(a1).toMatch(/^\x1b\[\d+m\[random-service-xyz]\x1b\[0m$/)
+    })
+
+    it('colorizeStatusBadge() colors a [NNN] badge after a leading ←/→/✗ symbol', () => {
+      expect(logger.colorizeStatusBadge('← [200] GET /health 2ms', true)).toBe(
+        '← \x1b[32m[200]\x1b[0m GET /health 2ms'
+      )
+      expect(logger.colorizeStatusBadge('→ [302] GET /r 5ms', true)).toBe(
+        '→ \x1b[36m[302]\x1b[0m GET /r 5ms'
+      )
+      expect(logger.colorizeStatusBadge('← [404] GET /missing 5ms', true)).toBe(
+        '← \x1b[33m[404]\x1b[0m GET /missing 5ms'
+      )
+      expect(logger.colorizeStatusBadge('← [503] GET / 12ms', true)).toBe(
+        '← \x1b[31m[503]\x1b[0m GET / 12ms'
+      )
+    })
+
+    it('colorizeStatusBadge() dims an [ERR] badge (no HTTP response)', () => {
+      expect(logger.colorizeStatusBadge('✗ [ERR] POST /x — Network down 5ms', true)).toBe(
+        '✗ \x1b[2m[ERR]\x1b[0m POST /x — Network down 5ms'
+      )
+    })
+
+    it('colorizeStatusBadge() leaves messages without the prefix pattern untouched', () => {
+      expect(logger.colorizeStatusBadge('Plain message [200]', true)).toBe('Plain message [200]')
+      expect(logger.colorizeStatusBadge('▸ GET /test', true)).toBe('▸ GET /test')
+    })
+
+    it('colorizeStatusBadge() is a no-op when colored=false', () => {
+      expect(logger.colorizeStatusBadge('← [200] GET / 2ms', false)).toBe('← [200] GET / 2ms')
+    })
+  })
+
+  describe('printBanner', () => {
+    it('writes a multi-line Astro-style block to stderr', () => {
+      const writes: string[] = []
+      const spy = vi.spyOn(process.stderr, 'write').mockImplementation((chunk: any) => {
+        writes.push(String(chunk))
+        return true
+      })
+
+      logger.printBanner({
+        name: 'mcp-rune',
+        version: '0.41.1',
+        readyMs: 124,
+        rows: [
+          ['MCP', 'http://localhost:3000/mcp'],
+          ['Health', 'http://localhost:3000/health']
+        ]
+      })
+
+      spy.mockRestore()
+
+      const out = writes.join('')
+      expect(out).toContain('mcp-rune')
+      expect(out).toContain('v0.41.1')
+      expect(out).toContain('ready in 124 ms')
+      expect(out).toContain('┃')
+      expect(out).toContain('MCP')
+      expect(out).toContain('http://localhost:3000/mcp')
+    })
+
+    it('omits the version segment when no version is provided', () => {
+      const writes: string[] = []
+      const spy = vi.spyOn(process.stderr, 'write').mockImplementation((chunk: any) => {
+        writes.push(String(chunk))
+        return true
+      })
+
+      logger.printBanner({ name: 'mcp-rune', readyMs: 42, rows: [] })
+      spy.mockRestore()
+
+      const out = writes.join('')
+      expect(out).toContain('mcp-rune')
+      expect(out).not.toMatch(/v\d/)
+      expect(out).toContain('ready in 42 ms')
     })
   })
 
