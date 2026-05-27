@@ -31,22 +31,30 @@ What lives where:
 The published `mcp-rune` package is organized by capability:
 
 ```
-mcp-rune/                              (the framework)
+mcp-rune/                                  (the framework)
     │
-    ├─ core                            BaseModel, ApiConfig, helpers, validators
-    ├─ server                          StdioServer, HttpServer, createServer
-    ├─ tools                           BaseTool, CRUD tools, categories
-    ├─ mcp/services                    ModelService, EndpointResolver
-    ├─ prompts                         BasePrompt, strategies, pipeline
-    ├─ apps                            AppRegistry, 6 generic app factories
-    ├─ domain                          Workflows, knowledge, business rules
-    ├─ search                          SearchService, SearchAdapter
-    ├─ oauth2                          OAuthService, token store
-    ├─ services                        Logger, tracing, error tracking
-    └─ db                              PostgreSQL client
+    ├─ core                                BaseModel, ApiClient, helpers, validators,
+    │                                      derived-fields
+    ├─ server                              StdioServer, HttpServer, createServer
+    ├─ tools                               BaseTool, CRUD tools, categories
+    ├─ mcp/services                        ModelService, EndpointResolver
+    ├─ prompts                             BasePrompt, strategies, pipeline
+    ├─ apps                                AppRegistry, generic app factories
+    ├─ domain                              Workflows, knowledge, business rules
+    ├─ extensions                          HttpExtension framework
+    │   └─ cimd                            Built-in HTTP extension (CIMD)
+    ├─ api-extensions                      ApiExtension framework
+    │   ├─ custom-actions                  Built-in: non-CRUD verbs on models
+    │   └─ search                          Built-in: SearchService, adapters,
+    │                                      search_records + get_filters_guide tools
+    ├─ oauth2                              OAuthService, token store
+    ├─ services                            Logger, tracing, error tracking
+    └─ db                                  PostgreSQL client
 ```
 
-These are exposed as subpath exports — `mcp-rune/core`, `mcp-rune/server`, `mcp-rune/tools`, etc. — so you only import the surface you need.
+These are exposed as subpath exports — `mcp-rune/core`, `mcp-rune/server`, `mcp-rune/tools`, `mcp-rune/api-extensions/search`, etc. — so you only import the surface you need.
+
+> The `api-extensions/*` subpaths are opt-in: importing the _module_ gets you the types and services (`SearchService` etc.), but the contributed MCP tools (`search_records`, `model_action`, `get_filters_guide`) only register when you also pass the extension to `ToolRegistry({ apiExtensions: {...} })`. Pure-REST servers can omit them entirely. See the [Authoring Extensions Guide](./authoring-extensions-guide.md) and [API Extensions Guide](./api-extensions.md).
 
 ## Example: the bookshelf
 

@@ -308,10 +308,12 @@ try {
 
 ### Setup
 
-```typescript
-import { SearchService, SearchAdapter, RailsSearchAdapter } from '@mcp-rune/mcp-rune/search'
+The recommended construction site is the shared `createSearchService` factory:
 
-const searchService = new SearchService(apiClient, {
+```typescript
+import { createSearchService, RailsSearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
+
+const searchService = createSearchService(apiClient, {
   searchGroups: {
     // Optional — named group search endpoints
     catalogue: {
@@ -324,22 +326,28 @@ const searchService = new SearchService(apiClient, {
 })
 ```
 
+Direct `new SearchService(apiClient, { ... })` is still supported for advanced use, but the factory is the single source of truth used by `SearchRecordsTool`, `apps/registry`, and `analysis-ingest-tool` — using it everywhere means future constructor changes ripple through one edit.
+
 ### Search Resolution Chain
 
-`searchService.search(ModelClass, query, { page, perPage, filters })` resolves the search endpoint using a 3-tier chain:
+`searchService.search(ModelClass, query, { page, perPage, filters })` resolves the search endpoint using a 3-tier chain. Internally it reads the model's search config through `getSearchConfig(ModelClass)` — the structural reader that works on `ModelConfig`, `AppModelClass`, and `SearchModelClass` uniformly:
 
-1. **Direct endpoint** — `model.search.query.endpoint` exists → POST/GET to that endpoint
-2. **Group search** — `model.search.query.group` exists → POST to shared group endpoint, scoped to this model's type
+1. **Direct endpoint** — `searchCfg.query.endpoint` exists → POST/GET to that endpoint
+2. **Group search** — `searchCfg.query.group` exists → POST to shared group endpoint, scoped to this model's type
 3. **List fallback** — neither configured → GET listing with first lookup field as filter
 
 ```typescript
+import { searchConfig } from '@mcp-rune/mcp-rune/api-extensions/search'
+
 // Path 1: Direct search endpoint
 class Activity extends BaseModel {
   static api = { endpoint: 'activities' }
-  static search = {
-    query: { endpoint: 'activities/search', method: 'POST', queryParam: 'q' },
-    filters: { theme_id: { type: 'relation' } },
-    lookup: { fields: ['title'] }
+  static extensions = {
+    search: searchConfig({
+      query: { endpoint: 'activities/search', method: 'POST', queryParam: 'q' },
+      filters: { theme_id: { type: 'relation' } },
+      lookup: { fields: ['title'] }
+    })
   }
 }
 const results = await searchService.search(Activity, 'React', {
@@ -352,9 +360,11 @@ const results = await searchService.search(Activity, 'React', {
 // Path 2: Group search (multiple models share one search endpoint)
 class Title extends BaseModel {
   static api = { endpoint: 'titles' }
-  static search = {
-    query: { group: 'catalogue', modelName: ['episode', 'feature'] },
-    lookup: { fields: ['external_id'] }
+  static extensions = {
+    search: searchConfig({
+      query: { group: 'catalogue', modelName: ['episode', 'feature'] },
+      lookup: { fields: ['external_id'] }
+    })
   }
 }
 const results = await searchService.search(Title, 'drama')
@@ -363,7 +373,9 @@ const results = await searchService.search(Title, 'drama')
 // Path 3: List fallback (no query config)
 class Platform extends BaseModel {
   static api = { endpoint: 'platforms' }
-  static search = { lookup: { fields: ['name'] } }
+  static extensions = {
+    search: searchConfig({ lookup: { fields: ['name'] } })
+  }
 }
 const results = await searchService.search(Platform, 'Netflix')
 // → GET /platforms?name=Netflix&page=1&per_page=20
@@ -373,17 +385,19 @@ const results = await searchService.search(Platform, 'Netflix')
 
 `searchService.lookup(ModelClass, query, { perPage })` resolves typeahead/autocomplete with its own 3-tier chain:
 
-1. **Dedicated lookup endpoint** — `model.search.lookup.endpoint` exists → GET to that endpoint
-2. **Search fallback** — `model.search.query` exists → delegates to `search()`
+1. **Dedicated lookup endpoint** — `searchCfg.lookup.endpoint` exists → GET to that endpoint
+2. **Search fallback** — `searchCfg.query` exists → delegates to `search()`
 3. **List fallback** — neither configured → GET listing with first lookup field
 
 ```typescript
 // Path 1: Dedicated lookup endpoint
 class Brand extends BaseModel {
   static api = { endpoint: 'brands' }
-  static search = {
-    query: { group: 'catalogue' },
-    lookup: { endpoint: 'brands/autocomplete', fields: ['external_id'] }
+  static extensions = {
+    search: searchConfig({
+      query: { group: 'catalogue' },
+      lookup: { endpoint: 'brands/autocomplete', fields: ['external_id'] }
+    })
   }
 }
 const results = await searchService.lookup(Brand, 'BBC')
@@ -391,9 +405,11 @@ const results = await searchService.lookup(Brand, 'BBC')
 
 // Path 2: Falls through to search()
 class Activity extends BaseModel {
-  static search = {
-    query: { endpoint: 'activities/search', method: 'POST', queryParam: 'q' },
-    lookup: { fields: ['title'] }
+  static extensions = {
+    search: searchConfig({
+      query: { endpoint: 'activities/search', method: 'POST', queryParam: 'q' },
+      lookup: { fields: ['title'] }
+    })
   }
 }
 const results = await searchService.lookup(Activity, 'Haskell')
@@ -434,14 +450,14 @@ List uses the model's Convention to normalize the response into `{ records, pagi
 
 Request bodies are built by pluggable adapters. The adapter is selected at three levels (highest priority first):
 
-1. **Per-model** — `model.search.query.adapter`
+1. **Per-model** — `searchCfg.query.adapter` (i.e. the `adapter` field inside `searchConfig({...}).query`)
 2. **Per-group** — `searchGroup.adapter`
 3. **Server-wide** — `defaultAdapter` in the SearchService constructor
 
 The base `SearchAdapter` spreads filters flat into the body. For Rails APIs that nest filters, use `RailsSearchAdapter`:
 
 ```typescript
-import { RailsSearchAdapter } from '@mcp-rune/mcp-rune/search'
+import { RailsSearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
 
 // Nests filters under a key + flattens range mappings
 const adapter = new RailsSearchAdapter({ filtersParam: 'filters' })
@@ -489,7 +505,10 @@ Construct both services in your tool registry and pass them as dependencies:
 
 ```typescript
 import { ModelService } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
-import { SearchService, RailsSearchAdapter } from '@mcp-rune/mcp-rune/search'
+import {
+  createSearchService,
+  RailsSearchAdapter
+} from '@mcp-rune/mcp-rune/api-extensions/search'
 
 async _createAuthenticatedInstance(ToolClass, getAccessToken) {
   const token = await getAccessToken()
@@ -502,7 +521,7 @@ async _createAuthenticatedInstance(ToolClass, getAccessToken) {
     namespace: 'api/v1'
   })
 
-  const searchService = new SearchService(apiClient, {
+  const searchService = createSearchService(apiClient, {
     searchGroups: this.serverContext.searchGroups,
     defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
   })
