@@ -131,7 +131,7 @@ export class ModelService {
     } catch (error) {
       throw error instanceof MissingParentError ? this._enrichMissingParentError(error) : error
     }
-    const payload = this._buildPayload(model, modelConfig, attributes)
+    const payload = this.buildPayload(model, modelConfig, attributes)
 
     this._log('info', 'Creating model', { model, impersonating: options?.userId ?? null })
     const data = await this._apiClient.post(endpoint, payload, options)
@@ -199,7 +199,7 @@ export class ModelService {
       { model, modelConfig, recordId },
       'update' as CrudAction
     )
-    const payload = this._buildPayload(model, modelConfig, attributes)
+    const payload = this.buildPayload(model, modelConfig, attributes)
 
     this._log('info', 'Updating model', {
       model,
@@ -267,7 +267,7 @@ export class ModelService {
     if (options?.attributes && ['POST', 'PUT', 'PATCH'].includes(method)) {
       payload = modelConfig.api?.actions?.[actionName]?.rawPayload
         ? options.attributes
-        : this._buildPayload(model, modelConfig, options.attributes)
+        : this.buildPayload(model, modelConfig, options.attributes)
     }
 
     this._log('info', 'Executing action', {
@@ -278,7 +278,7 @@ export class ModelService {
       impersonating: options?.requestOptions?.userId ?? null
     })
 
-    const result = await this._dispatch(
+    const result = await this.dispatch(
       method,
       url,
       payload,
@@ -302,10 +302,15 @@ export class ModelService {
     return this._apiClient
   }
 
-  // --- Internal helpers ---
+  // --- Extension contract (stable; ApiExtension mixins compose these) ---
 
-  /** Dispatch an HTTP request to the appropriate ApiClient method. */
-  private async _dispatch(
+  /**
+   * Dispatch an HTTP request to the appropriate ApiClient method.
+   *
+   * Public so ApiExtension mixins can reuse it for non-CRUD verbs without
+   * touching the underlying ApiClient directly.
+   */
+  async dispatch(
     method: string,
     url: string,
     payload?: Record<string, unknown>,
@@ -328,26 +333,13 @@ export class ModelService {
     }
   }
 
-  /** Validate model exists and return its config. */
-  private _validateModel(model: string): ModelConfig {
-    const config = this._models[model]
-    if (!config) {
-      throw new UnknownModelError(model, Object.keys(this._models))
-    }
-    return config
-  }
-
-  /** Validate model exists and is writable. */
-  private _validateWritable(model: string): ModelConfig {
-    const config = this._validateModel(model)
-    if (config.api?.readOnly) {
-      throw new ModelReadOnlyError(model, config.description)
-    }
-    return config
-  }
-
-  /** Build request payload using convention. */
-  private _buildPayload(
+  /**
+   * Build a request payload through the model's convention.
+   *
+   * Public so ApiExtension mixins can reuse the convention pipeline
+   * (association resolution + body wrapping) instead of bypassing it.
+   */
+  buildPayload(
     model: string,
     modelConfig: ModelConfig,
     attrs: Record<string, unknown>
@@ -365,6 +357,26 @@ export class ModelService {
     }
 
     return convention.buildRequestPayload(model, finalAttrs)
+  }
+
+  // --- Internal helpers ---
+
+  /** Validate model exists and return its config. */
+  private _validateModel(model: string): ModelConfig {
+    const config = this._models[model]
+    if (!config) {
+      throw new UnknownModelError(model, Object.keys(this._models))
+    }
+    return config
+  }
+
+  /** Validate model exists and is writable. */
+  private _validateWritable(model: string): ModelConfig {
+    const config = this._validateModel(model)
+    if (config.api?.readOnly) {
+      throw new ModelReadOnlyError(model, config.description)
+    }
+    return config
   }
 
   /** Get the convention for a model. */
