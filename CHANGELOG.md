@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.46.0] — 2026-05-27
+
+### Changed (BREAKING)
+
+- **`ApiClient`, `SearchApiClient`, and `RequestOptions` move from `@mcp-rune/mcp-rune/search` to `@mcp-rune/mcp-rune/core`.** They are the universal CRUD client interface (used by `ModelService`, every tool that requires auth, every MCP App, and the `LoggingApiClient` wrapper) and were located under `src/mcp/search/` only because `SearchService` happened to be the first non-CRUD consumer to abstract over them. The location was misleading — `ApiClient` has nothing intrinsically to do with search. New home: `src/core/api-client.ts`; new public export: `@mcp-rune/mcp-rune/core`.
+
+  Migration:
+
+  ```diff
+  -import type { ApiClient, RequestOptions, SearchApiClient } from '@mcp-rune/mcp-rune/search'
+  +import type { ApiClient, RequestOptions, SearchApiClient } from '@mcp-rune/mcp-rune/core'
+  ```
+
+  The `@mcp-rune/mcp-rune/search` export keeps `SearchService`, `SearchAdapter`, `RailsSearchAdapter`, `PaginationInfo`, `SearchGroup`, `SearchModelClass`, and `SearchResult` — the actually search-specific surface.
+
+- **`resolveDerivedFields` and `ModelWithDerivedAttrs` move from `src/mcp/apps/derived-fields` to `src/core/derived-fields`.** The utility is consumed by MCP apps (`list-view`, `search-view`) _and_ by the `search_records` ApiExtension tool — cross-feature use. Living inside the `apps/` directory misrepresented its scope. Now re-exported from `@mcp-rune/mcp-rune/core`.
+
+  The function signature loosens too: instead of requiring an `AppModelClass`, it accepts any object matching the minimal `ModelWithDerivedAttrs` shape (`{ attributes?: Record<string, { derived?: { from, field } }> }`). All existing call sites continue to satisfy it — `AppModelClass`, `ModelConfig`, and `BaseModel` subclasses all qualify.
+
+  Internal-only migration (no public consumers were importing this directly).
+
+### Why this is a first step
+
+This is PR A of a 3-PR plan to complete the search extension extraction. The misplaced cross-cutting types (`ApiClient`) and the misplaced cross-cutting util (`derived-fields`) needed to come out of the search and apps directories first, so that the next PRs — moving `SearchService` and its types into the search extension — can do so cleanly without dragging non-search infrastructure along.
+
+[0.46.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.45.0...v0.46.0
+
 ## [0.45.0] — 2026-05-27
 
 ### Added

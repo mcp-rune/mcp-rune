@@ -41,9 +41,9 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
+import { resolveDerivedFields } from '#src/core/derived-fields.js'
 import { pickFields } from '#src/core/helpers.js'
 import type { ApiExtension } from '#src/mcp/api-extensions/types.js'
-import { resolveDerivedFields } from '#src/mcp/apps/derived-fields.js'
 import { SearchService } from '#src/mcp/search/search-service.js'
 import type { PaginationInfo, SearchConfig } from '#src/mcp/search/types.js'
 import type {

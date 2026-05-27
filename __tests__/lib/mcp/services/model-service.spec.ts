@@ -1,5 +1,5 @@
+import type { ApiClient } from '../../../../src/core/api-client.js'
 import { jsonApiConvention } from '../../../../src/mcp/api-conventions/index.js'
-import type { ApiClient } from '../../../../src/mcp/search/types.js'
 import {
   MissingRequiredFieldsError,
   ModelReadOnlyError,

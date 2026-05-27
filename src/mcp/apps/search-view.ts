@@ -12,7 +12,7 @@ import path from 'node:path'
 
 import { z } from 'zod'
 
-import { resolveDerivedFields } from '#src/mcp/apps/derived-fields.js'
+import { resolveDerivedFields } from '#src/core/derived-fields.js'
 import { appResponseMeta, extractIds, formatAppSummary } from '#src/mcp/apps/format-summary.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
 import {

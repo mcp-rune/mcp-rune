@@ -11,7 +11,8 @@
  *   // All calls through `logged` now emit debug logs
  */
 
-import type { ApiClient, RequestOptions } from '../search/types.js'
+import type { ApiClient, RequestOptions } from '#src/core/api-client.js'
+
 import type { ToolLogger } from './base-tool.js'
 
 const MAX_LOG_LENGTH = 2000

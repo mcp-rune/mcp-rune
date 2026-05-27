@@ -14,9 +14,20 @@
  * then after resolution the record will have:
  *
  *   { title_name: "Breaking Bad", platform_name: "Netflix", ... }
+ *
+ * Lives in `core` because it is consumed across feature boundaries: by MCP
+ * apps (`list-view`, `search-view`) and by the `search` ApiExtension's
+ * `search_records` tool. Decoupled from any specific model-shape import.
  */
 
-import type { AppModelClass } from './types.js'
+/**
+ * Minimal shape this function needs to walk. Any model class with attributes
+ * whose entries optionally carry a `derived: { from, field }` is acceptable —
+ * including `AppModelClass`, `ModelConfig`, and `BaseModel` subclasses.
+ */
+export interface ModelWithDerivedAttrs {
+  attributes?: Record<string, { derived?: { from: string; field: string } }>
+}
 
 /**
  * Resolve derived fields on an array of records using model attribute metadata.
@@ -26,7 +37,7 @@ import type { AppModelClass } from './types.js'
  */
 export function resolveDerivedFields(
   records: Record<string, unknown>[],
-  ModelClass: AppModelClass
+  ModelClass: ModelWithDerivedAttrs
 ): Record<string, unknown>[] {
   const attrs = ModelClass.attributes
   if (!attrs) return records

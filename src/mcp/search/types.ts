@@ -10,45 +10,6 @@ import type { BaseConvention } from '#src/mcp/api-conventions/base-convention.js
 import type { SearchAdapter } from './search-adapter.js'
 
 // ============================================================================
-// API Client
-// ============================================================================
-
-/** Options passed to API client methods (e.g., userId impersonation). */
-export interface RequestOptions {
-  userId?: string
-  [key: string]: unknown
-}
-
-/** Full CRUD API client interface used across tools, apps, and search. */
-export interface ApiClient {
-  baseUrl?: string
-  get(
-    url: string,
-    params?: Record<string, unknown>,
-    options?: RequestOptions
-  ): Promise<Record<string, unknown>>
-  post(
-    url: string,
-    data?: Record<string, unknown>,
-    options?: RequestOptions
-  ): Promise<Record<string, unknown>>
-  put(
-    url: string,
-    data?: Record<string, unknown>,
-    options?: RequestOptions
-  ): Promise<Record<string, unknown>>
-  patch(
-    url: string,
-    data?: Record<string, unknown>,
-    options?: RequestOptions
-  ): Promise<Record<string, unknown>>
-  delete(url: string, options?: RequestOptions): Promise<Record<string, unknown>>
-}
-
-/** Minimal read-only subset used by SearchService. */
-export type SearchApiClient = Pick<ApiClient, 'get' | 'post'>
-
-// ============================================================================
 // Model search configuration (declared on model classes)
 // ============================================================================
 

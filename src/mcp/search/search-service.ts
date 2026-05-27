@@ -24,11 +24,12 @@
  * CRUD operations still use apiClient directly via Model.endpoint.
  */
 
+import type { SearchApiClient } from '#src/core/api-client.js'
+
 import { defaultConvention } from '../api-conventions/index.js'
 import { SearchAdapter } from './search-adapter.js'
 import type {
   PaginationInfo,
-  SearchApiClient,
   SearchConfig,
   SearchGroup,
   SearchModelClass,

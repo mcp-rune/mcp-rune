@@ -13,10 +13,10 @@ import path from 'node:path'
 
 import { z } from 'zod'
 
+import type { SearchApiClient } from '#src/core/api-client.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
 import { createSelectionTools } from '#src/mcp/apps/selection-tools.js'
 import type { SearchService } from '#src/mcp/search/search-service.js'
-import type { SearchApiClient } from '#src/mcp/search/types.js'
 import * as logger from '#src/services/logger.js'
 
 import type { AppModelClass, ToolResult } from './types.js'
