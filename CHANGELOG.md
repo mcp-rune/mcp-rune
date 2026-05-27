@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.43.0] — 2026-05-27
+
+### Added
+
+- **`ApiExtension` interface and `apiExtensions` config on `ToolRegistry`** — opt-in model/API-layer extensions that contribute MCP tools and `ModelService` methods on top of the built-in CRUD pipeline. Extensions receive a narrowed context object (`name`, `models`, `serverContext`, `logger`, `registerTool`, `registerModelServiceMixin`) — not raw access to `ToolRegistry` internals — and registration is validated synchronously at boot: tool-name collisions across core and other extensions throw with both extension keys in the error. Sibling pattern to `HttpExtension` but scoped to the tool registry, so it works uniformly in stdio mode. No built-in API extensions land in this release; the framework is in place ahead of the upcoming `custom-actions` and `search` extractions. New package export: `@mcp-rune/mcp-rune/api-extensions` (types). Authoring guide at [`docs/guides/api-extensions.md`](docs/guides/api-extensions.md).
+- **`static extensions: Record<string, unknown>` slot on `BaseModel`** — the per-model bag where each `ApiExtension` reads its own configuration slice via a typed helper it exports. Bag is a namespaced map (e.g. `extensions: { 'custom-actions': customActionsConfig({...}) }`) so extensions can never collide on config keys and each extension's config shape can evolve independently of core. See the "Why the namespaced bag?" section of the new guide for the rationale.
+- **`ModelService.dispatch()` and `ModelService.buildPayload()` are now public** — the stable mixin contract `ApiExtension` authors compose for non-CRUD verbs. Previously `_dispatch` / `_buildPayload`; renamed and exposed without changing behavior. The `endpointResolver` and `apiClient` getters were already public and complete the contract.
+
+[0.43.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.42.0...v0.43.0
+
 ## [0.42.0] — 2026-05-27
 
 ### Added

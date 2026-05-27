@@ -2,6 +2,7 @@ import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 export type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
+import type { ModelServiceMixin } from '#src/mcp/api-extensions/types.js'
 import type { ApiClient, RequestOptions } from '#src/mcp/search/types.js'
 import { ModelService } from '#src/mcp/services/model-service.js'
 import { storeOperation } from '#src/services/vector-storage.js'
@@ -98,6 +99,12 @@ export interface ModelConfig {
   associations?: AssociationConfig & {
     custom?: Record<string, Record<string, unknown>>
   }
+  /**
+   * Opt-in extension configs, keyed by extension name. Read by each registered
+   * `ApiExtension` via its typed `get<X>Config(modelConfig)` helper.
+   * See `docs/guides/api-extensions.md`.
+   */
+  extensions?: Record<string, unknown>
   [key: string]: unknown
 }
 
@@ -113,6 +120,12 @@ export interface ToolDependencies {
   promptRegistry?: PromptRegistry
   serverContext?: ServerContext
   domainRegistry?: DomainRegistry
+  /**
+   * Mixins contributed by registered `ApiExtension`s. Applied to the lazily
+   * constructed `ModelService` so extension methods are callable on the
+   * instance. Set by `ToolRegistry` — tools should not populate this.
+   */
+  modelServiceMixins?: ModelServiceMixin[]
 }
 
 /** Tool response content item */
@@ -206,6 +219,7 @@ export class BaseTool {
   _extra?: ToolHandlerExtra
 
   private _modelService: ModelService | undefined
+  private _modelServiceMixins: ModelServiceMixin[] | undefined
 
   constructor(dependencies: ToolDependencies = {}) {
     this.apiClient = dependencies.apiClient
@@ -215,20 +229,28 @@ export class BaseTool {
     this.promptRegistry = dependencies.promptRegistry
     this.serverContext = dependencies.serverContext ?? {}
     this.domainRegistry = dependencies.domainRegistry
+    this._modelServiceMixins = dependencies.modelServiceMixins
   }
 
   /**
    * ModelService instance for CRUD operations.
    * Lazily constructed from apiClient + models when not explicitly injected.
+   * Registered `ApiExtension` mixins are applied on first access.
    */
   get modelService(): ModelService | undefined {
     if (this._modelService) return this._modelService
     if (this.apiClient) {
-      this._modelService = new ModelService({
+      const service = new ModelService({
         apiClient: this.apiClient,
         models: this.models,
         logger: this.logger
       })
+      if (this._modelServiceMixins?.length) {
+        for (const mixin of this._modelServiceMixins) {
+          Object.assign(service, mixin(service))
+        }
+      }
+      this._modelService = service
     }
     return this._modelService
   }

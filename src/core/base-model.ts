@@ -104,6 +104,17 @@ export class BaseModel {
   static api: ApiConfig = { endpoint: '', convention: jsonApiConvention }
   static search: SearchConfig | null = null
   static associations: AssociationConfig = {}
+  /**
+   * Opt-in extension configs, keyed by extension name.
+   *
+   * Each registered `ApiExtension` reads its own slice via a typed helper it
+   * exports (e.g. `customActionsConfig({...})`). Authors should never write
+   * raw object literals here — always use the helper, which provides full
+   * type safety at the call site.
+   *
+   * See `docs/guides/api-extensions.md` for the rationale.
+   */
+  static extensions: Record<string, unknown> = {}
 
   // --- Static getters ---
 

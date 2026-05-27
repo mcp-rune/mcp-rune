@@ -34,6 +34,11 @@
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
+import type {
+  ApiExtensionContext,
+  ApiExtensionMap,
+  ModelServiceMixin
+} from '#src/mcp/api-extensions/types.js'
 import * as logger from '#src/services/logger.js'
 import * as tracing from '#src/services/tracing.js'
 
@@ -120,6 +125,20 @@ export interface ToolRegistryConfig {
    * Tracing wraps the entire chain externally via traceToolCall.
    */
   interceptors?: ToolInterceptor[]
+
+  /**
+   * Opt-in `ApiExtension`s. Each extension may contribute MCP tools and
+   * `ModelService` mixin methods. Registered synchronously at construction:
+   * capability validation and tool-name collision detection happen here, so
+   * misconfiguration surfaces at boot rather than as a missing tool at runtime.
+   *
+   * Keys are user-chosen identifiers used for log lines and the dedupe
+   * primitive (object semantics guarantee key uniqueness). Built-in
+   * extensions document their conventional key.
+   *
+   * See `docs/guides/api-extensions.md`.
+   */
+  apiExtensions?: ApiExtensionMap
 }
 
 // ============================================================================
@@ -138,9 +157,12 @@ export class ToolRegistry {
   private _gates: Record<string, boolean>
   private _interceptors: ToolInterceptor[]
   private _enabledTools: Set<string> | null = null
+  private _modelServiceMixins: ModelServiceMixin[] = []
+  /** Tracks which extension contributed each tool name, for collision diagnostics. */
+  private _toolOwners: Map<string, string> = new Map()
 
   constructor(config: ToolRegistryConfig) {
-    this._toolClasses = config.toolClasses
+    this._toolClasses = { ...config.toolClasses }
     this._models = config.models
     this._logger = config.logger ?? logger
     this._promptRegistry = config.promptRegistry
@@ -149,6 +171,61 @@ export class ToolRegistry {
     this._gates = config.gates ?? {}
     this._interceptors = config.interceptors ?? []
     this.serverContext = (config.serverContext as Record<string, unknown>) ?? {}
+
+    if (config.apiExtensions) {
+      this._applyApiExtensions(config.apiExtensions)
+    }
+  }
+
+  /**
+   * Register opt-in `ApiExtension`s synchronously at construction.
+   *
+   * Validates `requires` capabilities, collects contributed tools (throwing
+   * on tool-name collisions with both extension keys in the message), and
+   * collects `ModelService` mixins (which are applied lazily when each tool
+   * instance's `modelService` getter is first read).
+   *
+   * Errors are thrown synchronously so misconfiguration surfaces at boot.
+   */
+  private _applyApiExtensions(extensions: ApiExtensionMap): void {
+    for (const [name, extension] of Object.entries(extensions)) {
+      // Capability validation: reserved for future use; the type is `never`,
+      // so any non-empty `requires` array is by definition unsatisfiable today.
+      const required = extension.requires ?? []
+      for (const capability of required) {
+        throw new Error(
+          `ApiExtension "${name}" requires capability "${capability as string}", ` +
+            `which is not provided by ToolRegistry.`
+        )
+      }
+
+      extension.register({
+        name,
+        models: this._models,
+        serverContext: this.serverContext as ServerContext,
+        logger: this._logger as unknown as ApiExtensionContext['logger'],
+        registerTool: (toolName, ToolCls) => {
+          const existingOwner = this._toolOwners.get(toolName)
+          if (toolName in this._toolClasses) {
+            const owner = existingOwner ?? '<core>'
+            throw new Error(
+              `ApiExtension "${name}" attempted to register tool "${toolName}", ` +
+                `which is already registered by "${owner}". Tool names must be globally unique.`
+            )
+          }
+          this._toolClasses[toolName] = ToolCls
+          this._toolOwners.set(toolName, name)
+        },
+        registerModelServiceMixin: (mixin) => {
+          this._modelServiceMixins.push(mixin)
+        }
+      })
+
+      this._logger.info(`ApiExtension "${name}" registered`, {
+        service: 'tool-registry',
+        extensionName: name
+      })
+    }
   }
 
   /**
@@ -255,7 +332,8 @@ export class ToolRegistry {
       models: this._models,
       promptRegistry: this._promptRegistry,
       serverContext: this.serverContext as ServerContext,
-      domainRegistry: this._domainRegistry
+      domainRegistry: this._domainRegistry,
+      modelServiceMixins: this._modelServiceMixins
     })
   }
 
@@ -280,7 +358,8 @@ export class ToolRegistry {
       models: this._models,
       promptRegistry: this._promptRegistry,
       serverContext: this.serverContext as ServerContext,
-      domainRegistry: this._domainRegistry
+      domainRegistry: this._domainRegistry,
+      modelServiceMixins: this._modelServiceMixins
     })
   }
 }
