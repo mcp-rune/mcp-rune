@@ -17,10 +17,10 @@ import path from 'node:path'
 
 import { z } from 'zod'
 
+import type { SearchApiClient } from '#src/core/api-client.js'
 import { generateDetailSchema } from '#src/mcp/apps/detail-schema.js'
 import { appResponseMeta, formatAppSummary } from '#src/mcp/apps/format-summary.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
-import type { SearchApiClient } from '#src/mcp/search/types.js'
 import * as logger from '#src/services/logger.js'
 
 import type { SelectionStore } from './selection-store.js'

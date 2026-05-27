@@ -13,9 +13,9 @@ import {
   customActionsExtension,
   UnknownActionError
 } from '../../../../src/api-extensions/custom-actions.js'
+import type { ApiClient } from '../../../../src/core/api-client.js'
 import { jsonApiConvention } from '../../../../src/mcp/api-conventions/index.js'
 import type { ModelServiceMixin } from '../../../../src/mcp/api-extensions/types.js'
-import type { ApiClient } from '../../../../src/mcp/search/types.js'
 import { ModelService, UnknownModelError } from '../../../../src/mcp/services/model-service.js'
 import type { ModelConfig } from '../../../../src/mcp/tools/base-tool.js'
 

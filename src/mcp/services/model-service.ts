@@ -12,9 +12,10 @@
  * - Does NOT absorb vector storage, usage rules, or schema derivation
  */
 
+import type { ApiClient, RequestOptions } from '#src/core/api-client.js'
+
 import type { AssociationConfig, BaseConvention } from '../api-conventions/base-convention.js'
 import { defaultConvention } from '../api-conventions/index.js'
-import type { ApiClient, RequestOptions } from '../search/types.js'
 import type { ModelConfig, ModelsRegistry, ToolLogger } from '../tools/base-tool.js'
 import type { CrudAction, EndpointResolverConfig } from './endpoint-resolver.js'
 import { EndpointResolver, MissingParentError } from './endpoint-resolver.js'

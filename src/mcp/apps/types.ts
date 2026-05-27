@@ -6,15 +6,15 @@
  * layer does not know about.
  */
 
+import type { SearchApiClient } from '#src/core/api-client.js'
 import type { AssociationConfig, BaseConvention } from '#src/mcp/api-conventions/base-convention.js'
 import type { SearchService } from '#src/mcp/search/search-service.js'
-import type { SearchApiClient } from '#src/mcp/search/types.js'
 
 import type { FormDataStore } from './form-data-store.js'
 import type { SelectionStore } from './selection-store.js'
 
 // Re-export for convenience — apps only need get/post
-export type { SearchApiClient as ApiClient } from '#src/mcp/search/types.js'
+export type { SearchApiClient as ApiClient } from '#src/core/api-client.js'
 
 /**
  * Extended attribute definition used in app schema generators.
