@@ -22,9 +22,7 @@ export {
   DATA_TOOL_CLASSES,
   DeleteModelTool,
   FindRecordsTool,
-  GetFiltersGuideTool,
   ListModelsTool,
-  SearchRecordsTool,
   UpdateModelTool
 } from './mcp/tools/data/index.js'
 export {

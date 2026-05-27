@@ -1,4 +1,4 @@
-import { GetFiltersGuideTool } from '../../../../../src/mcp/tools/data/get-filters-guide-tool.js'
+import { GetFiltersGuideTool } from '../../../../src/api-extensions/search.js'
 
 // Mock model classes with static filters
 const mockModels = {

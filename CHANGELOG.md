@@ -4,6 +4,42 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.45.0] — 2026-05-27
+
+### Added
+
+- **Built-in `searchExtension`** at `@mcp-rune/mcp-rune/api-extensions/search` — the second concrete `ApiExtension`. Contributes the `search_records` and `get_filters_guide` MCP tools, plus the typed `getSearchConfig()` and `getSearchableModelNames()` readers. Conventional registration key: `search`.
+
+### Changed (BREAKING)
+
+- **`search_records` and `get_filters_guide` MCP tools move from core to the opt-in `search` ApiExtension.** Both are removed from `DATA_TOOL_CLASSES` and from the `@mcp-rune/mcp-rune/tools` re-exports. They are no longer registered unless `searchExtension()` is explicitly added to `ToolRegistry`. Behavior is identical when registered.
+
+  This is the same framing change v0.44.0 made for custom actions: pure REST servers shouldn't carry the surface area of capabilities they don't expose. The two tools were previously registered for every server, returning `"Model X does not support search"` errors at call time when the LLM tried them on models without `static search` config. As an opt-in extension, the surface area is explicit at the call site.
+
+  Migration:
+
+  ```diff
+   import { ToolRegistry, DATA_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
+  +import { searchExtension } from '@mcp-rune/mcp-rune/api-extensions/search'
+
+   new ToolRegistry({
+     toolClasses: DATA_TOOL_CLASSES,
+     models: MODEL_CLASSES,
+     createApiClient,
+  +  apiExtensions: {
+  +    search: searchExtension()
+  +  }
+   })
+  ```
+
+  Per-model `static search = { ... }` config is **unchanged** in this release. Unlike the custom-actions extraction in v0.44.0, the search extension does NOT move the per-model config into the `extensions['search']` bag, because the `SearchConfig` is read by code outside the search surface: `analysis-ingest-tool` instantiates `SearchService` for filtered ingestion, `validators.ts` reads `model.search.filters` to validate filter args across `find_records` / `create_model` / `update_model`, and `list_models` surfaces `search.filters` and `search.lookup.fields` in its output for LLM discovery. Moving the config slot would require refactoring those cross-cutting consumers — out of scope for this release. The `SearchService`, `SearchAdapter`, `RailsSearchAdapter`, and `SearchConfig` types stay in `@mcp-rune/mcp-rune/search` and continue to be importable from there.
+
+  Deeper extraction (moving `SearchService` and the config slot into the extension, and updating cross-cutting consumers to read through it) is a future, separate decision.
+
+  Omit the extension to drop both tools entirely. Models can still declare `static search` config — `list_models` will continue to surface `searchable_by` and `filterable_search` metadata for LLM discovery — but `search_records` and `get_filters_guide` will be absent from the tool catalogue.
+
+[0.45.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.44.0...v0.45.0
+
 ## [0.44.0] — 2026-05-27
 
 ### Added
