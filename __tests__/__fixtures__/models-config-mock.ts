@@ -2,12 +2,14 @@ export const MOCK_MODELS = {
   title: {
     attributes: ['id', 'name', 'external_id', 'title_type', 'episode_number', 'tags'],
     required: ['name'],
-    search: {
-      lookup: { fields: ['external_id', 'external_id_type'] },
-      filters: {
-        external_id: { type: 'text', label: 'External ID' },
-        title_type: { type: 'enum', label: 'Title Type', enumValues: ['feature', 'episode'] },
-        licensor_id: { type: 'relation', label: 'Licensor', relatedModel: 'licensor' }
+    extensions: {
+      search: {
+        lookup: { fields: ['external_id', 'external_id_type'] },
+        filters: {
+          external_id: { type: 'text', label: 'External ID' },
+          title_type: { type: 'enum', label: 'Title Type', enumValues: ['feature', 'episode'] },
+          licensor_id: { type: 'relation', label: 'Licensor', relatedModel: 'licensor' }
+        }
       }
     },
     description: 'Titles (movies, episodes, features)',
@@ -30,10 +32,12 @@ export const MOCK_MODELS = {
   image: {
     attributes: ['id', 'encoding', 'width', 'height', 'type', 'is_cover'],
     required: ['encoding'],
-    search: {
-      lookup: { fields: ['external_id'] },
-      filters: {
-        type: { type: 'enum', label: 'Image Type', enumValues: ['poster', 'thumbnail'] }
+    extensions: {
+      search: {
+        lookup: { fields: ['external_id'] },
+        filters: {
+          type: { type: 'enum', label: 'Image Type', enumValues: ['poster', 'thumbnail'] }
+        }
       }
     },
     description: 'Images for titles and brands',

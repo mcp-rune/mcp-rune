@@ -23,7 +23,7 @@ describe('FindRecordsTool', () => {
       brand: {
         api: { endpoint: 'brands' },
         attributes: { id: {}, name: {}, status: {}, extra: {} },
-        search: { lookup: { fields: ['name'] } }
+        extensions: { search: { lookup: { fields: ['name'] } } }
       }
     }
 
@@ -68,7 +68,7 @@ describe('FindRecordsTool', () => {
 
       const result = await tool.execute({
         model: 'brand',
-        search: {},
+        extensions: { search: {} },
         fields: ['name']
       })
 

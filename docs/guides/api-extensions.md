@@ -36,7 +36,7 @@ new ToolRegistry({
 })
 ```
 
-> The `customActionsExtension` and `searchExtension` referenced above are the first two built-in API extensions. They land in follow-up releases — until then, the framework ships their capabilities in core.
+> The `customActionsExtension` and `searchExtension` referenced above are the two built-in API extensions today. Their per-model config slots both sit in the `extensions` bag (`customActionsConfig({...})` since v0.44.0 and `searchConfig({...})` since v0.48.0), giving `BaseModel` exactly one model-level field for opt-in capabilities and a consistent authoring shape.
 
 The key (`'custom-actions'` above) is the extension's identifier for the lifetime of this registry. It is:
 

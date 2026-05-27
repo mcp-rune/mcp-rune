@@ -9,7 +9,7 @@ describe('lib/mcp/apps/list-schema', () => {
     return {
       api: { endpoint: 'books' },
       singularName: 'book',
-      search: { lookup: { fields: ['title', 'author'] } },
+      extensions: { search: { lookup: { fields: ['title', 'author'] } } },
       description: 'Books for study',
       attributes: {
         title: { type: 'string', required: true },
@@ -120,7 +120,9 @@ describe('lib/mcp/apps/list-schema', () => {
     })
 
     it('handles model with no searchable fields', () => {
-      const schema = generateListSchema(makeModel({ search: { lookup: { fields: [] } } }))
+      const schema = generateListSchema(
+        makeModel({ extensions: { search: { lookup: { fields: [] } } } })
+      )
       expect(schema.searchFields).toEqual([])
     })
 

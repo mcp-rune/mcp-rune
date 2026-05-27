@@ -30,10 +30,12 @@ const models = {
     api: { endpoint: 'books' },
     attributes: { title: { type: 'string' } },
     description: 'Book',
-    search: {
-      lookup: { fields: ['title'] },
-      filters: {
-        status: { type: 'enum', enumValues: ['draft', 'published'] }
+    extensions: {
+      search: {
+        lookup: { fields: ['title'] },
+        filters: {
+          status: { type: 'enum', enumValues: ['draft', 'published'] }
+        }
       }
     }
   }

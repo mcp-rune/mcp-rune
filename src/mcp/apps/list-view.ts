@@ -13,6 +13,7 @@ import path from 'node:path'
 import { z } from 'zod'
 
 import type { SearchService } from '#src/api-extensions/search/index.js'
+import { getSearchConfig } from '#src/api-extensions/search/index.js'
 import type { SearchApiClient } from '#src/core/api-client.js'
 import { resolveDerivedFields } from '#src/core/derived-fields.js'
 import { defaultConvention } from '#src/mcp/api-conventions/index.js'
@@ -126,7 +127,7 @@ export function createListViewApp({ modelClasses, namespace }: ListViewOptions):
         ModelClass
       )
       schema.model = model as string
-      const filterDefinitions = ModelClass.search?.filters || {}
+      const filterDefinitions = getSearchConfig(ModelClass)?.filters || {}
 
       let records: Record<string, unknown>[] = []
       let pagination: { page: number; per_page: number; total: number } = {

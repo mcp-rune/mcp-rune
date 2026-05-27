@@ -52,22 +52,12 @@ export interface AppModelClass {
   singularName: string
   attributes: Record<string, AppAttributeDefinition>
   associations?: AssociationConfig
-  search?: {
-    lookup?: {
-      endpoint?: string
-      fields: string[]
-      queryParam?: string
-    }
-    query?: {
-      endpoint?: string
-      group?: string
-      modelName?: string | string[]
-      adapter?: unknown
-      [key: string]: unknown
-    }
-    filters?: Record<string, unknown>
-    [key: string]: unknown
-  }
+  /**
+   * Opt-in extension configs, keyed by extension name. Apps read search
+   * config via `getSearchConfig(ModelClass)` from the search extension —
+   * no direct `.search.*` access.
+   */
+  extensions?: Record<string, unknown>
   api: {
     endpoint: string
     convention?: BaseConvention
@@ -76,7 +66,6 @@ export interface AppModelClass {
     standalone?: boolean
     [key: string]: unknown
   }
-  supportsLookup: boolean
   defaultColumns?: string[]
   description?: string
   [key: string]: unknown

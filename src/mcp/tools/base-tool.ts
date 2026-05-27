@@ -80,11 +80,6 @@ export interface ModelConfig {
       delete?: string
     }
   }
-  search?: {
-    lookup?: { endpoint?: string; fields: string[]; queryParam?: string }
-    query?: Record<string, unknown>
-    filters?: Record<string, FilterSchema>
-  } | null
   associations?: AssociationConfig & {
     custom?: Record<string, Record<string, unknown>>
   }

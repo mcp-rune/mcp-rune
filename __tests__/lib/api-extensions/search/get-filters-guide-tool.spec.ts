@@ -5,29 +5,31 @@ const mockModels = {
   title: {
     api: { endpoint: 'titles' },
     attributes: { id: {}, name: { label: 'Name' } },
-    search: {
-      filters: {
-        name: {
-          type: 'text',
-          label: 'Name',
-          description: 'Full-text search on title name'
-        },
-        status: {
-          type: 'enum',
-          label: 'Status',
-          enumValues: ['draft', 'active', 'archived'],
-          description: 'Filter by current status'
-        },
-        licensor_id: {
-          type: 'relation',
-          label: 'Licensor',
-          relatedModel: 'licensor',
-          description: 'Filter by rights owner'
-        },
-        created_at: {
-          type: 'date_range',
-          label: 'Created Date',
-          description: 'Filter by creation date range'
+    extensions: {
+      search: {
+        filters: {
+          name: {
+            type: 'text',
+            label: 'Name',
+            description: 'Full-text search on title name'
+          },
+          status: {
+            type: 'enum',
+            label: 'Status',
+            enumValues: ['draft', 'active', 'archived'],
+            description: 'Filter by current status'
+          },
+          licensor_id: {
+            type: 'relation',
+            label: 'Licensor',
+            relatedModel: 'licensor',
+            description: 'Filter by rights owner'
+          },
+          created_at: {
+            type: 'date_range',
+            label: 'Created Date',
+            description: 'Filter by creation date range'
+          }
         }
       }
     }
@@ -102,11 +104,13 @@ describe('GetFiltersGuideTool', () => {
       title: {
         api: { endpoint: 'titles' },
         attributes: {},
-        search: {
-          filters: {
-            raw_field: {
-              type: 'text',
-              description: 'A raw field without label'
+        extensions: {
+          search: {
+            filters: {
+              raw_field: {
+                type: 'text',
+                description: 'A raw field without label'
+              }
             }
           }
         }
@@ -125,11 +129,13 @@ describe('GetFiltersGuideTool', () => {
       title: {
         api: { endpoint: 'titles' },
         attributes: {},
-        search: {
-          filters: {
-            some_field: {
-              type: 'text',
-              label: 'Some Field'
+        extensions: {
+          search: {
+            filters: {
+              some_field: {
+                type: 'text',
+                label: 'Some Field'
+              }
             }
           }
         }
@@ -158,12 +164,14 @@ describe('GetFiltersGuideTool', () => {
       title: {
         api: { endpoint: 'titles' },
         attributes: {},
-        search: {
-          filters: {
-            duration_minutes: {
-              type: 'integer_range',
-              label: 'Duration (minutes)',
-              description: 'Filter by duration in minutes'
+        extensions: {
+          search: {
+            filters: {
+              duration_minutes: {
+                type: 'integer_range',
+                label: 'Duration (minutes)',
+                description: 'Filter by duration in minutes'
+              }
             }
           }
         }
@@ -184,12 +192,14 @@ describe('GetFiltersGuideTool', () => {
       title: {
         api: { endpoint: 'titles' },
         attributes: {},
-        search: {
-          filters: {
-            duration_minutes: {
-              type: 'integer_range',
-              label: 'Duration',
-              description: 'Duration filter'
+        extensions: {
+          search: {
+            filters: {
+              duration_minutes: {
+                type: 'integer_range',
+                label: 'Duration',
+                description: 'Duration filter'
+              }
             }
           }
         }
@@ -209,17 +219,19 @@ describe('GetFiltersGuideTool', () => {
       title: {
         api: { endpoint: 'titles' },
         attributes: {},
-        search: {
-          filters: {
-            licensor_id: {
-              type: 'relation',
-              label: 'Licensor',
-              relatedModel: 'licensor'
-            },
-            created_at: {
-              type: 'date_range',
-              label: 'Created',
-              description: 'Creation date'
+        extensions: {
+          search: {
+            filters: {
+              licensor_id: {
+                type: 'relation',
+                label: 'Licensor',
+                relatedModel: 'licensor'
+              },
+              created_at: {
+                type: 'date_range',
+                label: 'Created',
+                description: 'Creation date'
+              }
             }
           }
         }

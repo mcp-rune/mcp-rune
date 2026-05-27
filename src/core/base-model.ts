@@ -9,7 +9,6 @@
  * 2. Instantiated with record data: new BookModel(record).displayValue
  */
 
-import type { SearchConfig } from '#src/api-extensions/search/types.js'
 import type { AssociationConfig, BaseConvention } from '#src/mcp/api-conventions/base-convention.js'
 import { jsonApiConvention } from '#src/mcp/api-conventions/index.js'
 
@@ -76,7 +75,6 @@ export class BaseModel {
   static attributes: Record<string, AttributeDefinition> = {}
   static description: string = ''
   static api: ApiConfig = { endpoint: '', convention: jsonApiConvention }
-  static search: SearchConfig | null = null
   static associations: AssociationConfig = {}
   /**
    * Opt-in extension configs, keyed by extension name.
@@ -116,12 +114,6 @@ export class BaseModel {
   /** Singular name for API payloads (e.g., 'books' -> 'book'). Override with `static modelName`. */
   static get singularName(): string {
     return this.modelName ?? this.api.endpoint!.replace(/s$/, '')
-  }
-
-  /** Check if this model supports lookup (typeahead/autocomplete) */
-  static get supportsLookup(): boolean {
-    const fields = this.search?.lookup?.fields
-    return Array.isArray(fields) && fields.length > 0
   }
 
   // --- Static methods ---
