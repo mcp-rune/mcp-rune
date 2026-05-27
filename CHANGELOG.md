@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.48.1] — 2026-05-27
+
+### Docs
+
+- **`docs/guides/authoring-extensions-guide.md`** — new step-by-step guide for writing extensions from scratch. Walks through the five-piece `ApiExtension` shape (config type, typed helper, typed reader, optional service factory, extension factory), includes a worked `bulk-actions` example end-to-end (per-model config + MCP tool + `ModelService` mixin + registration), and points to the `HttpExtension` version for the simpler case. Includes the test patterns used by the built-in extensions (mixin-capturing helper for unit tests, end-to-end registration tests).
+- **`docs/guides/api-extensions.md`** — added an **Architecture overview** section at the top with a diagram of the six pieces (typed helper, typed reader, capability getters, extension factory, optional service factory, per-model bag slot) and the `ModelService` mixin contract table (`apiClient`, `endpointResolver`, `models`, `buildPayload`, `dispatch`). Reframed the page as the conceptual reference; cross-links to the new authoring guide for the step-by-step.
+- **`docs/guides/service-layer-guide.md`** — fixed wrong `@mcp-rune/mcp-rune/search` imports (now `/api-extensions/search`), migrated all `static search = {...}` code examples to `static extensions = { search: searchConfig({...}) }`, switched `new SearchService(...)` examples to the `createSearchService(apiClient, context)` factory pattern that all consumer clusters use.
+- **`docs/guides/search-filter-integration-guide.md`** — added the `searchExtension()` registration prerequisite at the top, migrated the activity-model example from `static filters = {...}` to `extensions = { search: searchConfig({ filters: {...} }) }`, updated the checklist.
+- **`docs/guides/project-structure-guide.md`** — removed the obsolete `search` subpath export, added `extensions/`, `extensions/cimd`, `api-extensions/`, `api-extensions/custom-actions`, `api-extensions/search` to the framework directory tree; added a note about opt-in tool registration.
+- **`docs/guides/mcp-apps-architecture.md`** — updated the `SEARCH_VIEW_MODELS` / `LIST_VIEW_MODELS` example to read filter declarations via `getSearchConfig(M)?.filters` from the search extension; clarified the "Available for" rows and "Separate Search App" / "Conditional Registration" sections to refer to declared search filters (via `searchConfig`) instead of the removed `static filters` field.
+
+No behavior change. Docs-only release; pinning is unaffected.
+
+[0.48.1]: https://github.com/mcp-rune/mcp-rune/compare/v0.48.0...v0.48.1
+
 ## [0.48.0] — 2026-05-27
 
 ### Added

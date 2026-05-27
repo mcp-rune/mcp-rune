@@ -2,7 +2,76 @@
 
 mcp-rune supports **opt-in API extensions** that contribute MCP tools and `ModelService` methods on top of the framework's built-in CRUD pipeline. Use API extensions to ship capabilities that aren't part of pure REST/CRUD — custom non-CRUD verbs, search subsystems, GraphQL field selection, bulk operations, RPC-style endpoints — without pulling them into the framework's core surface.
 
-This guide covers the `ApiExtension` API. It is the model-layer parallel of [`HttpExtension`](./extensions.md) and follows the same authoring contract.
+This guide is the **conceptual reference**: what an `ApiExtension` is, what the framework guarantees, what the registration and reading contracts look like, and why the design choices are what they are. For a **step-by-step walkthrough of authoring your own extension**, see [Authoring Extensions Guide](./authoring-extensions-guide.md).
+
+It is the model-layer parallel of [`HttpExtension`](./extensions.md) and follows the same authoring contract.
+
+## Architecture overview
+
+Six pieces work together. Author-facing pieces are on the left; framework-facing pieces are on the right.
+
+```
+       ┌──────────────────────────────────────────────────────────────┐
+       │                          your extension                      │
+       │                                                              │
+       │  xxxConfig({...})  ─────►   getXxxConfig(model)              │
+       │   (typed helper)             (typed reader, structural)      │
+       │        │                                │                    │
+       │        │                                ▼                    │
+       │        │                     ┌──────────────────────┐        │
+       │        │                     │  capability getters  │        │
+       │        │                     │  (filter consumers)  │        │
+       │        │                     └──────────────────────┘        │
+       │        │                                                     │
+       │        │                     xxxExtension(): ApiExtension    │
+       │        │                                │                    │
+       │        │                                ▼                    │
+       │        │                     register(ctx) ─► tools + mixin  │
+       │        │                                                     │
+       │        │                     createXxxService(apiClient, …)  │
+       │        │                       (optional factory)            │
+       │        ▼                                                     │
+       │        │                                                     │
+       └────────┼─────────────────────────────────────────────────────┘
+                │                                ▲
+                ▼                                │ registers
+       ┌──────────────────────┐         ┌────────┴──────────────┐
+       │ BaseModel.extensions │         │ ToolRegistry({        │
+       │ {                    │         │   apiExtensions: {    │
+       │   'xxx': …config…    │ ◄──────┤    'xxx': xxxExt()    │
+       │ }                    │  reads  │   }                   │
+       └──────────────────────┘         │ })                    │
+                                        └───────────────────────┘
+```
+
+| Piece                                                      | Owned by  | Read by                                   | Purpose                                                                                                                                                           |
+| ---------------------------------------------------------- | --------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`xxxConfig({...})`** typed helper                        | extension | model authors                             | Gives `extensions['xxx']` slot type-safe values                                                                                                                   |
+| **`getXxxConfig(model)`** typed reader                     | extension | tools/apps/anyone                         | Single read site; structural (works on `ModelConfig`, `AppModelClass`, `SearchModelClass`)                                                                        |
+| **Capability getters** (`getXxxableModelNames`, etc.)      | extension | tools that need "which models support X?" | Filter `models` registry by extension config                                                                                                                      |
+| **`xxxExtension()`** factory                               | extension | server author                             | Returns `ApiExtension`; registered on `ToolRegistry`                                                                                                              |
+| **`createXxxService(apiClient, ctx?)`** factory (optional) | extension | extension itself + other consumers        | Central construction site for long-lived service instances (only needed when the extension exposes a service that's used outside its tools, e.g. `SearchService`) |
+| **`BaseModel.extensions['xxx']`** slot                     | framework | typed reader                              | Per-model config bag, namespaced by extension key                                                                                                                 |
+| **`ToolRegistry({ apiExtensions: {...} })`**               | framework | server author                             | Single opt-in site; runs `register(ctx)` once at boot with capability validation and dedupe                                                                       |
+
+The two built-in extensions show what this looks like in practice:
+
+- **[`custom-actions`](../../src/api-extensions/custom-actions.ts)** — single-file extension; contributes one MCP tool (`model_action`) and one mixin (`action()` on `ModelService`).
+- **[`search`](../../src/api-extensions/search/)** — directory-shaped extension; contributes two MCP tools (`search_records`, `get_filters_guide`), a `createSearchService` factory, and a `SearchService` used by apps and `analysis-ingest-tool` as a module import (independent of registration).
+
+## The `ModelService` mixin contract (stable surface mixins compose)
+
+When your extension contributes a mixin via `ctx.registerModelServiceMixin(...)`, the mixin function receives a `ModelService` instance and returns a map of methods to `Object.assign` onto it. The mixin should compose these **public** members instead of reaching into private internals:
+
+| Member                                                       | Purpose                                                                                                                   |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `service.apiClient`                                          | The underlying CRUD client (`get`, `post`, `put`, `patch`, `delete`, `baseUrl`)                                           |
+| `service.endpointResolver`                                   | `pathForType(model, config)`, `applyNamespace(config, path)`, plus the CRUD `resolveCollection` / `resolveRecord` helpers |
+| `service.models`                                             | Read-only view of the models registry                                                                                     |
+| `service.buildPayload(model, modelConfig, attrs)`            | Convention-aware payload wrapping (handles association resolution)                                                        |
+| `service.dispatch(method, url, payload?, params?, options?)` | HTTP dispatch through the configured `ApiClient`                                                                          |
+
+Anything prefixed with `_` (e.g. `_apiClient`, `_resolver`) is not part of the contract and may change without a release note.
 
 ## What an ApiExtension is
 

@@ -23,13 +23,29 @@ Rails API
 search_records_app (MCP App) — OR — analysis memory (map-reduce)
 ```
 
-The MCP model's `static filters` is the shared contract. The MCP framework derives it into a prompt (via `get_filters_guide`), and the Rails API implements the same filter keys.
+The model's `extensions['search']` slice is the shared contract. The MCP framework derives the `filters` map into a prompt (via `get_filters_guide`), and the Rails API implements the same filter keys.
 
-> **Note:** This guide covers **direct search** — models with their own search endpoint. For **group search** (multiple models sharing one endpoint, e.g., Library search), see the Search Adapters section in CLAUDE.md. Group search also supports filter pass-through via the same adapter pipeline.
+> **Prerequisite:** the `search_records` and `get_filters_guide` MCP tools are contributed by the opt-in `searchExtension` (v0.45.0+). Without registering the extension on `ToolRegistry`, those tools are absent from your server even if every model declares filters. See [Authoring Extensions Guide](./authoring-extensions-guide.md) for the full pattern; the short version is:
+>
+> ```ts
+> import { ToolRegistry, DATA_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
+> import { searchExtension } from '@mcp-rune/mcp-rune/api-extensions/search'
+>
+> new ToolRegistry({
+>   toolClasses: DATA_TOOL_CLASSES,
+>   models: MODEL_CLASSES,
+>   createApiClient,
+>   apiExtensions: {
+>     search: searchExtension()
+>   }
+> })
+> ```
 
-## Step 1: Define Filters on the MCP Model
+> **Note:** This guide covers **direct search** — models with their own search endpoint. For **group search** (multiple models sharing one endpoint, e.g., Library search), see the Search Adapters section in the [Service Layer Guide](./service-layer-guide.md). Group search also supports filter pass-through via the same adapter pipeline.
 
-Add `static filters` to the model class. This single declaration activates three framework features:
+## Step 1: Declare Filters via `searchConfig` in the Model's `extensions` Bag
+
+Add an `extensions['search']` slice to the model class via the typed `searchConfig({...})` helper. This single declaration activates three framework features (once `searchExtension()` is registered on `ToolRegistry`):
 
 - `search_records` tool — accepts the model for filtered search
 - `get_filters_guide` tool — generates filter documentation for the LLM
@@ -49,28 +65,38 @@ Add `static filters` to the model class. This single declaration activates three
 
 ```javascript
 // src/{server}/models/activity.js
-static filters = {
-  theme_id: {
-    type: 'relation',
-    label: 'Theme',
-    relatedModel: 'theme',
-    description: 'Filter by theme'
-  },
-  category_id: {
-    type: 'relation',
-    label: 'Category',
-    relatedModel: 'category',
-    description: 'Filter by category within a theme'
-  },
-  started_at: {
-    type: 'date_range',
-    label: 'Start Date',
-    description: 'Filter by activity start date range'
-  },
-  duration_minutes: {
-    type: 'integer_range',
-    label: 'Duration (minutes)',
-    description: 'Filter by activity duration in minutes'
+import { BaseModel } from '@mcp-rune/mcp-rune/core'
+import { searchConfig } from '@mcp-rune/mcp-rune/api-extensions/search'
+
+class Activity extends BaseModel {
+  static api = { endpoint: 'activities' }
+  static extensions = {
+    search: searchConfig({
+      filters: {
+        theme_id: {
+          type: 'relation',
+          label: 'Theme',
+          relatedModel: 'theme',
+          description: 'Filter by theme'
+        },
+        category_id: {
+          type: 'relation',
+          label: 'Category',
+          relatedModel: 'category',
+          description: 'Filter by category within a theme'
+        },
+        started_at: {
+          type: 'date_range',
+          label: 'Start Date',
+          description: 'Filter by activity start date range'
+        },
+        duration_minutes: {
+          type: 'integer_range',
+          label: 'Duration (minutes)',
+          description: 'Filter by activity duration in minutes'
+        }
+      }
+    })
   }
 }
 ```
@@ -250,16 +276,16 @@ end
 
 ### MCP Side: Identical
 
-The MCP model's `static filters` definition is **identical** regardless of whether the Rails API uses ActiveRecord or Elasticsearch. The MCP doesn't know or care about the backend — it sends `{ filters, page, per_page }` and receives `{ records, pagination }`.
+The MCP model's `extensions['search'].filters` definition is **identical** regardless of whether the Rails API uses ActiveRecord or Elasticsearch. The MCP doesn't know or care about the backend — it sends `{ filters, page, per_page }` and receives `{ records, pagination }`.
 
 ## Step 4: What Activates Automatically
 
-Once a model has `static filters`, the following happens with zero additional code:
+Once a model declares `extensions['search']` via `searchConfig({...})` **and `searchExtension()` is registered on `ToolRegistry`**, the following happens with zero additional code:
 
-1. **`search_records` tool** — `_getSearchableModelNames()` includes the model
+1. **`search_records` tool** — `getSearchableModelNames(models)` (exported from `@mcp-rune/mcp-rune/api-extensions/search`) includes the model
 2. **`get_filters_guide` tool** — generates markdown documentation from the filter spec
-3. **`list_models` tool** — shows `filterable_search: { available: true, filter_count: N }`
-4. **Search view MCP App** — `SEARCH_VIEW_MODELS` in `apps/index.js` picks up the model (and `LIST_VIEW_MODELS` excludes it)
+3. **`list_models` tool** — shows `filterable_search: { available: true, filter_count: N }` (reads via `getSearchConfig(config)?.filters`)
+4. **Search view MCP App** — the server-author's `SEARCH_VIEW_MODELS` (or equivalent) registry can filter `getSearchConfig(M)?.filters` to pick eligible models
 5. **`find_records` tool** — usage rules direct the LLM to use `search_records` for filterable models
 
 ## Step 5: LLM Workflows
@@ -292,7 +318,8 @@ LLM: clear_analysis_memories({ analysis_id: "q1-review" })
 
 ## Checklist
 
-- [ ] MCP model: Add `static filters` with correct types and keys
+- [ ] MCP server boot: register `searchExtension()` on `ToolRegistry` via `apiExtensions: { search: searchExtension() }`
+- [ ] MCP model: Add `extensions = { search: searchConfig({ filters: {...} }) }` with correct types and keys
 - [ ] Rails route: Add `post :search` collection route
 - [ ] Rails controller: Add `search` action with filter parsing + pagination
 - [ ] Rails view: Add `search.json.jbuilder` with `{ records, pagination }` shape

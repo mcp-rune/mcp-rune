@@ -333,22 +333,29 @@ registerResources(mcpServer) {
 The registry wires models to apps via configuration maps:
 
 ```javascript
+import { getSearchConfig } from '@mcp-rune/mcp-rune/api-extensions/search'
+
 const FORM_MODEL_CLASSES = { activity: Activity, book: Book, ... }
 const FORM_PROMPT_CLASSES = { activity: ActivityPrompt, book: BookPrompt, ... }
-// Browse view excludes models with static filters (those go to search view only):
+
+// Browse view excludes models with filters (those go to search view only):
 const LIST_VIEW_MODELS = Object.fromEntries(
-  Object.entries(FORM_MODEL_CLASSES).filter(([, M]) =>
-    !M.filters || Object.keys(M.filters).length === 0
-  )
+  Object.entries(FORM_MODEL_CLASSES).filter(([, M]) => {
+    const filters = getSearchConfig(M)?.filters
+    return !filters || Object.keys(filters).length === 0
+  })
 )
 
-// Search view includes only models with static filters:
+// Search view includes only models that declare at least one filter:
 const SEARCH_VIEW_MODELS = Object.fromEntries(
-  Object.entries(FORM_MODEL_CLASSES).filter(([, M]) =>
-    M.filters && Object.keys(M.filters).length > 0
-  )
+  Object.entries(FORM_MODEL_CLASSES).filter(([, M]) => {
+    const filters = getSearchConfig(M)?.filters
+    return filters && Object.keys(filters).length > 0
+  })
 )
 ```
+
+> The `getSearchConfig` reader reaches into `M.extensions['search']` (v0.48.0+). Filter declarations live there via the `searchConfig({...})` typed helper from the search extension.
 
 ---
 
@@ -641,13 +648,13 @@ The search view app works alongside the search tool system:
 
 ### Search View vs Browse Records
 
-| Aspect        | `list_records_app`                       | `search_records_app`                  |
-| ------------- | ---------------------------------------- | ------------------------------------- |
-| Data source   | GET `{endpoint}`                         | POST `{endpoint}/search`              |
-| Input         | `model`, `search?`, `page?`              | `model`, `filters`, `page?`           |
-| Filtering     | Single text search field                 | Multi-criteria ES filters             |
-| UI            | Search input + table                     | Filter chips + table                  |
-| Available for | Only models **without** `static filters` | Only models **with** `static filters` |
+| Aspect        | `list_records_app`                              | `search_records_app`                                                                |
+| ------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Data source   | GET `{endpoint}`                                | POST `{endpoint}/search`                                                            |
+| Input         | `model`, `search?`, `page?`                     | `model`, `filters`, `page?`                                                         |
+| Filtering     | Single text search field                        | Multi-criteria ES filters                                                           |
+| UI            | Search input + table                            | Filter chips + table                                                                |
+| Available for | Only models **without** declared search filters | Only models **with** declared search filters (via `searchConfig({ filters: ... })`) |
 
 ---
 
@@ -701,7 +708,9 @@ import { ProjectPrompt } from '../prompts/project_prompt.js'
 const FORM_MODEL_CLASSES = { ..., project: Project }
 const FORM_PROMPT_CLASSES = { ..., project: ProjectPrompt }
 // LIST_VIEW_MODELS and SEARCH_VIEW_MODELS are derived automatically from FORM_MODEL_CLASSES.
-// Models with `static filters` go to search view; models without go to browse view.
+// Models with filters declared via `searchConfig({ filters: ... })` in their `extensions['search']`
+// slice go to the search view; models without go to browse view. The `getSearchConfig` reader
+// from `@mcp-rune/mcp-rune/api-extensions/search` is the single read site.
 ```
 
 ### Step 4: Build
@@ -746,11 +755,11 @@ Association options (locations, tags) are fetched when the form opens, not at sc
 
 ### Separate Search App
 
-Search results use a dedicated app (`search_records_app`) rather than overloading `list_records_app`. The split is structural — models with `static filters` are **only** available in `search_records_app`, models without filters are only in `list_records_app`. This eliminates routing ambiguity at the schema level.
+Search results use a dedicated app (`search_records_app`) rather than overloading `list_records_app`. The split is structural — models that declare filters in their `extensions['search']` slice are **only** available in `search_records_app`, models without filters are only in `list_records_app`. This eliminates routing ambiguity at the schema level.
 
 ### Conditional Registration
 
-The search view app is only registered when models with `static filters` exist. This avoids exposing a non-functional tool:
+The search view app is only registered when models with declared search filters exist. This avoids exposing a non-functional tool:
 
 ```javascript
 if (Object.keys(SEARCH_VIEW_MODELS).length > 0) {
