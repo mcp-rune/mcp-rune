@@ -42,10 +42,13 @@ const toolRegistry = {
         tool.inputSchema,
         tool.annotations,
         async (args: Record<string, unknown>) => {
-          const apiClient = {
-            /* inject your API client here */
-          }
-          tool.apiClient = apiClient as never
+          // Inject a DataLayer adapter here. The default `ModelService`
+          // adapter wraps an `ApiClient`; alternatives (in-memory stub,
+          // third-party library) implement the same `DataLayer` interface.
+          // Production servers should configure this on `ToolRegistry`
+          // via the `dataLayer` factory option — this raw registration
+          // path is shown for illustration only.
+          tool.dataLayer = undefined
           return tool.execute(args)
         }
       )

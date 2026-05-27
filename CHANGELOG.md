@@ -4,6 +4,60 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.49.0] — 2026-05-28 (BREAKING)
+
+### Added
+
+- **`DataLayer` interface at `@mcp-rune/mcp-rune/core`** — the stable seam between mcp-rune's projection layer (tools, prompts, apps, domain) and any concrete data backend. Declares the operations the projection layer needs (`create` / `find` / `list` / `update` / `delete` / `dispatch` / `buildPayload`), plus read-only views of the models registry and the endpoint resolver. `ModelService` now implements this interface and is the default adapter; alternative adapters (in-memory stub, fetch-only, third-party library wrappers) can ship as separate packages without forking the framework.
+- **`InMemoryDataLayer` reference adapter** (`@mcp-rune/mcp-rune/core`) — Map-backed `DataLayer` for offline tool tests and LLM evals. Demonstrates the seam in a deliberately convention-free form. Use `createInMemoryDataLayer({ fixtures })` as a `dataLayer` factory on `ToolRegistry` / `AppRegistry`.
+- **`dataLayer` factory option on `ToolRegistry` and `AppRegistry`** — lets integrators swap the default `ModelService` adapter. The factory receives `{ apiClient, models, namespace, logger }` and returns a `DataLayer`. The default factory wraps `ModelService` and applies any `ApiExtension` mixins.
+
+### Changed (BREAKING)
+
+- **`BaseTool.apiClient` removed.** Tools no longer receive a raw HTTP client; they receive a `DataLayer` via `BaseTool.dataLayer`. Custom tools that previously read `this.apiClient.get/post/...` migrate to `this.dataLayer.find/list/dispatch/...`. The `requireApiClient()` helper has been renamed to `requireDataLayer()` and now returns the `DataLayer` for chaining.
+- **`BaseTool.modelService` getter removed.** Tools that called `this.requireModelService()` switch to `this.requireDataLayer()`; the returned interface has the same CRUD surface.
+- **`ToolDependencies` simplified.** The `apiClient`, `modelService`, and `modelServiceMixins` fields are gone; only `dataLayer` (plus logger, models, registries, serverContext) remains. Mixins are now applied internally by `ToolRegistry`'s default `DataLayer` factory.
+- **Apps `AppToolContext` carries `dataLayer` instead of `apiClient`.** Apps' `handleToolCall` contexts now expose `{ dataLayer, searchClient, selectionStore, formDataStore }`. The previous `apiClient.get(url, params)` calls in `model-form`, `record-detail`, `list-view`, `multi-select`, and the autocomplete picker now go through `dataLayer.dispatch('GET', url, undefined, params)` or the typed `dataLayer.find/list` methods. Apps that previously passed `ModelClass.api.endpoint` as a raw string still work — namespace and per-action endpoint overrides are now respected for app calls too, which may be a behavior change for servers that bake a namespace into `api.endpoint`.
+- **`SearchService` now takes a `DataLayer`** instead of an `ApiClient`. The `createSearchService(dataLayer, context)` factory signature changed accordingly. Server-internal HTTP calls (`apiClient.get/post`) route through `dataLayer.dispatch`.
+- **`LoggingApiClient` removed.** The decorator used by `analysis_ingest` to emit `[API Request]` / `[API Response]` debug lines is gone — per-request debug logging now belongs to the adapter (or a future request-pipeline handler). The export from `@mcp-rune/mcp-rune/tools` is removed.
+- **`ModelService.dispatch` no longer forwards `undefined` trailing options** to the underlying `ApiClient`. Adapters and tests that asserted on the previous 3-arg call shape see 2-arg calls when no options are supplied; behavior is otherwise unchanged.
+
+### Migration
+
+```diff
+ export class ArchiveProjectTool extends BaseTool {
+   static override get category() {
+     return TOOL_CATEGORIES.CUSTOM
+   }
+
+   override get name() {
+     return 'archive_project'
+   }
+
+   override async execute({ project_id }: { project_id: string }) {
+-    return this.apiClient!.post(`/projects/${project_id}/archive`)
++    return this.requireDataLayer().dispatch('POST', `/projects/${project_id}/archive`)
+   }
+ }
+```
+
+```diff
+ const registry = new ToolRegistry({
+   toolClasses: { ...DATA_TOOL_CLASSES, custom_tool: MyTool },
+   models: MODEL_CLASSES,
+   serverContext,
+   createApiClient: (token) => createApiClient(token, { apiUrl }),
++  // Optional — swap the default ModelService adapter for an alternative:
++  // dataLayer: createInMemoryDataLayer({ fixtures }),
+ })
+```
+
+### Why
+
+The seam exists to separate what makes mcp-rune unique (turning model schemas into MCP tools / prompts / apps for LLMs) from what is generic ("talk to a REST backend"). Before v0.49 the projection layer was wired directly to `ModelService` + `ApiClient` and several internal tools reached for `this.apiClient` directly to bypass the service layer for bulk work, locking out any non-HTTP adapter. v0.49 names the data-access surface explicitly so adapters can slot in behind it — and removes the direct `apiClient` reaches so the seam is actually honest, not aspirational.
+
+[0.49.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.48.1...v0.49.0
+
 ## [0.48.1] — 2026-05-27
 
 ### Docs

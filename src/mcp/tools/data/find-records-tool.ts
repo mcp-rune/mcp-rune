@@ -86,7 +86,7 @@ Capabilities:
 
   override async execute(args: Record<string, unknown>): Promise<ToolResult> {
     try {
-      const service = this.requireModelService()
+      const service = this.requireDataLayer()
 
       const { model, record_id, parent_path, filters, page, per_page, user_id, fields } = args as {
         model: string

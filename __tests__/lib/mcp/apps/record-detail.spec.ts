@@ -12,8 +12,8 @@ const modelClasses = {
 }
 const namespace = 'test'
 
-const apiClient = {
-  get: async (path: string) => {
+const dataLayer = {
+  dispatch: async (_method: string, path: string) => {
     const id = path.split('/').pop()
     return { data: { id, title: `Book ${id}`, author: 'A' } }
   }
@@ -39,7 +39,7 @@ describe('find_records_app', () => {
       content: Array<{ type: string; text: string }>
       _meta?: { context?: { lifecycle?: string; summary?: string } }
     }>
-    const result = await handle({ model: 'book', ids: ['1', '2'] }, { apiClient })
+    const result = await handle({ model: 'book', ids: ['1', '2'] }, { dataLayer })
 
     const block1 = result.content[1]
     expect(block1.text).toMatch(/Displayed 2/)

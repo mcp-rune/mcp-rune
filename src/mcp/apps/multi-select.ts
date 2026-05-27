@@ -15,7 +15,7 @@ import { z } from 'zod'
 
 import type { SearchService } from '#src/api-extensions/search/index.js'
 import { getSearchConfig } from '#src/api-extensions/search/index.js'
-import type { SearchApiClient } from '#src/core/api-client.js'
+import type { DataLayer } from '#src/core/data-layer.js'
 import { defaultConvention } from '#src/mcp/api-conventions/index.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
 import { createSelectionTools } from '#src/mcp/apps/selection-tools.js'
@@ -77,10 +77,7 @@ export function createMultiSelectApp({ modelClasses, namespace }: MultiSelectOpt
 
     async handleToolCall(
       args: Record<string, unknown> = {},
-      {
-        apiClient,
-        searchClient
-      }: { apiClient?: SearchApiClient; searchClient?: SearchService } = {}
+      { dataLayer, searchClient }: { dataLayer?: DataLayer; searchClient?: SearchService } = {}
     ): Promise<ToolResult> {
       const { model } = args as { model?: string }
 
@@ -119,9 +116,11 @@ export function createMultiSelectApp({ modelClasses, namespace }: MultiSelectOpt
           })
           records = []
         }
-      } else if (apiClient) {
+      } else if (dataLayer) {
         try {
-          const data = await apiClient.get(ModelClass.api.endpoint, { per_page: MAX_RECORDS })
+          const data = await dataLayer.dispatch('GET', ModelClass.api.endpoint, undefined, {
+            per_page: MAX_RECORDS
+          })
           const convention = ModelClass.api?.convention ?? defaultConvention
           const { records: rawRecords } = convention.normalizeListResponse(data, {
             page: 1,

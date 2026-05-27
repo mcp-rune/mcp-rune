@@ -2,6 +2,15 @@
 export type { ApiClient, RequestOptions, SearchApiClient } from './core/api-client.js'
 export { BaseModel } from './core/base-model.js'
 export { loadConfig } from './core/config.js'
+export type {
+  DataLayer,
+  DataLayerFactory,
+  DataLayerFactoryContext,
+  ModelRequestOptions,
+  PaginationParams
+} from './core/data-layer.js'
+export type { InMemoryDataLayerOptions, StubFixtures, StubRecord } from './core/data-layer-stub.js'
+export { createInMemoryDataLayer, InMemoryDataLayer } from './core/data-layer-stub.js'
 export type { ModelWithDerivedAttrs } from './core/derived-fields.js'
 export { resolveDerivedFields } from './core/derived-fields.js'
 export { boolEnv, intEnv, optionalEnv, requireEnv } from './core/env.js'

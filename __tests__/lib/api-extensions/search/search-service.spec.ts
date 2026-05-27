@@ -1,3 +1,5 @@
+import { ModelService } from '#src/mcp/services/model-service.js'
+
 import { RailsSearchAdapter } from '../../../../src/api-extensions/search/rails-search-adapter.js'
 import { SearchService } from '../../../../src/api-extensions/search/search-service.js'
 import { flatConvention } from '../../../__fixtures__/flat-convention.js'
@@ -68,7 +70,9 @@ describe('SearchService', () => {
         pagination: { page: 1, per_page: 20, total: 1 }
       })
     }
-    client = new SearchService(mockApiClient, { searchGroups })
+    client = new SearchService(new ModelService({ apiClient: mockApiClient, models: {} }), {
+      searchGroups
+    })
   })
 
   // ============================================================================
@@ -232,10 +236,13 @@ describe('SearchService', () => {
 
   describe('defaultAdapter', () => {
     it('should use the provided defaultAdapter for direct search', async () => {
-      const railsClient = new SearchService(mockApiClient, {
-        searchGroups,
-        defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
-      })
+      const railsClient = new SearchService(
+        new ModelService({ apiClient: mockApiClient, models: {} }),
+        {
+          searchGroups,
+          defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
+        }
+      )
 
       await railsClient.search(DirectSearchModel, 'test', {
         filters: { theme_id: 1 }
@@ -250,10 +257,13 @@ describe('SearchService', () => {
     })
 
     it('should use the provided defaultAdapter for group search', async () => {
-      const railsClient = new SearchService(mockApiClient, {
-        searchGroups,
-        defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
-      })
+      const railsClient = new SearchService(
+        new ModelService({ apiClient: mockApiClient, models: {} }),
+        {
+          searchGroups,
+          defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
+        }
+      )
 
       await railsClient.groupSearch('library', 'ruby', {
         filters: { tag_id: 5 }
@@ -284,9 +294,12 @@ describe('SearchService', () => {
         }
       }
 
-      const railsClient = new SearchService(mockApiClient, {
-        defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
-      })
+      const railsClient = new SearchService(
+        new ModelService({ apiClient: mockApiClient, models: {} }),
+        {
+          defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
+        }
+      )
 
       await railsClient.search(modelWithAdapter, 'test')
 
@@ -305,10 +318,13 @@ describe('SearchService', () => {
       const customGroups = {
         library: { ...searchGroups.library, adapter: customAdapter }
       }
-      const railsClient = new SearchService(mockApiClient, {
-        searchGroups: customGroups,
-        defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
-      })
+      const railsClient = new SearchService(
+        new ModelService({ apiClient: mockApiClient, models: {} }),
+        {
+          searchGroups: customGroups,
+          defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
+        }
+      )
 
       await railsClient.groupSearch('library', 'test')
 
@@ -316,7 +332,10 @@ describe('SearchService', () => {
     })
 
     it('should default to base SearchAdapter when no defaultAdapter provided', async () => {
-      const plainClient = new SearchService(mockApiClient, { searchGroups })
+      const plainClient = new SearchService(
+        new ModelService({ apiClient: mockApiClient, models: {} }),
+        { searchGroups }
+      )
 
       await plainClient.search(DirectSearchModel, 'test', {
         filters: { status: 'active' }
@@ -623,7 +642,10 @@ describe('SearchService', () => {
       const customGroups = {
         library: { ...searchGroups.library, adapter: customAdapter }
       }
-      const customClient = new SearchService(mockApiClient, { searchGroups: customGroups })
+      const customClient = new SearchService(
+        new ModelService({ apiClient: mockApiClient, models: {} }),
+        { searchGroups: customGroups }
+      )
 
       await customClient.groupSearch('library', 'test', {
         filters: { tag_id: 3 }

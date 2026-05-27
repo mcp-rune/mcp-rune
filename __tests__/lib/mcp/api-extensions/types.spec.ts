@@ -81,7 +81,7 @@ class AuthTool extends BaseTool {
     return {}
   }
   async execute(): Promise<ToolResult> {
-    const service = this.requireModelService()
+    const service = this.requireDataLayer()
     const result = (service as unknown as { ping(): string }).ping()
     return { content: [{ type: 'text', text: result }] }
   }
@@ -265,11 +265,12 @@ describe('lib/mcp/api-extensions — ApiExtension mechanism', () => {
   })
 
   describe('ModelService mixin', () => {
-    it('mixin methods are callable on the lazily constructed ModelService', async () => {
+    it('mixin methods are callable on the DataLayer constructed by the registry', async () => {
       const ext: ApiExtension = {
         register(ctx) {
           ctx.registerModelServiceMixin((service) => ({
-            ping: () => `pong from ${service.apiClient.baseUrl}`
+            ping: () =>
+              `pong from ${(service as unknown as { apiClient: { baseUrl: string } }).apiClient.baseUrl}`
           }))
         }
       }
@@ -300,7 +301,7 @@ describe('lib/mcp/api-extensions — ApiExtension mechanism', () => {
       })
     })
 
-    it('mixins from multiple extensions all apply', () => {
+    it('mixins from multiple extensions all apply', async () => {
       const extA: ApiExtension = {
         register(ctx) {
           ctx.registerModelServiceMixin((_service) => ({
@@ -323,13 +324,17 @@ describe('lib/mcp/api-extensions — ApiExtension mechanism', () => {
         apiExtensions: { extA, extB }
       })
 
-      // Reach into the private internals just enough to construct a tool
-      // instance and inspect its modelService.
-      const tool = (
-        registry as unknown as { _createInstance(c: typeof AuthTool): AuthTool }
-      )._createInstance(AuthTool)
-      tool.apiClient = noopApiClient
-      const service = tool.modelService as unknown as {
+      // Reach into the private internals just enough to construct an
+      // authenticated tool instance and inspect its dataLayer.
+      const tool = await (
+        registry as unknown as {
+          _createAuthenticatedInstance(
+            c: typeof AuthTool,
+            getToken: () => Promise<string>
+          ): Promise<AuthTool>
+        }
+      )._createAuthenticatedInstance(AuthTool, async () => 'token')
+      const service = tool.dataLayer as unknown as {
         methodA(): string
         methodB(): string
       }

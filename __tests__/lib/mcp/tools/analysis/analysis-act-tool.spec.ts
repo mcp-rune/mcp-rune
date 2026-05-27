@@ -5,6 +5,7 @@ vi.mock('#src/services/vector-storage.js', () => ({
   getIngestedRecordDryRun: vi.fn()
 }))
 
+import { ModelService } from '#src/mcp/services/model-service.js'
 import {
   getIngestedRecordCount,
   getIngestedRecordDryRun,
@@ -88,7 +89,11 @@ describe('lib/mcp/tools/analysis/analysis-act-tool', () => {
       })
 
       const tool = new AnalysisActTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -126,7 +131,11 @@ describe('lib/mcp/tools/analysis/analysis-act-tool', () => {
       mockApiClient.patch.mockResolvedValue({})
 
       const tool = new AnalysisActTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -164,7 +173,11 @@ describe('lib/mcp/tools/analysis/analysis-act-tool', () => {
       mockApiClient.patch.mockResolvedValue({})
 
       const tool = new AnalysisActTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -193,7 +206,11 @@ describe('lib/mcp/tools/analysis/analysis-act-tool', () => {
       mockApiClient.delete.mockResolvedValue({})
 
       const tool = new AnalysisActTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -220,7 +237,11 @@ describe('lib/mcp/tools/analysis/analysis-act-tool', () => {
       mockApiClient.delete.mockResolvedValue({})
 
       const tool = new AnalysisActTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -260,7 +281,11 @@ describe('lib/mcp/tools/analysis/analysis-act-tool', () => {
       })
 
       const tool = new AnalysisActTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -290,7 +315,11 @@ describe('lib/mcp/tools/analysis/analysis-act-tool', () => {
       )
 
       const tool = new AnalysisActTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -310,7 +339,11 @@ describe('lib/mcp/tools/analysis/analysis-act-tool', () => {
     it("rejects action='update' without attributes", async () => {
       ;(getIngestedRecordCount as ReturnType<typeof vi.fn>).mockResolvedValue(10)
       const tool = new AnalysisActTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -328,7 +361,11 @@ describe('lib/mcp/tools/analysis/analysis-act-tool', () => {
 
     it('rejects read-only models', async () => {
       const tool = new AnalysisActTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -347,7 +384,11 @@ describe('lib/mcp/tools/analysis/analysis-act-tool', () => {
       ;(getIngestedRecordCount as ReturnType<typeof vi.fn>).mockResolvedValueOnce(0)
 
       const tool = new AnalysisActTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -367,7 +408,11 @@ describe('lib/mcp/tools/analysis/analysis-act-tool', () => {
       ;(getIngestedRecordIdsFiltered as ReturnType<typeof vi.fn>).mockResolvedValueOnce([])
 
       const tool = new AnalysisActTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -409,7 +454,11 @@ describe('lib/mcp/tools/analysis/analysis-act-tool', () => {
       mockApiClient.patch.mockResolvedValue({})
 
       const tool = new AnalysisActTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -442,7 +491,11 @@ describe('lib/mcp/tools/analysis/analysis-act-tool', () => {
 
       const sendNotification = vi.fn().mockResolvedValue(undefined)
       const tool = new AnalysisActTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -476,7 +529,11 @@ describe('lib/mcp/tools/analysis/analysis-act-tool', () => {
       mockApiClient.patch.mockResolvedValue({})
 
       const tool = new AnalysisActTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -503,7 +560,11 @@ describe('lib/mcp/tools/analysis/analysis-act-tool', () => {
       mockApiClient.patch.mockResolvedValue({})
 
       const tool = new AnalysisActTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })

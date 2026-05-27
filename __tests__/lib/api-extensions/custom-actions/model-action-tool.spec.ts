@@ -5,7 +5,9 @@ import {
   customActionsExtension,
   ModelActionTool
 } from '../../../../src/api-extensions/custom-actions.js'
+import type { ApiClient } from '../../../../src/core/api-client.js'
 import type { ModelServiceMixin } from '../../../../src/mcp/api-extensions/types.js'
+import { ModelService } from '../../../../src/mcp/services/model-service.js'
 
 /**
  * Captures the mixin contributed by `customActionsExtension()` by invoking
@@ -154,11 +156,13 @@ describe('api-extensions/custom-actions — ModelActionTool', () => {
     }
 
     function makeTool(deps: { apiClient?: unknown; logger?: unknown } = {}): ModelActionTool {
+      const apiClient = (deps.apiClient ?? mockApiClient) as ApiClient
+      const service = new ModelService({ apiClient, models: mockModels })
+      Object.assign(service, actionMixin(service))
       return new ModelActionTool({
-        apiClient: (deps.apiClient ?? mockApiClient) as never,
+        dataLayer: service,
         models: mockModels,
-        logger: deps.logger as never,
-        modelServiceMixins: [actionMixin]
+        logger: deps.logger as never
       })
     }
 
@@ -188,7 +192,7 @@ describe('api-extensions/custom-actions — ModelActionTool', () => {
         record_id: '42'
       })
 
-      expect(mockApiClient.post).toHaveBeenCalledWith('books/42/publish', undefined, undefined)
+      expect(mockApiClient.post).toHaveBeenCalledWith('books/42/publish', undefined)
       expect(result.isError).toBeFalsy()
       expect(result.content[0].text).toContain('success')
     })
@@ -203,11 +207,7 @@ describe('api-extensions/custom-actions — ModelActionTool', () => {
         path_params: { chapter_id: '5' }
       })
 
-      expect(mockApiClient.post).toHaveBeenCalledWith(
-        'books/42/chapters/5/approve',
-        undefined,
-        undefined
-      )
+      expect(mockApiClient.post).toHaveBeenCalledWith('books/42/chapters/5/approve', undefined)
     })
 
     it('should pass query params for GET actions', async () => {
@@ -220,11 +220,7 @@ describe('api-extensions/custom-actions — ModelActionTool', () => {
         params: { format: 'pdf' }
       })
 
-      expect(mockApiClient.get).toHaveBeenCalledWith(
-        'books/42/export',
-        { format: 'pdf' },
-        undefined
-      )
+      expect(mockApiClient.get).toHaveBeenCalledWith('books/42/export', { format: 'pdf' })
     })
 
     it('should pass user_id as requestOptions', async () => {

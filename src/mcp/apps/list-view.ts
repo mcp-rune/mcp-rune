@@ -14,7 +14,7 @@ import { z } from 'zod'
 
 import type { SearchService } from '#src/api-extensions/search/index.js'
 import { getSearchConfig } from '#src/api-extensions/search/index.js'
-import type { SearchApiClient } from '#src/core/api-client.js'
+import type { DataLayer } from '#src/core/data-layer.js'
 import { resolveDerivedFields } from '#src/core/derived-fields.js'
 import { defaultConvention } from '#src/mcp/api-conventions/index.js'
 import { appResponseMeta, extractIds, formatAppSummary } from '#src/mcp/apps/format-summary.js'
@@ -91,10 +91,7 @@ export function createListViewApp({ modelClasses, namespace }: ListViewOptions):
 
     async handleToolCall(
       args: Record<string, unknown> = {},
-      {
-        apiClient,
-        searchClient
-      }: { apiClient?: SearchApiClient; searchClient?: SearchService } = {}
+      { dataLayer, searchClient }: { dataLayer?: DataLayer; searchClient?: SearchService } = {}
     ): Promise<ToolResult> {
       const {
         model,
@@ -157,10 +154,15 @@ export function createListViewApp({ modelClasses, namespace }: ListViewOptions):
           })
           records = []
         }
-      } else if (apiClient) {
+      } else if (dataLayer) {
         try {
           const queryParams = { page, per_page: 20, ...(filters as Record<string, unknown>) }
-          const data = await apiClient.get(ModelClass.api.endpoint, queryParams)
+          const data = await dataLayer.dispatch(
+            'GET',
+            ModelClass.api.endpoint,
+            undefined,
+            queryParams
+          )
           const convention = ModelClass.api?.convention ?? defaultConvention
           const normalized = convention.normalizeListResponse(data, {
             page: page as number,

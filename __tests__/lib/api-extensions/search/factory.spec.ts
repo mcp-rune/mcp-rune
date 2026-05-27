@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { ModelService } from '#src/mcp/services/model-service.js'
+
 import { createSearchService } from '../../../../src/api-extensions/search/factory.js'
 import { SearchAdapter } from '../../../../src/api-extensions/search/search-adapter.js'
 import { SearchService } from '../../../../src/api-extensions/search/search-service.js'
@@ -12,7 +14,7 @@ const stubApiClient = () => ({
 describe('api-extensions/search/factory — createSearchService', () => {
   it('returns a SearchService bound to the given apiClient', () => {
     const apiClient = stubApiClient()
-    const service = createSearchService(apiClient)
+    const service = createSearchService(new ModelService({ apiClient, models: {} }))
     expect(service).toBeInstanceOf(SearchService)
   })
 
@@ -22,7 +24,7 @@ describe('api-extensions/search/factory — createSearchService', () => {
       records: [],
       pagination: { page: 1, per_page: 20, total: 0 }
     })
-    const service = createSearchService(apiClient, {
+    const service = createSearchService(new ModelService({ apiClient, models: {} }), {
       searchGroups: {
         catalogue: { endpoint: 'catalogue/search', modelsParam: 'models' }
       }
@@ -35,7 +37,9 @@ describe('api-extensions/search/factory — createSearchService', () => {
     const apiClient = stubApiClient()
     const customAdapter = new SearchAdapter()
     const spy = vi.spyOn(customAdapter, 'buildRequest')
-    const service = createSearchService(apiClient, { defaultAdapter: customAdapter })
+    const service = createSearchService(new ModelService({ apiClient, models: {} }), {
+      defaultAdapter: customAdapter
+    })
     // Indirectly verify the adapter was retained: invoke a search through a
     // model that has a direct endpoint, which triggers buildRequest on the
     // service's default adapter.
@@ -55,7 +59,7 @@ describe('api-extensions/search/factory — createSearchService', () => {
 
   it('falls back to empty defaults when context is omitted', () => {
     const apiClient = stubApiClient()
-    const service = createSearchService(apiClient)
+    const service = createSearchService(new ModelService({ apiClient, models: {} }))
     expect(service).toBeInstanceOf(SearchService)
   })
 })

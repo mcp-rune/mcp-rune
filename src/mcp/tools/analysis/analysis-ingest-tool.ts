@@ -13,8 +13,7 @@ import {
   storeIngestedRecords
 } from '#src/services/vector-storage.js'
 
-import type { ApiClient, ModelConfig, ToolAnnotations, ToolResult } from '../base-tool.js'
-import { LoggingApiClient } from '../logging-api-client.js'
+import type { DataLayer, ModelConfig, ToolAnnotations, ToolResult } from '../base-tool.js'
 import type { NestedValidationError, NestedValidationSuccess } from '../validators.js'
 import { validateFilterParams, validateNestedResource } from '../validators.js'
 import { BaseAnalysisTool } from './base-analysis-tool.js'
@@ -145,7 +144,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
 
   override async execute(args: Record<string, unknown>): Promise<ToolResult> {
     try {
-      this.requireApiClient()
+      const dataLayer = this.requireDataLayer()
 
       const {
         model,
@@ -175,7 +174,6 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         child_resource?: string
       }
 
-      const api = this.logger ? new LoggingApiClient(this.apiClient!, this.logger) : this.apiClient!
       const options = user_id ? { userId: user_id } : {}
 
       // --- Nested resource ingestion mode ---
@@ -192,7 +190,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
           }
         }
         return await this._ingestNestedResources(
-          api,
+          dataLayer,
           analysis_id,
           parent_model,
           child_resource,
@@ -245,7 +243,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
 
       if (ingest_all) {
         return await this._ingestAllPages(
-          api,
+          dataLayer,
           model,
           ModelClass,
           modelConfig,
@@ -258,7 +256,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         )
       } else {
         return await this._ingestPage(
-          api,
+          dataLayer,
           model,
           ModelClass,
           modelConfig,
@@ -277,7 +275,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
 
   /** Fetch and store a single page */
   private async _ingestPage(
-    api: ApiClient,
+    dataLayer: DataLayer,
     model: string,
     ModelClass: Record<string, unknown>,
     modelConfig: ModelConfig,
@@ -300,7 +298,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
 
     if (hasFullText && hasSearchParams) {
       // Use SearchService for filtered ingestion
-      const searchClient = this._createSearchService(api as unknown as ApiClient)
+      const searchClient = this._createSearchService(dataLayer)
       const { records, pagination } = (await searchClient.search(
         ModelClass as Parameters<typeof searchClient.search>[0],
         '',
@@ -316,10 +314,13 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     } else {
       // Use plain GET for simple listing (no filters)
       const queryParams = { page, per_page: perPage }
-      const data = (await api.get(modelConfig.api.endpoint, queryParams, apiOptions)) as Record<
-        string,
-        unknown
-      >
+      const data = (await dataLayer.dispatch(
+        'GET',
+        modelConfig.api.endpoint,
+        undefined,
+        queryParams,
+        apiOptions
+      )) as Record<string, unknown>
 
       const normalized = convention.normalizeListResponse(data, { page, perPage })
       rawRecords = normalized.records
@@ -363,7 +364,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
 
   /** Auto-paginate and ingest all pages */
   private async _ingestAllPages(
-    api: ApiClient,
+    dataLayer: DataLayer,
     model: string,
     ModelClass: Record<string, unknown>,
     modelConfig: ModelConfig,
@@ -396,7 +397,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     const hasFullText = getSearchConfig(modelConfig)?.query
     const hasSearchParams = filters && Object.keys(filters).length > 0
     const searchClient =
-      hasFullText && hasSearchParams ? this._createSearchService(api as unknown as ApiClient) : null
+      hasFullText && hasSearchParams ? this._createSearchService(dataLayer) : null
 
     while (currentPage <= MAX_INGEST_PAGES) {
       let rawRecords: Record<string, unknown>[]
@@ -420,10 +421,13 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       } else {
         // Use plain GET for simple listing
         const queryParams = { page: currentPage, per_page: perPage }
-        const data = (await api.get(modelConfig.api.endpoint, queryParams, apiOptions)) as Record<
-          string,
-          unknown
-        >
+        const data = (await dataLayer.dispatch(
+          'GET',
+          modelConfig.api.endpoint,
+          undefined,
+          queryParams,
+          apiOptions
+        )) as Record<string, unknown>
 
         const normalized = convention.normalizeListResponse(data, { page: currentPage, perPage })
         rawRecords = normalized.records
@@ -501,7 +505,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
 
   /** Ingest nested resources for parent records */
   private async _ingestNestedResources(
-    api: ApiClient,
+    dataLayer: DataLayer,
     analysisId: string,
     parentModel: string,
     childResource: string,
@@ -583,7 +587,13 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     const tasks = parentIds.map((parentId) => async () => {
       try {
         const endpoint = buildCollectionPath(parentConfig.api.endpoint, parentId, childPath)
-        const data = (await api.get(endpoint, {}, apiOptions)) as Record<string, unknown>
+        const data = (await dataLayer.dispatch(
+          'GET',
+          endpoint,
+          undefined,
+          {},
+          apiOptions
+        )) as Record<string, unknown>
         const rawRecords = convention.extractNestedRecords(
           data,
           childConfig?.attributes as Record<string, unknown> | undefined
@@ -716,10 +726,10 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     return augmented
   }
 
-  /** Create a SearchService from the tool's apiClient and serverContext */
-  private _createSearchService(apiClient?: ApiClient): SearchService {
+  /** Create a SearchService from the given (or bound) DataLayer and serverContext */
+  private _createSearchService(dataLayer?: DataLayer): SearchService {
     return createSearchService(
-      apiClient ?? this.apiClient!,
+      dataLayer ?? this.requireDataLayer(),
       this.serverContext as Record<string, unknown>
     )
   }

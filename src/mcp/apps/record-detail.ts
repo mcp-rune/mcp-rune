@@ -17,7 +17,7 @@ import path from 'node:path'
 
 import { z } from 'zod'
 
-import type { SearchApiClient } from '#src/core/api-client.js'
+import type { DataLayer } from '#src/core/data-layer.js'
 import { generateDetailSchema } from '#src/mcp/apps/detail-schema.js'
 import { appResponseMeta, formatAppSummary } from '#src/mcp/apps/format-summary.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
@@ -41,7 +41,7 @@ let _cachedHtml: string | null = null
 async function resolveAssociationLabelsBatch(
   fields: DetailFieldDefinition[],
   records: Record<string, unknown>[],
-  apiClient: SearchApiClient
+  dataLayer: DataLayer
 ): Promise<void> {
   const assocFields = fields.filter((f) => f.association)
   if (assocFields.length === 0) return
@@ -70,7 +70,7 @@ async function resolveAssociationLabelsBatch(
   await Promise.all(
     Array.from(lookups.entries()).map(async ([key, { endpoint, id, labelField }]) => {
       try {
-        const data = await apiClient.get(`${endpoint}/${id}`)
+        const data = await dataLayer.dispatch('GET', `${endpoint}/${id}`)
         const record = (data.data as Record<string, unknown>) || data
         const label = record[labelField] || record.name
         if (label) resolved.set(key, String(label))
@@ -145,10 +145,7 @@ export function createRecordDetailApp({
 
     async handleToolCall(
       args: Record<string, unknown> = {},
-      {
-        apiClient,
-        selectionStore
-      }: { apiClient?: SearchApiClient; selectionStore?: SelectionStore } = {}
+      { dataLayer, selectionStore }: { dataLayer?: DataLayer; selectionStore?: SelectionStore } = {}
     ): Promise<ToolResult> {
       const { model } = args
       let ids = args.ids as string[] | undefined
@@ -204,8 +201,8 @@ export function createRecordDetailApp({
       // Fetch all records in parallel
       const results = await Promise.allSettled(
         ids.map(async (id) => {
-          if (!apiClient) throw new Error('No API client available')
-          const data = await apiClient.get(`${ModelClass.api.endpoint}/${id}`)
+          if (!dataLayer) throw new Error('No data layer available')
+          const data = await dataLayer.dispatch('GET', `${ModelClass.api.endpoint}/${id}`)
           return (data.data as Record<string, unknown>) || data
         })
       )
@@ -228,8 +225,8 @@ export function createRecordDetailApp({
       const successfulRecords = records
         .filter((r): r is { data: Record<string, unknown> } => 'data' in r)
         .map((r) => r.data)
-      if (successfulRecords.length > 0 && apiClient) {
-        await resolveAssociationLabelsBatch(schema.fields, successfulRecords, apiClient)
+      if (successfulRecords.length > 0 && dataLayer) {
+        await resolveAssociationLabelsBatch(schema.fields, successfulRecords, dataLayer)
       }
 
       const response: Record<string, unknown> = { schema, records }

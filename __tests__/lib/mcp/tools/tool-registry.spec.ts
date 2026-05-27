@@ -57,7 +57,7 @@ class AuthTool extends BaseTool {
     return {}
   }
   async execute(_args: Record<string, unknown>): Promise<ToolResult> {
-    this.requireApiClient()
+    this.requireDataLayer()
     return { content: [{ type: 'text', text: 'authenticated' }] }
   }
 }

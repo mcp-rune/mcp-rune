@@ -36,7 +36,7 @@ describe('FindRecordsTool', () => {
       }
       tool = new FindRecordsTool({
         models: mockModels,
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({ apiClient: mockApiClient, models: mockModels }),
         logger: { info: vi.fn() }
       })
     })
@@ -95,3 +95,4 @@ describe('FindRecordsTool', () => {
     })
   })
 })
+import { ModelService } from '#src/mcp/services/model-service.js'

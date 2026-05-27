@@ -95,7 +95,7 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
 
   override async execute(args: Record<string, unknown>): Promise<ToolResult> {
     try {
-      this.requireApiClient()
+      this.requireDataLayer()
 
       const { model, action, user_id, parent_path } = args as {
         model: string
@@ -350,13 +350,17 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
       validIndices
     } = this._prepareCreate(modelConfig, model, records, parentPath)
 
+    const dataLayer = this.requireDataLayer()
     const tasks = validIndices.map(
       (i) => () =>
-        this.apiClient!.post(
-          endpoints[i]!,
-          this.buildRequestPayload(model, cleanRecords[i]!),
-          options
-        )
+        dataLayer
+          .dispatch(
+            'POST',
+            endpoints[i]!,
+            this.buildRequestPayload(model, cleanRecords[i]!),
+            undefined,
+            options
+          )
           .then((data) => {
             results[i] = {
               index: i,
@@ -389,13 +393,17 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
   ): Promise<BulkResult[]> {
     const results = new Array<BulkResult>(recordIds.length)
 
+    const dataLayer = this.requireDataLayer()
     const tasks = recordIds.map(
       (id, i) => () =>
-        this.apiClient!.patch(
-          this._resolveRecordEndpoint(modelConfig, id),
-          this.buildRequestPayload(model, attributes),
-          options
-        )
+        dataLayer
+          .dispatch(
+            'PATCH',
+            this._resolveRecordEndpoint(modelConfig, id),
+            this.buildRequestPayload(model, attributes),
+            undefined,
+            options
+          )
           .then(() => {
             results[i] = { index: i, id, status: 'updated' }
           })
@@ -424,13 +432,17 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
   ): Promise<BulkResult[]> {
     const results = new Array<BulkResult>(records.length)
 
+    const dataLayer = this.requireDataLayer()
     const tasks = records.map((record, i) => () => {
       const { record_id, ...attrs } = record
-      return this.apiClient!.patch(
-        this._resolveRecordEndpoint(modelConfig, record_id as string),
-        this.buildRequestPayload(model, attrs),
-        options
-      )
+      return dataLayer
+        .dispatch(
+          'PATCH',
+          this._resolveRecordEndpoint(modelConfig, record_id as string),
+          this.buildRequestPayload(model, attrs),
+          undefined,
+          options
+        )
         .then(() => {
           results[i] = { index: i, id: record_id as string, status: 'updated' }
         })
@@ -459,9 +471,17 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
   ): Promise<BulkResult[]> {
     const results = new Array<BulkResult>(recordIds.length)
 
+    const dataLayer = this.requireDataLayer()
     const tasks = recordIds.map(
       (id, i) => () =>
-        this.apiClient!.delete(this._resolveRecordEndpoint(modelConfig, id), options)
+        dataLayer
+          .dispatch(
+            'DELETE',
+            this._resolveRecordEndpoint(modelConfig, id),
+            undefined,
+            undefined,
+            options
+          )
           .then(() => {
             results[i] = { index: i, id, status: 'deleted' }
           })

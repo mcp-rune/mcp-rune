@@ -38,7 +38,6 @@ export {
   loggingInterceptor,
   tracingInterceptor
 } from './mcp/tools/interceptors.js'
-export { LoggingApiClient } from './mcp/tools/logging-api-client.js'
 export {
   BaseOperationsTool,
   ClusterOperationsTool,

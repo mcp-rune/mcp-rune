@@ -332,7 +332,7 @@ export class ModelActionTool extends BaseTool {
 
   override async execute(args: Record<string, unknown>): Promise<ToolResult> {
     try {
-      const service = this.requireModelService() as unknown as ActionServiceMethods
+      const service = this.requireDataLayer() as unknown as ActionServiceMethods
 
       const { model, action, record_id, attributes, path_params, params, user_id } = args as {
         model: string

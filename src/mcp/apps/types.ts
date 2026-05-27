@@ -7,14 +7,15 @@
  */
 
 import type { SearchService } from '#src/api-extensions/search/index.js'
-import type { SearchApiClient } from '#src/core/api-client.js'
+import type { DataLayer } from '#src/core/data-layer.js'
 import type { AssociationConfig, BaseConvention } from '#src/mcp/api-conventions/base-convention.js'
 
 import type { FormDataStore } from './form-data-store.js'
 import type { SelectionStore } from './selection-store.js'
 
-// Re-export for convenience — apps only need get/post
-export type { SearchApiClient as ApiClient } from '#src/core/api-client.js'
+// Re-exported for AppRegistry consumers wiring up the createApiClient factory.
+export type { ApiClient } from '#src/core/api-client.js'
+export type { DataLayer } from '#src/core/data-layer.js'
 
 /**
  * Extended attribute definition used in app schema generators.
@@ -87,7 +88,7 @@ export interface ToolResult {
 
 /** Context passed to handleToolCall by AppRegistry */
 export interface AppToolContext {
-  apiClient?: SearchApiClient
+  dataLayer?: DataLayer
   searchClient?: SearchService
   selectionStore?: SelectionStore
   formDataStore?: FormDataStore

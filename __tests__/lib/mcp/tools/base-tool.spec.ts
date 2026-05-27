@@ -29,10 +29,10 @@ describe('lib/mcp/tools/base-tool', () => {
   })
 
   describe('constructor dependency injection', () => {
-    it('should accept apiClient', () => {
-      const apiClient = { get: () => {} }
-      const tool = new BaseTool({ apiClient })
-      expect(tool.apiClient).toBe(apiClient)
+    it('should accept dataLayer', () => {
+      const dataLayer = { create: () => {}, find: () => {} } as never
+      const tool = new BaseTool({ dataLayer })
+      expect(tool.dataLayer).toBe(dataLayer)
     })
 
     it('should accept logger', () => {
@@ -71,7 +71,7 @@ describe('lib/mcp/tools/base-tool', () => {
 
     it('should handle empty dependencies', () => {
       const tool = new BaseTool()
-      expect(tool.apiClient).toBeUndefined()
+      expect(tool.dataLayer).toBeUndefined()
       expect(tool.logger).toBeUndefined()
     })
   })
@@ -509,15 +509,15 @@ describe('lib/mcp/tools/base-tool', () => {
     })
   })
 
-  describe('requireApiClient', () => {
-    it('should throw when apiClient is not set', () => {
+  describe('requireDataLayer', () => {
+    it('should throw when dataLayer is not set', () => {
       const tool = new BaseTool()
-      expect(() => tool.requireApiClient()).toThrow('Not authenticated')
+      expect(() => tool.requireDataLayer()).toThrow('Not authenticated')
     })
 
-    it('should not throw when apiClient is set', () => {
-      const tool = new BaseTool({ apiClient: { get: () => {} } })
-      expect(() => tool.requireApiClient()).not.toThrow()
+    it('should not throw when dataLayer is set', () => {
+      const tool = new BaseTool({ dataLayer: { create: () => {} } as never })
+      expect(() => tool.requireDataLayer()).not.toThrow()
     })
   })
 
