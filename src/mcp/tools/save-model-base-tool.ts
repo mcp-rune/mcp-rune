@@ -13,6 +13,19 @@ import { BaseTool } from './base-tool.js'
 
 export class SaveModelBaseTool extends BaseTool {
   /**
+   * Why this class exists alongside `DataLayer.buildPayload`:
+   *
+   * `DataLayer.buildPayload(model, modelConfig, attrs)` is the
+   * authenticated-path version that lives on the seam — it requires the
+   * caller to already have a `DataLayer` instance and a `ModelConfig`.
+   * The methods here are the *unauthenticated* helpers used during
+   * tool-definition introspection (e.g. when the registry instantiates a
+   * tool just to read its `inputSchema`) where no `DataLayer` is bound.
+   *
+   * Both paths route through the same convention; the divergence is
+   * intentional and the surface stays narrow.
+   */
+  /**
    * Get usage rules for save operations.
    *
    * Adds MANDATORY restrictions for models that require guided creation.
@@ -48,23 +61,28 @@ export class SaveModelBaseTool extends BaseTool {
   /**
    * Build the request payload for a write operation (create/update).
    *
-   * Reads the convention from the model config. Falls back to the
-   * wrapped (Rails) convention when no convention is configured.
+   * When a `DataLayer` is bound (authenticated path) we route through
+   * its `buildPayload` so adapters can override convention/association
+   * handling. Otherwise we fall back to the plain convention pipeline
+   * with no base URL — sufficient for non-HAL conventions and for the
+   * tool-definition introspection path.
    */
   buildRequestPayload(model: string, attrs: Record<string, unknown>): Record<string, unknown> {
     const modelConfig = this.models[model]
-    const convention = modelConfig?.api?.convention ?? defaultConvention
 
-    // Resolve _id attributes into convention-specific fields (e.g., title_id -> title_link for HAL)
+    if (this.dataLayer && modelConfig) {
+      return this.dataLayer.buildPayload(model, modelConfig, attrs)
+    }
+
+    const convention = modelConfig?.api?.convention ?? defaultConvention
     let finalAttrs = attrs
     if (modelConfig?.associations?.belongsTo) {
       finalAttrs = convention.resolveAssociationValues(
         attrs,
         modelConfig.associations.belongsTo,
-        this.apiClient?.baseUrl
+        undefined
       )
     }
-
     return convention.buildRequestPayload(model, finalAttrs)
   }
 

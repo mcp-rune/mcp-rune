@@ -127,7 +127,7 @@ Failure model: batches are not atomic across the whole set (matches bulk_action_
 
   override async execute(args: Record<string, unknown>): Promise<ToolResult> {
     try {
-      this.requireApiClient()
+      this.requireDataLayer()
 
       const {
         analysis_id,
@@ -286,9 +286,17 @@ Failure model: batches are not atomic across the whole set (matches bulk_action_
     const results = new Array<ActResult>(recordIds.length)
     const payload = this.buildRequestPayload(model, attributes)
 
+    const dataLayer = this.requireDataLayer()
     const tasks = recordIds.map(
       (id, i) => () =>
-        this.apiClient!.patch(this._resolveRecordEndpoint(modelConfig, id), payload, options)
+        dataLayer
+          .dispatch(
+            'PATCH',
+            this._resolveRecordEndpoint(modelConfig, id),
+            payload,
+            undefined,
+            options
+          )
           .then(() => {
             results[i] = { index: baseIndex + i, id, status: 'updated' }
           })
@@ -317,9 +325,17 @@ Failure model: batches are not atomic across the whole set (matches bulk_action_
   ): Promise<ActResult[]> {
     const results = new Array<ActResult>(recordIds.length)
 
+    const dataLayer = this.requireDataLayer()
     const tasks = recordIds.map(
       (id, i) => () =>
-        this.apiClient!.delete(this._resolveRecordEndpoint(modelConfig, id), options)
+        dataLayer
+          .dispatch(
+            'DELETE',
+            this._resolveRecordEndpoint(modelConfig, id),
+            undefined,
+            undefined,
+            options
+          )
           .then(() => {
             results[i] = { index: baseIndex + i, id, status: 'deleted' }
           })

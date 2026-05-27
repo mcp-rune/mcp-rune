@@ -220,7 +220,7 @@ Call get_filters_guide first to learn available filters for the target model.`
 
   override async execute(args: Record<string, unknown>): Promise<ToolResult> {
     try {
-      this.requireApiClient()
+      const dataLayer = this.requireDataLayer()
 
       const {
         model,
@@ -278,7 +278,7 @@ Call get_filters_guide first to learn available filters for the target model.`
 
       const clampedPerPage = Math.min(per_page, 200)
       const searchClient = createSearchService(
-        this.apiClient!,
+        dataLayer,
         this.serverContext as Record<string, unknown>
       )
       const { records, pagination } = (await searchClient.search(

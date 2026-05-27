@@ -3,6 +3,7 @@ import { DeleteModelTool } from '../../../../../src/mcp/tools/data/delete-model-
 vi.mock('#src/services/vector-storage.js', () => ({
   storeOperation: vi.fn().mockResolvedValue(null)
 }))
+import { ModelService } from '#src/mcp/services/model-service.js'
 
 const { storeOperation } = await import('#src/services/vector-storage.js')
 
@@ -73,7 +74,11 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
       }
 
       const tool = new DeleteModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -94,7 +99,11 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
       }
 
       const tool = new DeleteModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels
       })
 
@@ -108,7 +117,10 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
 
     it('should return error for unknown model', async () => {
       const tool = new DeleteModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: { book: { api: { endpoint: 'books' } } }
+        }),
         models: { book: { api: { endpoint: 'books' } } }
       })
 
@@ -122,14 +134,19 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
     })
 
     it('should return error for read-only model', async () => {
-      const tool = new DeleteModelTool({
-        apiClient: mockApiClient,
-        models: {
-          report: {
-            api: { endpoint: 'reports', readOnly: true },
-            description: 'Read-only reports'
-          }
+      const readOnlyModels = {
+        report: {
+          api: { endpoint: 'reports', readOnly: true },
+          description: 'Read-only reports'
         }
+      }
+      const tool = new DeleteModelTool({
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: readOnlyModels,
+          logger: mockLogger
+        }),
+        models: readOnlyModels
       })
 
       const result = await tool.execute({
@@ -163,7 +180,11 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
       mockApiClient.delete.mockRejectedValue(error)
 
       const tool = new DeleteModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels
       })
 
@@ -182,7 +203,11 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
       }
 
       const tool = new DeleteModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -204,7 +229,11 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
       }
 
       const tool = new DeleteModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels
       })
 
@@ -223,7 +252,11 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
       }
 
       const tool = new DeleteModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         serverContext: { sessionId: 'sess-789' }
       })
@@ -249,7 +282,11 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
       storeOperation.mockRejectedValueOnce(new Error('pgvector unavailable'))
 
       const tool = new DeleteModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })

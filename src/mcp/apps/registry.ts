@@ -21,7 +21,10 @@ import type { z } from 'zod'
 
 import type { SearchAdapter, SearchGroup } from '#src/api-extensions/search/index.js'
 import { createSearchService } from '#src/api-extensions/search/index.js'
+import type { DataLayer, DataLayerFactory } from '#src/core/data-layer.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
+import { ModelService } from '#src/mcp/services/model-service.js'
+import type { ModelsRegistry } from '#src/mcp/tools/base-tool.js'
 import * as logger from '#src/services/logger.js'
 
 import type { FormDataStore } from './form-data-store.js'
@@ -60,6 +63,21 @@ interface AppDefinition {
 interface RegistryOptions {
   apiUrl?: string
   createApiClient?: (token: string, options: { apiUrl: string }) => ApiClient
+  /**
+   * Models registry, required when apps need to fetch records through the
+   * default `DataLayer` adapter. When omitted, apps that call
+   * `context.dataLayer` will receive an empty-registry adapter and only
+   * `dataLayer.dispatch` against literal URLs will work.
+   */
+  models?: ModelsRegistry
+  /**
+   * Optional `DataLayer` factory mirror of the one on `ToolRegistry`. Lets
+   * integrators back the apps' data access with the same adapter they
+   * configured for tools (in-memory stub, third-party library, etc.). When
+   * omitted, the registry wraps the `createApiClient`-produced client in a
+   * default `ModelService`.
+   */
+  dataLayer?: DataLayerFactory
   searchGroups?: Record<string, SearchGroup>
   defaultAdapter?: SearchAdapter
   /** SVG data URI for the h1::before header icon (overrides --header-icon CSS variable) */
@@ -77,19 +95,40 @@ export class AppRegistry {
   private _apps = new Map<string, AppDefinition>()
   private _apiUrl?: string
   private _createApiClient?: (token: string, options: { apiUrl: string }) => ApiClient
+  private _models: ModelsRegistry
+  private _dataLayerFactory: DataLayerFactory
   private _searchGroups: Record<string, SearchGroup>
   private _defaultAdapter?: SearchAdapter
   private _headerIcon?: string
 
   constructor(
     apps: AppDefinition[] = [],
-    { apiUrl, createApiClient, searchGroups = {}, defaultAdapter, headerIcon }: RegistryOptions = {}
+    {
+      apiUrl,
+      createApiClient,
+      models,
+      dataLayer,
+      searchGroups = {},
+      defaultAdapter,
+      headerIcon
+    }: RegistryOptions = {}
   ) {
     this._apiUrl = apiUrl
     this._createApiClient = createApiClient
+    this._models = models ?? {}
     this._searchGroups = searchGroups
     this._defaultAdapter = defaultAdapter
     this._headerIcon = headerIcon
+
+    // Default DataLayer factory wraps ModelService. Apps share the same
+    // pluggable seam as ToolRegistry — integrators can swap the adapter
+    // (in-memory stub, third-party library, etc.) by passing `dataLayer`.
+    const modelsRef = this._models
+    this._dataLayerFactory =
+      dataLayer ??
+      (({ apiClient, models: m, logger: log }): DataLayer =>
+        new ModelService({ apiClient: apiClient!, models: m ?? modelsRef, logger: log }))
+
     for (const app of apps) {
       if (app.toolName) {
         this._apps.set(app.toolName, app)
@@ -142,12 +181,17 @@ export class AppRegistry {
           try {
             const context: Record<string, unknown> = {}
 
-            // Create authenticated API client and search client for apps that need it
+            // Build the authenticated DataLayer + search client for apps that need it
             if (app.needsAuth && getAccessToken && this._apiUrl && this._createApiClient) {
               const token = await getAccessToken()
               const apiClient = this._createApiClient(token, { apiUrl: this._apiUrl })
-              context.apiClient = apiClient
-              context.searchClient = createSearchService(apiClient, {
+              const dataLayer = this._dataLayerFactory({
+                apiClient,
+                models: this._models,
+                logger
+              })
+              context.dataLayer = dataLayer
+              context.searchClient = createSearchService(dataLayer, {
                 searchGroups: this._searchGroups,
                 defaultAdapter: this._defaultAdapter
               })

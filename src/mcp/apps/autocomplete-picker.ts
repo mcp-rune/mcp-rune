@@ -15,7 +15,7 @@ import { z } from 'zod'
 
 import type { SearchService } from '#src/api-extensions/search/index.js'
 import { getSearchConfig } from '#src/api-extensions/search/index.js'
-import type { SearchApiClient } from '#src/core/api-client.js'
+import type { DataLayer } from '#src/core/data-layer.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
 import { createSelectionTools } from '#src/mcp/apps/selection-tools.js'
 import * as logger from '#src/services/logger.js'
@@ -151,7 +151,7 @@ export function createAutocompletePickerApp({
 
     async handleToolCall(
       args: Record<string, unknown> = {},
-      { searchClient }: { apiClient?: SearchApiClient; searchClient?: SearchService } = {}
+      { searchClient }: { dataLayer?: DataLayer; searchClient?: SearchService } = {}
     ): Promise<ToolResult> {
       const {
         model,

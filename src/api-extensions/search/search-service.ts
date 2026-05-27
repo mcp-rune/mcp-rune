@@ -1,11 +1,11 @@
 /**
  * SearchService -- Normalized search interface for MCP apps and tools.
  *
- * Wraps apiClient to provide a consistent search API regardless of
- * whether a model has its own search endpoint, delegates to a group
- * search endpoint, or only supports listing.
+ * Backed by a `DataLayer` so search composes with any adapter the
+ * projection layer is wired to. The service issues raw HTTP via
+ * `DataLayer.dispatch` and never reaches for a concrete `ApiClient`.
  *
- *   MCP App/Tool -> SearchService -> apiClient -> API
+ *   MCP App/Tool -> SearchService -> DataLayer.dispatch -> API
  *
  * Three entry points:
  * - search()  — structured query with filters (POST or group-based)
@@ -21,10 +21,11 @@
  * The base SearchAdapter spreads filters flat into the body. For Rails-style
  * nesting (e.g., `{ filters: { ... } }`), use RailsSearchAdapter.
  *
- * CRUD operations still use apiClient directly via Model.endpoint.
+ * CRUD operations remain on the typed `DataLayer.find/list/create/update`
+ * surface; SearchService only handles the search-specific dispatch paths.
  */
 
-import type { SearchApiClient } from '#src/core/api-client.js'
+import type { DataLayer } from '#src/core/data-layer.js'
 import { defaultConvention } from '#src/mcp/api-conventions/index.js'
 
 import { getSearchConfig } from './capabilities.js'
@@ -38,12 +39,12 @@ import type {
 } from './types.js'
 
 export class SearchService {
-  private _apiClient: SearchApiClient
+  private _dataLayer: DataLayer
   private _searchGroups: Record<string, SearchGroup>
   private _defaultAdapter: SearchAdapter
 
   constructor(
-    apiClient: SearchApiClient,
+    dataLayer: DataLayer,
     {
       searchGroups = {},
       defaultAdapter = new SearchAdapter()
@@ -52,7 +53,7 @@ export class SearchService {
       defaultAdapter?: SearchAdapter
     } = {}
   ) {
-    this._apiClient = apiClient
+    this._dataLayer = dataLayer
     this._searchGroups = searchGroups
     this._defaultAdapter = defaultAdapter
   }
@@ -179,7 +180,7 @@ export class SearchService {
       const paramName = lookupConfig.queryParam || lookupConfig.fields?.[0] || 'q'
       const params: Record<string, unknown> = { per_page: perPage }
       if (query) params[paramName] = query
-      const data = await this._apiClient.get(lookupConfig.endpoint, params)
+      const data = await this._dataLayer.dispatch('GET', lookupConfig.endpoint, undefined, params)
       return this._normalizeResponse(data, { page: 1, perPage })
     }
 
@@ -229,7 +230,7 @@ export class SearchService {
       body[group.modelsParam] = models
     }
 
-    const response = await this._apiClient.post(group.endpoint, body)
+    const response = await this._dataLayer.dispatch('POST', group.endpoint, body)
     return this._normalizeResponse(response, { page, perPage })
   }
 
@@ -257,7 +258,7 @@ export class SearchService {
     const params: Record<string, unknown> = { page, per_page: perPage, ...fieldFilters }
     if (sort) params.sort = sort
 
-    const data = await this._apiClient.get(ModelClass.api.endpoint, params)
+    const data = await this._dataLayer.dispatch('GET', ModelClass.api.endpoint, undefined, params)
 
     const convention = ModelClass.api?.convention ?? defaultConvention
     return convention.normalizeListResponse(data, { page, perPage }) as SearchResult
@@ -320,7 +321,7 @@ export class SearchService {
       const endpoint = queryParams
         ? `${queryConfig!.endpoint}?${queryParams}`
         : queryConfig!.endpoint!
-      const response = await this._apiClient.post(endpoint, body)
+      const response = await this._dataLayer.dispatch('POST', endpoint, body)
       return this._normalizeResponse(response, { page, perPage })
     }
 
@@ -331,7 +332,7 @@ export class SearchService {
       per_page: perPage
     }
 
-    const data = await this._apiClient.get(queryConfig!.endpoint!, params)
+    const data = await this._dataLayer.dispatch('GET', queryConfig!.endpoint!, undefined, params)
     return this._normalizeResponse(data, { page, perPage })
   }
 

@@ -42,7 +42,7 @@ export class DeleteModelTool extends BaseTool {
 
   override async execute(args: Record<string, unknown>): Promise<ToolResult> {
     try {
-      const service = this.requireModelService()
+      const service = this.requireDataLayer()
 
       const { model, record_id, user_id } = args as {
         model: string

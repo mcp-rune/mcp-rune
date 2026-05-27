@@ -4,6 +4,7 @@ import { flatConvention } from '../../../../__fixtures__/flat-convention.js'
 vi.mock('#src/services/vector-storage.js', () => ({
   storeOperation: vi.fn().mockResolvedValue(null)
 }))
+import { ModelService } from '#src/mcp/services/model-service.js'
 
 const { storeOperation } = await import('#src/services/vector-storage.js')
 
@@ -80,7 +81,11 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
       mockApiClient.patch.mockResolvedValue({ id: 1, title: 'Updated Session' })
 
       const tool = new UpdateModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -107,7 +112,11 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
       }
 
       const tool = new UpdateModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels
       })
 
@@ -122,7 +131,10 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should return error for unknown model', async () => {
       const tool = new UpdateModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: { book: { api: { endpoint: 'books' } } }
+        }),
         models: { book: { api: { endpoint: 'books' } } }
       })
 
@@ -159,7 +171,11 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
       mockApiClient.patch.mockRejectedValue(error)
 
       const tool = new UpdateModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels
       })
 
@@ -181,7 +197,11 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
       mockApiClient.patch.mockResolvedValue({ id: 5, title: 'Updated Book' })
 
       const tool = new UpdateModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -210,7 +230,11 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
       mockApiClient.patch.mockResolvedValue({ id: 5, title: 'Updated' })
 
       const tool = new UpdateModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels
       })
 
@@ -237,7 +261,11 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
       storeOperation.mockClear()
 
       const tool = new UpdateModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         serverContext: { sessionId: 'sess-456' }
       })
@@ -268,7 +296,11 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
       const mockWarnLogger = { info: vi.fn(), warn: vi.fn() }
 
       const tool = new UpdateModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockWarnLogger
       })
@@ -309,7 +341,11 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
       mockApiClient.patch.mockResolvedValue({ id: 1, title: 'Updated Session' })
 
       const tool = new UpdateModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -334,7 +370,11 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
       }
 
       const tool = new UpdateModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels
       })
 
@@ -349,7 +389,10 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
 
     it('should return error for unknown model', async () => {
       const tool = new UpdateModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: { book: { api: { endpoint: 'books', convention: flatConvention } } }
+        }),
         models: { book: { api: { endpoint: 'books', convention: flatConvention } } }
       })
 
@@ -388,7 +431,11 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
       mockApiClient.patch.mockRejectedValue(error)
 
       const tool = new UpdateModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels
       })
 
@@ -410,7 +457,11 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
       mockApiClient.patch.mockResolvedValue({ id: 5, title: 'Updated Book' })
 
       const tool = new UpdateModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -439,7 +490,11 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
       mockApiClient.patch.mockResolvedValue({ id: 5, title: 'Updated' })
 
       const tool = new UpdateModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels
       })
 
@@ -466,7 +521,11 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
       storeOperation.mockClear()
 
       const tool = new UpdateModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         serverContext: { sessionId: 'sess-456' }
       })
@@ -497,7 +556,11 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
       const mockWarnLogger = { info: vi.fn(), warn: vi.fn() }
 
       const tool = new UpdateModelTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockWarnLogger
       })

@@ -13,6 +13,7 @@
  */
 
 import type { ApiClient, RequestOptions } from '#src/core/api-client.js'
+import type { DataLayer } from '#src/core/data-layer.js'
 
 import type { AssociationConfig, BaseConvention } from '../api-conventions/base-convention.js'
 import { defaultConvention } from '../api-conventions/index.js'
@@ -89,7 +90,7 @@ export class UnknownModelError extends Error {
 // ModelService
 // ============================================================================
 
-export class ModelService {
+export class ModelService implements DataLayer {
   private _apiClient: ApiClient
   private _models: ModelsRegistry
   private _resolver: EndpointResolver
@@ -268,17 +269,31 @@ export class ModelService {
     params?: Record<string, unknown>,
     options?: RequestOptions
   ): Promise<Record<string, unknown>> {
+    // Omit `options` when caller passed nothing; the underlying ApiClient
+    // sees the same call shape it would receive from a direct caller, which
+    // keeps third-party clients (and their tests) free of spurious
+    // `undefined` trailing args.
     switch (method) {
       case 'GET':
-        return this._apiClient.get(url, params, options)
+        return options === undefined
+          ? this._apiClient.get(url, params)
+          : this._apiClient.get(url, params, options)
       case 'POST':
-        return this._apiClient.post(url, payload, options)
+        return options === undefined
+          ? this._apiClient.post(url, payload)
+          : this._apiClient.post(url, payload, options)
       case 'PUT':
-        return this._apiClient.put(url, payload, options)
+        return options === undefined
+          ? this._apiClient.put(url, payload)
+          : this._apiClient.put(url, payload, options)
       case 'PATCH':
-        return this._apiClient.patch(url, payload, options)
+        return options === undefined
+          ? this._apiClient.patch(url, payload)
+          : this._apiClient.patch(url, payload, options)
       case 'DELETE':
-        return this._apiClient.delete(url, options)
+        return options === undefined
+          ? this._apiClient.delete(url)
+          : this._apiClient.delete(url, options)
       default:
         throw new Error(`Unsupported HTTP method: ${method}`)
     }

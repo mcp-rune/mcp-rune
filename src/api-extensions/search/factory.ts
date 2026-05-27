@@ -12,7 +12,7 @@
  * one edit instead of three.
  */
 
-import type { SearchApiClient } from '#src/core/api-client.js'
+import type { DataLayer } from '#src/core/data-layer.js'
 
 import { SearchService } from './search-service.js'
 import type { SearchGroup } from './types.js'
@@ -31,17 +31,17 @@ export interface SearchFactoryContext {
 }
 
 /**
- * Construct a `SearchService` bound to the given API client. Pulls
+ * Construct a `SearchService` bound to the given `DataLayer`. Pulls
  * `searchGroups` and `defaultAdapter` out of the passed context (typically
  * `tool.serverContext` in a tool, or the analogous field in an app).
  */
 export function createSearchService(
-  apiClient: SearchApiClient,
+  dataLayer: DataLayer,
   context?: Record<string, unknown>
 ): SearchService {
   const ctx = (context ?? {}) as SearchFactoryContext
   const searchGroups = ctx.searchGroups ?? {}
-  return new SearchService(apiClient, {
+  return new SearchService(dataLayer, {
     searchGroups,
     defaultAdapter: ctx.defaultAdapter
   } as ConstructorParameters<typeof SearchService>[1])

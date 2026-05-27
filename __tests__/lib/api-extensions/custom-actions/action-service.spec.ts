@@ -82,7 +82,7 @@ describe('api-extensions/custom-actions — action() mixin on ModelService', () 
   it('dispatches POST by default', async () => {
     const { service, apiClient } = makeService()
     await service.action('book_with_actions', 'publish', { recordId: '42' })
-    expect(apiClient.post).toHaveBeenCalledWith('books/42/publish', undefined, undefined)
+    expect(apiClient.post).toHaveBeenCalledWith('books/42/publish', undefined)
   })
 
   it('dispatches to correct HTTP method (PATCH)', async () => {
@@ -91,11 +91,9 @@ describe('api-extensions/custom-actions — action() mixin on ModelService', () 
       recordId: '42',
       attributes: { reason: 'outdated' }
     })
-    expect(apiClient.patch).toHaveBeenCalledWith(
-      'books/42/archive',
-      { book_with_actions: { reason: 'outdated' } },
-      undefined
-    )
+    expect(apiClient.patch).toHaveBeenCalledWith('books/42/archive', {
+      book_with_actions: { reason: 'outdated' }
+    })
   })
 
   it('dispatches GET with query params', async () => {
@@ -104,7 +102,7 @@ describe('api-extensions/custom-actions — action() mixin on ModelService', () 
       recordId: '42',
       params: { format: 'pdf' }
     })
-    expect(apiClient.get).toHaveBeenCalledWith('books/42/export', { format: 'pdf' }, undefined)
+    expect(apiClient.get).toHaveBeenCalledWith('books/42/export', { format: 'pdf' })
   })
 
   it('wraps attributes via convention by default', async () => {
@@ -122,7 +120,7 @@ describe('api-extensions/custom-actions — action() mixin on ModelService', () 
     await service.action('book_with_actions', 'bulk_publish', {
       attributes: { ids: [1, 2, 3] }
     })
-    expect(apiClient.post).toHaveBeenCalledWith('books/bulk-publish', { ids: [1, 2, 3] }, undefined)
+    expect(apiClient.post).toHaveBeenCalledWith('books/bulk-publish', { ids: [1, 2, 3] })
   })
 
   it('passes request options (userId) through', async () => {
@@ -140,7 +138,7 @@ describe('api-extensions/custom-actions — action() mixin on ModelService', () 
       recordId: '42',
       pathParams: { chapter_id: '5' }
     })
-    expect(apiClient.post).toHaveBeenCalledWith('books/42/chapters/5/approve', undefined, undefined)
+    expect(apiClient.post).toHaveBeenCalledWith('books/42/chapters/5/approve', undefined)
   })
 
   it('resolves compound IDs correctly', async () => {
@@ -148,7 +146,7 @@ describe('api-extensions/custom-actions — action() mixin on ModelService', () 
     await service.action('book_with_actions', 'publish', {
       recordId: 'authors/10/books/42'
     })
-    expect(apiClient.post).toHaveBeenCalledWith('authors/10/books/42/publish', undefined, undefined)
+    expect(apiClient.post).toHaveBeenCalledWith('authors/10/books/42/publish', undefined)
   })
 
   it('throws UnknownModelError for bad model', async () => {
@@ -177,6 +175,6 @@ describe('api-extensions/custom-actions — action() mixin on ModelService', () 
     }
     const { service, apiClient } = makeService(models)
     await service.action('readonly_book', 'export', { recordId: '1' })
-    expect(apiClient.get).toHaveBeenCalledWith('books/1/export', undefined, undefined)
+    expect(apiClient.get).toHaveBeenCalledWith('books/1/export', undefined)
   })
 })

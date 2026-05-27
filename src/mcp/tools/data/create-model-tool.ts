@@ -66,7 +66,7 @@ export class CreateModelTool extends SaveModelBaseTool {
 
   override async execute(args: Record<string, unknown>): Promise<ToolResult> {
     try {
-      const service = this.requireModelService()
+      const service = this.requireDataLayer()
 
       const { model, attributes, parent_path, user_id } = args as {
         model: string

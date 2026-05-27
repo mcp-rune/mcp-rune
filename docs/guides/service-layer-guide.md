@@ -1,10 +1,12 @@
 # Service Layer Guide
 
-This guide covers the two services that sit between MCP tools and the API client: `ModelService` for CRUD operations, and `SearchService` for search, lookup, and listing. Both compose lower-level primitives (EndpointResolver, Convention, SearchAdapter) into clean interfaces that tools delegate to.
+This guide covers the two services that sit between MCP tools and the API: `ModelService` for CRUD operations, and `SearchService` for search, lookup, and listing. Both compose lower-level primitives (EndpointResolver, Convention, SearchAdapter) into clean interfaces.
 
+> **`ModelService` is the default adapter for the `DataLayer` seam introduced in v0.49.0.** The projection layer (tools, prompts, apps) talks to a `DataLayer` interface (`@mcp-rune/mcp-rune/core`); `ModelService implements DataLayer`. Integrators can swap in an alternative adapter — in-memory stub, third-party library wrapper — via the `dataLayer` factory option on `ToolRegistry` and `AppRegistry`. The CRUD surface and method signatures are unchanged; this guide describes the default adapter's behavior. See the changelog entry for v0.49.0 for migration notes (`BaseTool.apiClient` removed; tools now consume `this.dataLayer`).
+>
 > **`ModelService.action()` moved to the [`custom-actions` ApiExtension](./api-extensions.md) in v0.44.0.** It's still callable on the same instance — but only when `customActionsExtension()` is registered on `ToolRegistry`, which contributes it as a mixin. The signature and behavior are unchanged.
 >
-> **`SearchService`, `SearchAdapter`, `RailsSearchAdapter`, and their types moved to the [`search` ApiExtension](./api-extensions.md) in v0.47.0** (`@mcp-rune/mcp-rune/api-extensions/search`). The implementation and behavior are unchanged; only the import path moves. Apps and `analysis-ingest-tool` import these as module-level primitives — they don't require `searchExtension()` to be registered on `ToolRegistry`. The new `createSearchService(apiClient, context)` factory is the recommended construction site for all three consumer clusters.
+> **`SearchService`, `SearchAdapter`, `RailsSearchAdapter`, and their types moved to the [`search` ApiExtension](./api-extensions.md) in v0.47.0** (`@mcp-rune/mcp-rune/api-extensions/search`). The new `createSearchService(dataLayer, context)` factory (v0.49.0) is the recommended construction site for all three consumer clusters — it accepts a `DataLayer` so search composes with any adapter.
 
 ## Table of Contents
 

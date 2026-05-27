@@ -2,9 +2,8 @@ import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 export type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
-import type { ApiClient, RequestOptions } from '#src/core/api-client.js'
-import type { ModelServiceMixin } from '#src/mcp/api-extensions/types.js'
-import { ModelService } from '#src/mcp/services/model-service.js'
+import type { RequestOptions } from '#src/core/api-client.js'
+import type { DataLayer } from '#src/core/data-layer.js'
 import { storeOperation } from '#src/services/vector-storage.js'
 
 import type { AssociationConfig, BaseConvention } from '../api-conventions/base-convention.js'
@@ -16,7 +15,8 @@ import { getCategoryConfig, TOOL_CATEGORIES } from './categories.js'
 // Types
 // ============================================================================
 
-export type { ApiClient, RequestOptions }
+export type { RequestOptions }
+export type { DataLayer } from '#src/core/data-layer.js'
 
 /** Logger interface expected by tools */
 export interface ToolLogger {
@@ -97,19 +97,18 @@ export type ModelsRegistry = Record<string, ModelConfig>
 
 /** Dependencies injected into tool constructors */
 export interface ToolDependencies {
-  apiClient?: ApiClient
-  modelService?: ModelService
+  /**
+   * The data-access seam. Set by `ToolRegistry` for tools whose category
+   * requires authentication; absent for STRATEGY / no-auth tools that do
+   * not touch CRUD. Constructed via the registry's `dataLayer` factory
+   * with any registered `ApiExtension` mixins already applied.
+   */
+  dataLayer?: DataLayer
   logger?: ToolLogger
   models?: ModelsRegistry
   promptRegistry?: PromptRegistry
   serverContext?: ServerContext
   domainRegistry?: DomainRegistry
-  /**
-   * Mixins contributed by registered `ApiExtension`s. Applied to the lazily
-   * constructed `ModelService` so extension methods are callable on the
-   * instance. Set by `ToolRegistry` — tools should not populate this.
-   */
-  modelServiceMixins?: ModelServiceMixin[]
 }
 
 /** Tool response content item */
@@ -192,7 +191,7 @@ export class BaseTool {
     return config.requiresAuth
   }
 
-  apiClient: ApiClient | undefined
+  dataLayer: DataLayer | undefined
   logger: ToolLogger | undefined
   models: ModelsRegistry
   promptRegistry: PromptRegistry | undefined
@@ -202,41 +201,13 @@ export class BaseTool {
   /** @internal Set by ToolRegistry before execute(). Exposes SDK request context (progress, abort). */
   _extra?: ToolHandlerExtra
 
-  private _modelService: ModelService | undefined
-  private _modelServiceMixins: ModelServiceMixin[] | undefined
-
   constructor(dependencies: ToolDependencies = {}) {
-    this.apiClient = dependencies.apiClient
-    this._modelService = dependencies.modelService
+    this.dataLayer = dependencies.dataLayer
     this.logger = dependencies.logger
     this.models = dependencies.models ?? {}
     this.promptRegistry = dependencies.promptRegistry
     this.serverContext = dependencies.serverContext ?? {}
     this.domainRegistry = dependencies.domainRegistry
-    this._modelServiceMixins = dependencies.modelServiceMixins
-  }
-
-  /**
-   * ModelService instance for CRUD operations.
-   * Lazily constructed from apiClient + models when not explicitly injected.
-   * Registered `ApiExtension` mixins are applied on first access.
-   */
-  get modelService(): ModelService | undefined {
-    if (this._modelService) return this._modelService
-    if (this.apiClient) {
-      const service = new ModelService({
-        apiClient: this.apiClient,
-        models: this.models,
-        logger: this.logger
-      })
-      if (this._modelServiceMixins?.length) {
-        for (const mixin of this._modelServiceMixins) {
-          Object.assign(service, mixin(service))
-        }
-      }
-      this._modelService = service
-    }
-    return this._modelService
   }
 
   /** Tool name (override in subclasses) */
@@ -402,17 +373,15 @@ export class BaseTool {
     return response
   }
 
-  /** Check if API client is required and available */
-  requireApiClient(): void {
-    if (!this.apiClient) {
+  /**
+   * Assert the data layer is available (i.e. the tool ran in an
+   * authenticated context). Returns the instance for chaining.
+   */
+  requireDataLayer(): DataLayer {
+    if (!this.dataLayer) {
       throw new Error('Not authenticated. Please authenticate first.')
     }
-  }
-
-  /** Check that ModelService is available (requires apiClient). Returns the instance. */
-  requireModelService(): ModelService {
-    this.requireApiClient()
-    return this.modelService!
+    return this.dataLayer
   }
 
   /** Fire-and-forget: store operation embedding for retrospective analysis */

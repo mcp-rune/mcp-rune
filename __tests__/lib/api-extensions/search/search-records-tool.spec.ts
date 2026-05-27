@@ -29,6 +29,7 @@ const mockModels = {
     // No search
   }
 }
+import { ModelService } from '#src/mcp/services/model-service.js'
 
 describe('SearchRecordsTool', () => {
   let tool
@@ -44,7 +45,7 @@ describe('SearchRecordsTool', () => {
     }
     tool = new SearchRecordsTool({
       models: mockModels,
-      apiClient: mockApiClient,
+      dataLayer: new ModelService({ apiClient: mockApiClient, models: mockModels }),
       logger: { info: vi.fn(), error: vi.fn() }
     })
   })
@@ -239,7 +240,7 @@ describe('SearchRecordsTool', () => {
   it('should work without logger', async () => {
     const noLogTool = new SearchRecordsTool({
       models: mockModels,
-      apiClient: mockApiClient
+      dataLayer: new ModelService({ apiClient: mockApiClient, models: mockModels })
     })
 
     const result = await noLogTool.execute({
@@ -295,7 +296,7 @@ describe('SearchRecordsTool', () => {
     }
     const noLabelTool = new SearchRecordsTool({
       models: modelsNoLabel,
-      apiClient: mockApiClient,
+      dataLayer: new ModelService({ apiClient: mockApiClient, models: modelsNoLabel }),
       logger: { info: vi.fn(), error: vi.fn() }
     })
 
@@ -330,7 +331,7 @@ describe('SearchRecordsTool', () => {
     }
     const noTypeTool = new SearchRecordsTool({
       models: modelsNoType,
-      apiClient: mockApiClient,
+      dataLayer: new ModelService({ apiClient: mockApiClient, models: modelsNoType }),
       logger: { info: vi.fn(), error: vi.fn() }
     })
 
@@ -552,7 +553,10 @@ describe('SearchRecordsTool', () => {
 
       const derivedTool = new SearchRecordsTool({
         models: modelsWithDerived,
-        apiClient: derivedApiClient,
+        dataLayer: new ModelService({
+          apiClient: derivedApiClient as never,
+          models: modelsWithDerived
+        }),
         logger: { info: vi.fn(), error: vi.fn() }
       })
 
@@ -603,7 +607,10 @@ describe('SearchRecordsTool', () => {
 
       const derivedTool = new SearchRecordsTool({
         models: modelsWithDerived,
-        apiClient: derivedApiClient,
+        dataLayer: new ModelService({
+          apiClient: derivedApiClient as never,
+          models: modelsWithDerived
+        }),
         logger: { info: vi.fn(), error: vi.fn() }
       })
 

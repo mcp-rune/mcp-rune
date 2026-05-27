@@ -1,3 +1,5 @@
+import { ModelService } from '#src/mcp/services/model-service.js'
+
 import {
   BulkActionModelsTool,
   MAX_BATCH_SIZE
@@ -97,7 +99,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
         .mockResolvedValueOnce({ id: 3, title: 'Third' })
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -131,7 +137,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
   describe('create — all records fail validation', () => {
     it('should return isError true and make no API calls', async () => {
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -161,7 +171,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       )
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -195,7 +209,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       )
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -217,7 +235,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
   describe('create — missing records arg', () => {
     it('should return error when records is missing', async () => {
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels
       })
 
@@ -238,7 +260,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       mockApiClient.post.mockResolvedValueOnce({ id: 10 }).mockResolvedValueOnce({ id: 11 })
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -274,7 +300,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
   describe('create — nested-only without parent_path', () => {
     it('should fail fast with error listing valid parents', async () => {
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -302,7 +332,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       mockApiClient.post.mockResolvedValueOnce({ id: 99, name: 'Override' })
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -334,7 +368,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       mockApiClient.post.mockResolvedValueOnce({ id: 10 }).mockResolvedValueOnce({ id: 11 })
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -370,7 +408,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
   describe('create — mutual exclusivity of tool-level and per-record parent_path', () => {
     it('should throw when both tool-level and per-record parent_path are provided', async () => {
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -396,7 +438,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
         .mockResolvedValueOnce({ id: 2, name: 'B' })
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -426,7 +472,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       mockApiClient.post.mockResolvedValueOnce({ id: 10 })
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -466,7 +516,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
         .mockResolvedValueOnce({ id: 3, title: 'C', tag_ids: [5] })
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -504,7 +558,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       )
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -528,7 +586,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
   describe('update (uniform) — missing attributes', () => {
     it('should return error when attributes is missing', async () => {
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels
       })
 
@@ -552,7 +614,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
         .mockResolvedValueOnce({ id: 2, title: 'New B' })
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -590,7 +656,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
   describe('update (per-record) — missing record_id', () => {
     it('should return error when record_id is missing in a record', async () => {
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels
       })
 
@@ -609,7 +679,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
   describe('update — no records or record_ids', () => {
     it('should return error when neither records nor record_ids provided', async () => {
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels
       })
 
@@ -630,7 +704,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       mockApiClient.delete.mockResolvedValueOnce().mockResolvedValueOnce()
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -663,7 +741,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       )
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -690,7 +772,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       )
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -711,7 +797,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
   describe('delete — missing record_ids', () => {
     it('should return error when record_ids is missing', async () => {
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels
       })
 
@@ -730,7 +820,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
   describe('unknown model', () => {
     it('should return error without making API calls', async () => {
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels
       })
 
@@ -749,7 +843,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
   describe('read-only model', () => {
     it('should return error without making API calls', async () => {
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels
       })
 
@@ -787,7 +885,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
         .mockResolvedValueOnce({ id: 2, title: 'B' })
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels
       })
 
@@ -814,7 +916,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       mockApiClient.patch.mockResolvedValue({ id: 1, tag_ids: [5] })
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels
       })
 
@@ -837,7 +943,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       mockApiClient.delete.mockResolvedValue()
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels
       })
 
@@ -859,7 +969,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
         .mockResolvedValueOnce({ id: 2, title: 'B' })
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         serverContext: { sessionId: 'sess-bulk' }
       })
@@ -885,7 +999,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       storeOperation.mockRejectedValueOnce(new Error('pgvector unavailable'))
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -947,7 +1065,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       })
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -989,7 +1111,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
           .mockResolvedValueOnce({ id: 3, title: 'Third' })
 
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels,
           logger: mockLogger
         })
@@ -1019,7 +1145,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
     describe('create — all records fail validation', () => {
       it('should return isError true and make no API calls', async () => {
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels,
           logger: mockLogger
         })
@@ -1049,7 +1179,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
         )
 
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels,
           logger: mockLogger
         })
@@ -1083,7 +1217,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
         )
 
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels,
           logger: mockLogger
         })
@@ -1105,7 +1243,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
     describe('create — missing records arg', () => {
       it('should return error when records is missing', async () => {
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels
         })
 
@@ -1129,7 +1271,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
           .mockResolvedValueOnce({ id: 3, title: 'C', tag_ids: [5] })
 
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels,
           logger: mockLogger
         })
@@ -1163,7 +1309,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
         )
 
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels,
           logger: mockLogger
         })
@@ -1187,7 +1337,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
     describe('update (uniform) — missing attributes', () => {
       it('should return error when attributes is missing', async () => {
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels
         })
 
@@ -1211,7 +1365,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
           .mockResolvedValueOnce({ id: 2, title: 'New B' })
 
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels,
           logger: mockLogger
         })
@@ -1241,7 +1399,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
     describe('update (per-record) — missing record_id', () => {
       it('should return error when record_id is missing in a record', async () => {
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels
         })
 
@@ -1260,7 +1422,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
     describe('update — no records or record_ids', () => {
       it('should return error when neither records nor record_ids provided', async () => {
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels
         })
 
@@ -1281,7 +1447,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
         mockApiClient.delete.mockResolvedValueOnce().mockResolvedValueOnce()
 
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels,
           logger: mockLogger
         })
@@ -1314,7 +1484,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
         )
 
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels,
           logger: mockLogger
         })
@@ -1341,7 +1515,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
         )
 
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels,
           logger: mockLogger
         })
@@ -1362,7 +1540,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
     describe('delete — missing record_ids', () => {
       it('should return error when record_ids is missing', async () => {
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels
         })
 
@@ -1381,7 +1563,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
     describe('unknown model', () => {
       it('should return error without making API calls', async () => {
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels
         })
 
@@ -1400,7 +1586,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
     describe('read-only model', () => {
       it('should return error without making API calls', async () => {
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels
         })
 
@@ -1440,7 +1630,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
           .mockResolvedValueOnce({ id: 2, title: 'B' })
 
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels
         })
 
@@ -1467,7 +1661,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
         mockApiClient.patch.mockResolvedValue({ id: 1, tag_ids: [5] })
 
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels
         })
 
@@ -1490,7 +1688,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
         mockApiClient.delete.mockResolvedValue()
 
         const tool = new BulkActionModelsTool({
-          apiClient: mockApiClient,
+          dataLayer: new ModelService({
+            apiClient: mockApiClient,
+            models: halMockModels,
+            logger: mockLogger
+          }),
           models: halMockModels
         })
 
@@ -1515,7 +1717,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
         .mockResolvedValueOnce({ id: '3' })
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -1548,7 +1754,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       mockApiClient.delete.mockResolvedValueOnce({}).mockResolvedValueOnce({})
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })
@@ -1579,7 +1789,11 @@ describe('lib/mcp/tools/data/bulk-action-models-tool', () => {
       mockApiClient.post.mockResolvedValue({ id: '1' })
 
       const tool = new BulkActionModelsTool({
-        apiClient: mockApiClient,
+        dataLayer: new ModelService({
+          apiClient: mockApiClient,
+          models: mockModels,
+          logger: mockLogger
+        }),
         models: mockModels,
         logger: mockLogger
       })

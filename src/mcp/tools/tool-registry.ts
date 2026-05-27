@@ -34,16 +34,18 @@
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
+import type { ApiClient } from '#src/core/api-client.js'
+import type { DataLayer, DataLayerFactory } from '#src/core/data-layer.js'
 import type {
   ApiExtensionContext,
   ApiExtensionMap,
   ModelServiceMixin
 } from '#src/mcp/api-extensions/types.js'
+import { ModelService } from '#src/mcp/services/model-service.js'
 import * as logger from '#src/services/logger.js'
 import * as tracing from '#src/services/tracing.js'
 
 import type {
-  ApiClient,
   DomainRegistry,
   ModelsRegistry,
   PromptRegistry,
@@ -105,6 +107,23 @@ export interface ToolRegistryConfig {
   createApiClient?: ApiClientFactory
 
   /**
+   * Optional `DataLayer` factory. Lets integrators swap the default
+   * `ModelService` adapter for an alternative implementation (in-memory
+   * stub, third-party library wrapper, etc.). When omitted, the registry
+   * wraps `ModelService` and applies any `ApiExtension` mixins.
+   *
+   * The factory is invoked per authenticated tool invocation with the
+   * fresh `ApiClient` produced by `createApiClient`.
+   */
+  dataLayer?: DataLayerFactory
+
+  /**
+   * Server-wide namespace prefix passed to the default `ModelService`
+   * adapter. Ignored when a custom `dataLayer` factory is supplied.
+   */
+  namespace?: string
+
+  /**
    * Feature gates: category → boolean.
    * Tools in a gated category are skipped when the gate is false.
    *
@@ -154,6 +173,8 @@ export class ToolRegistry {
   private _promptRegistry: PromptRegistry | undefined
   private _domainRegistry: DomainRegistry | undefined
   private _createApiClient: ApiClientFactory | undefined
+  private _dataLayerFactory: DataLayerFactory
+  private _namespace: string | undefined
   private _gates: Record<string, boolean>
   private _interceptors: ToolInterceptor[]
   private _enabledTools: Set<string> | null = null
@@ -168,9 +189,30 @@ export class ToolRegistry {
     this._promptRegistry = config.promptRegistry
     this._domainRegistry = config.domainRegistry
     this._createApiClient = config.createApiClient
+    this._namespace = config.namespace
     this._gates = config.gates ?? {}
     this._interceptors = config.interceptors ?? []
     this.serverContext = (config.serverContext as Record<string, unknown>) ?? {}
+
+    // Default DataLayer factory wraps ModelService and applies extension mixins.
+    // Integrators can override to back the projection layer with a different
+    // adapter (in-memory stub, third-party library, etc.).
+    const mixins = this._modelServiceMixins
+    this._dataLayerFactory =
+      config.dataLayer ??
+      (({ apiClient, models, namespace, logger: log }): DataLayer => {
+        if (!apiClient) {
+          throw new Error(
+            'Default DataLayer factory requires an apiClient. Provide one via createApiClient ' +
+              'or supply a custom `dataLayer` factory that does not depend on HTTP.'
+          )
+        }
+        const service = new ModelService({ apiClient, models, namespace, logger: log })
+        for (const mixin of mixins) {
+          Object.assign(service, mixin(service))
+        }
+        return service
+      })
 
     if (config.apiExtensions) {
       this._applyApiExtensions(config.apiExtensions)
@@ -332,12 +374,11 @@ export class ToolRegistry {
       models: this._models,
       promptRegistry: this._promptRegistry,
       serverContext: this.serverContext as ServerContext,
-      domainRegistry: this._domainRegistry,
-      modelServiceMixins: this._modelServiceMixins
+      domainRegistry: this._domainRegistry
     })
   }
 
-  /** Create a tool instance with authenticated API client */
+  /** Create a tool instance with a DataLayer constructed from the session's access token. */
   private async _createAuthenticatedInstance(
     ToolCls: ToolClass,
     getAccessToken: () => Promise<string | null | undefined>
@@ -352,14 +393,19 @@ export class ToolRegistry {
       )
     }
     const apiClient = this._createApiClient(token)
-    return new ToolCls({
+    const dataLayer = this._dataLayerFactory({
       apiClient,
+      models: this._models,
+      namespace: this._namespace,
+      logger: this._logger
+    })
+    return new ToolCls({
+      dataLayer,
       logger: this._logger,
       models: this._models,
       promptRegistry: this._promptRegistry,
       serverContext: this.serverContext as ServerContext,
-      domainRegistry: this._domainRegistry,
-      modelServiceMixins: this._modelServiceMixins
+      domainRegistry: this._domainRegistry
     })
   }
 }

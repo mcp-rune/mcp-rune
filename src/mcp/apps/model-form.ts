@@ -28,7 +28,7 @@ import { generateFormSchema } from '#src/mcp/apps/form-schema.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
 import * as logger from '#src/services/logger.js'
 
-import type { ApiClient, AppModelClass, FormFieldDefinition, ToolResult } from './types.js'
+import type { AppModelClass, DataLayer, FormFieldDefinition, ToolResult } from './types.js'
 
 const DIST_DIR = path.resolve(import.meta.dirname, 'dist')
 const HTML_PATH = path.join(DIST_DIR, 'model-form.html')
@@ -73,7 +73,7 @@ interface AppDefinition {
   toolInputSchema: Record<string, z.ZodTypeAny>
   handleToolCall(
     args: Record<string, unknown>,
-    context: { apiClient?: ApiClient }
+    context: { dataLayer?: DataLayer }
   ): Promise<ToolResult>
   getHtml: () => string
 }
@@ -122,7 +122,7 @@ export function createCreateFormApp({
         )
     },
 
-    async handleToolCall(args: Record<string, unknown> = {}, { apiClient } = {}) {
+    async handleToolCall(args: Record<string, unknown> = {}, { dataLayer } = {}) {
       const { model, mode, prefill, ...extraArgs } = args
 
       if (mode !== 'form') {
@@ -195,8 +195,8 @@ export function createCreateFormApp({
         : buildDefaultsFromModel(ModelClass, FormClass)
       Object.assign(defaults, filterEmpty(prefillArgs))
 
-      if (apiClient) {
-        await resolveAssociationOptions(schema.fields, apiClient, defaults)
+      if (dataLayer) {
+        await resolveAssociationOptions(schema.fields, dataLayer, defaults)
       }
 
       // Separate prefill args into rendered fields (defaults) and non-rendered (hiddenValues)
@@ -258,7 +258,7 @@ export function createUpdateFormApp({
       record_id: z.string().describe('ID of the record to edit')
     },
 
-    async handleToolCall(args: Record<string, unknown> = {}, { apiClient } = {}) {
+    async handleToolCall(args: Record<string, unknown> = {}, { dataLayer } = {}) {
       const { model, record_id, ...prefillArgs } = args
 
       if (!model || !eligible[model as string]) {
@@ -281,8 +281,8 @@ export function createUpdateFormApp({
       const schema = generateFormSchema(ModelClass, FormClass, { allModelClasses: eligible })
 
       let defaults: Record<string, unknown>
-      if (record_id && apiClient) {
-        defaults = await fetchRecord(apiClient, ModelClass.api.endpoint, record_id as string)
+      if (record_id && dataLayer) {
+        defaults = await fetchRecord(dataLayer, ModelClass.api.endpoint, record_id as string)
       } else if (PromptClass) {
         defaults = new PromptClass(prefillArgs).getDefaultFormState()
         Object.assign(defaults, filterEmpty(prefillArgs))
@@ -291,8 +291,8 @@ export function createUpdateFormApp({
         Object.assign(defaults, filterEmpty(prefillArgs))
       }
 
-      if (apiClient) {
-        await resolveAssociationOptions(schema.fields, apiClient, defaults)
+      if (dataLayer) {
+        await resolveAssociationOptions(schema.fields, dataLayer, defaults)
       }
 
       return {
@@ -316,12 +316,12 @@ export function createUpdateFormApp({
 
 /** Fetch a single record from the API for pre-filling the update form. */
 async function fetchRecord(
-  apiClient: ApiClient,
+  dataLayer: DataLayer,
   endpoint: string,
   recordId: string
 ): Promise<Record<string, unknown>> {
   try {
-    const data = await apiClient.get(`${endpoint}/${recordId}`)
+    const data = await dataLayer.dispatch('GET', `${endpoint}/${recordId}`)
     return (data.data as Record<string, unknown>) || data
   } catch (err) {
     logger.warn('Failed to fetch record for form', {
@@ -340,7 +340,7 @@ async function fetchRecord(
  */
 async function resolveAssociationOptions(
   fields: FormFieldDefinition[],
-  apiClient: ApiClient,
+  dataLayer: DataLayer,
   defaults: Record<string, unknown> = {}
 ): Promise<void> {
   const associationFields = fields.filter((f) => f.association)
@@ -362,7 +362,7 @@ async function resolveAssociationOptions(
         endpoint = `${parentModelEndpoint}/${String(parentValue)}/${childEndpoint}`
       }
 
-      const data = await apiClient.get(endpoint)
+      const data = await dataLayer.dispatch('GET', endpoint)
       const convention = field.association!.convention ?? defaultConvention
       const { records } = convention.normalizeListResponse(data, { page: 1, perPage: 200 })
 
