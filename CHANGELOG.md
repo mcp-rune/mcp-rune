@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.49.1] — 2026-05-28
+
+### Fixed
+
+- **`ModelService.dispatch` no longer forwards trailing `undefined` args** to the underlying `ApiClient`. v0.49.0 already trimmed the `options` arg when it was undefined; v0.49.1 extends the same treatment to the `params` (`GET`) and `payload` (`POST` / `PUT` / `PATCH`) positions. The call shape now matches what a direct `ApiClient` caller would produce, which keeps third-party consumers (and their `vi.fn().toHaveBeenCalledWith(url)` assertions) free of spurious `undefined` arguments. No behavioral change for real HTTP transport — `axios` / `fetch` ignore trailing `undefined`. The two affected mcp-rune tests had their assertions updated to match the cleaner shape.
+
+[0.49.1]: https://github.com/mcp-rune/mcp-rune/compare/v0.49.0...v0.49.1
+
 ## [0.49.0] — 2026-05-28 (BREAKING)
 
 ### Added
