@@ -1,4 +1,4 @@
-import { SearchRecordsTool } from '../../../../../src/mcp/tools/data/search-records-tool.js'
+import { SearchRecordsTool } from '../../../../src/api-extensions/search.js'
 
 // Mock model classes with search.filters and search.query config
 const mockModels = {
