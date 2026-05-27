@@ -4,6 +4,52 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.47.0] — 2026-05-27
+
+### Changed (BREAKING)
+
+- **The entire `src/mcp/search/` directory moves into the `search` ApiExtension at `src/api-extensions/search/`.** `SearchService`, `SearchAdapter`, `RailsSearchAdapter`, and all search-related types (`SearchConfig`, `LookupConfig`, `QueryConfig`, `SearchGroup`, `SearchModelClass`, `SearchResult`, `PaginationInfo`, `NormalizedListResponse`, etc.) now live inside the extension that owns them. Apps and `analysis-ingest-tool` continue to use these primitives by importing them from `@mcp-rune/mcp-rune/api-extensions/search` — they depend on the _module_, not on the extension being registered with `ToolRegistry`.
+
+  The `@mcp-rune/mcp-rune/search` package export is **removed**. All imports route through `@mcp-rune/mcp-rune/api-extensions/search` instead.
+
+  Migration:
+
+  ```diff
+  -import {
+  -  SearchService,
+  -  SearchAdapter,
+  -  RailsSearchAdapter
+  -} from '@mcp-rune/mcp-rune/search'
+  -import type { SearchConfig, SearchGroup } from '@mcp-rune/mcp-rune/search'
+  +import {
+  +  SearchService,
+  +  SearchAdapter,
+  +  RailsSearchAdapter
+  +} from '@mcp-rune/mcp-rune/api-extensions/search'
+  +import type { SearchConfig, SearchGroup } from '@mcp-rune/mcp-rune/api-extensions/search'
+  ```
+
+  No behavioral change. `SearchService` instances created without the extension being registered with `ToolRegistry` work identically — the extension's only contribution to `ToolRegistry` is the `search_records` and `get_filters_guide` MCP tools.
+
+### Added
+
+- **`createSearchService(apiClient, context?)` factory** at `@mcp-rune/mcp-rune/api-extensions/search`. Three sites used to instantiate `SearchService` independently with the same conventional arg-extraction pattern (pulling `searchGroups` and `defaultAdapter` out of `serverContext`): the extension's `SearchRecordsTool`, the apps registry, and `analysis-ingest-tool`. They all now route through this factory. Future changes to the `SearchService` constructor signature ripple through one edit instead of three.
+
+- **Typed capability readers** at `@mcp-rune/mcp-rune/api-extensions/search`:
+  - `getSearchConfig(model)` — read a model's search config (returns `undefined` when absent)
+  - `getModelFilters(model)` — typed alias for `getSearchConfig(model)?.filters`
+  - `getSearchableModelNames(models)` — names of models that declare at least one filter
+  - `getLookupableModelNames(models)` — names of models that declare lookup fields
+  - `getQueryableModelNames(models)` — names of models that declare a query endpoint or group
+
+  These centralize the read path for `model.search.*`. Today `model.search` is still declared as `static search` on `BaseModel`; if that moves to the `extensions['search']` bag in a future release, only `getSearchConfig()` changes — every consumer above it already routes through this module. Used internally by `analysis-ingest-tool`, `list-models-tool`, `validators.ts`, and the extension's own tools.
+
+### Why this step
+
+PR B of the 3-PR plan to complete the search-extension extraction. The directory move and the new factory + capability readers establish the single ownership boundary: the search extension owns the entire search subsystem; everything that needs search imports from it. PR A (v0.46.0) extracted the cross-cutting `ApiClient` and `derived-fields` so they didn't have to come along for the ride. PR C will move the per-model config from `static search` on `BaseModel` into the `extensions['search']` bag via a `searchConfig({...})` helper — at which point the capability getters introduced here become the only consumers that need to update.
+
+[0.47.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.46.0...v0.47.0
+
 ## [0.46.0] — 2026-05-27
 
 ### Changed (BREAKING)

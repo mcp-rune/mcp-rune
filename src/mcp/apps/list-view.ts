@@ -12,6 +12,7 @@ import path from 'node:path'
 
 import { z } from 'zod'
 
+import type { SearchService } from '#src/api-extensions/search/index.js'
 import type { SearchApiClient } from '#src/core/api-client.js'
 import { resolveDerivedFields } from '#src/core/derived-fields.js'
 import { defaultConvention } from '#src/mcp/api-conventions/index.js'
@@ -23,7 +24,6 @@ import {
   getAvailableColumnNames
 } from '#src/mcp/apps/list-schema.js'
 import { createSelectionTools } from '#src/mcp/apps/selection-tools.js'
-import type { SearchService } from '#src/mcp/search/search-service.js'
 import * as logger from '#src/services/logger.js'
 
 import type { AppModelClass, ListSchema, ToolResult } from './types.js'

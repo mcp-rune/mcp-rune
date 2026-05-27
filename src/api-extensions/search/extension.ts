@@ -1,41 +1,14 @@
 /**
- * Search extension — opt-in MCP tools for searchable models.
+ * The `search` ApiExtension's MCP tools and registration factory.
  *
- * Contributes the `search_records` and `get_filters_guide` MCP tools that
- * expose a model's `static search` config (filters + lookup) to LLMs. The
- * extension is the user-facing surface of the existing in-core search
- * infrastructure (`SearchService`, `SearchAdapter`, `SearchConfig`), which
- * stays in `@mcp-rune/mcp-rune/search` because it's also consumed by
- * non-search features — `analysis-ingest-tool` uses `SearchService` for
- * filtered ingestion, `validators.ts` reads `model.search.filters` to
- * validate filter args on tools like `find_records`, and `list_models`
- * surfaces `search.filters` / `search.lookup.fields` in its output to help
- * LLMs discover capability. Forcing those cross-cutting reads through this
- * extension would mean refactoring features that aren't about search.
+ * Contributes `search_records` (raw-JSON filtered search) and
+ * `get_filters_guide` (filter discovery for LLMs). Both rely on:
+ *   - `getSearchConfig` / `getSearchableModelNames` from `./capabilities`
+ *   - `createSearchService` from `./factory`
  *
- * What this extension *does* deliver: pure REST servers no longer have
- * `search_records` and `get_filters_guide` cluttering their tool namespace
- * — both tools are absent unless `searchExtension()` is registered.
- *
- * Conventional registration key: `search`. Usage:
- *
- * ```ts
- * import { ToolRegistry, DATA_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
- * import { searchExtension } from '@mcp-rune/mcp-rune/api-extensions/search'
- *
- * new ToolRegistry({
- *   toolClasses: DATA_TOOL_CLASSES,
- *   models: MODEL_CLASSES,
- *   createApiClient,
- *   apiExtensions: {
- *     search: searchExtension()
- *   }
- * })
- * ```
- *
- * Model `static search` config is unchanged; deeper extraction (moving the
- * config into `extensions['search']` and moving `SearchService` itself out
- * of core) is intentionally deferred — see CHANGELOG for the rationale.
+ * Per-model search config currently lives at `static search` on `BaseModel`
+ * — moving to the `extensions['search']` bag is planned for a follow-up
+ * release once we're ready to coordinate the change across consumers.
  */
 
 import type { ZodTypeAny } from 'zod'
@@ -44,46 +17,16 @@ import { z } from 'zod'
 import { resolveDerivedFields } from '#src/core/derived-fields.js'
 import { pickFields } from '#src/core/helpers.js'
 import type { ApiExtension } from '#src/mcp/api-extensions/types.js'
-import { SearchService } from '#src/mcp/search/search-service.js'
-import type { PaginationInfo, SearchConfig } from '#src/mcp/search/types.js'
-import type {
-  ModelConfig,
-  ModelsRegistry,
-  ToolAnnotations,
-  ToolResult
-} from '#src/mcp/tools/base-tool.js'
+import type { ModelConfig, ToolAnnotations, ToolResult } from '#src/mcp/tools/base-tool.js'
 import { BaseTool } from '#src/mcp/tools/base-tool.js'
 import type { ToolCategory } from '#src/mcp/tools/categories.js'
 import { TOOL_CATEGORIES } from '#src/mcp/tools/categories.js'
 import type { FilterSchema } from '#src/mcp/tools/validators.js'
 import { normalizeFilterValues, validateFilterValues } from '#src/mcp/tools/validators.js'
 
-// ============================================================================
-// Public API: typed reader
-// ============================================================================
-
-/**
- * Read a model's search configuration. Returns `undefined` when the model
- * doesn't declare `static search`, so callers can tolerate the absence
- * without conditionals.
- *
- * Symmetrical with `getActionsConfig()` from the `custom-actions` extension —
- * exposed so extension authors and downstream code have a single, typed
- * read site even though (for now) the underlying field is `model.search`.
- */
-export function getSearchConfig(model: ModelConfig): SearchConfig | undefined {
-  return (model.search ?? undefined) as SearchConfig | undefined
-}
-
-/** Names of models that declare at least one search filter. */
-export function getSearchableModelNames(models: ModelsRegistry): string[] {
-  return Object.entries(models)
-    .filter(([, m]) => {
-      const filters = getSearchConfig(m)?.filters
-      return filters && Object.keys(filters).length > 0
-    })
-    .map(([name]) => name)
-}
+import { getSearchableModelNames, getSearchConfig } from './capabilities.js'
+import { createSearchService } from './factory.js'
+import type { PaginationInfo } from './types.js'
 
 // ============================================================================
 // MCP tool — `get_filters_guide`
@@ -334,7 +277,10 @@ Call get_filters_guide first to learn available filters for the target model.`
       }
 
       const clampedPerPage = Math.min(per_page, 200)
-      const searchClient = this._createSearchService()
+      const searchClient = createSearchService(
+        this.apiClient!,
+        this.serverContext as Record<string, unknown>
+      )
       const { records, pagination } = (await searchClient.search(
         ModelClass as unknown as Parameters<typeof searchClient.search>[0],
         '',
@@ -381,18 +327,6 @@ Call get_filters_guide first to learn available filters for the target model.`
     const ids = records.slice(0, 3).map((r) => r.id)
     const idPreview = ids.join(', ') + (records.length > 3 ? '...' : '')
     return `${records.length} ${model} records (page ${pagination.page}/${pagination.total_pages}, IDs: ${idPreview})`
-  }
-
-  private _createSearchService(): SearchService {
-    const ctx = this.serverContext as Record<string, unknown>
-    const searchGroups = (ctx?.searchGroups ?? {}) as Record<string, unknown>
-    const defaultAdapter = ctx?.defaultAdapter as
-      | NonNullable<ConstructorParameters<typeof SearchService>[1]>['defaultAdapter']
-      | undefined
-    return new SearchService(this.apiClient!, {
-      searchGroups,
-      defaultAdapter
-    } as ConstructorParameters<typeof SearchService>[1])
   }
 
   private _validateFilters(

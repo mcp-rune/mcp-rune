@@ -1,4 +1,5 @@
 import { getActionsConfig } from '#src/api-extensions/custom-actions.js'
+import { getSearchConfig } from '#src/api-extensions/search/index.js'
 
 import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
@@ -41,7 +42,8 @@ For listing the actual records of a model, use list_records_app (visual table) o
       const enumFields = Object.keys(attrs).filter(
         (k) => (attrs[k] as Record<string, unknown>)?.enumValues
       )
-      const filters = config.search?.filters
+      const searchCfg = getSearchConfig(config)
+      const filters = searchCfg?.filters
 
       const actionsCfg = getActionsConfig(config)?.actions
       const actions = actionsCfg
@@ -61,7 +63,7 @@ For listing the actual records of a model, use list_records_app (visual table) o
         read_only: config.api?.readOnly ?? false,
         parent: config.api?.parent ?? undefined,
         standalone: config.api?.standalone === false ? false : undefined,
-        searchable_by: config.search?.lookup?.fields,
+        searchable_by: searchCfg?.lookup?.fields,
         enum_fields: enumFields.length > 0 ? enumFields : undefined,
         belongs_to: config.associations?.belongsTo
           ? Object.keys(config.associations.belongsTo)

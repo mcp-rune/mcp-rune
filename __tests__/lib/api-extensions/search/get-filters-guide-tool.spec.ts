@@ -1,4 +1,4 @@
-import { GetFiltersGuideTool } from '../../../../src/api-extensions/search.js'
+import { GetFiltersGuideTool } from '../../../../src/api-extensions/search/index.js'
 
 // Mock model classes with static filters
 const mockModels = {

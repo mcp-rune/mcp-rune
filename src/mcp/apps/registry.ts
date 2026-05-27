@@ -19,10 +19,9 @@ import {
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { z } from 'zod'
 
+import type { SearchAdapter, SearchGroup } from '#src/api-extensions/search/index.js'
+import { createSearchService } from '#src/api-extensions/search/index.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
-import type { SearchAdapter } from '#src/mcp/search/search-adapter.js'
-import { SearchService } from '#src/mcp/search/search-service.js'
-import type { SearchGroup } from '#src/mcp/search/types.js'
 import * as logger from '#src/services/logger.js'
 
 import type { FormDataStore } from './form-data-store.js'
@@ -148,7 +147,7 @@ export class AppRegistry {
               const token = await getAccessToken()
               const apiClient = this._createApiClient(token, { apiUrl: this._apiUrl })
               context.apiClient = apiClient
-              context.searchClient = new SearchService(apiClient, {
+              context.searchClient = createSearchService(apiClient, {
                 searchGroups: this._searchGroups,
                 defaultAdapter: this._defaultAdapter
               })

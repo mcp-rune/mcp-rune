@@ -8,7 +8,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { searchExtension } from '../../../../src/api-extensions/search.js'
+import { searchExtension } from '../../../../src/api-extensions/search/index.js'
 import { DATA_TOOL_CLASSES } from '../../../../src/mcp/tools/data/index.js'
 import { ToolRegistry } from '../../../../src/mcp/tools/tool-registry.js'
 
