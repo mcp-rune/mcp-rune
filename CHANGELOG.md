@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.41.1] — 2026-05-27
+
+### Docs
+
+- **`docs/guides/extensions.md` gains a "What the framework guarantees" section.** Makes explicit the no-auto-registration promise that the extension API already implements: mcp-rune never discovers plugins from `node_modules`, never sniffs env vars to enable extensions, never auto-loads from a manifest. An extension runs if and only if it appears in the `extensions` option on `HttpServer`. The built-in `cimdExtension` is framed as a participant in that contract, not an exception. README's "Client Registration Strategies" section gets a one-line cross-link to the new subsection. No behavior change — the guarantee was already true; only the docs are new.
+
+[0.41.1]: https://github.com/mcp-rune/mcp-rune/compare/v0.41.0...v0.41.1
+
 ## [0.41.0] — 2026-05-27
 
 ### Added

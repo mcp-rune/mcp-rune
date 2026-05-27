@@ -10,6 +10,14 @@ An `HttpExtension` is an object with a `register(ctx)` function. The framework c
 
 Extensions are HTTP-layer features: routes, route-scoped middleware, response handlers. They are **not** the place for MCP protocol concerns (tools, prompts, resources) — those belong to the registries passed to `createServer()`.
 
+## What the framework guarantees
+
+mcp-rune never auto-registers an extension. There is no plugin discovery, no scanning of `node_modules`, no env-var sniffing that wires things up behind your back, no convention-based loading. An extension runs **if and only if** you pass it in the `extensions` option on `HttpServer`. Conversely, if you don't pass it, it definitely is not running.
+
+This is deliberate: the answer to "what is actually serving requests in this server?" is always answerable by reading one call site — the `new HttpServer({...})` constructor argument. No surprises from `node_modules`, no implicit behavior from environment variables, no plugin manifest hidden in a config file.
+
+The built-in `cimdExtension` (see [The built-in CIMD extension](#the-built-in-cimd-extension) below) follows this contract like any third-party extension would: it ships in the framework's package, but mcp-rune itself does not enable it. The consumer decides.
+
 ## The registration contract
 
 Register extensions through the `extensions` option on `HttpServer`. The shape is `{ [name]: HttpExtension }` — a plain object keyed by an identifier you choose.
