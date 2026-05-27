@@ -1,5 +1,5 @@
-import { RailsSearchAdapter } from '../../../../src/mcp/search/rails-search-adapter.js'
-import { SearchService } from '../../../../src/mcp/search/search-service.js'
+import { RailsSearchAdapter } from '../../../../src/api-extensions/search/rails-search-adapter.js'
+import { SearchService } from '../../../../src/api-extensions/search/search-service.js'
 import { flatConvention } from '../../../__fixtures__/flat-convention.js'
 
 // Mock model classes

@@ -1,9 +1,10 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
+import type { SearchService } from '#src/api-extensions/search/index.js'
+import { createSearchService, getSearchConfig } from '#src/api-extensions/search/index.js'
 import { pickFields } from '#src/core/helpers.js'
 import { defaultConvention } from '#src/mcp/api-conventions/index.js'
-import { SearchService } from '#src/mcp/search/search-service.js'
 import { buildCollectionPath } from '#src/mcp/services/compound-id.js'
 import {
   getIngestedRecordCount,
@@ -294,7 +295,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     const convention = modelConfig.api?.convention ?? defaultConvention
 
     // Use SearchService if model supports query search and filters provided
-    const hasFullText = modelConfig.search?.query
+    const hasFullText = getSearchConfig(modelConfig)?.query
     const hasSearchParams = filters && Object.keys(filters).length > 0
 
     if (hasFullText && hasSearchParams) {
@@ -392,7 +393,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     const convention = modelConfig.api?.convention ?? defaultConvention
 
     // Use SearchService if model supports query search and filters provided
-    const hasFullText = modelConfig.search?.query
+    const hasFullText = getSearchConfig(modelConfig)?.query
     const hasSearchParams = filters && Object.keys(filters).length > 0
     const searchClient =
       hasFullText && hasSearchParams ? this._createSearchService(api as unknown as ApiClient) : null
@@ -717,12 +718,9 @@ When NOT to use: For quick lookups of specific records by ID or small result set
 
   /** Create a SearchService from the tool's apiClient and serverContext */
   private _createSearchService(apiClient?: ApiClient): SearchService {
-    const client = apiClient ?? this.apiClient!
-    const searchGroups = ((this.serverContext as Record<string, unknown>)?.searchGroups ??
-      {}) as Record<string, unknown>
-    return new SearchService(
-      client as unknown as ConstructorParameters<typeof SearchService>[0],
-      { searchGroups } as unknown as ConstructorParameters<typeof SearchService>[1]
+    return createSearchService(
+      apiClient ?? this.apiClient!,
+      this.serverContext as Record<string, unknown>
     )
   }
 

@@ -9,9 +9,9 @@
  * 2. Instantiated with record data: new BookModel(record).displayValue
  */
 
+import type { SearchConfig } from '#src/api-extensions/search/types.js'
 import type { AssociationConfig, BaseConvention } from '#src/mcp/api-conventions/base-convention.js'
 import { jsonApiConvention } from '#src/mcp/api-conventions/index.js'
-import type { SearchConfig } from '#src/mcp/search/types.js'
 
 // ============================================================================
 // Types

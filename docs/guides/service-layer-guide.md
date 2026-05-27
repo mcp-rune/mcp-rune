@@ -3,6 +3,8 @@
 This guide covers the two services that sit between MCP tools and the API client: `ModelService` for CRUD operations, and `SearchService` for search, lookup, and listing. Both compose lower-level primitives (EndpointResolver, Convention, SearchAdapter) into clean interfaces that tools delegate to.
 
 > **`ModelService.action()` moved to the [`custom-actions` ApiExtension](./api-extensions.md) in v0.44.0.** It's still callable on the same instance — but only when `customActionsExtension()` is registered on `ToolRegistry`, which contributes it as a mixin. The signature and behavior are unchanged.
+>
+> **`SearchService`, `SearchAdapter`, `RailsSearchAdapter`, and their types moved to the [`search` ApiExtension](./api-extensions.md) in v0.47.0** (`@mcp-rune/mcp-rune/api-extensions/search`). The implementation and behavior are unchanged; only the import path moves. Apps and `analysis-ingest-tool` import these as module-level primitives — they don't require `searchExtension()` to be registered on `ToolRegistry`. The new `createSearchService(apiClient, context)` factory is the recommended construction site for all three consumer clusters.
 
 ## Table of Contents
 

@@ -6,6 +6,8 @@
 import { normalizeObjectSchema } from '@modelcontextprotocol/sdk/server/zod-compat.js'
 import { toJsonSchemaCompat } from '@modelcontextprotocol/sdk/server/zod-json-schema-compat.js'
 
+import { getSearchConfig } from '#src/api-extensions/search/index.js'
+
 import type { ModelsRegistry } from './base-tool.js'
 
 // ============================================================================
@@ -169,7 +171,10 @@ export function validateFilterParams(
   models: ModelsRegistry
 ): FilterValidationResult {
   const modelConfig = models[model]
-  const filterSchema = (modelConfig?.search?.filters ?? {}) as Record<string, FilterSchema>
+  const filterSchema = (modelConfig ? (getSearchConfig(modelConfig)?.filters ?? {}) : {}) as Record<
+    string,
+    FilterSchema
+  >
 
   if (!filterParams || Object.keys(filterParams).length === 0) {
     return { valid: true }

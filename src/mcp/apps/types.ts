@@ -6,9 +6,9 @@
  * layer does not know about.
  */
 
+import type { SearchService } from '#src/api-extensions/search/index.js'
 import type { SearchApiClient } from '#src/core/api-client.js'
 import type { AssociationConfig, BaseConvention } from '#src/mcp/api-conventions/base-convention.js'
-import type { SearchService } from '#src/mcp/search/search-service.js'
 
 import type { FormDataStore } from './form-data-store.js'
 import type { SelectionStore } from './selection-store.js'
