@@ -30,7 +30,12 @@ const {
       debug: vi.fn(),
       info: vi.fn(),
       warn: vi.fn(),
-      error: vi.fn()
+      error: vi.fn(),
+      // The startup banner is gated on canPrintBanner(); under test it stays
+      // off so we keep emitting the structured `… started` info line and the
+      // existing assertions over `logger.info` keep working.
+      canPrintBanner: vi.fn(() => false),
+      printBanner: vi.fn()
     },
     mockRequestIdMiddleware: vi.fn(() => (req, res, next) => {
       req.requestId = 'test-request-id'

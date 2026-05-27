@@ -1,10 +1,12 @@
 /**
  * Request Logger — one-line-per-request output
  *
- * The middleware emits a single `← METHOD path STATUS (totalMs[, upstream Xms])`
- * line on `res.finish`. Slow requests get a deferred `▸` line at 1s.
- * Domain context comes from the inbound endpoint-log allowlist for paths
- * like /oauth/token and /oauth/register; other paths log transport-only.
+ * The middleware emits a single `← [STATUS] METHOD path totalMs` line on
+ * `res.finish`. Upstream timing lives in the logfmt tail (upstreamMs /
+ * upstreamCalls) rather than the message. Slow requests get a deferred
+ * `▸` line at 1s. Domain context comes from the inbound endpoint-log
+ * allowlist for paths like /oauth/token and /oauth/register; other paths
+ * log transport-only.
  */
 
 const { mockLogger, mockGetUpstream } = vi.hoisted(() => ({
@@ -89,7 +91,7 @@ describe('lib/mcp/middleware/request-logger', () => {
 
       expect(logger.info).toHaveBeenCalledTimes(1)
       const [message, meta] = logger.info.mock.calls[0]
-      expect(message).toMatch(/^← GET \/test 200 \(\d+ms\)$/)
+      expect(message).toMatch(/^← \[200] GET \/test \d+ms$/)
       expect(meta).toEqual({
         service: 'express',
         durationMs: expect.any(Number),
@@ -103,7 +105,7 @@ describe('lib/mcp/middleware/request-logger', () => {
       finishHandler()
 
       const [message] = logger.info.mock.calls[0]
-      expect(message).toMatch(/^← GET \/test 302 \(\d+ms\)$/)
+      expect(message).toMatch(/^← \[302] GET \/test \d+ms$/)
     })
 
     it('uses warn level for 4xx', () => {
@@ -113,7 +115,7 @@ describe('lib/mcp/middleware/request-logger', () => {
 
       expect(logger.warn).toHaveBeenCalledTimes(1)
       const [message] = logger.warn.mock.calls[0]
-      expect(message).toMatch(/^← GET \/test 404 \(\d+ms\)$/)
+      expect(message).toMatch(/^← \[404] GET \/test \d+ms$/)
     })
 
     it('uses error level for 5xx', () => {
@@ -123,12 +125,12 @@ describe('lib/mcp/middleware/request-logger', () => {
 
       expect(logger.error).toHaveBeenCalledTimes(1)
       const [message] = logger.error.mock.calls[0]
-      expect(message).toMatch(/^← GET \/test 503 \(\d+ms\)$/)
+      expect(message).toMatch(/^← \[503] GET \/test \d+ms$/)
     })
   })
 
   describe('upstream segment', () => {
-    it('omits the upstream segment when no upstream calls happened', () => {
+    it('omits upstream from both message and meta when no upstream calls happened', () => {
       mockGetUpstream.mockReturnValue({ totalMs: 0, calls: 0 })
       middleware(mockReq, mockRes, mockNext)
       finishHandler()
@@ -139,13 +141,16 @@ describe('lib/mcp/middleware/request-logger', () => {
       expect(meta).not.toHaveProperty('upstreamCalls')
     })
 
-    it('includes upstream segment + structured fields when calls > 0', () => {
+    it('keeps upstream out of the message but surfaces it in the logfmt tail when calls > 0', () => {
       mockGetUpstream.mockReturnValue({ totalMs: 132, calls: 1 })
       middleware(mockReq, mockRes, mockNext)
       finishHandler()
 
       const [message, meta] = logger.info.mock.calls[0]
-      expect(message).toMatch(/^← GET \/test 200 \(\d+ms, upstream 132ms\)$/)
+      // Astro-style: message stays compact; upstream details ride in metadata
+      // (visible in the dim logfmt tail in console mode, structured in JSON).
+      expect(message).toMatch(/^← \[200] GET \/test \d+ms$/)
+      expect(message).not.toMatch(/upstream/)
       expect(meta).toMatchObject({ upstreamMs: 132, upstreamCalls: 1 })
     })
   })
