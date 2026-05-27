@@ -77,10 +77,12 @@ jobs:
         run: npm ci
 
       - name: Build
-        # The `prebuild` lifecycle hook runs `build:all-apps` before `tsc`,
-        # so a single `npm run build` produces the complete publishable
-        # artifact (dist/ + dist/mcp/apps/dist/*.html).
-        run: npm run build
+        # `build:full` chains `build:all-apps` (6 Vite bundles) + `tsc` +
+        # `copy:app-html` to produce the complete publishable artifact
+        # (dist/ + dist/mcp/apps/dist/*.html). `npm publish` re-runs this
+        # via the `prepublishOnly` hook; this explicit step surfaces build
+        # failures before the publish attempt.
+        run: npm run build:full
 
       - name: Publish
         run: npm publish

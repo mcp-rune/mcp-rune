@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.49.2] — 2026-05-28
+
+### Fixed
+
+- **CI `Build` step on master.** `npm run build` ran `tsc && copy:app-html`, but `copy:app-html` copies `src/mcp/apps/dist/*.html` — Vite single-file outputs that are gitignored under `dist/`. On a clean CI checkout the HTML files don't exist, so the copy step failed with `cp: cannot stat 'src/mcp/apps/dist/*.html': No such file or directory` and master CI had been red since v0.41.0 (#110 / commit 1be1375). v0.41.0 deliberately split `build` (TS-only, fast inner-loop) from `build:full` (TS + 6 Vite bundles + copy) and dropped the `prebuild` hook — but `copy:app-html` was left in `build`, which contradicted the split. This release makes the split honest: `build` is now `tsc`, and `copy:app-html` lives in `build:full` alongside `build:all-apps`. `prepublishOnly` already calls `build:full`, so published tarballs still contain `dist/mcp/apps/dist/*.html`.
+
+### Changed
+
+- **CI `publish` job's `Build` step now runs `npm run build:full`** so the explicit pre-publish build matches what `npm publish` re-runs via `prepublishOnly`. The stale comment claiming a `prebuild` lifecycle hook (removed in v0.41.0) is replaced with the actual flow.
+- **README `Development` section** corrected: `npm run build` is documented as TypeScript-only (fast iteration); `npm run build:full` is the full publishable artifact (Vite apps + tsc + copy HTML).
+
+[0.49.2]: https://github.com/mcp-rune/mcp-rune/compare/v0.49.1...v0.49.2
+
 ## [0.49.1] — 2026-05-28
 
 ### Fixed
