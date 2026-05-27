@@ -1,6 +1,6 @@
 {
   "name": "@mcp-rune/mcp-rune",
-  "version": "0.43.0",
+  "version": "0.44.0",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "restricted"
@@ -53,6 +53,10 @@
     "./api-extensions": {
       "types": "./dist/api-extensions.d.ts",
       "import": "./dist/api-extensions.js"
+    },
+    "./api-extensions/custom-actions": {
+      "types": "./dist/api-extensions/custom-actions.d.ts",
+      "import": "./dist/api-extensions/custom-actions.js"
     },
     "./services": {
       "types": "./dist/services.d.ts",

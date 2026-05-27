@@ -79,17 +79,6 @@ export interface ModelConfig {
       update?: string
       delete?: string
     }
-    /** Custom actions beyond CRUD. Keys are action names. */
-    actions?: Record<
-      string,
-      {
-        method?: string
-        path: string
-        recordLevel?: boolean
-        description?: string
-        rawPayload?: boolean
-      }
-    >
   }
   search?: {
     lookup?: { endpoint?: string; fields: string[]; queryParam?: string }

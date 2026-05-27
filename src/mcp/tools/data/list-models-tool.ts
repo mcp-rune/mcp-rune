@@ -1,3 +1,5 @@
+import { getActionsConfig } from '#src/api-extensions/custom-actions.js'
+
 import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
 
@@ -41,11 +43,12 @@ For listing the actual records of a model, use list_records_app (visual table) o
       )
       const filters = config.search?.filters
 
-      const actions = config.api?.actions
-        ? Object.entries(config.api.actions).map(([name, def]) => ({
+      const actionsCfg = getActionsConfig(config)?.actions
+      const actions = actionsCfg
+        ? Object.entries(actionsCfg).map(([name, def]) => ({
             name,
-            method: (def as Record<string, unknown>).method ?? 'POST',
-            description: (def as Record<string, unknown>).description
+            method: def.method ?? 'POST',
+            description: def.description
           }))
         : undefined
 

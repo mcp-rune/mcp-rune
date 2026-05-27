@@ -24,7 +24,6 @@ export {
   FindRecordsTool,
   GetFiltersGuideTool,
   ListModelsTool,
-  ModelActionTool,
   SearchRecordsTool,
   UpdateModelTool
 } from './mcp/tools/data/index.js'

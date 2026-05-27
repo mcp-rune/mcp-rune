@@ -1,3 +1,4 @@
+import { customActionsConfig } from '../../../../../src/api-extensions/custom-actions.js'
 import { ListModelsTool } from '../../../../../src/mcp/tools/data/list-models-tool.js'
 
 describe('lib/mcp/tools/data/list-models-tool', () => {
@@ -189,12 +190,14 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
     it('should include actions summary when model has actions', async () => {
       const mockModels = {
         book: {
-          api: {
-            endpoint: 'books',
-            actions: {
-              publish: { path: ':id/publish', method: 'POST', description: 'Publish a book' },
-              archive: { path: ':id/archive', description: 'Archive a book' }
-            }
+          api: { endpoint: 'books' },
+          extensions: {
+            'custom-actions': customActionsConfig({
+              actions: {
+                publish: { path: ':id/publish', method: 'POST', description: 'Publish a book' },
+                archive: { path: ':id/archive', description: 'Archive a book' }
+              }
+            })
           },
           attributes: { title: { type: 'string' } },
           description: 'Book model'

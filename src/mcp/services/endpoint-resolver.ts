@@ -14,9 +14,9 @@
  * Supports compound IDs (e.g., 'titles/42/assets/7') that encode the full
  * resource hierarchy, eliminating the need for separate nested routing logic.
  *
- * Custom actions extend the resolver with `resolveAction()`, supporting
- * Rails-style named parameters (e.g., ':id/chapters/:chapter_id/approve')
- * and any HTTP method.
+ * Custom-action URL resolution lives in the `custom-actions` ApiExtension
+ * (@mcp-rune/mcp-rune/api-extensions/custom-actions), which composes
+ * `pathForType()` and `applyNamespace()` from this class.
  */
 
 import type { EndpointOverrides } from '../../core/base-model.js'
@@ -48,14 +48,6 @@ export interface EndpointContext {
   attributes?: Record<string, unknown>
 }
 
-/** Context for custom action resolution. */
-export interface ActionContext extends EndpointContext {
-  /** The action name as declared in the model's actions config. */
-  action: string
-  /** Named path parameters for Rails-style substitution (e.g., { chapter_id: '5' }). */
-  pathParams?: Record<string, string>
-}
-
 /** CRUD action type for per-action endpoint resolution. */
 export type CrudAction = 'list' | 'find' | 'create' | 'update' | 'delete'
 
@@ -79,17 +71,6 @@ export class MissingParentError extends Error {
     this.model = model
     this.childEndpoint = childEndpoint
     this.parentModels = parentModels
-  }
-}
-
-/** Thrown when a custom action is not declared on a model. */
-export class UnknownActionError extends Error {
-  constructor(model: string, action: string, available: string[]) {
-    super(
-      `Unknown action '${action}' on model '${model}'. ` +
-        `Available actions: ${available.length ? available.join(', ') : 'none'}.`
-    )
-    this.name = 'UnknownActionError'
   }
 }
 
@@ -140,7 +121,7 @@ export class EndpointResolver {
     }
 
     // 5. Namespace + pathForType
-    return this._applyNamespace(ctx.modelConfig, this.pathForType(ctx.model, ctx.modelConfig))
+    return this.applyNamespace(ctx.modelConfig, this.pathForType(ctx.model, ctx.modelConfig))
   }
 
   /**
@@ -169,68 +150,12 @@ export class EndpointResolver {
 
     // 3. Compound ID — use as full path (apply namespace only)
     if (recordId?.includes('/')) {
-      return this._applyNamespace(ctx.modelConfig, recordId)
+      return this.applyNamespace(ctx.modelConfig, recordId)
     }
 
     // 4. Namespace + pathForType + /recordId
-    const base = this._applyNamespace(ctx.modelConfig, this.pathForType(ctx.model, ctx.modelConfig))
+    const base = this.applyNamespace(ctx.modelConfig, this.pathForType(ctx.model, ctx.modelConfig))
     return recordId ? `${base}/${recordId}` : base
-  }
-
-  /**
-   * Resolve the endpoint and HTTP method for a custom action.
-   *
-   * Resolution:
-   *   1. Look up action definition from modelConfig.api.actions
-   *   2. Substitute :id with recordId (special-cased for ergonomics)
-   *   3. Substitute remaining :param_name placeholders from pathParams
-   *   4. Validate no unsubstituted placeholders remain
-   *   5. Compound ID (recordId contains '/') — skip base prepend
-   *   6. Simple ID or collection-level — prepend pathForType
-   *   7. Apply namespace
-   */
-  resolveAction(ctx: ActionContext): { url: string; method: string } {
-    const actions = ctx.modelConfig.api?.actions
-    const actionDef = actions?.[ctx.action]
-    if (!actionDef) {
-      throw new UnknownActionError(ctx.model, ctx.action, Object.keys(actions ?? {}))
-    }
-
-    let path = actionDef.path
-    const isCompound = ctx.recordId?.includes('/')
-
-    // 1. Substitute :id with recordId (the primary record parameter)
-    if (ctx.recordId && path.includes(':id')) {
-      path = path.replace(':id', ctx.recordId)
-    }
-
-    // 2. Substitute all remaining :param_name placeholders from pathParams
-    if (ctx.pathParams) {
-      for (const [key, value] of Object.entries(ctx.pathParams)) {
-        path = path.replace(`:${key}`, value)
-      }
-    }
-
-    // 3. Validate no unsubstituted placeholders remain
-    const remaining = path.match(/:[a-z_]+/g)
-    if (remaining) {
-      throw new Error(
-        `Unresolved path parameters in action '${ctx.action}' on '${ctx.model}': ` +
-          `${remaining.join(', ')}. Provide values via recordId or pathParams.`
-      )
-    }
-
-    // 4. Compound IDs encode the full hierarchy (same as resolveRecord step 3).
-    //    Only prepend base endpoint for simple IDs or collection-level actions.
-    if (!isCompound) {
-      const base = this.pathForType(ctx.model, ctx.modelConfig)
-      path = `${base}/${path}`
-    }
-
-    return {
-      url: this._applyNamespace(ctx.modelConfig, path),
-      method: actionDef.method ?? 'POST'
-    }
   }
 
   /**
@@ -244,21 +169,24 @@ export class EndpointResolver {
     return modelConfig.api.endpoint
   }
 
+  /**
+   * Apply the effective namespace to a path.
+   *
+   * Model-level namespace overrides server-wide namespace. Public so
+   * `ApiExtension`s that resolve their own URLs (e.g. custom-actions)
+   * compose the same namespace logic as core CRUD.
+   */
+  applyNamespace(modelConfig: ModelConfig, path: string): string {
+    const ns = this._resolveNamespace(modelConfig)
+    if (!ns) return path
+    return `${ns}/${path}`
+  }
+
   // --- Private helpers ---
 
   /** Get endpoint overrides from model config, if any. */
   private _getOverrides(modelConfig: ModelConfig): EndpointOverrides | undefined {
     return modelConfig.api?.endpoints
-  }
-
-  /**
-   * Apply the effective namespace to a path.
-   * Model-level namespace overrides server-wide namespace.
-   */
-  private _applyNamespace(modelConfig: ModelConfig, path: string): string {
-    const ns = this._resolveNamespace(modelConfig)
-    if (!ns) return path
-    return `${ns}/${path}`
   }
 
   /**
