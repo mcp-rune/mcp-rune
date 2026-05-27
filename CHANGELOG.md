@@ -4,6 +4,44 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.41.0] — 2026-05-27
+
+### Added
+
+- **`HttpExtension` interface and `extensions` config on `HttpServer`** — opt-in HTTP-layer extensions that add routes and route-scoped middleware on top of the built-in OAuth, status, and MCP transport endpoints. Extensions receive a narrowed context object (`router`, `baseUrl`, `pathPrefix`, `mcpName`, `oauth`, `logger`) — not the raw Express `app` — and a `requires: ['oauth']` capability check that fails at boot if the host is in token mode. Built-in extensions mount after `/oauth/*` and `/health` and before the `/mcp` transport, so they cannot intercept MCP traffic or override well-known endpoints. New package exports: `@mcp-rune/mcp-rune/extensions` (types) and `@mcp-rune/mcp-rune/extensions/cimd` (the first built-in). Authoring guide at [`docs/guides/extensions.md`](docs/guides/extensions.md).
+- **Built-in `cimdExtension`** at `@mcp-rune/mcp-rune/extensions/cimd` — the opt-in replacement for the prior in-core CIMD support. Same defaults, same Cache-Control / ETag behavior, registered explicitly under the conventional `cimd` key.
+
+### Changed (BREAKING)
+
+- **CIMD (Client ID Metadata Document) support moves from OAuth core to an opt-in extension.** The `clientMetadata` field on `OAuthServiceOptions` and the `ClientMetadataConfig` type export are removed. The `GET /oauth/client-metadata.json` endpoint is no longer served unless `cimdExtension` is explicitly registered.
+
+  This is a deliberate framing change, not a refactor. Server-hosted CIMD is a testing convenience (it lets MCP clients which don't host their own CIMD — e.g. Opencode — complete the OAuth flow end-to-end against an upstream auth server), not what the MCP Authorization spec describes (the spec has the downstream MCP client host its own document). Keeping it in core implied otherwise. As an opt-in extension, the divergence is explicit at the call site.
+
+  Migration:
+
+  ```diff
+   import { HttpServer } from '@mcp-rune/mcp-rune/server'
+   import { OAuthService } from '@mcp-rune/mcp-rune/oauth2'
+  +import { cimdExtension } from '@mcp-rune/mcp-rune/extensions/cimd'
+
+   new HttpServer({
+     oauth: new OAuthService({
+       authServerUrl, clientId, clientSecret, redirectUri,
+  -    clientMetadata: { redirectUris, clientName, scope }
+     }),
+     mcp,
+  +  extensions: {
+  +    cimd: cimdExtension({ redirectUris, clientName, scope })
+  +  }
+   })
+  ```
+
+  Defaults are unchanged: `redirect_uris` falls back to `${baseUrl}/oauth/callback`, `client_name` to `mcp.name`, `scope` to `oauth.scopes`, `cacheMaxAge` to 3600. If you weren't using `clientMetadata` at all and want to keep serving the endpoint, register the extension with no options: `extensions: { cimd: cimdExtension() }`. To remove CIMD entirely, just omit the extension — `/oauth/client-metadata.json` will then return 404.
+
+  See [`docs/guides/extensions.md`](docs/guides/extensions.md) for the authoring guide and stability promise.
+
+[0.41.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.40.1...v0.41.0
+
 ## [0.40.1] — 2026-05-25
 
 ### Added
