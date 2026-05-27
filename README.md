@@ -534,21 +534,31 @@ MCP clients must identify themselves to the authorization server before obtainin
 | ----------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------- | ---------------------- |
 | **Pre-registered (CC)** | Admin creates the OAuth app upfront; client uses known `clientId`/`clientSecret`    | `OAuthService` with `clientId` + `clientSecret`                 | Confidential           |
 | **DCR (RFC 7591)**      | Client auto-registers on first connection via `/oauth/register`                     | `OAuthService` with `clientId` + `clientSecret` (for the proxy) | Public or confidential |
-| **CIMD (IETF Draft)**   | Client uses an HTTPS URL as `client_id`; auth server fetches metadata from that URL | `OAuthService` with `clientMetadata` config                     | Public                 |
+| **CIMD (IETF Draft)**   | Client uses an HTTPS URL as `client_id`; auth server fetches metadata from that URL | Opt-in `cimdExtension` (see below)                              | Public                 |
 
 **Pre-registered (Client Credentials)** — The traditional approach. An admin creates an OAuth application in the authorization server and distributes the `clientId` and `clientSecret` to the MCP client. The client includes these credentials in the OAuth flow.
 
 **DCR (Dynamic Client Registration)** — The MCP server proxies registration requests to the authorization server at `/oauth/register`. Clients that support RFC 7591 auto-register on first connection without any pre-configuration.
 
-**CIMD (Client ID Metadata Document)** — Specified in the active OAuth WG draft [`draft-ietf-oauth-client-id-metadata-document`](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) (no RFC yet). The MCP server serves a JSON metadata document at `/oauth/client-metadata.json`. MCP clients use this URL as their `client_id`. When the authorization server receives this URL-based `client_id`, it fetches the metadata document, validates it, and creates the application record automatically. Configure the metadata via `clientMetadata` on `OAuthService` — it sits alongside DCR's `authServerUrl` because both describe the same OAuth client identity:
+**CIMD (Client ID Metadata Document)** — Specified in the active OAuth WG draft [`draft-ietf-oauth-client-id-metadata-document`](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) (no RFC yet). The MCP server serves a JSON metadata document at `/oauth/client-metadata.json`. MCP clients use this URL as their `client_id`. When the authorization server receives this URL-based `client_id`, it fetches the metadata document, validates it, and creates the application record automatically. **In mcp-rune, CIMD ships as an opt-in HTTP extension** — it is a testing convenience for MCP clients that don't host their own CIMD, not a core OAuth feature. Register the built-in extension:
 
 ```typescript
-new OAuthService({
-  // ... other config ...
-  clientMetadata: {
-    redirectUris: ['http://127.0.0.1/callback'],
-    clientName: 'My MCP Server',
-    scope: 'read write'
+import { HttpServer } from '@mcp-rune/mcp-rune/server'
+import { cimdExtension } from '@mcp-rune/mcp-rune/extensions/cimd'
+
+new HttpServer({
+  oauth: new OAuthService({
+    /* ... */
+  }),
+  mcp: {
+    /* ... */
+  },
+  extensions: {
+    cimd: cimdExtension({
+      redirectUris: ['http://127.0.0.1/callback'],
+      clientName: 'My MCP Server',
+      scope: 'read write'
+    })
   }
 })
 ```
@@ -557,21 +567,31 @@ new OAuthService({
 <summary>JavaScript version</summary>
 
 ```javascript
-new OAuthService({
-  // ... other config ...
-  clientMetadata: {
-    redirectUris: ['http://127.0.0.1/callback'],
-    clientName: 'My MCP Server',
-    scope: 'read write'
+import { HttpServer } from '@mcp-rune/mcp-rune/server'
+import { cimdExtension } from '@mcp-rune/mcp-rune/extensions/cimd'
+
+new HttpServer({
+  oauth: new OAuthService({
+    /* ... */
+  }),
+  mcp: {
+    /* ... */
+  },
+  extensions: {
+    cimd: cimdExtension({
+      redirectUris: ['http://127.0.0.1/callback'],
+      clientName: 'My MCP Server',
+      scope: 'read write'
+    })
   }
 })
 ```
 
 </details>
 
-When `clientMetadata` is omitted, the endpoint still serves defaults using the server name and `read` scope.
+When `cimdExtension()` is called with no options, every field falls back to defaults derived from `baseUrl`, `mcp.name`, and `oauth.scopes`. To disable CIMD entirely, just don't register the extension — the `/oauth/client-metadata.json` endpoint will return 404. See [`docs/guides/extensions.md`](docs/guides/extensions.md) for the extension authoring guide.
 
-**Server-hosted vs client-hosted CIMD.** The MCP spec's CIMD model has the _MCP client_ publish its own metadata document at a URL it controls (e.g. `https://app.example.com/oauth/client-metadata.json`), so the upstream auth server's consent screen shows that client's name. mcp-rune does the inverse — the MCP server hosts one static document identifying itself. This is convenient for standing up a stable upstream client ID without DCR, and for exercising an upstream CIMD validator end-to-end without each MCP client needing to publish its own document; but it means the consent screen displays `clientName` for every downstream MCP client (Opencode, Claude Desktop, etc.) regardless of which one initiated the flow. For per-downstream-client identity on the consent screen, prefer DCR. For a spec-conformant proxy deployment, the spec's [Confused-Deputy section](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization#confused-deputy-problem) additionally requires per-downstream-client consent at the proxy layer, which mcp-rune does not surface today.
+**Server-hosted vs client-hosted CIMD.** The MCP spec's CIMD model has the _MCP client_ publish its own metadata document at a URL it controls (e.g. `https://app.example.com/oauth/client-metadata.json`), so the upstream auth server's consent screen shows that client's name. mcp-rune's `cimdExtension` does the inverse — the MCP server hosts one static document identifying itself. This is convenient for standing up a stable upstream client ID without DCR, and for exercising an upstream CIMD validator end-to-end without each MCP client needing to publish its own document; but it means the consent screen displays `clientName` for every downstream MCP client (Opencode, Claude Desktop, etc.) regardless of which one initiated the flow. For per-downstream-client identity on the consent screen, prefer DCR. For a spec-conformant proxy deployment, the spec's [Confused-Deputy section](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization#confused-deputy-problem) additionally requires per-downstream-client consent at the proxy layer, which mcp-rune does not surface today. The fact that CIMD lives as an opt-in extension — rather than a core OAuth feature — is intentional: it makes the divergence from the spec explicit at the call site.
 
 </details>
 

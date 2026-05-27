@@ -13,8 +13,6 @@
  * - RFC 8414  Authorization Server Metadata         -> /.well-known/oauth-authorization-server
  * - RFC 8707  Resource Indicators                   -> forwarded as `resource` param
  * - RFC 9728  Protected Resource Metadata           -> /.well-known/oauth-protected-resource[/mcp]
- * - RFC 9111 HTTP Caching                         -> Cache-Control on CIMD metadata
- * - CIMD  Client ID Metadata Document (MCP Auth) -> /oauth/client-metadata.json
  *
  * Routes:
  * - GET  /.well-known/oauth-protected-resource      - RFC 9728 metadata (origin-only form)
@@ -25,11 +23,12 @@
  * - GET  /oauth/authorize                           - Redirect to authorization server (RFC 6749)
  * - POST /oauth/token                               - Proxy token requests (RFC 6749)
  * - POST /oauth/register                            - Proxy DCR (RFC 7591)
- * - GET  /oauth/client-metadata.json                 - CIMD metadata document (MCP Auth Spec Nov 2025)
  * - POST /mcp/m2m/token                             - Machine-to-machine token endpoint
+ *
+ * CIMD (Client ID Metadata Document) was previously served here. It is now an
+ * opt-in extension — see `src/extensions/cimd/` and `docs/guides/extensions.md`.
  */
 
-import { createHash } from 'node:crypto'
 import { URLSearchParams } from 'node:url'
 
 import type { AxiosError } from 'axios'
@@ -425,49 +424,6 @@ export function createOAuthRouter({
       }
     })
   )
-
-  /**
-   * Client ID Metadata Document (CIMD)
-   *
-   * MCP Authorization Spec (November 2025): Clients can use an HTTPS URL
-   * as their client_id. The authorization server fetches the JSON metadata
-   * document from that URL to register the client automatically.
-   *
-   * This endpoint serves the metadata document so this MCP server can be
-   * used as a CIMD client_id with any compliant authorization server.
-   */
-  router.get('/oauth/client-metadata.json', (_req: Request, res: Response) => {
-    const metadataUrl = `${baseUrl}/oauth/client-metadata.json`
-    // CIMD is a public manifestation of the OAuth client's identity, so it
-    // lives on OAuthService alongside DCR's authServerUrl — not on the HTTP
-    // server. Falls back to oauth.scopes / mcpName / baseUrl-derived callback
-    // when the embedding server didn't configure overrides.
-    const clientMetadata = oauth.clientMetadata
-
-    logger.info('CIMD metadata document requested', {
-      service: mcpName,
-      clientId: metadataUrl
-    })
-
-    const body = {
-      client_id: metadataUrl,
-      client_name: clientMetadata?.clientName || mcpName,
-      redirect_uris: clientMetadata?.redirectUris || [`${baseUrl}/oauth/callback`],
-      grant_types: ['authorization_code'],
-      response_types: ['code'],
-      token_endpoint_auth_method: 'none',
-      scope: clientMetadata?.scope || oauth.scopes
-    }
-
-    // RFC 9111: Cache headers so authorization servers know when to re-fetch.
-    // IETF Client ID Metadata Document draft: servers SHOULD respect these.
-    const maxAge = clientMetadata?.cacheMaxAge ?? 3600
-    const etag = `"${createHash('sha256').update(JSON.stringify(body)).digest('hex').slice(0, 16)}"`
-
-    res.setHeader('Cache-Control', `public, max-age=${maxAge}`)
-    res.setHeader('ETag', etag)
-    res.json(body)
-  })
 
   /** Machine-to-Machine token endpoint - Client Credentials grant */
   router.post(

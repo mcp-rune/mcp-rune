@@ -97,20 +97,6 @@ describe('lib/oauth2/service', () => {
       )
     })
 
-    it('defaults clientMetadata to null when not provided', () => {
-      expect(oauth.clientMetadata).toBeNull()
-    })
-
-    it('stores clientMetadata when provided (CIMD sibling of DCR)', () => {
-      const clientMetadata = {
-        redirectUris: ['https://app.example.com/cb'],
-        clientName: 'Custom App',
-        scope: 'read write profile'
-      }
-      const svc = new OAuthService({ ...defaultOptions, clientMetadata })
-      expect(svc.clientMetadata).toEqual(clientMetadata)
-    })
-
     it('throws on HTTP identity URL in production', () => {
       expect(
         () =>

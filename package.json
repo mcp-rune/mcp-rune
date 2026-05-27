@@ -1,6 +1,6 @@
 {
   "name": "@mcp-rune/mcp-rune",
-  "version": "0.40.1",
+  "version": "0.41.0",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "restricted"
@@ -41,6 +41,14 @@
     "./oauth2": {
       "types": "./dist/oauth2.d.ts",
       "import": "./dist/oauth2.js"
+    },
+    "./extensions": {
+      "types": "./dist/extensions.d.ts",
+      "import": "./dist/extensions.js"
+    },
+    "./extensions/cimd": {
+      "types": "./dist/extensions/cimd.d.ts",
+      "import": "./dist/extensions/cimd.js"
     },
     "./services": {
       "types": "./dist/services.d.ts",

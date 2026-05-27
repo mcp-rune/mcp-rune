@@ -29,6 +29,7 @@ import {
 import * as logger from '#src/services/logger.js'
 import { closeTracing, flushTracing } from '#src/services/tracing.js'
 
+import type { HttpExtensionMap } from './extensions/types.js'
 import { createCorsMiddleware } from './middleware/cors.js'
 import { createMcpAuthMiddleware } from './middleware/mcp-auth.js'
 import { createMcpRequestHandler } from './middleware/mcp-handler.js'
@@ -63,6 +64,14 @@ interface HttpServerConfig {
   mcp: McpConfig
   isProduction?: boolean
   corsOrigins?: string
+  /**
+   * Opt-in HTTP-layer extensions. Keys are user-chosen identifiers (the same
+   * key is logged on registration and surfaced in error messages). Extensions
+   * mount after built-in OAuth/status routers and before the MCP transport,
+   * so they cannot intercept `/mcp` or override `/.well-known/*` routes.
+   * See `docs/guides/extensions.md`.
+   */
+  extensions?: HttpExtensionMap
 }
 
 /** Extended request with requestId from request-id middleware. */
@@ -81,6 +90,7 @@ export class HttpServer {
   private _isProduction: boolean
   private _isDevelopment: boolean
   private _corsOrigins: string | undefined
+  private _extensions: HttpExtensionMap
   app: Express
   private httpServer: ReturnType<Express['listen']> | null
 
@@ -92,7 +102,8 @@ export class HttpServer {
     accessToken,
     mcp,
     isProduction,
-    corsOrigins
+    corsOrigins,
+    extensions
   }: HttpServerConfig) {
     if (!oauth && !accessToken) {
       throw new Error('HttpServer requires either oauth (OAuth mode) or accessToken (token mode)')
@@ -130,6 +141,7 @@ export class HttpServer {
     this._isProduction = isProduction ?? false
     this._isDevelopment = !this._isProduction
     this._corsOrigins = corsOrigins
+    this._extensions = extensions ?? {}
 
     // Express app
     this.app = express()
@@ -206,6 +218,11 @@ export class HttpServer {
       })
     )
 
+    // Opt-in HTTP extensions. Mounted between the built-in OAuth/status
+    // routers and the MCP transport so they can neither mask `/.well-known/*`
+    // and `/oauth/*` nor intercept `/mcp`. See docs/guides/extensions.md.
+    this._applyExtensions()
+
     // MCP transport endpoint — auth runs as a route-scoped middleware so it
     // does not affect oauth-router / health / cache-stats.
     const mcpAuth = createMcpAuthMiddleware({
@@ -248,6 +265,55 @@ export class HttpServer {
         message: this._isDevelopment ? err.message : undefined
       })
     })
+  }
+
+  /**
+   * Register opt-in HTTP extensions. Validates `requires` capabilities and
+   * mounts each extension's router at `pathPrefix`. Object insertion order
+   * is the mount order; key uniqueness is guaranteed by object semantics.
+   *
+   * Errors are thrown synchronously so misconfiguration surfaces at boot
+   * rather than as a silent missing-route at runtime.
+   */
+  private _applyExtensions(): void {
+    for (const [name, extension] of Object.entries(this._extensions)) {
+      if (extension.requires?.includes('oauth') && !this.oauth) {
+        throw new Error(`Extension "${name}" requires OAuth, but no OAuthService is configured.`)
+      }
+
+      const extRouter = express.Router()
+      const result = extension.register({
+        name,
+        router: extRouter,
+        baseUrl: this.baseUrl,
+        pathPrefix: this.pathPrefix,
+        mcpName: this.mcp.name,
+        oauth: this.oauth,
+        logger
+      })
+
+      // register() may return a Promise; the constructor cannot await it, so
+      // we attach a rejection handler that logs+exits. Async registration is
+      // supported but its failure mode is "kill the process at boot" — never
+      // a half-mounted server.
+      if (result instanceof Promise) {
+        result.catch((err: Error) => {
+          logger.error(`Extension "${name}" failed to register`, {
+            service: this.mcp.name,
+            extensionName: name,
+            error: err.message,
+            stack: err.stack
+          })
+          process.exit(1)
+        })
+      }
+
+      this.app.use(this.pathPrefix, extRouter)
+      logger.info(`Extension "${name}" registered`, {
+        service: this.mcp.name,
+        extensionName: name
+      })
+    }
   }
 
   /** Legacy SSE endpoint - deprecated */
