@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" width="1280" height="320" role="img" aria-label="mcp-rune">
+  <defs>
+    <linearGradient id="rb-bg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0a0a14"></stop>
+      <stop offset="1" stop-color="#07070a"></stop>
+    </linearGradient>
+    <radialGradient id="rb-glow" cx="0.15" cy="0.5" r="0.55">
+      <stop offset="0" stop-color="#7c5cff" stop-opacity="0.32"></stop>
+      <stop offset="1" stop-color="#7c5cff" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="rb-chip" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a78bfa"></stop>
+      <stop offset="0.55" stop-color="#7c5cff"></stop>
+      <stop offset="1" stop-color="#4f3da6"></stop>
+    </linearGradient>
+    <pattern id="rb-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.025"></path>
+    </pattern>
+  </defs>
+  <rect x="0" y="0" width="1280" height="320" fill="url(#rb-bg)"></rect>
+  <rect x="0" y="0" width="1280" height="320" fill="url(#rb-grid)"></rect>
+  <rect x="0" y="0" width="1280" height="320" fill="url(#rb-glow)"></rect>
+
+  
+  <g transform="translate(72,108)">
+    <rect x="0" y="0" width="104" height="104" rx="22" fill="url(#rb-chip)"></rect>
+    <rect x="0.5" y="0.5" width="103" height="103" rx="21.5" fill="none" stroke="#ffffff" stroke-opacity="0.10"></rect>
+    <rect x="31" y="29" width="15" height="49" fill="#ffffff"></rect>
+    <rect x="46" y="29" width="24" height="11" fill="#ffffff"></rect>
+    <polygon points="70,29 76,29 70,47" fill="#ffffff"></polygon>
+  </g>
+
+  
+  <text x="200" y="158" fill="#f4f4f7" font-family="Geist, Inter, system-ui, sans-serif" font-size="56" font-weight="500" letter-spacing="-0.04em">mcp-rune</text>
+  <text x="200" y="200" fill="#9090a0" font-family="Geist, Inter, system-ui, sans-serif" font-size="22" letter-spacing="-0.01em">Derive an MCP server from your schema.</text>
+
+  
+  <g transform="translate(880,80)" opacity="0.85">
+    <text x="0" y="0" fill="#5f5f6c" font-family="Geist Mono, ui-monospace, monospace" font-size="12" letter-spacing="0.10em">FIVE-LAYER PROMPT</text>
+    <g transform="translate(0,16)">
+      
+      <rect x="0" y="0" width="320" height="22" rx="3" fill="#15151c" stroke="#26262f"></rect>
+      <rect x="0" y="0" width="320" height="22" rx="3" fill="#7c5cff" fill-opacity="0.18"></rect>
+      <text x="12" y="15" fill="#a78bfa" font-family="Geist Mono, ui-monospace, monospace" font-size="11" letter-spacing="0.06em">L1  SCHEMA</text>
+
+      <rect x="0" y="30" width="320" height="22" rx="3" fill="#15151c" stroke="#26262f"></rect>
+      <text x="12" y="45" fill="#9090a0" font-family="Geist Mono, ui-monospace, monospace" font-size="11" letter-spacing="0.06em">L2  GROUPS</text>
+
+      <rect x="0" y="60" width="320" height="22" rx="3" fill="#15151c" stroke="#26262f"></rect>
+      <text x="12" y="75" fill="#9090a0" font-family="Geist Mono, ui-monospace, monospace" font-size="11" letter-spacing="0.06em">L3  DOCS</text>
+
+      <rect x="0" y="90" width="320" height="22" rx="3" fill="#15151c" stroke="#26262f"></rect>
+      <text x="12" y="105" fill="#9090a0" font-family="Geist Mono, ui-monospace, monospace" font-size="11" letter-spacing="0.06em">L4  ASSEMBLY</text>
+
+      <rect x="0" y="120" width="320" height="22" rx="3" fill="#15151c" stroke="#26262f"></rect>
+      <text x="12" y="135" fill="#9090a0" font-family="Geist Mono, ui-monospace, monospace" font-size="11" letter-spacing="0.06em">L5  BEHAVIOR</text>
+    </g>
+  </g>
+
+  
+  <g transform="translate(72,260)">
+    <rect x="0" y="0" width="80" height="22" rx="4" fill="none" stroke="#3b3b46"></rect>
+    <text x="10" y="15" fill="#9090a0" font-family="Geist Mono, ui-monospace, monospace" font-size="11" letter-spacing="0.06em">0.1.0-α</text>
+    <text x="98" y="15" fill="#5f5f6c" font-family="Geist Mono, ui-monospace, monospace" font-size="11" letter-spacing="0.06em">MIT · NO TELEMETRY · SELF-HOST</text>
+  </g>
+</svg>

@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="docs/assets/readme-banner.svg" alt="mcp-rune — Derive an MCP server from your schema." />
+</p>
+
+<p align="center">
   <a href="https://github.com/mcp-rune/mcp-rune/actions/workflows/ci.yml"><img src="https://github.com/mcp-rune/mcp-rune/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <img src="https://img.shields.io/badge/MCP-2025--11--25-blue" alt="MCP Spec" />
   <img src="https://img.shields.io/badge/node-%3E%3D24-green" alt="Node.js" />
