@@ -36,14 +36,14 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
           api: { endpoint: 'activities' },
           attributes: { title: { type: 'string', required: true }, duration: { type: 'integer' } },
           required: ['title'],
-          search: { lookup: { fields: ['title'] } },
+          extensions: { search: { lookup: { fields: ['title'] } } },
           description: 'Study session model'
         },
         book: {
           api: { endpoint: 'books' },
           attributes: { title: { type: 'string', required: true }, author: { type: 'string' } },
           required: ['title'],
-          search: { lookup: { fields: ['title'] } },
+          extensions: { search: { lookup: { fields: ['title'] } } },
           description: 'Book model'
         }
       }
@@ -66,7 +66,7 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
           api: { endpoint: 'categories' },
           attributes: { name: { type: 'string', required: true } },
           required: ['name'],
-          search: { lookup: { fields: ['name'] } },
+          extensions: { search: { lookup: { fields: ['name'] } } },
           description: 'Category model',
           associations: {
             belongsTo: { theme: { rel: 'theme', target_model: 'theme' } },
@@ -89,7 +89,7 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
           api: { endpoint: 'tags' },
           attributes: { name: { type: 'string', required: true } },
           required: ['name'],
-          search: { lookup: { fields: ['name'] } },
+          extensions: { search: { lookup: { fields: ['name'] } } },
           description: 'Tag model'
         }
       }
@@ -108,11 +108,13 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
           api: { endpoint: 'titles' },
           attributes: { name: { type: 'string' } },
           required: ['name'],
-          search: {
-            lookup: { fields: ['name'] },
-            filters: {
-              name: { type: 'text', label: 'Name' },
-              status: { type: 'enum', label: 'Status', enumValues: ['draft', 'active'] }
+          extensions: {
+            search: {
+              lookup: { fields: ['name'] },
+              filters: {
+                name: { type: 'text', label: 'Name' },
+                status: { type: 'enum', label: 'Status', enumValues: ['draft', 'active'] }
+              }
             }
           },
           description: 'Title model'
@@ -236,7 +238,7 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
           api: { endpoint: 'books' },
           attributes: { title: { type: 'string' } },
           required: ['title'],
-          search: { lookup: { fields: ['title'] } },
+          extensions: { search: { lookup: { fields: ['title'] } } },
           description: 'Book model'
         }
       }

@@ -9,23 +9,52 @@
  * consumer above it already routes through this module.
  */
 
-import type { ModelConfig, ModelsRegistry } from '#src/mcp/tools/base-tool.js'
+import type { ModelsRegistry } from '#src/mcp/tools/base-tool.js'
 
 import type { SearchConfig } from './types.js'
 
 /**
- * Read a model's search configuration. Returns `undefined` when the model
- * doesn't declare search, so callers can tolerate the absence without
- * conditionals.
+ * Minimal structural shape every search config carrier matches.
+ *
+ * Both `ModelConfig` (used by tools/services) and `AppModelClass` (used by
+ * MCP apps) qualify, so the capability readers work uniformly across the
+ * three consumer clusters without forcing the call sites to cast.
+ */
+export interface ModelWithExtensions {
+  extensions?: Record<string, unknown>
+}
+
+/**
+ * Typed helper for declaring this extension's per-model slice. Use it —
+ * not a raw object literal — so TypeScript catches mistakes at the call
+ * site even though the `extensions` bag is `Record<string, unknown>`.
+ *
+ * ```ts
+ * static extensions = {
+ *   search: searchConfig({
+ *     lookup: { fields: ['title'] },
+ *     filters: { status: { type: 'enum', enumValues: ['draft', 'live'] } }
+ *   })
+ * }
+ * ```
+ */
+export function searchConfig(config: SearchConfig): SearchConfig {
+  return config
+}
+
+/**
+ * Read a model's search configuration from its `extensions['search']` slice.
+ * Returns `undefined` when the model doesn't opt into search, so callers
+ * can tolerate the absence without conditionals.
  *
  * Symmetrical with `getActionsConfig()` from the `custom-actions` extension.
  */
-export function getSearchConfig(model: ModelConfig): SearchConfig | undefined {
-  return (model.search ?? undefined) as SearchConfig | undefined
+export function getSearchConfig(model: ModelWithExtensions): SearchConfig | undefined {
+  return model.extensions?.['search'] as SearchConfig | undefined
 }
 
 /** A model's filter schema, or `undefined` when none is declared. */
-export function getModelFilters(model: ModelConfig): Record<string, unknown> | undefined {
+export function getModelFilters(model: ModelWithExtensions): Record<string, unknown> | undefined {
   return getSearchConfig(model)?.filters
 }
 

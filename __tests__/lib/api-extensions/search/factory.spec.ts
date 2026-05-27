@@ -42,7 +42,7 @@ describe('api-extensions/search/factory — createSearchService', () => {
     const ModelClass = {
       singularName: 'm',
       api: { endpoint: 'm' },
-      search: { query: { endpoint: 'm/search', method: 'POST' as const } }
+      extensions: { search: { query: { endpoint: 'm/search', method: 'POST' as const } } }
     }
     apiClient.post.mockResolvedValue({
       records: [],

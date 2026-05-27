@@ -14,6 +14,7 @@ import path from 'node:path'
 import { z } from 'zod'
 
 import type { SearchService } from '#src/api-extensions/search/index.js'
+import { getSearchConfig } from '#src/api-extensions/search/index.js'
 import type { SearchApiClient } from '#src/core/api-client.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
 import { createSelectionTools } from '#src/mcp/apps/selection-tools.js'
@@ -43,7 +44,7 @@ function getHtml(): string {
 function buildTypeToModelMap(modelClasses: Record<string, AppModelClass>): Record<string, string> {
   const typeToModel: Record<string, string> = {}
   for (const [key, ModelClass] of Object.entries(modelClasses)) {
-    const modelName = ModelClass.search?.query?.modelName
+    const modelName = getSearchConfig(ModelClass)?.query?.modelName
     if (modelName) {
       const names = Array.isArray(modelName) ? modelName : [modelName]
       for (const name of names) {
@@ -79,7 +80,10 @@ export function createAutocompletePickerApp({
 }: AutocompletePickerOptions): unknown[] {
   // Convention: only models with lookup support are eligible
   const eligible = Object.fromEntries(
-    Object.entries(modelClasses).filter(([, MC]) => MC.supportsLookup)
+    Object.entries(modelClasses).filter(([, MC]) => {
+      const fields = getSearchConfig(MC)?.lookup?.fields
+      return Array.isArray(fields) && fields.length > 0
+    })
   )
   const modelNames = Object.keys(eligible)
   const groupNames = Object.keys(searchGroups)
@@ -263,7 +267,7 @@ export function createAutocompletePickerApp({
       }
 
       const ModelClass = eligible[model!]!
-      const searchFields = ModelClass.search?.lookup?.fields || []
+      const searchFields = getSearchConfig(ModelClass)?.lookup?.fields || []
       let results: Array<{ id: unknown; display: string; [key: string]: unknown }> = []
 
       if (searchClient && query) {

@@ -6,29 +6,33 @@ import { flatConvention } from '../../../__fixtures__/flat-convention.js'
 const DirectSearchModel = {
   api: { endpoint: 'activities' },
   singularName: 'activity',
-  search: {
-    query: {
-      endpoint: 'activities/search',
-      method: 'POST' as const,
-      queryParam: 'q'
-    },
-    lookup: { fields: ['title', 'description'] }
+  extensions: {
+    search: {
+      query: {
+        endpoint: 'activities/search',
+        method: 'POST' as const,
+        queryParam: 'q'
+      },
+      lookup: { fields: ['title', 'description'] }
+    }
   }
 }
 
 const GroupSearchModel = {
   api: { endpoint: 'books' },
   singularName: 'book',
-  search: {
-    query: { group: 'library' },
-    lookup: { fields: ['title', 'author'] }
+  extensions: {
+    search: {
+      query: { group: 'library' },
+      lookup: { fields: ['title', 'author'] }
+    }
   }
 }
 
 const ListOnlyModel = {
   api: { endpoint: 'brands' },
   singularName: 'brand',
-  search: { lookup: { fields: ['name'] } }
+  extensions: { search: { lookup: { fields: ['name'] } } }
 }
 
 const NoSearchableModel = {
@@ -116,8 +120,10 @@ describe('SearchService', () => {
     it('should handle GET method search endpoints', async () => {
       const getSearchModel = {
         ...DirectSearchModel,
-        search: {
-          query: { endpoint: 'items/search', method: 'GET' as const, queryParam: 'q' }
+        extensions: {
+          search: {
+            query: { endpoint: 'items/search', method: 'GET' as const, queryParam: 'q' }
+          }
         }
       }
 
@@ -144,11 +150,13 @@ describe('SearchService', () => {
       }
       const modelWithAdapter = {
         ...DirectSearchModel,
-        search: {
-          ...DirectSearchModel.search,
-          query: {
-            ...DirectSearchModel.search.query,
-            adapter: customAdapter
+        extensions: {
+          search: {
+            ...DirectSearchModel.extensions.search,
+            query: {
+              ...DirectSearchModel.extensions.search.query,
+              adapter: customAdapter
+            }
           }
         }
       }
@@ -161,7 +169,7 @@ describe('SearchService', () => {
         'test',
         { duration_minutes: { from: 40 } },
         { page: 1, perPage: 20 },
-        modelWithAdapter.search
+        modelWithAdapter.extensions.search
       )
       expect(mockApiClient.post).toHaveBeenCalledWith('activities/search', {
         q: 'test',
@@ -187,11 +195,13 @@ describe('SearchService', () => {
     it('should append expand query params to POST URL when configured', async () => {
       const modelWithExpand = {
         ...DirectSearchModel,
-        search: {
-          ...DirectSearchModel.search,
-          query: {
-            ...DirectSearchModel.search.query,
-            expand: ['title', 'platform']
+        extensions: {
+          search: {
+            ...DirectSearchModel.extensions.search,
+            query: {
+              ...DirectSearchModel.extensions.search.query,
+              expand: ['title', 'platform']
+            }
           }
         }
       }
@@ -266,9 +276,11 @@ describe('SearchService', () => {
       }
       const modelWithAdapter = {
         ...DirectSearchModel,
-        search: {
-          ...DirectSearchModel.search,
-          query: { ...DirectSearchModel.search.query, adapter: customAdapter }
+        extensions: {
+          search: {
+            ...DirectSearchModel.search,
+            query: { ...DirectSearchModel.extensions.search.query, adapter: customAdapter }
+          }
         }
       }
 
@@ -351,8 +363,10 @@ describe('SearchService', () => {
       const ModelWithModelName = {
         api: { endpoint: 'title_groups' },
         singularName: 'title_group',
-        search: {
-          query: { group: 'library', modelName: 'series' }
+        extensions: {
+          search: {
+            query: { group: 'library', modelName: 'series' }
+          }
         }
       }
 
@@ -370,8 +384,10 @@ describe('SearchService', () => {
       const ModelWithMultipleNames = {
         api: { endpoint: 'titles' },
         singularName: 'title',
-        search: {
-          query: { group: 'library', modelName: ['episode', 'feature'] }
+        extensions: {
+          search: {
+            query: { group: 'library', modelName: ['episode', 'feature'] }
+          }
         }
       }
 
@@ -441,9 +457,11 @@ describe('SearchService', () => {
       const modelWithLookupEndpoint = {
         api: { endpoint: 'brands' },
         singularName: 'brand',
-        search: {
-          query: { group: 'catalogue' },
-          lookup: { endpoint: 'brands/autocomplete', fields: ['name'] }
+        extensions: {
+          search: {
+            query: { group: 'catalogue' },
+            lookup: { endpoint: 'brands/autocomplete', fields: ['name'] }
+          }
         }
       }
 
@@ -459,8 +477,10 @@ describe('SearchService', () => {
       const modelWithQueryParam = {
         api: { endpoint: 'brands' },
         singularName: 'brand',
-        search: {
-          lookup: { endpoint: 'brands/autocomplete', fields: ['name'], queryParam: 'q' }
+        extensions: {
+          search: {
+            lookup: { endpoint: 'brands/autocomplete', fields: ['name'], queryParam: 'q' }
+          }
         }
       }
 
@@ -737,7 +757,7 @@ describe('SearchService', () => {
     it('should return "dedicated" for models with lookup endpoint', () => {
       const model = {
         api: { endpoint: 'brands' },
-        search: { lookup: { endpoint: 'brands/autocomplete', fields: ['name'] } }
+        extensions: { search: { lookup: { endpoint: 'brands/autocomplete', fields: ['name'] } } }
       }
       expect(SearchService.getLookupCapability(model)).toBe('dedicated')
     })

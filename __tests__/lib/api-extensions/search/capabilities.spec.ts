@@ -9,8 +9,9 @@ import {
 } from '../../../../src/api-extensions/search/capabilities.js'
 import type { ModelConfig } from '../../../../src/mcp/tools/base-tool.js'
 
-const withSearch = (search: ModelConfig['search']): ModelConfig =>
-  ({ api: { endpoint: 'm' }, search }) as ModelConfig
+// Use a permissive type — ModelConfig no longer carries `search` directly.
+const withSearch = (search: Record<string, unknown> | null): ModelConfig =>
+  ({ api: { endpoint: 'm' }, extensions: search ? { search } : {} }) as ModelConfig
 
 describe('api-extensions/search/capabilities', () => {
   describe('getSearchConfig', () => {

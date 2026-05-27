@@ -6,7 +6,7 @@ const modelClasses = {
   book: {
     api: { endpoint: 'books' },
     singularName: 'book',
-    search: { lookup: { fields: ['title'] } },
+    extensions: { search: { lookup: { fields: ['title'] } } },
     attributes: {
       title: { type: 'string', required: true },
       author: { type: 'string' }

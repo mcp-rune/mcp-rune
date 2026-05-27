@@ -56,7 +56,12 @@ export interface SearchRequest {
 
 export interface SearchModelClass {
   singularName?: string
-  search?: SearchConfig | null
+  /**
+   * Search config lives on `extensions['search']` (read via `getSearchConfig`).
+   * `SearchService` does not access this field directly — it always goes
+   * through the capability getter so the bag layout can evolve in one place.
+   */
+  extensions?: Record<string, unknown>
   api: {
     endpoint: string
     convention?: BaseConvention

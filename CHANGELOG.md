@@ -4,6 +4,63 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.48.0] — 2026-05-27
+
+### Added
+
+- **`searchConfig({...})` typed helper** at `@mcp-rune/mcp-rune/api-extensions/search` — symmetric with `customActionsConfig()` from the custom-actions extension. Use it to declare per-model search config inside the `extensions['search']` slice with full TypeScript validation, instead of writing raw object literals.
+
+### Changed (BREAKING)
+
+- **Per-model search config moves from `static search` on `BaseModel` into `extensions['search']`.** Final step of the search-extraction trilogy (PRs A and B landed in v0.46.0 and v0.47.0). After this release `BaseModel` declares only what every API needs — endpoint, convention, namespace, parent/standalone, associations, and the `extensions` bag — with both opt-in capabilities (custom actions, search) consistently sitting in that bag via their typed helpers.
+
+  Concrete changes:
+  - `static search: SearchConfig | null` removed from `BaseModel`.
+  - `static get supportsLookup()` getter removed from `BaseModel`. Apps now compute lookup capability inline via `getSearchConfig(MC)?.lookup?.fields`.
+  - `search` field removed from the `ModelConfig` interface (`src/mcp/tools/base-tool.ts`).
+  - `search` field removed from `AppModelClass` (`src/mcp/apps/types.ts`); `extensions?: Record<string, unknown>` slot added in its place.
+  - `SearchModelClass` (in the search extension's types) reads `extensions['search']` via `getSearchConfig` instead of `model.search`.
+  - `SearchService` internals read every search config field through `getSearchConfig(ModelClass)` instead of `ModelClass.search.*`.
+
+  `getSearchConfig` is now a **structural** getter — it accepts any `{ extensions?: Record<string, unknown> }` shape, so the same call works on `ModelConfig`, `AppModelClass`, and `SearchModelClass` uniformly.
+
+  Migration:
+
+  ```diff
+  -import { BaseModel } from '@mcp-rune/mcp-rune/core'
+  -import type { SearchConfig } from '@mcp-rune/mcp-rune/api-extensions/search'
+  +import { BaseModel } from '@mcp-rune/mcp-rune/core'
+  +import { searchConfig } from '@mcp-rune/mcp-rune/api-extensions/search'
+
+   class Title extends BaseModel {
+     static api = { endpoint: 'titles' }
+  -  static search: SearchConfig = {
+  -    lookup: { fields: ['name'] },
+  -    filters: { status: { type: 'enum', enumValues: ['draft', 'live'] } },
+  -    query: { endpoint: 'titles/search', method: 'POST', queryParam: 'q' }
+  -  }
+  +  static extensions = {
+  +    search: searchConfig({
+  +      lookup: { fields: ['name'] },
+  +      filters: { status: { type: 'enum', enumValues: ['draft', 'live'] } },
+  +      query: { endpoint: 'titles/search', method: 'POST', queryParam: 'q' }
+  +    })
+  +  }
+   }
+  ```
+
+  Behavior is unchanged. Apps, analysis-ingest, list-models, validators, and the search extension's own tools all continue to work — they were already routing through `getSearchConfig` after PR B (v0.47.0).
+
+  Models that don't use search drop the `static search` declaration with no replacement needed.
+
+### Why this completes the trilogy
+
+`BaseModel` was bootstrapped with one foundational concept (CRUD) and accumulated two bolted-on capabilities (custom actions, then search). v0.44.0 extracted custom actions into an opt-in extension with config in `extensions['custom-actions']`. v0.46.0 and v0.47.0 prepared search infrastructure for the same shape. This release finishes the job: `BaseModel` is back to being only what every API needs, and both opt-in capabilities sit in `extensions[...]` via their typed helpers, with the same shape and the same authoring contract.
+
+The trilogy is now complete. Future API capabilities (GraphQL field selection, bulk endpoints, RPC verbs, streaming, etc.) follow the same pattern without further `BaseModel` churn.
+
+[0.48.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.47.0...v0.48.0
+
 ## [0.47.0] — 2026-05-27
 
 ### Changed (BREAKING)

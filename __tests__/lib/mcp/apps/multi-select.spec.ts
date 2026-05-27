@@ -6,7 +6,7 @@ class FakeModel {
   static api = { endpoint: '/fakes' }
   static attributes = ['id', 'name']
   static attributesConfig = { id: { type: 'integer' }, name: { type: 'string' } }
-  static supportsLookup = true
+  static extensions = { search: { lookup: { fields: ['name'] } } }
   constructor(data) {
     this.data = data
   }

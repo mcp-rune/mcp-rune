@@ -7,6 +7,8 @@
  * The schema is a pure data structure -- no API calls, no side effects.
  */
 
+import { getSearchConfig } from '#src/api-extensions/search/index.js'
+
 import { humanize } from './helpers.js'
 import type { AppModelClass, ColumnDefinition, ListSchema } from './types.js'
 
@@ -74,7 +76,7 @@ export function applyColumnSelection(
 export function generateListSchema(ModelClass: AppModelClass): ListSchema {
   const model = ModelClass.singularName
   const columns = inferColumns(ModelClass)
-  const searchFields = ModelClass.search?.lookup?.fields || []
+  const searchFields = getSearchConfig(ModelClass)?.lookup?.fields || []
 
   return {
     model,

@@ -9,15 +9,17 @@ const mockModels = {
       name: { label: 'Name', type: 'string' },
       status: { label: 'Status', type: 'enum' }
     },
-    search: {
-      query: {
-        endpoint: 'titles/search',
-        method: 'POST',
-        queryParam: 'q'
-      },
-      filters: {
-        name: { type: 'text', label: 'Name', description: 'Search by name' },
-        status: { type: 'enum', label: 'Status', enumValues: ['draft', 'active'] }
+    extensions: {
+      search: {
+        query: {
+          endpoint: 'titles/search',
+          method: 'POST',
+          queryParam: 'q'
+        },
+        filters: {
+          name: { type: 'text', label: 'Name', description: 'Search by name' },
+          status: { type: 'enum', label: 'Status', enumValues: ['draft', 'active'] }
+        }
       }
     }
   },
@@ -279,13 +281,15 @@ describe('SearchRecordsTool', () => {
         attributes: {
           raw_attr: { type: 'string' }
         },
-        search: {
-          query: {
-            endpoint: 'titles/search',
-            method: 'POST',
-            queryParam: 'q'
-          },
-          filters: { name: { type: 'text' } }
+        extensions: {
+          search: {
+            query: {
+              endpoint: 'titles/search',
+              method: 'POST',
+              queryParam: 'q'
+            },
+            filters: { name: { type: 'text' } }
+          }
         }
       }
     }
@@ -312,13 +316,15 @@ describe('SearchRecordsTool', () => {
         attributes: {
           no_type: { label: 'No Type' }
         },
-        search: {
-          query: {
-            endpoint: 'titles/search',
-            method: 'POST',
-            queryParam: 'q'
-          },
-          filters: { name: { type: 'text' } }
+        extensions: {
+          search: {
+            query: {
+              endpoint: 'titles/search',
+              method: 'POST',
+              queryParam: 'q'
+            },
+            filters: { name: { type: 'text' } }
+          }
         }
       }
     }
@@ -519,14 +525,16 @@ describe('SearchRecordsTool', () => {
               derived: { from: 'title', field: 'name' }
             }
           },
-          search: {
-            query: {
-              endpoint: 'schedulings/search',
-              method: 'POST',
-              queryParam: 'q'
-            },
-            filters: {
-              put_up: { type: 'text', label: 'Put Up' }
+          extensions: {
+            search: {
+              query: {
+                endpoint: 'schedulings/search',
+                method: 'POST',
+                queryParam: 'q'
+              },
+              filters: {
+                put_up: { type: 'text', label: 'Put Up' }
+              }
             }
           }
         }
@@ -571,14 +579,16 @@ describe('SearchRecordsTool', () => {
               derived: { from: 'title', field: 'name' }
             }
           },
-          search: {
-            query: {
-              endpoint: 'schedulings/search',
-              method: 'POST',
-              queryParam: 'q'
-            },
-            filters: {
-              put_up: { type: 'text', label: 'Put Up' }
+          extensions: {
+            search: {
+              query: {
+                endpoint: 'schedulings/search',
+                method: 'POST',
+                queryParam: 'q'
+              },
+              filters: {
+                put_up: { type: 'text', label: 'Put Up' }
+              }
             }
           }
         }

@@ -13,6 +13,7 @@ import path from 'node:path'
 import { z } from 'zod'
 
 import type { SearchService } from '#src/api-extensions/search/index.js'
+import { getSearchConfig } from '#src/api-extensions/search/index.js'
 import { resolveDerivedFields } from '#src/core/derived-fields.js'
 import { appResponseMeta, extractIds, formatAppSummary } from '#src/mcp/apps/format-summary.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
@@ -48,7 +49,7 @@ interface SearchViewOptions {
 export function createSearchViewApp({ modelClasses, namespace }: SearchViewOptions): unknown[] {
   // Convention: only models with query search are eligible
   const eligible = Object.fromEntries(
-    Object.entries(modelClasses).filter(([, MC]) => MC.search?.query)
+    Object.entries(modelClasses).filter(([, MC]) => getSearchConfig(MC)?.query)
   )
   const modelNames = Object.keys(eligible)
   const resourceUri = `ui://${namespace}/search-records-app`
@@ -136,7 +137,7 @@ export function createSearchViewApp({ modelClasses, namespace }: SearchViewOptio
         ModelClass
       )
       schema.model = model!
-      const filterDefinitions = ModelClass.search?.filters || {}
+      const filterDefinitions = getSearchConfig(ModelClass)?.filters || {}
 
       let records: Record<string, unknown>[] = []
       const clampedPerPage = Math.min(per_page!, MAX_VIEW_PER_PAGE)

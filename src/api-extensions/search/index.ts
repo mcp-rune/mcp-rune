@@ -25,12 +25,14 @@
  * ```
  */
 
+export type { ModelWithExtensions } from './capabilities.js'
 export {
   getLookupableModelNames,
   getModelFilters,
   getQueryableModelNames,
   getSearchableModelNames,
-  getSearchConfig
+  getSearchConfig,
+  searchConfig
 } from './capabilities.js'
 export { GetFiltersGuideTool, searchExtension, SearchRecordsTool } from './extension.js'
 export type { SearchFactoryContext } from './factory.js'

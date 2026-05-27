@@ -27,6 +27,7 @@
 import type { SearchApiClient } from '#src/core/api-client.js'
 import { defaultConvention } from '#src/mcp/api-conventions/index.js'
 
+import { getSearchConfig } from './capabilities.js'
 import { SearchAdapter } from './search-adapter.js'
 import type {
   PaginationInfo,
@@ -103,11 +104,12 @@ export class SearchService {
       filters
     }: { page?: number; perPage?: number; filters?: Record<string, unknown> } = {}
   ): Promise<SearchResult> {
-    const queryConfig = ModelClass.search?.query
+    const searchCfg = getSearchConfig(ModelClass)
+    const queryConfig = searchCfg?.query
 
     if (!queryConfig) {
       // Fallback: field-based search on first lookup field
-      const searchField = ModelClass.search?.lookup?.fields?.[0]
+      const searchField = searchCfg?.lookup?.fields?.[0]
       if (searchField && query) {
         return this.list(ModelClass, { page, perPage, [searchField]: query })
       }
@@ -168,8 +170,9 @@ export class SearchService {
     query: string,
     { perPage = 10 }: { perPage?: number } = {}
   ): Promise<SearchResult> {
-    const lookupConfig = ModelClass.search?.lookup
-    const queryConfig = ModelClass.search?.query
+    const searchCfg = getSearchConfig(ModelClass)
+    const lookupConfig = searchCfg?.lookup
+    const queryConfig = searchCfg?.query
 
     // 1. Dedicated lookup endpoint
     if (lookupConfig?.endpoint) {
@@ -262,7 +265,7 @@ export class SearchService {
 
   /** Get the search capability of a model. */
   static getSearchCapability(ModelClass: SearchModelClass): 'direct' | 'group' | 'list-only' {
-    const queryConfig = ModelClass.search?.query
+    const queryConfig = getSearchConfig(ModelClass)?.query
     if (!queryConfig) return 'list-only'
     if (queryConfig.endpoint) return 'direct'
     if (queryConfig.group) return 'group'
@@ -273,14 +276,15 @@ export class SearchService {
   static getLookupCapability(
     ModelClass: SearchModelClass
   ): 'dedicated' | 'search-fallback' | 'list-fallback' {
-    if (ModelClass.search?.lookup?.endpoint) return 'dedicated'
-    if (ModelClass.search?.query) return 'search-fallback'
+    const searchCfg = getSearchConfig(ModelClass)
+    if (searchCfg?.lookup?.endpoint) return 'dedicated'
+    if (searchCfg?.query) return 'search-fallback'
     return 'list-fallback'
   }
 
   /** Get the search group name for a model, if any. */
   static getSearchGroup(ModelClass: SearchModelClass): string | null {
-    return ModelClass.search?.query?.group || null
+    return getSearchConfig(ModelClass)?.query?.group || null
   }
 
   // ============================================================================
@@ -300,7 +304,8 @@ export class SearchService {
       perPage: 20
     }
   ): Promise<SearchResult> {
-    const queryConfig = ModelClass.search?.query
+    const searchCfg = getSearchConfig(ModelClass)
+    const queryConfig = searchCfg?.query
     const method = (queryConfig!.method || 'POST').toUpperCase()
 
     if (method === 'POST') {
@@ -309,7 +314,7 @@ export class SearchService {
         query,
         filters,
         { page, perPage },
-        ModelClass.search as SearchConfig
+        searchCfg as SearchConfig
       )
 
       const endpoint = queryParams
