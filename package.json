@@ -82,7 +82,6 @@
   "files": [
     "dist/",
     "src/mcp/apps/shared/",
-    "vendor/",
     "docs/",
     "LICENSE"
   ],
