@@ -1,6 +1,6 @@
 {
   "name": "@mcp-rune/mcp-rune",
-  "version": "0.49.1",
+  "version": "0.49.2",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "restricted"
@@ -87,8 +87,8 @@
   ],
   "scripts": {
     "dev": "tsc --watch",
-    "build": "tsc && npm run copy:app-html",
-    "build:full": "npm run build:all-apps && npm run build",
+    "build": "tsc",
+    "build:full": "npm run build:all-apps && npm run build && npm run copy:app-html",
     "build:check": "tsc --noEmit",
     "build:apps": "vite build -c src/mcp/apps/vite.config.js",
     "build:apps:model-form": "BUILD_TARGET=model-form vite build -c src/mcp/apps/vite.config.js",
