@@ -82,7 +82,7 @@ describe('api-extensions/custom-actions — action() mixin on ModelService', () 
   it('dispatches POST by default', async () => {
     const { service, apiClient } = makeService()
     await service.action('book_with_actions', 'publish', { recordId: '42' })
-    expect(apiClient.post).toHaveBeenCalledWith('books/42/publish', undefined)
+    expect(apiClient.post).toHaveBeenCalledWith('books/42/publish')
   })
 
   it('dispatches to correct HTTP method (PATCH)', async () => {
@@ -138,7 +138,7 @@ describe('api-extensions/custom-actions — action() mixin on ModelService', () 
       recordId: '42',
       pathParams: { chapter_id: '5' }
     })
-    expect(apiClient.post).toHaveBeenCalledWith('books/42/chapters/5/approve', undefined)
+    expect(apiClient.post).toHaveBeenCalledWith('books/42/chapters/5/approve')
   })
 
   it('resolves compound IDs correctly', async () => {
@@ -146,7 +146,7 @@ describe('api-extensions/custom-actions — action() mixin on ModelService', () 
     await service.action('book_with_actions', 'publish', {
       recordId: 'authors/10/books/42'
     })
-    expect(apiClient.post).toHaveBeenCalledWith('authors/10/books/42/publish', undefined)
+    expect(apiClient.post).toHaveBeenCalledWith('authors/10/books/42/publish')
   })
 
   it('throws UnknownModelError for bad model', async () => {
@@ -175,6 +175,6 @@ describe('api-extensions/custom-actions — action() mixin on ModelService', () 
     }
     const { service, apiClient } = makeService(models)
     await service.action('readonly_book', 'export', { recordId: '1' })
-    expect(apiClient.get).toHaveBeenCalledWith('books/1/export', undefined)
+    expect(apiClient.get).toHaveBeenCalledWith('books/1/export')
   })
 })

@@ -192,7 +192,7 @@ describe('api-extensions/custom-actions — ModelActionTool', () => {
         record_id: '42'
       })
 
-      expect(mockApiClient.post).toHaveBeenCalledWith('books/42/publish', undefined)
+      expect(mockApiClient.post).toHaveBeenCalledWith('books/42/publish')
       expect(result.isError).toBeFalsy()
       expect(result.content[0].text).toContain('success')
     })
@@ -207,7 +207,7 @@ describe('api-extensions/custom-actions — ModelActionTool', () => {
         path_params: { chapter_id: '5' }
       })
 
-      expect(mockApiClient.post).toHaveBeenCalledWith('books/42/chapters/5/approve', undefined)
+      expect(mockApiClient.post).toHaveBeenCalledWith('books/42/chapters/5/approve')
     })
 
     it('should pass query params for GET actions', async () => {

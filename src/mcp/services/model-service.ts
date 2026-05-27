@@ -269,31 +269,30 @@ export class ModelService implements DataLayer {
     params?: Record<string, unknown>,
     options?: RequestOptions
   ): Promise<Record<string, unknown>> {
-    // Omit `options` when caller passed nothing; the underlying ApiClient
-    // sees the same call shape it would receive from a direct caller, which
-    // keeps third-party clients (and their tests) free of spurious
-    // `undefined` trailing args.
+    // Omit trailing `undefined` args when the caller passed nothing; the
+    // underlying ApiClient sees the same call shape it would receive from a
+    // direct caller, which keeps third-party clients (and their tests) free
+    // of spurious `undefined` trailing args.
     switch (method) {
       case 'GET':
-        return options === undefined
-          ? this._apiClient.get(url, params)
-          : this._apiClient.get(url, params, options)
+        if (options !== undefined) return this._apiClient.get(url, params, options)
+        if (params !== undefined) return this._apiClient.get(url, params)
+        return this._apiClient.get(url)
       case 'POST':
-        return options === undefined
-          ? this._apiClient.post(url, payload)
-          : this._apiClient.post(url, payload, options)
+        if (options !== undefined) return this._apiClient.post(url, payload, options)
+        if (payload !== undefined) return this._apiClient.post(url, payload)
+        return this._apiClient.post(url)
       case 'PUT':
-        return options === undefined
-          ? this._apiClient.put(url, payload)
-          : this._apiClient.put(url, payload, options)
+        if (options !== undefined) return this._apiClient.put(url, payload, options)
+        if (payload !== undefined) return this._apiClient.put(url, payload)
+        return this._apiClient.put(url)
       case 'PATCH':
-        return options === undefined
-          ? this._apiClient.patch(url, payload)
-          : this._apiClient.patch(url, payload, options)
+        if (options !== undefined) return this._apiClient.patch(url, payload, options)
+        if (payload !== undefined) return this._apiClient.patch(url, payload)
+        return this._apiClient.patch(url)
       case 'DELETE':
-        return options === undefined
-          ? this._apiClient.delete(url)
-          : this._apiClient.delete(url, options)
+        if (options !== undefined) return this._apiClient.delete(url, options)
+        return this._apiClient.delete(url)
       default:
         throw new Error(`Unsupported HTTP method: ${method}`)
     }
