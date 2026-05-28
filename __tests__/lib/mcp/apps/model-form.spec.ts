@@ -1,3 +1,5 @@
+import { vi } from 'vitest'
+
 import { createCreateFormApp } from '../../../../src/mcp/apps/model-form.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
@@ -122,6 +124,136 @@ describe('lib/mcp/apps/model-form', () => {
       const result = await app.handleToolCall({ model: 'book', mode: 'form' })
       const data = JSON.parse(result.content[0].text)
       expect(data.hiddenValues).toBeUndefined()
+    })
+  })
+
+  describe('parent context banner', () => {
+    /**
+     * Set up a nested-model fixture: `subdomain` belongs to `domain` and is
+     * reached via `domains/:domain_id/subdomains`. The parent-context
+     * resolver should fetch the domain record and surface its `name` as
+     * the banner label.
+     */
+    const SubdomainModel = {
+      api: {
+        endpoint: 'subdomains',
+        parent: 'domain',
+        standalone: false
+      },
+      singularName: 'subdomain',
+      attributes: {
+        id: { type: 'string', prompt_visible: false },
+        name: { type: 'string', required: true },
+        domain_id: { type: 'integer', required: true, prompt_visible: false }
+      },
+      associations: {
+        belongsTo: { domain: { rel: 'domain', target_model: 'domain' } }
+      }
+    }
+    const DomainModel = {
+      api: { endpoint: 'domains' },
+      singularName: 'domain',
+      attributes: {
+        id: { type: 'string', prompt_visible: false },
+        name: { type: 'string', required: true }
+      },
+      associations: {}
+    }
+    const SubdomainFormClass = { fields: ['name'] }
+
+    function nestedApp() {
+      return createCreateFormApp({
+        modelClasses: { subdomain: SubdomainModel, domain: DomainModel },
+        formClasses: { subdomain: SubdomainFormClass },
+        promptClasses: {},
+        namespace: 'test'
+      })
+    }
+
+    it('emits parentContext when the parent id is in hiddenValues', async () => {
+      const app = nestedApp()
+      const dataLayer = {
+        dispatch: vi.fn(async (method: string, endpoint: string) => {
+          expect(method).toBe('GET')
+          expect(endpoint).toBe('domains/7')
+          return { data: { id: 7, name: 'Software Engineering' } }
+        })
+      }
+      const result = await app.handleToolCall(
+        { model: 'subdomain', mode: 'form', prefill: { domain_id: '7' } },
+        { dataLayer } as unknown as Record<string, unknown>
+      )
+      const data = JSON.parse(result.content[0].text)
+      expect(data.parentContext).toEqual({
+        parentModel: 'domain',
+        parentId: '7',
+        label: 'Software Engineering'
+      })
+      expect(dataLayer.dispatch).toHaveBeenCalledTimes(1)
+    })
+
+    it('falls back to "<parent> #<id>" when the parent record has no name/title/slug', async () => {
+      const app = nestedApp()
+      const dataLayer = {
+        dispatch: vi.fn(async () => ({ data: { id: 7 } }))
+      }
+      const result = await app.handleToolCall(
+        { model: 'subdomain', mode: 'form', prefill: { domain_id: '7' } },
+        { dataLayer } as unknown as Record<string, unknown>
+      )
+      const data = JSON.parse(result.content[0].text)
+      expect(data.parentContext).toEqual({
+        parentModel: 'domain',
+        parentId: '7',
+        label: 'domain #7'
+      })
+    })
+
+    it('omits parentContext when the parent id is missing', async () => {
+      const app = nestedApp()
+      const dataLayer = { dispatch: vi.fn() }
+      const result = await app.handleToolCall({ model: 'subdomain', mode: 'form' }, {
+        dataLayer
+      } as unknown as Record<string, unknown>)
+      const data = JSON.parse(result.content[0].text)
+      expect(data.parentContext).toBeUndefined()
+      expect(dataLayer.dispatch).not.toHaveBeenCalled()
+    })
+
+    it('omits parentContext when no dataLayer is provided', async () => {
+      const app = nestedApp()
+      const result = await app.handleToolCall({
+        model: 'subdomain',
+        mode: 'form',
+        prefill: { domain_id: '7' }
+      })
+      const data = JSON.parse(result.content[0].text)
+      expect(data.parentContext).toBeUndefined()
+    })
+
+    it('omits parentContext for standalone models even when their parent fetch would succeed', async () => {
+      const app = createApp()
+      const dataLayer = { dispatch: vi.fn() }
+      const result = await app.handleToolCall({ model: 'book', mode: 'form' }, {
+        dataLayer
+      } as unknown as Record<string, unknown>)
+      const data = JSON.parse(result.content[0].text)
+      expect(data.parentContext).toBeUndefined()
+    })
+
+    it('logs a warning and omits parentContext when the parent fetch fails', async () => {
+      const app = nestedApp()
+      const dataLayer = {
+        dispatch: vi.fn(async () => {
+          throw new Error('404 not found')
+        })
+      }
+      const result = await app.handleToolCall(
+        { model: 'subdomain', mode: 'form', prefill: { domain_id: '7' } },
+        { dataLayer } as unknown as Record<string, unknown>
+      )
+      const data = JSON.parse(result.content[0].text)
+      expect(data.parentContext).toBeUndefined()
     })
   })
 })

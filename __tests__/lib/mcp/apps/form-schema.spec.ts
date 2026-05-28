@@ -154,16 +154,61 @@ describe('lib/mcp/apps/form-schema', () => {
       expect(ratingField.type).toBe('number')
     })
 
-    it('maps enum type to select with options', () => {
+    it('maps small enums to chips with options', () => {
+      // Enums with <= CHIPS_MAX_OPTIONS (8) auto-promote to the segmented
+      // chip control. Larger enums fall back to a <select> below.
       const schema = generateFormSchema(MockModel, MockPrompt)
       const statusField = schema.fields.find((f) => f.name === 'status')
-      expect(statusField.type).toBe('select')
+      expect(statusField.type).toBe('chips')
       expect(statusField.options).toEqual([
         { value: 'unread', label: 'Unread' },
         { value: 'reading', label: 'Reading' },
         { value: 'completed', label: 'Completed' }
       ])
       expect(statusField.default).toBe('unread')
+    })
+
+    it('falls back to select when an enum exceeds the chips threshold', () => {
+      // A 9-value enum is above CHIPS_MAX_OPTIONS (8) and should render
+      // as the searchable <select> instead of overflowing chip wrap.
+      const ManyValueModel = {
+        api: { endpoint: 'tickets' },
+        singularName: 'ticket',
+        attributes: {
+          ...MockModel.attributes,
+          priority: {
+            type: 'enum',
+            enumValues: ['p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'],
+            description: '9 priority bands'
+          }
+        },
+        associations: MockModel.associations
+      }
+      const SimpleFormClass = { fields: ['priority'] }
+      const schema = generateFormSchema(ManyValueModel, SimpleFormClass)
+      const priorityField = schema.fields.find((f) => f.name === 'priority')
+      expect(priorityField.type).toBe('select')
+      expect(priorityField.options).toHaveLength(9)
+    })
+
+    it('keeps small enums (boundary: exactly 8 options) as chips', () => {
+      const ExactlyEightModel = {
+        api: { endpoint: 'flags' },
+        singularName: 'flag',
+        attributes: {
+          ...MockModel.attributes,
+          bucket: {
+            type: 'enum',
+            enumValues: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'],
+            description: '8 buckets — exactly at the chips ceiling'
+          }
+        },
+        associations: MockModel.associations
+      }
+      const SimpleFormClass = { fields: ['bucket'] }
+      const schema = generateFormSchema(ExactlyEightModel, SimpleFormClass)
+      const bucketField = schema.fields.find((f) => f.name === 'bucket')
+      expect(bucketField.type).toBe('chips')
     })
 
     it('maps array with enumValues to checkbox_group', () => {
@@ -563,8 +608,10 @@ describe('lib/mcp/apps/form-schema', () => {
         expect(titleField.required).toBe(true)
         expect(titleField.placeholder).toBe('e.g. Clean Code')
 
+        // Small enums (<= 8 options) render as chips; the existing test
+        // model declares 3 status values so it lands in the chips bucket.
         const statusField = schema.fields.find((f) => f.name === 'status')
-        expect(statusField.type).toBe('select')
+        expect(statusField.type).toBe('chips')
         expect(statusField.default).toBe('unread')
       })
 
