@@ -11,16 +11,18 @@ import { anomalyStrategy } from './anomaly.js'
 import { coverageStrategy } from './coverage.js'
 import { distributionStrategy } from './distribution.js'
 import { SummaryStrategyRegistry } from './registry.js'
+import { temporalStrategy } from './temporal.js'
 import type { SummaryStrategy } from './types.js'
 
 export type { SummaryInput, SummaryOutput, SummaryStrategy } from './types.js'
-export { anomalyStrategy, coverageStrategy, distributionStrategy }
+export { anomalyStrategy, coverageStrategy, distributionStrategy, temporalStrategy }
 export { SummaryStrategyRegistry }
 
 export const BUILT_IN_SUMMARY_STRATEGIES: ReadonlyArray<SummaryStrategy> = Object.freeze([
   distributionStrategy,
   coverageStrategy,
-  anomalyStrategy
+  anomalyStrategy,
+  temporalStrategy
 ])
 
 let _defaultRegistry: SummaryStrategyRegistry | undefined
