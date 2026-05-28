@@ -103,6 +103,8 @@ export interface ColumnDefinition {
   enumValues?: string[]
   derived?: { from: string; field: string }
   enumHints?: Record<string, { icon?: string; className?: string }>
+  /** Optional format discriminator (e.g. 'URL', 'rating', 'isbn') for formatter narrowing. */
+  format?: string
 }
 
 /** Field definition for form schemas */
@@ -115,6 +117,12 @@ export interface FormFieldDefinition {
   description?: string
   placeholder?: string
   default?: unknown
+  /**
+   * Model attribute kind ('string', 'integer', 'boolean', 'date', 'datetime', …).
+   * Distinct from `type`, which is the HTML widget type. Used by the bidirectional
+   * formatter registry to apply parse/format/toInput/fromInput/serialize.
+   */
+  kind?: string
   options?: Array<{ value: string; label: string; color?: string }>
   association?: {
     endpoint: string

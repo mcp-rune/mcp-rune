@@ -4,6 +4,7 @@ import {
   MissingRequiredFieldsError,
   ModelReadOnlyError,
   ModelService,
+  normalizeListWithConvention,
   UnknownModelError
 } from '../../../../src/mcp/services/model-service.js'
 import type { ModelConfig } from '../../../../src/mcp/tools/base-tool.js'
@@ -82,11 +83,9 @@ describe('lib/mcp/services/model-service', () => {
       const { service, apiClient } = makeService()
       await service.create('book', { title: 'Test', author: 'Author' })
 
-      expect(apiClient.post).toHaveBeenCalledWith(
-        'books',
-        { book: { title: 'Test', author: 'Author' } },
-        undefined
-      )
+      expect(apiClient.post).toHaveBeenCalledWith('books', {
+        book: { title: 'Test', author: 'Author' }
+      })
     })
 
     it('passes request options (userId) through', async () => {
@@ -156,7 +155,7 @@ describe('lib/mcp/services/model-service', () => {
       const { service, apiClient } = makeService()
       await service.find('book', '123')
 
-      expect(apiClient.get).toHaveBeenCalledWith('books/123', {}, undefined)
+      expect(apiClient.get).toHaveBeenCalledWith('books/123', {})
     })
 
     it('passes request options through', async () => {
@@ -181,18 +180,61 @@ describe('lib/mcp/services/model-service', () => {
       const { service, apiClient } = makeService()
       await service.list('book')
 
-      expect(apiClient.get).toHaveBeenCalledWith('books', { page: 1, per_page: 20 }, undefined)
+      expect(apiClient.get).toHaveBeenCalledWith('books', { page: 1, per_page: 20 })
     })
 
     it('merges filters with pagination', async () => {
       const { service, apiClient } = makeService()
       await service.list('book', { status: 'active' }, { page: 2, perPage: 10 })
 
-      expect(apiClient.get).toHaveBeenCalledWith(
-        'books',
-        { status: 'active', page: 2, per_page: 10 },
-        undefined
-      )
+      expect(apiClient.get).toHaveBeenCalledWith('books', {
+        status: 'active',
+        page: 2,
+        per_page: 10
+      })
+    })
+  })
+
+  // =========================================================================
+  // listNormalized
+  // =========================================================================
+
+  describe('listNormalized', () => {
+    it("applies the model's convention to flatten { data, meta } envelopes", async () => {
+      const { service } = makeService({
+        get: vi.fn().mockResolvedValue({
+          data: [
+            { id: '1', title: 'A' },
+            { id: '2', title: 'B' }
+          ],
+          meta: { page: 1, per_page: 20, total: 42 }
+        })
+      })
+
+      const result = await service.listNormalized('book')
+
+      expect(result.records).toEqual([
+        { id: '1', title: 'A' },
+        { id: '2', title: 'B' }
+      ])
+      expect(result.pagination).toEqual({ page: 1, per_page: 20, total: 42 })
+    })
+
+    it('falls back to the default convention when none is configured', async () => {
+      // The 'review' model in makeModels() has no api.convention set.
+      const { service } = makeService({
+        get: vi.fn().mockResolvedValue([{ id: '1', rating: 5 }])
+      })
+
+      const result = await service.listNormalized('review')
+
+      expect(result.records).toEqual([{ id: '1', rating: 5 }])
+      expect(result.pagination.page).toBe(1)
+    })
+
+    it('throws UnknownModelError for an unregistered model', async () => {
+      const { service } = makeService()
+      await expect(service.listNormalized('nope')).rejects.toBeInstanceOf(UnknownModelError)
     })
   })
 
@@ -205,11 +247,9 @@ describe('lib/mcp/services/model-service', () => {
       const { service, apiClient } = makeService()
       await service.update('book', '123', { title: 'Updated' })
 
-      expect(apiClient.patch).toHaveBeenCalledWith(
-        'books/123',
-        { book: { title: 'Updated' } },
-        undefined
-      )
+      expect(apiClient.patch).toHaveBeenCalledWith('books/123', {
+        book: { title: 'Updated' }
+      })
     })
 
     it('throws ModelReadOnlyError for read-only models', async () => {
@@ -227,7 +267,7 @@ describe('lib/mcp/services/model-service', () => {
       const { service, apiClient } = makeService()
       await service.delete('book', '123')
 
-      expect(apiClient.delete).toHaveBeenCalledWith('books/123', undefined)
+      expect(apiClient.delete).toHaveBeenCalledWith('books/123')
     })
 
     it('throws ModelReadOnlyError for read-only models', async () => {
@@ -245,25 +285,21 @@ describe('lib/mcp/services/model-service', () => {
       const { service, apiClient } = makeService()
       await service.find('book', 'authors/42/books/7')
 
-      expect(apiClient.get).toHaveBeenCalledWith('authors/42/books/7', {}, undefined)
+      expect(apiClient.get).toHaveBeenCalledWith('authors/42/books/7', {})
     })
 
     it('update resolves compound ID as full path', async () => {
       const { service, apiClient } = makeService()
       await service.update('book', 'authors/42/books/7', { title: 'Updated' })
 
-      expect(apiClient.patch).toHaveBeenCalledWith(
-        'authors/42/books/7',
-        expect.any(Object),
-        undefined
-      )
+      expect(apiClient.patch).toHaveBeenCalledWith('authors/42/books/7', expect.any(Object))
     })
 
     it('delete resolves compound ID as full path', async () => {
       const { service, apiClient } = makeService()
       await service.delete('book', 'authors/42/books/7')
 
-      expect(apiClient.delete).toHaveBeenCalledWith('authors/42/books/7', undefined)
+      expect(apiClient.delete).toHaveBeenCalledWith('authors/42/books/7')
     })
 
     it('list uses parentPath for nested collection', async () => {
@@ -297,13 +333,13 @@ describe('lib/mcp/services/model-service', () => {
       })
 
       await service.list('book')
-      expect(apiClient.get).toHaveBeenCalledWith('api/v1/books', expect.any(Object), undefined)
+      expect(apiClient.get).toHaveBeenCalledWith('api/v1/books', expect.any(Object))
 
       await service.find('book', '1')
-      expect(apiClient.get).toHaveBeenCalledWith('api/v1/books/1', {}, undefined)
+      expect(apiClient.get).toHaveBeenCalledWith('api/v1/books/1', {})
 
       await service.create('book', { title: 'T', author: 'A' })
-      expect(apiClient.post).toHaveBeenCalledWith('api/v1/books', expect.any(Object), undefined)
+      expect(apiClient.post).toHaveBeenCalledWith('api/v1/books', expect.any(Object))
     })
   })
 
@@ -350,11 +386,7 @@ describe('lib/mcp/services/model-service', () => {
       })
 
       await service.list('book')
-      expect(apiClient.get).toHaveBeenCalledWith(
-        'catalogue/book-items',
-        expect.any(Object),
-        undefined
-      )
+      expect(apiClient.get).toHaveBeenCalledWith('catalogue/book-items', expect.any(Object))
     })
 
     it('uses per-action create override', async () => {
@@ -369,7 +401,7 @@ describe('lib/mcp/services/model-service', () => {
       })
 
       await service.create('book', {})
-      expect(apiClient.post).toHaveBeenCalledWith('books/draft', expect.any(Object), undefined)
+      expect(apiClient.post).toHaveBeenCalledWith('books/draft', expect.any(Object))
     })
 
     it('uses record override with :id substitution for find', async () => {
@@ -384,7 +416,7 @@ describe('lib/mcp/services/model-service', () => {
       })
 
       await service.find('book', '456')
-      expect(apiClient.get).toHaveBeenCalledWith('catalogue/book-items/456', {}, undefined)
+      expect(apiClient.get).toHaveBeenCalledWith('catalogue/book-items/456', {})
     })
 
     it('uses per-action update override with :id substitution', async () => {
@@ -399,11 +431,7 @@ describe('lib/mcp/services/model-service', () => {
       })
 
       await service.update('book', '789', { title: 'Updated' })
-      expect(apiClient.patch).toHaveBeenCalledWith(
-        'books/789/revise',
-        expect.any(Object),
-        undefined
-      )
+      expect(apiClient.patch).toHaveBeenCalledWith('books/789/revise', expect.any(Object))
     })
 
     it('uses per-action delete override', async () => {
@@ -418,7 +446,7 @@ describe('lib/mcp/services/model-service', () => {
       })
 
       await service.delete('book', '10')
-      expect(apiClient.delete).toHaveBeenCalledWith('books/10/archive', undefined)
+      expect(apiClient.delete).toHaveBeenCalledWith('books/10/archive')
     })
   })
 
@@ -443,10 +471,10 @@ describe('lib/mcp/services/model-service', () => {
       })
 
       await service.list('book')
-      expect(apiClient.get).toHaveBeenCalledWith('api/v2/books', expect.any(Object), undefined)
+      expect(apiClient.get).toHaveBeenCalledWith('api/v2/books', expect.any(Object))
 
       await service.list('author')
-      expect(apiClient.get).toHaveBeenCalledWith('api/v1/authors', expect.any(Object), undefined)
+      expect(apiClient.get).toHaveBeenCalledWith('api/v1/authors', expect.any(Object))
     })
   })
 
@@ -463,6 +491,30 @@ describe('lib/mcp/services/model-service', () => {
     it('exposes apiClient', () => {
       const { service, apiClient } = makeService()
       expect(service.apiClient).toBe(apiClient)
+    })
+  })
+
+  // =========================================================================
+  // normalizeListWithConvention
+  // =========================================================================
+
+  describe('normalizeListWithConvention', () => {
+    it('flattens a { data, meta } envelope through the given convention', () => {
+      const raw = {
+        data: [{ id: '1' }, { id: '2' }],
+        meta: { page: 1, per_page: 20, total: 9 }
+      }
+      const result = normalizeListWithConvention(raw, jsonApiConvention, { page: 1, perPage: 20 })
+
+      expect(result.records).toHaveLength(2)
+      expect(result.pagination.total).toBe(9)
+    })
+
+    it('falls back to the default convention when undefined is passed', () => {
+      const raw = { data: [{ id: '1' }], meta: { page: 1, per_page: 20, total: 1 } }
+      const result = normalizeListWithConvention(raw)
+
+      expect(result.records).toEqual([{ id: '1' }])
     })
   })
 })

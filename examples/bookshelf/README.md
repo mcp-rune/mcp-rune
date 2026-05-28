@@ -391,10 +391,40 @@ function createApiClient(token: string): ApiClient {
 
 mcp-rune doesn't care what API you talk to. It formats payloads according to the configured convention (JSON:API by default, HAL also supported) and normalizes responses automatically.
 
+## MCP Apps (interactive UI)
+
+This example wires `createDefaultAppRegistry` in `config.ts` so the server
+serves all six framework apps out of the box: list view, record detail,
+create/update forms, multi-select picker, search view, and autocomplete
+picker. Each app's UI is a vanilla-JS bundle the host renders in an iframe.
+
+Per-deployment theming and custom-kind formatters slot in through the same
+helper — see the commented options in `config.ts`:
+
+```ts
+const appRegistry = createDefaultAppRegistry({
+  modelClasses: MODEL_CLASSES,
+  namespace: 'bookshelf',
+  themeOverrides: { cssVariables: { '--color-accent': '#0a84ff' } },
+  formatters: { date: { display: { locale: 'en-GB' } } },
+  formatterScript: `
+    window.__MCP_RUNE_REGISTER_FORMATTERS__ = (registerFormatter, helpers) => {
+      registerFormatter('currency', {
+        parse: (v) => Number(v),
+        format: (n) => helpers.text(
+          new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
+        )
+      })
+    }
+  `
+})
+```
+
 ## Next Steps
 
 - Add more models (Author, Category) — still 8 tools, polymorphic
 - Add OAuth for remote access (`HttpServer` + `OAuthService`)
-- Add MCP Apps for interactive forms (`AppRegistry`)
+- Customize the apps' theming or register custom attribute kinds via
+  `themeOverrides` / `formatters` / `formatterScript` on `createDefaultAppRegistry`
 - Add domain workflows for multi-step operations
 - See the [guides](../../docs/guides/) for deep dives on each feature

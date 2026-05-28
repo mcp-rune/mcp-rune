@@ -19,13 +19,13 @@ import path from 'node:path'
 
 import { z } from 'zod'
 
-import { defaultConvention } from '#src/mcp/api-conventions/index.js'
 import {
   buildAssociationInstructions,
   resolveFormAssociations
 } from '#src/mcp/apps/form-associations.js'
 import { generateFormSchema } from '#src/mcp/apps/form-schema.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
+import { normalizeListWithConvention } from '#src/mcp/services/model-service.js'
 import * as logger from '#src/services/logger.js'
 
 import type { AppModelClass, DataLayer, FormFieldDefinition, ToolResult } from './types.js'
@@ -363,8 +363,10 @@ async function resolveAssociationOptions(
       }
 
       const data = await dataLayer.dispatch('GET', endpoint)
-      const convention = field.association!.convention ?? defaultConvention
-      const { records } = convention.normalizeListResponse(data, { page: 1, perPage: 200 })
+      const { records } = normalizeListWithConvention(data, field.association!.convention, {
+        page: 1,
+        perPage: 200
+      })
 
       const valueField = field.association!.valueField || 'id'
       field.options = records.map((record) => ({

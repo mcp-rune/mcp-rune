@@ -96,13 +96,9 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
         attributes: { title: 'Updated Session' }
       })
 
-      expect(mockApiClient.patch).toHaveBeenCalledWith(
-        'activities/1',
-        {
-          activity: { title: 'Updated Session' }
-        },
-        undefined
-      )
+      expect(mockApiClient.patch).toHaveBeenCalledWith('activities/1', {
+        activity: { title: 'Updated Session' }
+      })
       expect(result.isError).toBeFalsy()
     })
 
@@ -356,11 +352,9 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
         attributes: { title: 'Updated Session' }
       })
 
-      expect(mockApiClient.patch).toHaveBeenCalledWith(
-        'activities/1',
-        { title: 'Updated Session' },
-        undefined
-      )
+      expect(mockApiClient.patch).toHaveBeenCalledWith('activities/1', {
+        title: 'Updated Session'
+      })
       expect(result.isError).toBeFalsy()
     })
 

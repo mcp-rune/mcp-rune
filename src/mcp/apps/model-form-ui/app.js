@@ -11,6 +11,8 @@
 import { App } from '@modelcontextprotocol/ext-apps'
 import { humanize } from '../shared/helpers.js'
 import { initApp, showStatus, clearStatus } from '../shared/app-init.js'
+import { getFormatter } from '../shared/formatters.js'
+import '../shared/formatters.runtime.js'
 
 // ─── State ──────────────────────────────────────────────────────────────────
 
@@ -462,13 +464,16 @@ function collectFormData() {
         if (!el) break
         const val = el.value.trim()
         if (val === '') break
-        if (field.type === 'number' || field.type === 'select') {
+
+        // Route through the bidirectional formatter when the field's
+        // model kind is known. Falls back to the legacy number/text coercion
+        // when the schema didn't propagate `kind` (e.g. association selects).
+        if (field.kind) {
+          const fmt = getFormatter(field.kind, field.format)
+          data[field.name] = fmt.serialize(fmt.fromInput(val))
+        } else if (field.type === 'number' || field.type === 'select') {
           const num = Number(val)
-          if (!isNaN(num) && val !== '') {
-            data[field.name] = num
-          } else {
-            data[field.name] = val
-          }
+          data[field.name] = !isNaN(num) && val !== '' ? num : val
         } else {
           data[field.name] = val
         }
@@ -488,6 +493,7 @@ function collectFormData() {
 function prefillForm(values) {
   if (!values) return
   const form = document.getElementById('model-form')
+  const fieldByName = new Map((formSchema?.fields ?? []).map((f) => [f.name, f]))
 
   for (const [key, val] of Object.entries(values)) {
     if (val === null || val === undefined || val === '') continue
@@ -500,9 +506,19 @@ function prefillForm(values) {
       continue
     }
 
-    // Handle regular inputs and selects
+    // Handle regular inputs and selects, routing API value through the
+    // bidirectional formatter so kinds like `datetime` / `date` / `time`
+    // land in the right HTML <input> shape.
     const input = document.getElementById(key)
-    if (input) input.value = val
+    if (!input) continue
+
+    const field = fieldByName.get(key)
+    if (field?.kind) {
+      const fmt = getFormatter(field.kind, field.format)
+      input.value = fmt.toInput(fmt.parse(val))
+    } else {
+      input.value = val
+    }
   }
 }
 

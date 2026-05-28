@@ -4,6 +4,52 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.50.0] — 2026-05-28 (BREAKING)
+
+> v0.50 is a multi-gap overhaul of the MCP apps surface, landing as four commits on PR #135.
+
+### Added
+
+- **`DataLayer.listNormalized(model, filters?, pagination?, options?)`** on the seam at `@mcp-rune/mcp-rune/core`. Returns a convention-applied `{ records, pagination }` envelope so callers — notably the MCP apps — never need to import `defaultConvention` themselves. `ModelService` is the sole sanctioned implementation site for the default convention path; `InMemoryDataLayer` reuses its already-normalized `list()` output.
+- **`normalizeListWithConvention(rawData, convention, pagination?)`** exported from `src/mcp/services/model-service.js`. Used by `model-form`'s `resolveAssociationOptions` where the endpoint is a nested association URL (so a model-level `listNormalized` is the wrong shape) and the convention may differ per association. Falls back to `defaultConvention` when `undefined` is passed.
+- **`themeOverrides` on `AppRegistry`** — `{ cssVariables?: Record<string, string>; css?: string }`. Deployers integrating mcp-rune for different aesthetics now have a first-class override channel: variables write a `:root { … }` block, `css` is appended verbatim, and both ride into every app's bundled HTML at serve time. Variable names should match the tokens in `src/mcp/apps/shared/base.css`.
+- **`AppRegistry.injectIntoHead(html)`** is now the single seam that mutates app HTML before it is returned as an MCP resource. Public so tests and future extensions can exercise it directly; previously the rewrite lived inline inside `registerResources`.
+- **`--color-accent-soft` design token** added to `src/mcp/apps/shared/base.css`. Replaces the literal `rgba(196, 112, 75, 0.12)` in `autocomplete-picker-ui/styles.css:71`, restoring full theming coverage to the picker app.
+- **Bidirectional attribute-kind formatter registry** at `src/mcp/apps/shared/formatters.js`. One source of truth for moving values between three representations: API value ⇄ internal value ⇄ HTML `<input>` value. Each formatter implements `parse / format / toInput / fromInput / serialize`. 17 built-in formatters: `string`, `text`, `integer`, `decimal`, `boolean`, `date`, `datetime`, `time`, `enum`, `array`, `uuid`, `json`, `color`, `email`, `url`, `base64`, `rating`. Display rendering in `list-view-ui`, `record-detail-ui`, and `search-view-ui` consolidates into one shared `renderCellValue` import — datetime, boolean, URL, and array rendering are now identical across all three.
+- **Custom-kind extension paths on `AppRegistry`.** Two new options surface deployer overrides into every bundled app:
+  - `formatters: Record<string, FormatterDescriptor>` — JSON-serializable declarative overrides keyed by `"kind"` or `"kind:format"`. Translated through a closed allowlist (template substitution, `Intl` locale, badge variant, regex parser). CSP-safe.
+  - `formatterScript: string` — deployer-supplied JS that runs in the app iframe and registers entirely new kinds the framework doesn't ship (currency, phone, isbn, deployment-specific time) with arbitrary `parse/format/toInput/fromInput/serialize` logic via a `window.__MCP_RUNE_REGISTER_FORMATTERS__` hook.
+- **`renderCellValue(value, column, opts?)` exported from `src/mcp/apps/shared/formatters.js`.** The single seam apps call to render attribute-kind cells; null/undefined renders as an em-dash; routes through `getFormatter(column.kind || column.type, column.format)`.
+- **`form-schema.ts` propagates `kind` + `format`** onto every `FormFieldDefinition`. Without it the form UI couldn't look up the right formatter for bidirectional round-trips (`field.type` is the HTML widget type, not the model kind).
+- **`list-schema.ts` propagates `format`** onto every `ColumnDefinition` so formatter narrowing works in list rendering (e.g. `kind: 'string', format: 'isbn'`).
+- **`detail-schema.ts` stamps `format: 'rating'`** server-side for integer attributes named `rating`. The UI no longer matches by field name.
+
+### Changed (BREAKING)
+
+- **`DataLayer` interface gains `listNormalized`.** Third-party `DataLayer` adapters (in-memory stubs beyond the bundled one, GraphQL or fetch-only wrappers shipped as separate packages) must implement this method. `ModelService` and `InMemoryDataLayer` already do.
+- **`defaultConvention` is no longer importable from app code.** The three apps that previously called `dataLayer.dispatch()` and then ran `defaultConvention.normalizeListResponse()` themselves — `list-view`, `multi-select`, `model-form` — now call `listNormalized` (or `normalizeListWithConvention` for the per-association case). Apps no longer import from `#src/mcp/api-conventions/index.js`. Custom apps following the same pattern must migrate similarly.
+- **Booleans render `"Yes"/"No"` in `list-view-ui` and `search-view-ui`** (previously the raw `"true"/"false"`). `record-detail-ui` already rendered them this way; the unification matches.
+- **Datetime values render via `Intl.DateTimeFormat({ dateStyle: 'medium', timeStyle: 'short' })` everywhere.** Previously list-view emitted `"Feb 23, 2026 14:00"` (short month) while record-detail emitted `"February 23, 2026 14:00"` (long month). Single source of truth now — locale-overridable via the new `formatters: { date: { display: { locale: 'en-GB' } } }` channel.
+- **URLs render as clickable `<a>` tags in list-view-ui and search-view-ui** (previously plain text — only record-detail-ui linked them).
+- **`rating` field is no longer auto-detected by literal field name** in `record-detail-ui`. The server-side `detail-schema.ts` stamps `format: 'rating'` on integer attributes named `rating` so the UI can rely on the schema. Models whose rating attribute is named differently must opt in by setting `format: 'rating'` on the attribute definition.
+- **`src/mcp/apps/model-form-ui/field-formatters.js` deleted.** Its two kinds (`datetime-local`, `time`) become built-in formatters in the new registry, and `model-form-ui/app.js` now routes prefill / submit through `getFormatter(field.kind, field.format)` for bidirectional round-trips on every kind (including `date`, `datetime`, `time`, `boolean`, `integer`, `decimal`, `json`). Importantly: the previous wiring left `field-formatters.js` unconsumed, so dates didn't round-trip correctly at all — this commit fixes that bug as part of the registry rollout.
+- **`happy-dom` added to `devDependencies`** for vitest-based DOM testing of the formatter module.
+
+### Added (Gap 4)
+
+- **`createDefaultAppRegistry(options)`** at `@mcp-rune/mcp-rune/apps` — one-call assembly of every framework-shipped MCP App. Accepts the union of `AppRegistry` options (`themeOverrides`, `formatters`, `formatterScript`, `dataLayer`, `headerIcon`, …) and an `exclude` opt-out list. Replaces the hand-wired six-factory boilerplate every integrator was carrying.
+- **`examples/bookshelf` wires `createDefaultAppRegistry`.** The canonical demo now exercises every gap end-to-end (list, detail, create/update forms, multi-select, search, autocomplete-picker) and includes commented examples for `themeOverrides`, declarative `formatters`, and a custom-kind `formatterScript`.
+
+### Removed (Gap 4)
+
+- **`draft-view` Vite target removed** from `src/mcp/apps/vite.config.js`. The orphan never had a source folder or server factory; it was a placeholder for unfinished work that confused the build matrix.
+
+### Changed (Gap 4 follow-up — BREAKING for tests asserting call shape)
+
+- **`ModelService` trims trailing `undefined` from all CRUD calls** (`find`, `list`, `create`, `update`, `delete`), matching the treatment v0.49.1 introduced for `dispatch`. Surfaced after v0.50 routed apps through `list()` via `listNormalized` — dependent test suites (e.g. engineer-mcp) saw the call shape change. The fix is for `ModelService` to call `apiClient.method(endpoint, …)` without the trailing `undefined`, so third-party API clients (axios, fetch, custom) see the same call shape they'd get from a direct caller. Real HTTP transport (`axios`, `fetch`) is unaffected; only assertions like `vi.fn().toHaveBeenCalledWith(url, body, undefined)` need to drop the trailing `undefined`.
+
+[0.50.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.49.2...v0.50.0
+
 ## [0.49.2] — 2026-05-28
 
 ### Fixed

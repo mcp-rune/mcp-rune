@@ -6,10 +6,11 @@
  */
 
 import { App } from '@modelcontextprotocol/ext-apps'
-import { humanize } from '../shared/helpers.js'
 import { initApp, showStatus, clearStatus } from '../shared/app-init.js'
 import { renderFilterChips, renderAvailableFilters } from '../shared/filter-chips.js'
 import { createTableSelection } from '../shared/selection.js'
+import { renderCellValue } from '../shared/formatters.js'
+import '../shared/formatters.runtime.js'
 
 // ─── State ──────────────────────────────────────────────────────────────────
 
@@ -137,53 +138,6 @@ function renderTable(schema, records) {
 
   container.innerHTML = ''
   container.appendChild(table)
-}
-
-function renderCellValue(value, column) {
-  const span = document.createElement('span')
-
-  if (value === null || value === undefined) {
-    span.textContent = '—'
-    span.style.color = 'var(--color-text-info)'
-    return span
-  }
-
-  // Enum values as badges (with optional semantic hints)
-  if (column.enumValues) {
-    const hint = column.enumHints?.[value]
-    span.className = `status-badge${hint?.className ? ' ' + hint.className : ''}`
-    span.textContent = hint?.icon
-      ? `${hint.icon}\u2002${humanize(String(value))}`
-      : humanize(String(value))
-    return span
-  }
-
-  // Arrays as comma-separated
-  if (Array.isArray(value)) {
-    span.textContent = value.join(', ') || '—'
-    return span
-  }
-
-  // Datetime values — format nicely for table columns
-  if (column.type === 'datetime' && value) {
-    try {
-      const date = new Date(value)
-      span.textContent = date.toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      })
-      return span
-    } catch {
-      // Fall through to default
-    }
-  }
-
-  span.textContent = String(value)
-  return span
 }
 
 function renderPagination(pagination) {

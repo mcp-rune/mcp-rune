@@ -33,7 +33,8 @@ function inferColumns(ModelClass: AppModelClass): ColumnDefinition[] {
       type: attr.type || 'string',
       sortable: !attr.derived,
       ...(attr.enumValues && { enumValues: attr.enumValues }),
-      ...(attr.derived && { derived: attr.derived })
+      ...(attr.derived && { derived: attr.derived }),
+      ...(attr.format && { format: attr.format })
     })
   }
 

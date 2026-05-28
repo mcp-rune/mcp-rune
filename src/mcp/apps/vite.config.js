@@ -31,10 +31,6 @@ const configs = {
   'multi-select': {
     root: 'multi-select-ui',
     outFile: 'multi-select.html'
-  },
-  'draft-view': {
-    root: 'draft-view-ui',
-    outFile: 'draft-view.html'
   }
 }
 
