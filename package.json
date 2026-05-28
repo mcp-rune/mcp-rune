@@ -1,6 +1,6 @@
 {
   "name": "@mcp-rune/mcp-rune",
-  "version": "0.50.0",
+  "version": "0.51.0",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "restricted"
@@ -45,6 +45,10 @@
     "./extensions/cimd": {
       "types": "./dist/extensions/cimd.d.ts",
       "import": "./dist/extensions/cimd.js"
+    },
+    "./extensions/center-of-control": {
+      "types": "./dist/extensions/center-of-control.d.ts",
+      "import": "./dist/extensions/center-of-control.js"
     },
     "./api-extensions": {
       "types": "./dist/api-extensions.d.ts",

@@ -27,6 +27,7 @@ import { ModelService } from '#src/mcp/services/model-service.js'
 import type { ModelsRegistry } from '#src/mcp/tools/base-tool.js'
 import * as logger from '#src/services/logger.js'
 
+import type { FormSubmitMode } from '../extensions/tool-flow.js'
 import type { FormDataStore } from './form-data-store.js'
 import type { SelectionStore } from './selection-store.js'
 import type { ApiClient, ToolResult } from './types.js'
@@ -149,6 +150,12 @@ interface RegisterToolsOptions {
   getAccessToken?: () => Promise<string>
   selectionStore?: SelectionStore
   formDataStore?: FormDataStore
+  /**
+   * Extra context values to merge into every app tool handler's context
+   * object. Populated by `ToolFlowExtension.provideContext(...)` and threaded
+   * through the server factory.
+   */
+  extraContext?: Record<string, unknown>
 }
 
 /** Registry of MCP Apps for any server. Provides tool and resource registration to the server factory. */
@@ -164,6 +171,7 @@ export class AppRegistry {
   private _themeOverrides?: ThemeOverrides
   private _formatters?: Record<string, FormatterDescriptor>
   private _formatterScript?: string
+  private _formSubmitMode: FormSubmitMode = 'direct'
 
   constructor(
     apps: AppDefinition[] = [],
@@ -219,6 +227,39 @@ export class AppRegistry {
   }
 
   /**
+   * Register an additional app at runtime (e.g. from a `ToolFlowExtension`).
+   * Returns the registry to allow chaining.
+   *
+   * Apps must declare a `toolName` to be registerable; resource-only apps
+   * (no tool surface) are not supported via this entry point.
+   */
+  registerApp(app: AppDefinition): this {
+    if (!app.toolName) {
+      throw new Error('AppRegistry.registerApp: AppDefinition.toolName is required')
+    }
+    this._apps.set(app.toolName, app)
+    return this
+  }
+
+  /** Look up a registered app by tool name. */
+  getApp(toolName: string): AppDefinition | undefined {
+    return this._apps.get(toolName)
+  }
+
+  /**
+   * Current form submit mode threaded into `create_model_form` /
+   * `update_model_form` responses. Defaults to `'direct'`; flip to
+   * `'collect'` via a `ToolFlowExtension` (e.g. `centerOfControlExtension`).
+   */
+  getFormSubmitMode(): FormSubmitMode {
+    return this._formSubmitMode
+  }
+
+  setFormSubmitMode(mode: FormSubmitMode): void {
+    this._formSubmitMode = mode
+  }
+
+  /**
    * Register app tools on an McpServer instance via ext-apps helpers.
    * Each app with a toolName gets registered with normalized UI metadata.
    *
@@ -227,7 +268,7 @@ export class AppRegistry {
    */
   registerTools(
     mcpServer: McpServer,
-    { getAccessToken, selectionStore, formDataStore }: RegisterToolsOptions = {}
+    { getAccessToken, selectionStore, formDataStore, extraContext }: RegisterToolsOptions = {}
   ): void {
     for (const app of this._apps.values()) {
       if (!app.toolName || !app.handleToolCall) continue
@@ -249,7 +290,10 @@ export class AppRegistry {
           logger.info('App tool called', { service: 'mcp-app', app: app.toolName })
 
           try {
-            const context: Record<string, unknown> = {}
+            const context: Record<string, unknown> = {
+              ...(extraContext ?? {}),
+              formSubmitMode: this._formSubmitMode
+            }
 
             // Build the authenticated DataLayer + search client for apps that need it
             if (app.needsAuth && getAccessToken && this._apiUrl && this._createApiClient) {

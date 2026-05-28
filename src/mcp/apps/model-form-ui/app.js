@@ -19,6 +19,9 @@ import '../shared/formatters.runtime.js'
 let formSchema = null
 let modelName = null
 let formMode = 'create' // 'create' or 'update'
+let submitMode = 'direct' // 'direct' or 'collect' — server-advertised
+let recordId = null // populated in update mode
+let hiddenValues = {} // server-side prefill not rendered as fields
 
 // ─── MCP App Connection ─────────────────────────────────────────────────────
 
@@ -40,6 +43,9 @@ app.ontoolresult = (result) => {
       formSchema = data.schema
       modelName = data.schema.model
       formMode = data.mode || 'create'
+      submitMode = data.submitMode || 'direct'
+      recordId = data.recordId || null
+      hiddenValues = data.hiddenValues || {}
       renderForm(data.schema)
       if (data.defaults) {
         prefillForm(data.defaults)
@@ -578,19 +584,84 @@ document.getElementById('btn-done').addEventListener('click', async () => {
     }
   }
 
-  showStatus(statusBar, 'Saving form data…', 'info')
+  const label = humanize(modelName)
+
+  if (submitMode === 'collect') {
+    // Center-of-Control flow: the form stages the data into FormDataStore
+    // and the LLM owns the review/confirm/submit handoff. Surfaced via the
+    // built-in centerOfControlExtension.
+    showStatus(statusBar, 'Saving form data…', 'info')
+    try {
+      await app.callServerTool({
+        name: 'collect_form_data',
+        arguments: { model: modelName, fields, mode: formMode }
+      })
+      const summary = `${label} form data collected — ready for review`
+      showStatus(statusBar, summary, 'success')
+      app.sendLog({ level: 'info', data: { type: 'completed', summary } })
+    } catch (err) {
+      showStatus(statusBar, 'Error: ' + err.message, 'error')
+    }
+    return
+  }
+
+  // Standard flow: form submission calls create_model / update_model directly.
+  const isUpdate = formMode === 'update'
+  const toolName = isUpdate ? 'update_model' : 'create_model'
+  const verbing = isUpdate ? 'Updating' : 'Creating'
+  showStatus(statusBar, `${verbing} ${label.toLowerCase()}…`, 'info')
 
   try {
-    await app.callServerTool({
-      name: 'collect_form_data',
-      arguments: { model: modelName, fields, mode: formMode }
-    })
+    const attributes = { ...hiddenValues, ...fields }
+    const toolArgs = { model: modelName, attributes }
+    if (isUpdate && recordId) {
+      toolArgs.id = recordId
+    }
+    const result = await app.callServerTool({ name: toolName, arguments: toolArgs })
 
-    const label = humanize(modelName)
-    const summary = `${label} form data collected — ready for review`
+    // Surface server-side validation errors (422) as inline field errors when possible.
+    const errorPayload = parseToolError(result)
+    if (errorPayload) {
+      const { fieldErrors, message } = errorPayload
+      for (const [name, msg] of Object.entries(fieldErrors)) {
+        showFieldError(name, msg)
+      }
+      showStatus(statusBar, message || 'Submission failed', 'error')
+      return
+    }
+
+    const summary = isUpdate ? `${label} updated` : `${label} created`
     showStatus(statusBar, summary, 'success')
     app.sendLog({ level: 'info', data: { type: 'completed', summary } })
   } catch (err) {
     showStatus(statusBar, 'Error: ' + err.message, 'error')
   }
 })
+
+/**
+ * Extract field-level errors from a tool result. The server returns errors as
+ * { isError: true, content: [{ text: JSON | string }] }. Falls back to a flat
+ * message when no per-field details are present.
+ *
+ * @param {Object} result - Tool call result from app.callServerTool
+ * @returns {{ fieldErrors: Object<string,string>, message?: string } | null}
+ */
+function parseToolError(result) {
+  if (!result?.isError) return null
+  const text = result.content?.find?.((c) => c.type === 'text')?.text
+  if (!text) return { fieldErrors: {}, message: 'Submission failed' }
+  try {
+    const parsed = JSON.parse(text)
+    const errors = parsed.errors || parsed.error?.errors
+    if (errors && typeof errors === 'object') {
+      const fieldErrors = {}
+      for (const [name, val] of Object.entries(errors)) {
+        fieldErrors[name] = Array.isArray(val) ? val.join('; ') : String(val)
+      }
+      return { fieldErrors, message: parsed.message || parsed.error?.message }
+    }
+    return { fieldErrors: {}, message: parsed.message || parsed.error || text }
+  } catch {
+    return { fieldErrors: {}, message: text }
+  }
+}

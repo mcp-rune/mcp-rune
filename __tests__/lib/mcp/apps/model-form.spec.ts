@@ -72,6 +72,25 @@ describe('lib/mcp/apps/model-form', () => {
     })
   })
 
+  describe('submit mode', () => {
+    it('defaults submitMode to "direct" when no context is provided', async () => {
+      const app = createApp()
+      const result = await app.handleToolCall({ model: 'book', mode: 'form' })
+      const data = JSON.parse(result.content[0].text)
+      expect(data.submitMode).toBe('direct')
+    })
+
+    it('echoes formSubmitMode from context (e.g. set by centerOfControlExtension)', async () => {
+      const app = createApp()
+      const result = await app.handleToolCall(
+        { model: 'book', mode: 'form' },
+        { formSubmitMode: 'collect' }
+      )
+      const data = JSON.parse(result.content[0].text)
+      expect(data.submitMode).toBe('collect')
+    })
+  })
+
   describe('hidden values', () => {
     it('populates hiddenValues from prefill args not in schema fields', async () => {
       const app = createApp()
