@@ -1,0 +1,125 @@
+# Adapters & Extensions — Overview
+
+mcp-rune is intentionally extensible at every layer. The framework ships sensible defaults for everything — a JSON:API convention, an axios-based HTTP client, six MCP apps, three prompt strategies — and exposes a typed seam at each boundary so deployers can swap, extend, or compose without forking.
+
+This page maps every extensibility surface to its dedicated guide and helps you pick the right seam for what you're trying to do. Read it first when you're standing up a non-default integration.
+
+## Table of Contents
+
+- [When Should I Extend?](#when-should-i-extend)
+- [The Three Tiers](#the-three-tiers)
+  - [Core Adapters](#core-adapters)
+  - [Tool & App Extensions](#tool--app-extensions)
+  - [HTTP & Transport](#http--transport)
+- [Picking the Right Seam](#picking-the-right-seam)
+- [Composing Extensions](#composing-extensions)
+- [Conventions](#conventions)
+
+## When Should I Extend?
+
+Three quick checks before reaching for a seam:
+
+1. **Is it a model-level concern?** Add it to the model — attributes, associations, validation, `api.endpoint`. Don't extend the framework if you're really declaring data.
+2. **Is there a built-in already?** The framework ships `ModelService`, `jsonApiConvention`, an axios client, `customActionsExtension`, six apps, three prompt strategies, the kind registry, OAuth2 service. Most projects use these as-is.
+3. **Does the seam already exist?** This page is the index. If you see your concern here, follow the linked guide. If you don't see it, the framework probably doesn't expose that surface yet — open an issue.
+
+If you genuinely need a new seam (response middleware, telemetry hooks, etc.), file an issue. mcp-rune adds seams when there's a real consumer; the framework deliberately avoids speculative abstractions.
+
+## The Three Tiers
+
+### Core Adapters
+
+The data path: HTTP transport → response normalization → model-aware CRUD → projection layer. Each step is a swappable seam.
+
+| Surface                                              | What it owns                                                                                                                                    | Guide                                              |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| **`ApiClient`**                                      | HTTP verbs (`get/post/put/patch/delete`) against URLs. Auth header injection, transport choice (axios, fetch, gRPC bridge).                     | [Custom API Client](./api-client-guide.md)         |
+| **`BaseConvention`**                                 | Wire-format specifics: request payload wrapping, association resolution, list normalization, error parsing. The HAL/JSON:API/your-flavor logic. | [Custom API Convention](./api-convention-guide.md) |
+| **`DataLayer`**                                      | Model-aware CRUD over the API client + convention combo. The seam every tool, prompt, and app talks to.                                         | [DataLayer](./data-layer-guide.md)                 |
+| **`SearchAdapter`**                                  | Filter shaping: turn `filters: { author_id: 7 }` into Ransack `q[author_id_eq]=7` or Elasticsearch `term: { author_id: 7 }`.                    | [Custom Search Adapter](./search-adapter-guide.md) |
+| **Kinds (`KindDescriptor` + `FormatterDescriptor`)** | Attribute taxonomy: parse/serialize/toInput/fromInput/describe/validate. Drives forms, prompts, summaries, and display.                         | [Attribute Kinds](./attribute-kinds-guide.md)      |
+
+The composition (top to bottom): `DataLayer ← ModelService ← (ApiClient, BaseConvention)`. SearchAdapter sits inside the search extension, parallel to the CRUD path. Kinds are orthogonal — they describe attribute values, not transport.
+
+### Tool & App Extensions
+
+Where the framework's tool surface and runtime context get extended.
+
+| Surface                                | What it owns                                                                                                                                         | Guide                                                                                                                                                                         |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`ApiExtension`**                     | New MCP tools tied to the model layer (custom verbs like publish/archive, bulk ops, RPC). Optionally contribute `ModelService` mixins.               | [API Extensions](./api-extensions.md) · [Authoring Extensions](./authoring-extensions-guide.md)                                                                               |
+| **`ToolFlowExtension`**                | The tool/app pipeline: register additional app tools, flip form submit mode (`direct` ↔ `collect`), thread state into handlers via `provideContext`. | [Tool Flow Extension](./tool-flow-extension-guide.md)                                                                                                                         |
+| **MCP Apps (`AppDefinition`)**         | New iframe widgets beyond the six the framework ships (calendars, dashboards, bulk-edit grids, printable artifacts).                                 | [Custom MCP App](./custom-app-guide.md) · [MCP Apps Guide](./mcp-apps-guide.md) · [MCP Apps Architecture](./mcp-apps-architecture.md)                                         |
+| **Prompts (`BasePrompt`, strategies)** | Domain-specific prompts: which model, which sections, which validation, which strategy (stateless / hybrid / stateful).                              | [Prompt Creation](./prompt-creation-guide.md) · [Stateful Strategies](./stateful-strategies-guide.md) · [Prompt Derivation Framework](./prompt-derivation-framework-guide.md) |
+| **Custom tools (`ToolClass`)**         | Tools beyond CRUD/search/prompt: domain workflows, batch operations, anything model-agnostic.                                                        | [Tool Creation](./tool-creation-guide.md)                                                                                                                                     |
+
+The boundary worth knowing: `ApiExtension` is about extending the model layer (new tools, new `ModelService` methods); `ToolFlowExtension` is about extending the tool runtime (intercepting submission, threading context). Different lifetime, different shape.
+
+### HTTP & Transport
+
+Routes, middleware, and auth. Below the MCP protocol.
+
+| Surface             | What it owns                                                                                                                | Guide                                                                                   |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| **`HttpExtension`** | Express routes and route-scoped middleware on top of `/oauth/*`, `/health`, `/mcp`. Built-in example: CIMD client metadata. | [Extensions](./extensions.md) · [Authoring Extensions](./authoring-extensions-guide.md) |
+| **`OAuthService`**  | Authorization server discovery, token introspection, token exchange, audience validation per RFC 8707.                      | [OAuth 2.0 Discovery Flow](./oauth2-discovery-flow.md)                                  |
+
+`HttpExtension` is the only place to add a new HTTP route inside the same process as your MCP server. Don't sneak routes in elsewhere — the boundary is auditable on purpose.
+
+## Picking the Right Seam
+
+Common scenarios mapped to the surfaces that solve them:
+
+| What you want                                                      | Pick                                                                                                                                           |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Add an ISBN attribute kind"                                       | [Attribute Kinds](./attribute-kinds-guide.md) — declare `'string:isbn'` in `AppRegistry.formatters`.                                           |
+| "Render `boolean` as a toggle instead of a checkbox"               | [Attribute Kinds](./attribute-kinds-guide.md) — DOM-only `registerFormatter` override.                                                         |
+| "My API isn't JSON:API"                                            | [Custom API Convention](./api-convention-guide.md).                                                                                            |
+| "My API takes filters as Rails Ransack `q[field_eq]`"              | [Custom Search Adapter](./search-adapter-guide.md).                                                                                            |
+| "I need request signing / mTLS / per-tenant routing on every call" | [Custom API Client](./api-client-guide.md).                                                                                                    |
+| "Stub the API for integration tests"                               | [DataLayer](./data-layer-guide.md) — use `createInMemoryDataLayer`, or [Custom API Client](./api-client-guide.md) — stub at the HTTP boundary. |
+| "Add a `publish` / `archive` non-CRUD action to a model"           | [API Extensions](./api-extensions.md) — register `customActionsExtension`.                                                                     |
+| "Approve every write through Slack before it hits the API"         | [Tool Flow Extension](./tool-flow-extension-guide.md) — collect → review → submit pattern.                                                     |
+| "Add a `/health/detailed` HTTP endpoint"                           | [Extensions (HttpExtension)](./extensions.md).                                                                                                 |
+| "Show a monthly calendar widget for bookings"                      | [Custom MCP App](./custom-app-guide.md).                                                                                                       |
+| "Customize the layout of the generic create form"                  | [Model Form Customization](./model-form-customization-guide.md) — no extension needed, just `static fieldsets`.                                |
+| "Add a multi-section guided prompt for a complex model"            | [Stateful Strategies](./stateful-strategies-guide.md).                                                                                         |
+| "Wire OAuth2 for remote MCP clients"                               | [OAuth 2.0 Discovery Flow](./oauth2-discovery-flow.md).                                                                                        |
+| "Generate prompt docs from model attributes"                       | [Prompt Derivation Framework](./prompt-derivation-framework-guide.md).                                                                         |
+
+If your scenario isn't here and you can't pick from the table above, default to: change the **model**, not the **framework**. The model layer is where 80% of customization lives.
+
+## Composing Extensions
+
+Multiple extensions coexist in one server. The composition rules:
+
+- **`HttpExtension`s** are keyed by user-chosen names in the `extensions` map. They register routes on a `pathPrefix` you control. Two extensions on different prefixes don't conflict; on the same prefix, ordering matters (first-registered wins). See [Authoring Extensions](./authoring-extensions-guide.md) for the assembly contract.
+- **`ApiExtension`s** are keyed in `apiExtensions` on `ToolRegistry`. They contribute MCP tools and `ModelService` mixins; tool names must be unique, mixins are merged in registration order.
+- **`ToolFlowExtension`s** are keyed in `toolFlowExtensions` on the server factory. They register app tools and can call `setFormSubmitMode` and `provideContext`. If two extensions set the submit mode, last-write-wins — typically you compose Center-of-Control with auxiliary extensions, not with each other. See [Tool Flow Extension](./tool-flow-extension-guide.md).
+- **`provideContext`** is additive. Two extensions can each contribute a context key as long as the keys differ. The context bag is passed to every app tool's `handleToolCall`.
+
+Capability declarations (`requires: ['apps']`) are validated **at boot**, before the server accepts connections. If an extension declares it needs `apps` and the host doesn't have an `AppRegistry`, the server refuses to start. That's deliberate: failures should be loud and early.
+
+## Conventions
+
+Every extensibility seam in mcp-rune follows the same shape, by design:
+
+1. **Typed interface or base class.** The contract is in the codebase (`DataLayer`, `BaseConvention`, `ToolFlowExtension`, `ApiClient`, `KindDescriptor`). TypeScript guides you.
+2. **Single registration point.** No discovery, no auto-loading, no plugin scanning. You write your extension; you pass it to the relevant registry.
+3. **Opt-in capabilities.** Extensions declare what they need (`requires: ['apps']`); the host validates at boot.
+4. **Composable, not subsumed.** Composition rules favor adding methods to context bags, prepending to lists, or layering decorators — never inheritance chains. The Center-of-Control extension doesn't subclass `ToolRegistry`; it threads a `FormDataStore` into the context.
+5. **Pre-1.0, no back-compat.** When the framework introduces a new pattern, it deletes the old one. Don't write extensions that assume v0.49 APIs will stick around — track the [CHANGELOG](../../CHANGELOG.md) at each release.
+
+If you're writing an extension and the shape feels wrong, push back: the seam is probably misnamed, missing a method, or has the wrong scope. Open an issue with a concrete code sample.
+
+---
+
+**Where each guide lives in the Docs sidebar:**
+
+- **Adapters & Extensions** (this section): the 7 dedicated guides above.
+- **Tools & Services** (section III): [DataLayer](./data-layer-guide.md), [Service Layer](./service-layer-guide.md), [API Extensions](./api-extensions.md), [Extensions](./extensions.md), [Authoring Extensions](./authoring-extensions-guide.md), [Tool Creation](./tool-creation-guide.md).
+- **Apps, Search & Forms** (section IV): [MCP Apps Guide](./mcp-apps-guide.md), [MCP Apps Architecture](./mcp-apps-architecture.md), [Model Form Customization](./model-form-customization-guide.md), [Search Filter Integration](./search-filter-integration-guide.md).
+- **The Prompt DSL** (section II): [Prompt Creation](./prompt-creation-guide.md), [Stateful Strategies](./stateful-strategies-guide.md), [Prompt Derivation Framework](./prompt-derivation-framework-guide.md), [Sections & Field Groups](./sections-groups-guide.md).
+- **Auth & Transport** (section VI): [OAuth 2.0 Discovery Flow](./oauth2-discovery-flow.md).
+
+This section's guides are **new authoring walkthroughs** for surfaces that previously lacked dedicated docs. The existing guides above remain canonical for their topics; this section's overview links to them so deployers see the whole map.
