@@ -19,11 +19,14 @@
  * See `docs/guides/api-extensions.md` for the authoring guide.
  */
 
+import type { SummaryStrategy } from '#src/core/summary-strategies/index.js'
 import type * as logger from '#src/services/logger.js'
 
 import type { ModelService } from '../services/model-service.js'
 import type { ModelsRegistry, ServerContext } from '../tools/base-tool.js'
 import type { ToolClass } from '../tools/tool-registry.js'
+
+export type { SummaryStrategy }
 
 /**
  * Capabilities an extension can require from the host. Validated at boot —
@@ -72,6 +75,14 @@ export interface ApiExtensionContext {
    * callable on the instance via `tool.modelService.<methodName>(...)`.
    */
   registerModelServiceMixin(mixin: ModelServiceMixin): void
+  /**
+   * Contribute a summary strategy usable by `analysis_ingest` (via the
+   * `summary_strategy` / `summary_strategies` params) and `analysis_summarize`.
+   * Strategy names must be globally unique across built-ins and all
+   * extensions; collisions throw at boot with both owner keys in the
+   * message. See `docs/guides/summary-strategies.md` for the authoring guide.
+   */
+  registerSummaryStrategy(strategy: SummaryStrategy): void
 }
 
 export interface ApiExtension {

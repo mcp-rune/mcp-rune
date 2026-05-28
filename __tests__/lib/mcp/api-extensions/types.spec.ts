@@ -119,6 +119,7 @@ describe('lib/mcp/api-extensions — ApiExtension mechanism', () => {
       expect(ctx.name).toBe('foo')
       expect(typeof ctx.registerTool).toBe('function')
       expect(typeof ctx.registerModelServiceMixin).toBe('function')
+      expect(typeof ctx.registerSummaryStrategy).toBe('function')
     })
 
     it('passes the models registry and server context to ctx', () => {
@@ -340,6 +341,76 @@ describe('lib/mcp/api-extensions — ApiExtension mechanism', () => {
       }
       expect(service.methodA()).toBe('a')
       expect(service.methodB()).toBe('b')
+    })
+  })
+
+  describe('registerSummaryStrategy', () => {
+    const makeStrategy = (name: string) => ({
+      name,
+      description: `${name} desc`,
+      generate: () => ({ finding: '', metadata: {} })
+    })
+
+    it('makes the contributed strategy visible to tools via summaryStrategies', () => {
+      const customStrategy = makeStrategy('custom-strategy')
+      const registry = new ToolRegistry({
+        toolClasses: {},
+        models: {},
+        apiExtensions: {
+          ext: {
+            register: (ctx) => {
+              ctx.registerSummaryStrategy(customStrategy)
+            }
+          }
+        }
+      })
+
+      const tool = (
+        registry as unknown as { _createInstance(c: typeof CoreTool): CoreTool }
+      )._createInstance(CoreTool)
+      const strategies = tool.summaryStrategies
+      expect(strategies?.has('distribution')).toBe(true) // built-in
+      expect(strategies?.get('custom-strategy')).toBe(customStrategy)
+      expect(strategies?.ownerOf('custom-strategy')).toBe('ext')
+    })
+
+    it('throws at boot when a strategy name collides with a built-in', () => {
+      expect(
+        () =>
+          new ToolRegistry({
+            toolClasses: {},
+            models: {},
+            apiExtensions: {
+              ext: {
+                register: (ctx) => {
+                  ctx.registerSummaryStrategy(makeStrategy('distribution'))
+                }
+              }
+            }
+          })
+      ).toThrow(/"distribution" attempted by "ext" is already registered by "<built-in>"/)
+    })
+
+    it('throws at boot when two extensions register the same name', () => {
+      expect(
+        () =>
+          new ToolRegistry({
+            toolClasses: {},
+            models: {},
+            apiExtensions: {
+              first: {
+                register: (ctx) => {
+                  ctx.registerSummaryStrategy(makeStrategy('shared-name'))
+                }
+              },
+              second: {
+                register: (ctx) => {
+                  ctx.registerSummaryStrategy(makeStrategy('shared-name'))
+                }
+              }
+            }
+          })
+      ).toThrow(/"shared-name" attempted by "second" is already registered by "first"/)
     })
   })
 })

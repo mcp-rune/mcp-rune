@@ -36,6 +36,10 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import type { ApiClient } from '#src/core/api-client.js'
 import type { DataLayer, DataLayerFactory } from '#src/core/data-layer.js'
+import {
+  BUILT_IN_SUMMARY_STRATEGIES,
+  SummaryStrategyRegistry
+} from '#src/core/summary-strategies/index.js'
 import type {
   ApiExtensionContext,
   ApiExtensionMap,
@@ -181,6 +185,7 @@ export class ToolRegistry {
   private _modelServiceMixins: ModelServiceMixin[] = []
   /** Tracks which extension contributed each tool name, for collision diagnostics. */
   private _toolOwners: Map<string, string> = new Map()
+  private _summaryStrategies: SummaryStrategyRegistry
 
   constructor(config: ToolRegistryConfig) {
     this._toolClasses = { ...config.toolClasses }
@@ -193,6 +198,11 @@ export class ToolRegistry {
     this._gates = config.gates ?? {}
     this._interceptors = config.interceptors ?? []
     this.serverContext = (config.serverContext as Record<string, unknown>) ?? {}
+
+    // Seed with built-ins before _applyApiExtensions runs so extensions can
+    // (in Step 3) contribute additional strategies with collision detection
+    // against the built-ins.
+    this._summaryStrategies = new SummaryStrategyRegistry(BUILT_IN_SUMMARY_STRATEGIES)
 
     // Default DataLayer factory wraps ModelService and applies extension mixins.
     // Integrators can override to back the projection layer with a different
@@ -260,6 +270,9 @@ export class ToolRegistry {
         },
         registerModelServiceMixin: (mixin) => {
           this._modelServiceMixins.push(mixin)
+        },
+        registerSummaryStrategy: (strategy) => {
+          this._summaryStrategies.register(name, strategy)
         }
       })
 
@@ -374,7 +387,8 @@ export class ToolRegistry {
       models: this._models,
       promptRegistry: this._promptRegistry,
       serverContext: this.serverContext as ServerContext,
-      domainRegistry: this._domainRegistry
+      domainRegistry: this._domainRegistry,
+      summaryStrategies: this._summaryStrategies
     })
   }
 
@@ -405,7 +419,8 @@ export class ToolRegistry {
       models: this._models,
       promptRegistry: this._promptRegistry,
       serverContext: this.serverContext as ServerContext,
-      domainRegistry: this._domainRegistry
+      domainRegistry: this._domainRegistry,
+      summaryStrategies: this._summaryStrategies
     })
   }
 }

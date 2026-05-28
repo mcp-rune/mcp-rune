@@ -3,5 +3,6 @@ export type {
   ApiExtensionCapability,
   ApiExtensionContext,
   ApiExtensionMap,
-  ModelServiceMixin
+  ModelServiceMixin,
+  SummaryStrategy
 } from './types.js'
