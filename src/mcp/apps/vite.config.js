@@ -51,6 +51,11 @@ export default defineConfig({
       }
     }
   ],
+  resolve: {
+    alias: {
+      '#src': path.resolve(import.meta.dirname, '../../..', 'src')
+    }
+  },
   build: {
     sourcemap: isDevelopment ? 'inline' : undefined,
     cssMinify: !isDevelopment,

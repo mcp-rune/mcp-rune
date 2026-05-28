@@ -177,16 +177,16 @@ describe('lib/mcp/apps/form-schema', () => {
       ])
     })
 
-    it('maps format: URL to url type', () => {
+    it('maps format: URL (uppercase) to url type via case-insensitive lookup', () => {
       const schema = generateFormSchema(MockModel, MockPrompt)
       const coverField = schema.fields.find((f) => f.name === 'cover_url')
       expect(coverField.type).toBe('url')
     })
 
-    it('maps format: base64 to file type', () => {
+    it('maps format: base64 to text (display-only, matches formatter (binary) rendering)', () => {
       const schema = generateFormSchema(MockModel, MockPrompt)
       const base64Field = schema.fields.find((f) => f.name === 'cover_base64')
-      expect(base64Field.type).toBe('file')
+      expect(base64Field.type).toBe('text')
     })
 
     it('maps belongsTo association to select with association metadata', () => {
@@ -617,6 +617,54 @@ describe('lib/mcp/apps/form-schema', () => {
         const schema = generateFormSchema(SimpleModel)
         expect(schema.fields).toHaveLength(0)
         expect(schema.fieldsets).toHaveLength(0)
+      })
+    })
+
+    describe('kind → HTML input type (kind-metadata coverage)', () => {
+      function fieldFor(attr) {
+        const Model = {
+          api: { endpoint: 'things' },
+          singularName: 'thing',
+          attributes: { value: attr }
+        }
+        const Form = { fields: ['value'] }
+        return generateFormSchema(Model, Form).fields[0]
+      }
+
+      it('datetime → datetime-local', () => {
+        expect(fieldFor({ type: 'datetime', description: '' }).type).toBe('datetime-local')
+      })
+
+      it('time → time', () => {
+        expect(fieldFor({ type: 'time', description: '' }).type).toBe('time')
+      })
+
+      it('decimal → number', () => {
+        expect(fieldFor({ type: 'decimal', description: '' }).type).toBe('number')
+      })
+
+      it('uuid → text', () => {
+        expect(fieldFor({ type: 'uuid', description: '' }).type).toBe('text')
+      })
+
+      it('json → textarea', () => {
+        expect(fieldFor({ type: 'json', description: '' }).type).toBe('textarea')
+      })
+
+      it('color → color', () => {
+        expect(fieldFor({ type: 'color', description: '' }).type).toBe('color')
+      })
+
+      it('email → email', () => {
+        expect(fieldFor({ type: 'email', description: '' }).type).toBe('email')
+      })
+
+      it('rating → number', () => {
+        expect(fieldFor({ type: 'rating', description: '' }).type).toBe('number')
+      })
+
+      it('text → textarea', () => {
+        expect(fieldFor({ type: 'text', description: '' }).type).toBe('textarea')
       })
     })
   })

@@ -14,6 +14,7 @@
  * app's handleToolCall can fetch options from the API separately.
  */
 
+import { getKind } from '#src/core/kind-metadata.js'
 import type {
   TransformerConfig,
   TransformerEntry
@@ -29,16 +30,6 @@ import type {
   FormFieldDefinition,
   FormSchema
 } from './types.js'
-
-/** Map model attribute types to HTML form field types */
-const TYPE_MAP: Record<string, string> = {
-  string: 'text',
-  text: 'textarea',
-  integer: 'number',
-  number: 'number',
-  boolean: 'checkbox',
-  date: 'date'
-}
 
 interface FormSchemaOptions {
   allModelClasses?: Record<string, AppModelClass>
@@ -334,12 +325,8 @@ function buildField(
     field.type = 'select'
     field.options = attr.enumValues!.map((v) => ({ value: v, label: humanize(v) }))
     if (attr.default !== undefined) field.default = attr.default
-  } else if (attr.format === 'URL') {
-    field.type = 'url'
-  } else if (attr.format === 'base64') {
-    field.type = 'file'
   } else {
-    field.type = TYPE_MAP[attr.type!] || 'text'
+    field.type = getKind(attr.type, attr.format).htmlInputType
   }
 
   // Validation constraints

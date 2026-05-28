@@ -17,6 +17,7 @@
  * Example models: Series, Episode
  */
 
+import { getKind } from '#src/core/kind-metadata.js'
 import * as logger from '#src/services/logger.js'
 
 import type { FieldGroup, PromptFieldDefinition } from '../base-prompt.js'
@@ -240,7 +241,11 @@ export class HybridStrategy extends BaseStrategy {
           .filter((f) => fields[f] !== undefined && fields[f] !== '')
           .map((f) => {
             const def = fieldDefs[f]
-            return `  - ${def?.description || f}: ${fields[f]}`
+            const rendered = getKind(def?.type, def?.format).describe(fields[f], {
+              format: def?.format,
+              enumValues: def?.enumValues
+            })
+            return `  - ${def?.description || f}: ${rendered}`
           })
 
         if (groupValues.length > 0) {
@@ -253,7 +258,11 @@ export class HybridStrategy extends BaseStrategy {
       for (const [name, value] of Object.entries(fields)) {
         if (value !== undefined && value !== '') {
           const def = fieldDefs[name]
-          lines.push(`- ${def?.description || name}: ${value}`)
+          const rendered = getKind(def?.type, def?.format).describe(value, {
+            format: def?.format,
+            enumValues: def?.enumValues
+          })
+          lines.push(`- ${def?.description || name}: ${rendered}`)
         }
       }
     }

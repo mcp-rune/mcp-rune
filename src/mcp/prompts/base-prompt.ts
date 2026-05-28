@@ -14,6 +14,8 @@
  * This is the shared library version. Server-specific BasePrompts should extend this class.
  */
 
+import { getKind } from '#src/core/kind-metadata.js'
+
 import { generateAttributeReference } from './generators/attribute-reference-generator.js'
 import type { FlowSection } from './generators/flow-diagram-generator.js'
 import {
@@ -328,8 +330,11 @@ export class BasePrompt {
           .filter((f) => formState[f] !== undefined && formState[f] !== '')
           .map((f) => {
             const def = this.fieldDefinitions[f]
-            const value = formState[f]
-            return `  - ${def?.description || f}: ${JSON.stringify(value)}`
+            const rendered = getKind(def?.type, def?.format).describe(formState[f], {
+              format: def?.format,
+              enumValues: def?.enumValues
+            })
+            return `  - ${def?.description || f}: ${rendered}`
           })
 
         if (sectionValues.length > 0) {
@@ -343,8 +348,11 @@ export class BasePrompt {
           .filter((f) => formState[f] !== undefined && formState[f] !== '')
           .map((f) => {
             const def = this.fieldDefinitions[f]
-            const value = formState[f]
-            return `  - ${def?.description || f}: ${JSON.stringify(value)}`
+            const rendered = getKind(def?.type, def?.format).describe(formState[f], {
+              format: def?.format,
+              enumValues: def?.enumValues
+            })
+            return `  - ${def?.description || f}: ${rendered}`
           })
 
         if (groupValues.length > 0) {

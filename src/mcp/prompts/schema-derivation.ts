@@ -12,6 +12,8 @@
  * - Memoization ensures static schemas are computed only once
  */
 
+import { getKind } from '#src/core/kind-metadata.js'
+
 import type {
   BaseConvention,
   BelongsToAssociation,
@@ -142,21 +144,6 @@ export function getSchemaCacheStats(): CacheStats {
   }
 }
 
-/** Field type mapping from API to prompt types */
-const TYPE_MAPPING: Record<string, string> = {
-  string: 'string',
-  integer: 'integer',
-  number: 'number',
-  boolean: 'boolean',
-  array: 'array',
-  object: 'object',
-  datetime: 'datetime',
-  date: 'date',
-  time: 'time',
-  text: 'text',
-  enum: 'enum'
-}
-
 /**
  * Derive field definitions from model configuration (memoized).
  *
@@ -218,7 +205,7 @@ export function deriveFieldDefinitions(
 
     // Build field definition
     const fieldDef: PromptFieldDefinition = {
-      type: mapType(attrConfig.type || 'string'),
+      type: getKind(attrConfig.type || 'string', attrConfig.format).promptType,
       required: required.includes(attrName),
       description: attrConfig.description || `${attrName} field`
     }
@@ -312,11 +299,6 @@ function addAssociationFields(
       }
     }
   }
-}
-
-/** Map API type to prompt type */
-function mapType(apiType: string): string {
-  return TYPE_MAPPING[apiType] || 'string'
 }
 
 /**

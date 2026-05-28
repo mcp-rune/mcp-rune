@@ -14,6 +14,8 @@
  * strategies stay in sync automatically.
  */
 
+import { getKind } from '#src/core/kind-metadata.js'
+
 import type { PromptFieldDefinition } from '../base-prompt.js'
 
 export interface ValidationContext {
@@ -62,12 +64,15 @@ export class BaseStrategy {
       }
     }
 
-    // Type checks
-    if (def.type === 'integer' && !Number.isInteger(value)) {
-      errors.push(`${fieldName} must be an integer`)
-    }
-    if (def.type === 'boolean' && typeof value !== 'boolean') {
-      errors.push(`${fieldName} must be a boolean`)
+    // Kind-aware type/format checks (integer, boolean, date, datetime, uuid,
+    // email, url, json, time, decimal, rating, array) come from kind-metadata
+    // so the rules stay aligned with what the formatter rendered to the user.
+    const kindError = getKind(def.type, def.format).validate(value, {
+      format: def.format,
+      enumValues: def.enumValues
+    })
+    if (kindError) {
+      errors.push(`${fieldName} ${kindError}`)
     }
 
     // Validation property (pattern, length, range)

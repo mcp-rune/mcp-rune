@@ -417,4 +417,31 @@ describe('lib/mcp/prompts/schema-derivation - Memoization', () => {
       expect(stats.schemas).toBe(2)
     })
   })
+
+  describe('attribute type → promptType (kind-metadata coverage)', () => {
+    function promptTypeFor(attribute: Record<string, unknown>) {
+      const modelConfig = { attributes: { value: attribute }, required: [] }
+      return deriveFieldDefinitions(modelConfig).value.type
+    }
+
+    it('uuid attribute kind surfaces as uuid (was string before kind-metadata)', () => {
+      expect(promptTypeFor({ type: 'uuid', description: '' })).toBe('uuid')
+    })
+
+    it('json attribute kind surfaces as object', () => {
+      expect(promptTypeFor({ type: 'json', description: '' })).toBe('object')
+    })
+
+    it('decimal attribute kind surfaces as number', () => {
+      expect(promptTypeFor({ type: 'decimal', description: '' })).toBe('number')
+    })
+
+    it('rating attribute kind surfaces as integer', () => {
+      expect(promptTypeFor({ type: 'rating', description: '' })).toBe('integer')
+    })
+
+    it('unknown kind falls back to string', () => {
+      expect(promptTypeFor({ type: 'wat', description: '' })).toBe('string')
+    })
+  })
 })

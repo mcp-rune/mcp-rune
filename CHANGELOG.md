@@ -4,6 +4,60 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] (BREAKING)
+
+> Closes #137. Unifies the kind/format taxonomy across the prompt system, the form-schema layer, and the iframe formatter registry into a single source of truth at `src/core/kind-metadata.ts`.
+
+### Added
+
+- **`src/core/kind-metadata.ts`** — DOM-free single source of truth for all 17 built-in attribute kinds (`string`, `text`, `integer`, `decimal`, `boolean`, `date`, `datetime`, `time`, `enum`, `array`, `uuid`, `json`, `color`, `email`, `url`, `base64`, `rating`). Each `KindDescriptor` carries `htmlInputType`, `promptType`, `label`, plus `parse / serialize / toInput / fromInput / describe / validate` pure functions. Imported by both the browser-side formatter registry and the server-side prompts/form-schema/validation layers — one vocabulary, one extension point. Published under the existing `./core` subpath export.
+- **`getKind(kind, format)` case-insensitive lookup with format-hop fallback.** When `kind:format` has no explicit narrowing but `format` names a registered top-level kind (e.g. `getKind('string', 'url')`), it returns that kind's descriptor. This is what makes JSON-schema-style `format: 'url'` or `format: 'email'` work without each deployer registering every narrowing.
+- **Server-side validation now covers `date`, `datetime`, `uuid`, `email`, `url`, `json`, `time`, `decimal`, `rating`** in `BaseStrategy.validateField`. Previously only `integer` and `boolean` were checked.
+- **LLM-facing prompt summaries now mirror what the user sees on screen.** `HybridStrategy.generateHumanSummary` and `BasePrompt.generateHumanReadableSummary` route every value through `getKind(...).describe(...)`: booleans render as `Yes`/`No` (matched to `record-detail-ui`), dates as ISO, enum values humanized, base64 as `(binary)`, arrays as humanized comma-joined lists.
+- **`FormatterDescriptor` is now expressive enough for declarative-only deployer extensions.** Added top-level `htmlInputType`, `promptType`, `label`, `validation` (`pattern`, `minLength`, `maxLength`, `minimum`, `maximum`). Same descriptor drives DOM rendering (iframe), HTML input type (form-schema), prompt type label (LLM docs), and `validate_form` errors.
+- **`#src` resolve alias in `src/mcp/apps/vite.config.js`** so browser-bundled `apps/shared/formatters.ts` uses the same `#src/core/kind-metadata.js` specifier as server-side TypeScript.
+
+### Changed (BREAKING)
+
+- **`src/mcp/apps/shared/formatters.js` → `formatters.ts`.** Rewritten to delegate `parse / serialize / toInput / fromInput / describe / validate` to `kind-metadata`. The only remaining surface is the DOM `format()` renderer registry and the `helpers` primitives. `registerFormatter` now accepts ONLY `{ format }` — a DOM renderer — and throws on any other shape. Non-DOM behavior is sourced from `AppRegistry.formatters` descriptors.
+- **`form-schema.ts` `TYPE_MAP` deleted.** HTML input type is now derived from `getKind(attr.type, attr.format).htmlInputType`. Coverage expands from 6 kinds (`string`/`text`/`integer`/`number`/`boolean`/`date`) to all 17. `datetime`/`time`/`decimal`/`uuid`/`json`/`color`/`email`/`url`/`rating` no longer fall through to plain text inputs.
+- **`form-schema.ts:337` `attr.format === 'URL'` (uppercase) bug fixed.** Format strings are now case-insensitive everywhere via `getKind`.
+- **`format: 'base64'` now maps to a `text` HTML input** (display-only, matching the formatter's `(binary)` rendering). Was `file`, which never worked — `model-form-ui/app.js:182-183` already skipped file inputs.
+- **`schema-derivation.ts` `TYPE_MAPPING` and `mapType` deleted.** Prompt type labels derive from `getKind(attr.type, attr.format).promptType`. `uuid`/`json`/`decimal`/`rating` attributes now surface their real types to the LLM instead of silently falling back to `string`.
+- **`BaseStrategy.validateField` integer/boolean inline checks deleted.** Replaced by `getKind(def.type, def.format).validate(value, opts)` — the kind decides what's valid. Range/length/pattern from `FieldValidation` still live in `base-strategy.ts` (orthogonal to kind).
+
+### Removed (BREAKING)
+
+- **`AppRegistry.formatterScript` deleted.** The `window.__MCP_RUNE_REGISTER_FORMATTERS__` JS-hook escape valve, shipped in v0.50, is gone. It was the architectural seam that created server/browser drift: deployers could register `currency`/`isbn`/`phone` kinds the server-side prompts and validation couldn't see. All deployer extensions now flow through the declarative `FormatterDescriptor` channel, which both the iframe and the server consume — single source of truth, no shim path. Pre-1.0, no deprecation.
+- **`__MCP_RUNE_REGISTER_FORMATTERS__` window-global removed** from `formatters.runtime.js`. The runtime now exports `applyDescriptorOverrides` (renamed from `applyRuntimeOverrides`) and consumes only `window.__MCP_RUNE_FORMATTERS__`.
+
+### Migration (v0.50 → next)
+
+Any deployer who shipped a `formatterScript` to register a new kind must re-express it as a `FormatterDescriptor`. Most real-world cases fit the descriptor vocabulary:
+
+```ts
+// BEFORE (v0.50)
+formatterScript: `
+  window.__MCP_RUNE_REGISTER_FORMATTERS__ = (registerFormatter, helpers) => {
+    registerFormatter('isbn', {
+      format: (v) => helpers.text('ISBN: ' + v)
+    })
+  }
+`
+
+// AFTER
+formatters: {
+  'string:isbn': {
+    label: 'ISBN',
+    htmlInputType: 'text',
+    validation: { pattern: '^[0-9-]+$', minLength: 10, maxLength: 17 },
+    display: { template: 'ISBN: {value}' }
+  }
+}
+```
+
+The descriptor channel now also drives server-side concerns (prompt type label, form HTML input, `validate_form` errors), so a single registration covers what previously required wiring in three places.
+
 ## [0.50.0] — 2026-05-28 (BREAKING)
 
 > v0.50 is a multi-gap overhaul of the MCP apps surface, landing as four commits on PR #135.

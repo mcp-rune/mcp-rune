@@ -51,7 +51,6 @@ export interface DefaultAppRegistryOptions {
   headerIcon?: string
   themeOverrides?: ThemeOverrides
   formatters?: Record<string, FormatterDescriptor>
-  formatterScript?: string
 }
 
 /**
@@ -79,8 +78,7 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
     defaultAdapter,
     headerIcon,
     themeOverrides,
-    formatters,
-    formatterScript
+    formatters
   } = opts
 
   const excludedSet = new Set<DefaultAppName>(exclude)
@@ -143,7 +141,6 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
     ...(defaultAdapter && { defaultAdapter }),
     ...(headerIcon !== undefined && { headerIcon }),
     ...(themeOverrides && { themeOverrides }),
-    ...(formatters && { formatters }),
-    ...(formatterScript !== undefined && { formatterScript })
+    ...(formatters && { formatters })
   })
 }

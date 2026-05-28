@@ -399,24 +399,25 @@ create/update forms, multi-select picker, search view, and autocomplete
 picker. Each app's UI is a vanilla-JS bundle the host renders in an iframe.
 
 Per-deployment theming and custom-kind formatters slot in through the same
-helper — see the commented options in `config.ts`:
+helper — see the commented options in `config.ts`. The descriptor channel is
+the single source of truth: each entry drives iframe DOM rendering, the form
+HTML input type, the prompt-side type label, and `validate_form` errors.
 
 ```ts
 const appRegistry = createDefaultAppRegistry({
   modelClasses: MODEL_CLASSES,
   namespace: 'bookshelf',
   themeOverrides: { cssVariables: { '--color-accent': '#0a84ff' } },
-  formatters: { date: { display: { locale: 'en-GB' } } },
-  formatterScript: `
-    window.__MCP_RUNE_REGISTER_FORMATTERS__ = (registerFormatter, helpers) => {
-      registerFormatter('currency', {
-        parse: (v) => Number(v),
-        format: (n) => helpers.text(
-          new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
-        )
-      })
+  formatters: {
+    date: { display: { locale: 'en-GB' } },
+    'string:isbn': {
+      label: 'ISBN',
+      htmlInputType: 'text',
+      promptType: 'string',
+      validation: { pattern: '^[0-9-]+$', minLength: 10, maxLength: 17 },
+      display: { template: 'ISBN: {value}' }
     }
-  `
+  }
 })
 ```
 
@@ -425,6 +426,6 @@ const appRegistry = createDefaultAppRegistry({
 - Add more models (Author, Category) — still 8 tools, polymorphic
 - Add OAuth for remote access (`HttpServer` + `OAuthService`)
 - Customize the apps' theming or register custom attribute kinds via
-  `themeOverrides` / `formatters` / `formatterScript` on `createDefaultAppRegistry`
+  `themeOverrides` / `formatters` on `createDefaultAppRegistry`
 - Add domain workflows for multi-step operations
 - See the [guides](../../docs/guides/) for deep dives on each feature

@@ -417,7 +417,8 @@ describe('Summary Generation', () => {
 
       expect(summary).toContain('**Identification:**')
       expect(summary).toContain('test-item')
-      expect(summary).toContain('basic')
+      // enum values now humanize via kind-metadata describe() — was raw JSON before
+      expect(summary).toContain('Basic')
     })
 
     test('falls back to fieldGroups when no sections', () => {
@@ -438,6 +439,14 @@ describe('Summary Generation', () => {
 
       expect(summary).toContain('test')
       expect(summary).not.toContain('display_name')
+    })
+
+    test('renders enum values humanized (LLM-facing summary matches user-facing screen)', () => {
+      const summary = MockStatefulPrompt.generateHumanReadableSummary({
+        name: 'x',
+        type: 'advanced_config'
+      })
+      expect(summary).toContain('Advanced Config')
     })
   })
 

@@ -126,8 +126,7 @@ describe('createDefaultAppRegistry', () => {
       modelClasses: { book: FakeModel as never },
       namespace: 'test-default',
       themeOverrides: { cssVariables: { '--color-accent': '#0a84ff' } },
-      formatters: { date: { display: { locale: 'en-GB' } } },
-      formatterScript: 'window.__MCP_RUNE_REGISTER_FORMATTERS__ = ()=>{}'
+      formatters: { date: { display: { locale: 'en-GB' } } }
     })
 
     const out = registry.injectIntoHead('<html><head></head><body></body></html>')
@@ -135,6 +134,5 @@ describe('createDefaultAppRegistry', () => {
     expect(out).toContain('--color-accent:#0a84ff')
     expect(out).toContain('window.__MCP_RUNE_FORMATTERS__')
     expect(out).toContain('en-GB')
-    expect(out).toContain('window.__MCP_RUNE_REGISTER_FORMATTERS__ = ()=>{}')
   })
 })

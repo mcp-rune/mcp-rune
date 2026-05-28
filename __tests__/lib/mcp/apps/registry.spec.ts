@@ -274,14 +274,23 @@ describe('AppRegistry logging', () => {
       expect(out).toContain('en-GB')
     })
 
-    it('emits formatterScript verbatim after the declarative assignment', () => {
-      const script =
-        'window.__MCP_RUNE_REGISTER_FORMATTERS__=(reg,h)=>{reg("currency",{format:(n)=>h.text("$"+n)})}'
-      const registry = new AppRegistry([], { formatterScript: script })
-
+    it('serializes the full FormatterDescriptor shape (label, describe, htmlInputType, validation)', () => {
+      const registry = new AppRegistry([], {
+        formatters: {
+          'string:isbn': {
+            label: 'ISBN',
+            htmlInputType: 'text',
+            promptType: 'string',
+            validation: { pattern: '^[0-9-]+$', minLength: 10, maxLength: 17 },
+            display: { template: 'ISBN: {value}' }
+          }
+        }
+      })
       const out = registry.injectIntoHead(BASE_HTML)
-
-      expect(out).toContain(`<script>${script}</script>`)
+      expect(out).toContain('"label":"ISBN"')
+      expect(out).toContain('"htmlInputType":"text"')
+      expect(out).toContain('"pattern":"^[0-9-]+$"')
+      expect(out).toContain('"template":"ISBN: {value}"')
     })
 
     it('escapes </script> sequences inside the serialized JSON', () => {

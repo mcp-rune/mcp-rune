@@ -74,10 +74,19 @@ const toolRegistry = {
 const appRegistry = createDefaultAppRegistry({
   modelClasses: MODEL_CLASSES,
   namespace: 'bookshelf'
-  // Per-deployment theming and custom-kind formatters slot in here:
+  // Per-deployment theming and custom-kind formatters slot in here.
+  // Everything is declarative — the same descriptors drive iframe rendering,
+  // the form HTML input type, prompt docs, and `validate_form` errors:
   //   themeOverrides: { cssVariables: { '--color-accent': '#0a84ff' } },
-  //   formatters: { date: { display: { locale: 'en-GB' } } },
-  //   formatterScript: 'window.__MCP_RUNE_REGISTER_FORMATTERS__ = (reg, h) => { … }'
+  //   formatters: {
+  //     date: { display: { locale: 'en-GB' } },
+  //     'string:isbn': {
+  //       label: 'ISBN',
+  //       htmlInputType: 'text',
+  //       validation: { pattern: '^[0-9-]+$', minLength: 10, maxLength: 17 },
+  //       display: { template: 'ISBN: {value}' }
+  //     }
+  //   }
 })
 
 /** Create MCP server instance for this bookshelf server */
