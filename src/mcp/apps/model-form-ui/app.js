@@ -22,6 +22,7 @@ let formMode = 'create' // 'create' or 'update'
 let submitMode = 'direct' // 'direct' or 'collect' — server-advertised
 let recordId = null // populated in update mode
 let hiddenValues = {} // server-side prefill not rendered as fields
+let parentContext = null // { parentModel, parentId, label } when nested
 
 // ─── MCP App Connection ─────────────────────────────────────────────────────
 
@@ -46,12 +47,15 @@ app.ontoolresult = (result) => {
       submitMode = data.submitMode || 'direct'
       recordId = data.recordId || null
       hiddenValues = data.hiddenValues || {}
+      parentContext = data.parentContext || null
       renderForm(data.schema)
       if (data.defaults) {
         prefillForm(data.defaults)
       }
+      updateSubmitGate()
     } else {
       prefillForm(data.defaults || data)
+      updateSubmitGate()
     }
   } catch {
     /* ignore parse errors */
@@ -64,7 +68,17 @@ initApp(app)
 // ─── Form Rendering ─────────────────────────────────────────────────────────
 
 /** Field types that render with inline option labels and need stacked layout */
-const STACKED_TYPES = new Set(['checkbox_group', 'multiselect', 'checkbox'])
+const STACKED_TYPES = new Set(['checkbox_group', 'multiselect', 'checkbox', 'chips'])
+
+/**
+ * Tiny CSS attribute-selector escape. Field names are model attribute
+ * identifiers (`/^[a-z_][a-z0-9_]*$/i`), so we only need to escape the
+ * handful of characters that can occur defensively. Avoids reaching for
+ * the browser-only `CSS.escape` global which ESLint's node env doesn't know.
+ */
+function cssEscape(value) {
+  return String(value).replace(/(["\\])/g, '\\$1')
+}
 
 /**
  * Render the entire form from a schema
@@ -82,6 +96,8 @@ function renderForm(schema) {
   document.getElementById('form-subtitle').textContent = isUpdate
     ? `Update ${schema.model} details`
     : `Add a new ${schema.model} to your library`
+
+  renderParentContextBanner(form)
 
   // Group fields by their group key
   const fieldsByGroup = new Map()
@@ -104,8 +120,36 @@ function renderForm(schema) {
   // Wire up conditional visibility for fields with visibleWhen rules
   setupConditionalVisibility(schema.fields)
 
+  // Hook required-field gating to enable/disable the submit button live.
+  setupSubmitGating(schema.fields)
+
   // Show action buttons
   document.getElementById('form-actions').style.display = 'flex'
+}
+
+/**
+ * Render the nested-parent context banner above the form when the server
+ * resolved a parent record. The server already humanized the parent label;
+ * we just frame it as "Adding {modelName} to {label}".
+ *
+ * @param {HTMLElement} form
+ */
+function renderParentContextBanner(form) {
+  if (!parentContext || !parentContext.label) return
+  const banner = document.createElement('div')
+  banner.className = 'parent-banner'
+  banner.dataset.parentModel = parentContext.parentModel
+  banner.dataset.parentId = parentContext.parentId
+
+  const heading = document.createElement('strong')
+  heading.textContent = `${humanize(parentContext.parentModel)}:`
+
+  const value = document.createElement('span')
+  value.textContent = parentContext.label
+
+  banner.appendChild(heading)
+  banner.appendChild(value)
+  form.appendChild(banner)
 }
 
 /**
@@ -169,6 +213,9 @@ function renderField(field) {
           ? createSearchableSelect(field)
           : createSelect(field)
       )
+      break
+    case 'chips':
+      container.appendChild(createChipsControl(field))
       break
     case 'multiselect':
       container.appendChild(createMultiselect(field))
@@ -317,6 +364,61 @@ function createSearchableSelect(field) {
   return wrapper
 }
 
+/**
+ * Render a chip / segmented control for small enum fields.
+ *
+ * Each option is a button. Selecting a chip writes its value to a hidden
+ * input named after the field so `collectFormData` can read it like any
+ * other control. Clicking the active chip clears the selection (unless
+ * the field is required).
+ *
+ * @param {Object} field - Field definition with `options: [{ value, label }]`
+ * @returns {HTMLElement}
+ */
+function createChipsControl(field) {
+  const wrapper = document.createElement('div')
+  wrapper.className = 'chips'
+  wrapper.dataset.field = field.name
+
+  const hidden = document.createElement('input')
+  hidden.type = 'hidden'
+  hidden.id = field.name
+  hidden.name = field.name
+  if (field.default !== undefined) hidden.value = String(field.default)
+  wrapper.appendChild(hidden)
+
+  for (const opt of field.options || []) {
+    const chip = document.createElement('button')
+    chip.type = 'button'
+    chip.className = 'chips__option'
+    chip.dataset.value = opt.value
+    chip.textContent = opt.label
+    if (field.default !== undefined && String(opt.value) === String(field.default)) {
+      chip.classList.add('is-active')
+    }
+    chip.addEventListener('click', () => {
+      const alreadyActive = chip.classList.contains('is-active')
+      for (const sibling of wrapper.querySelectorAll('.chips__option')) {
+        sibling.classList.remove('is-active')
+      }
+      if (alreadyActive && !field.required) {
+        hidden.value = ''
+      } else {
+        chip.classList.add('is-active')
+        hidden.value = String(opt.value)
+      }
+      // Re-evaluate the submit gate every time a chip toggles.
+      updateSubmitGate()
+      // Fire a change event so any setupConditionalVisibility listener
+      // bound to this field name reacts to the new value.
+      hidden.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    wrapper.appendChild(chip)
+  }
+
+  return wrapper
+}
+
 function createMultiselect(field) {
   const wrapper = document.createElement('div')
   wrapper.className = 'multiselect-group'
@@ -428,6 +530,75 @@ function setupConditionalVisibility(fields) {
   }
 }
 
+// ─── Submit Gating ───────────────────────────────────────────────────────────
+
+/**
+ * Wire `input` / `change` listeners on every required-field control so the
+ * submit button reflects validity in real time. Idempotent — each call wipes
+ * the existing listeners by recreating the button (cheap and avoids leaks).
+ *
+ * @param {Object[]} fields - Field definitions from schema
+ */
+function setupSubmitGating(fields) {
+  const form = document.getElementById('model-form')
+  for (const field of fields) {
+    if (!field.required) continue
+    // multiselect / checkbox_group have one input per option — bind to all.
+    const inputs = form.querySelectorAll(`[name="${field.name}"]`)
+    for (const input of inputs) {
+      input.addEventListener('input', updateSubmitGate)
+      input.addEventListener('change', updateSubmitGate)
+    }
+  }
+  updateSubmitGate()
+}
+
+/**
+ * Toggle the `[disabled]` attribute on the Done button based on whether all
+ * required fields currently hold a non-empty value. Cheap to call from any
+ * change handler — there's no full form serialization in the hot path.
+ */
+function updateSubmitGate() {
+  const btn = document.getElementById('btn-done')
+  if (!btn) return
+  if (!formSchema) {
+    btn.disabled = false
+    return
+  }
+  const form = document.getElementById('model-form')
+  const requiredFields = formSchema.fields.filter((f) => f.required)
+  for (const field of requiredFields) {
+    // Skip fields hidden by visibleWhen — they're not part of "required" right now.
+    const container = form.querySelector(`.field[data-field="${field.name}"]`)
+    if (container && container.style.display === 'none') continue
+    if (!hasValue(form, field)) {
+      btn.disabled = true
+      return
+    }
+  }
+  btn.disabled = false
+}
+
+/**
+ * Whether the in-DOM controls for `field` currently hold a non-empty value.
+ * Handles the special shapes (multiselect / checkbox_group, checkbox) without
+ * routing through the slow `collectFormData` pipeline.
+ */
+function hasValue(form, field) {
+  switch (field.type) {
+    case 'multiselect':
+    case 'checkbox_group':
+      return form.querySelectorAll(`input[name="${field.name}"]:checked`).length > 0
+    case 'checkbox':
+      return form.querySelector(`#${cssEscape(field.name)}`)?.checked === true
+    default: {
+      const el = form.querySelector(`#${cssEscape(field.name)}`)
+      if (!el) return false
+      return el.value !== undefined && el.value !== null && String(el.value).trim() !== ''
+    }
+  }
+}
+
 // ─── Form Data Collection ────────────────────────────────────────────────────
 
 /**
@@ -512,13 +683,26 @@ function prefillForm(values) {
       continue
     }
 
+    const field = fieldByName.get(key)
+
+    // Chips control: light up the matching option, write to hidden input.
+    if (field?.type === 'chips') {
+      const wrapper = form.querySelector(`.chips[data-field="${cssEscape(key)}"]`)
+      if (!wrapper) continue
+      const hidden = wrapper.querySelector(`input[name="${cssEscape(key)}"]`)
+      if (hidden) hidden.value = String(val)
+      for (const chip of wrapper.querySelectorAll('.chips__option')) {
+        chip.classList.toggle('is-active', String(chip.dataset.value) === String(val))
+      }
+      continue
+    }
+
     // Handle regular inputs and selects, routing API value through the
     // bidirectional formatter so kinds like `datetime` / `date` / `time`
     // land in the right HTML <input> shape.
     const input = document.getElementById(key)
     if (!input) continue
 
-    const field = fieldByName.get(key)
     if (field?.kind) {
       const fmt = getFormatter(field.kind, field.format)
       input.value = fmt.toInput(fmt.parse(val))
@@ -567,7 +751,9 @@ document.getElementById('btn-done').addEventListener('click', async () => {
 
   const fields = collectFormData()
 
-  // Basic client-side required-field check
+  // Basic client-side required-field check (defensive — the submit gate
+  // should already disable the button, but a hidden-via-visibleWhen field
+  // can sneak through if the user re-shows it without input).
   if (formSchema) {
     const requiredFields = formSchema.fields.filter((f) => f.required)
     const missing = requiredFields.filter((f) => !fields[f.name])

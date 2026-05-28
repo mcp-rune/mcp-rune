@@ -117,6 +117,63 @@ textarea {
   font-style: italic;
 }
 
+/* Chips / segmented control for small enums. The hidden input carries the
+   selected value; chips are buttons that toggle .is-active. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chips__option {
+  appearance: none;
+  font: inherit;
+  font-size: 0.85em;
+  padding: 4px 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+.chips__option:hover {
+  border-color: var(--color-accent);
+}
+.chips__option.is-active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
+}
+.chips__option:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* Parent-context banner — shown when the form is for a nested model
+   and the server resolved the parent's display label. */
+.parent-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+  background: var(--color-accent-soft, rgba(99, 102, 241, 0.1));
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--border-radius-md);
+  font-size: 0.85em;
+  color: var(--color-text-primary);
+}
+.parent-banner strong {
+  color: var(--color-text-info);
+  text-transform: uppercase;
+  font-size: 0.75em;
+  letter-spacing: 0.04em;
+}
+
 /* Searchable select (inline autocomplete for large option lists) */
 .searchable-select {
   position: relative;
@@ -171,6 +228,10 @@ textarea {
   display: flex;
   gap: 8px;
   margin-top: 16px;
+}
+.actions button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Error states */
