@@ -302,7 +302,8 @@ describe('AnalysisIngestTool — nested resource ingestion', () => {
     expect(storeAnalysisMemory).toHaveBeenCalledTimes(1)
     const summaryCall = (storeAnalysisMemory as ReturnType<typeof vi.fn>).mock.calls[0][0]
     expect(summaryCall.analysisId).toBe('test-session')
-    expect(summaryCall.category).toBe('page_summary')
+    expect(summaryCall.category).toBe('page_summary:distribution')
+    expect(summaryCall.metadata.strategy).toBe('distribution')
     expect(summaryCall.finding).toContain('metadata_error')
     expect(summaryCall.finding).toContain('3 records')
   })
@@ -894,5 +895,106 @@ describe('AnalysisIngestTool — resume and progress', () => {
 
     // No errors, no notifications
     expect(true).toBe(true) // Just verify it doesn't throw
+  })
+
+  // ============================================================================
+  // Summary strategy selection
+  // ============================================================================
+
+  it('uses summary_strategy when provided (single)', async () => {
+    mockApi.get.mockResolvedValueOnce([
+      { id: 'err-1', message: 'a' },
+      { id: 'err-2', message: 'b' },
+      { id: 'err-3', message: 'c' },
+      { id: 'err-4', message: 'd' },
+      { id: 'err-5', message: 'e' }
+    ])
+
+    await tool.execute({
+      analysis_id: 'strat-single',
+      parent_model: 'scheduling',
+      parent_ids: ['sched-1'],
+      child_resource: 'metadata_errors',
+      summary_strategy: 'coverage'
+    })
+
+    expect(storeAnalysisMemory).toHaveBeenCalledTimes(1)
+    const call = (storeAnalysisMemory as ReturnType<typeof vi.fn>).mock.calls[0][0]
+    expect(call.category).toBe('page_summary:coverage')
+    expect(call.metadata.strategy).toBe('coverage')
+  })
+
+  it('runs every entry in summary_strategies and stores one memory per applicable strategy', async () => {
+    mockApi.get.mockResolvedValueOnce([
+      { id: 'err-1', message: 'a' },
+      { id: 'err-2', message: 'b' },
+      { id: 'err-3', message: 'c' }
+    ])
+
+    await tool.execute({
+      analysis_id: 'strat-multi',
+      parent_model: 'scheduling',
+      parent_ids: ['sched-1'],
+      child_resource: 'metadata_errors',
+      summary_strategies: ['distribution', 'coverage']
+    })
+
+    expect(storeAnalysisMemory).toHaveBeenCalledTimes(2)
+    const cats = (storeAnalysisMemory as ReturnType<typeof vi.fn>).mock.calls.map(
+      (c) => c[0].category
+    )
+    expect(cats).toEqual(['page_summary:distribution', 'page_summary:coverage'])
+  })
+
+  it('silently skips strategies whose appliesTo returns false', async () => {
+    // metadata_error records carry no ISO-date field, so temporal.appliesTo === false
+    mockApi.get.mockResolvedValueOnce([
+      { id: 'err-1', message: 'a' },
+      { id: 'err-2', message: 'b' }
+    ])
+
+    await tool.execute({
+      analysis_id: 'strat-skip',
+      parent_model: 'scheduling',
+      parent_ids: ['sched-1'],
+      child_resource: 'metadata_errors',
+      summary_strategies: ['distribution', 'temporal']
+    })
+
+    expect(storeAnalysisMemory).toHaveBeenCalledTimes(1)
+    expect((storeAnalysisMemory as ReturnType<typeof vi.fn>).mock.calls[0][0].category).toBe(
+      'page_summary:distribution'
+    )
+  })
+
+  it('rejects setting both summary_strategy and summary_strategies', async () => {
+    const result = await tool.execute({
+      analysis_id: 'strat-both',
+      parent_model: 'scheduling',
+      parent_ids: ['sched-1'],
+      child_resource: 'metadata_errors',
+      summary_strategy: 'distribution',
+      summary_strategies: ['coverage']
+    })
+    expect(result.isError).toBe(true)
+    expect(result.content[0].text).toMatch(/either .* not both/i)
+    expect(storeAnalysisMemory).not.toHaveBeenCalled()
+  })
+
+  it('rejects unknown strategy names at execute time', async () => {
+    mockApi.get.mockResolvedValueOnce([{ id: 'err-1', message: 'a' }])
+
+    await expect(
+      tool.execute({
+        analysis_id: 'strat-unknown',
+        parent_model: 'scheduling',
+        parent_ids: ['sched-1'],
+        child_resource: 'metadata_errors',
+        summary_strategy: 'bogus-strategy'
+      })
+    ).resolves.toMatchObject({
+      isError: true,
+      content: [{ text: expect.stringMatching(/Unknown summary strategy: "bogus-strategy"/) }]
+    })
   })
 })

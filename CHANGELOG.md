@@ -4,12 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] (BREAKING)
+## [0.53.0] - 2026-05-29 (BREAKING)
 
-> Closes #137. Unifies the kind/format taxonomy across the prompt system, the form-schema layer, and the iframe formatter registry into a single source of truth at `src/core/kind-metadata.ts`.
+> Two breaking change sets ship together:
+>
+> 1. **Pluggable summary strategies for `analysis_ingest`.** The fixed "distributions + numeric stats + date ranges" page summary becomes one of several built-in strategies and is extensible via `ApiExtension`. The default memory category renames from `page_summary` to `page_summary:<strategy>`.
+> 2. **Closes #137.** Unifies the kind/format taxonomy across the prompt system, the form-schema layer, and the iframe formatter registry into a single source of truth at `src/core/kind-metadata.ts`.
 
 ### Added
 
+- **`src/core/summary-strategies/`** — strategy interface (`SummaryStrategy`, `SummaryInput`, `SummaryOutput`), `SummaryStrategyRegistry` with owner-tracked collision detection, and five built-in strategies (`distribution`, `coverage`, `anomaly`, `temporal`, `entity-extraction`). Strategies are deterministic pure functions over the records array; optional `appliesTo(input)` lets multi-strategy calls skip strategies whose preconditions aren't met (e.g., `temporal` skips when records carry no ISO-date field). Built-ins are auto-registered by `ToolRegistry`; the registry is threaded into tools via `ToolDependencies.summaryStrategies`.
+- **`analysis_ingest` learns `summary_strategy` and `summary_strategies` params.** `summary_strategy` (enum) picks a single strategy per call; `summary_strategies` (array, mutually exclusive) runs several per page and stores one memory per applicable strategy. Default remains `distribution`. The enum is dynamically populated from the registry, so extension-contributed strategies appear automatically in tool docs.
+- **`ApiExtensionContext.registerSummaryStrategy(strategy)`** — third collector alongside `registerTool` and `registerModelServiceMixin`. Strategy names must be globally unique across built-ins and all extensions; collisions throw at boot with both owner keys in the message. `SummaryStrategy` is re-exported from `./extensions`.
 - **`src/core/kind-metadata.ts`** — DOM-free single source of truth for all 17 built-in attribute kinds (`string`, `text`, `integer`, `decimal`, `boolean`, `date`, `datetime`, `time`, `enum`, `array`, `uuid`, `json`, `color`, `email`, `url`, `base64`, `rating`). Each `KindDescriptor` carries `htmlInputType`, `promptType`, `label`, plus `parse / serialize / toInput / fromInput / describe / validate` pure functions. Imported by both the browser-side formatter registry and the server-side prompts/form-schema/validation layers — one vocabulary, one extension point. Published under the existing `./core` subpath export.
 - **`getKind(kind, format)` case-insensitive lookup with format-hop fallback.** When `kind:format` has no explicit narrowing but `format` names a registered top-level kind (e.g. `getKind('string', 'url')`), it returns that kind's descriptor. This is what makes JSON-schema-style `format: 'url'` or `format: 'email'` work without each deployer registering every narrowing.
 - **Server-side validation now covers `date`, `datetime`, `uuid`, `email`, `url`, `json`, `time`, `decimal`, `rating`** in `BaseStrategy.validateField`. Previously only `integer` and `boolean` were checked.
@@ -19,6 +25,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed (BREAKING)
 
+- **Page-summary memory category renamed from `page_summary` to `page_summary:<strategy>`.** Every memory row now also carries `metadata.strategy: <strategy-name>`. Callers using `analysis_query mode: semantic, category: 'page_summary'` must update to the per-strategy category (e.g. `'page_summary:distribution'`) or drop the category filter and rely on semantic ranking.
+- **`AnalysisIngestTool._storePageSummary`, `_buildFieldDistributions`, `_buildNumericStats`, `_buildDateRanges` removed.** Logic lifted into `src/core/summary-strategies/distribution.ts` as the `distribution` built-in strategy. Wire behavior is unchanged when no `summary_strategy` param is passed (modulo the category rename above).
 - **`src/mcp/apps/shared/formatters.js` → `formatters.ts`.** Rewritten to delegate `parse / serialize / toInput / fromInput / describe / validate` to `kind-metadata`. The only remaining surface is the DOM `format()` renderer registry and the `helpers` primitives. `registerFormatter` now accepts ONLY `{ format }` — a DOM renderer — and throws on any other shape. Non-DOM behavior is sourced from `AppRegistry.formatters` descriptors.
 - **`form-schema.ts` `TYPE_MAP` deleted.** HTML input type is now derived from `getKind(attr.type, attr.format).htmlInputType`. Coverage expands from 6 kinds (`string`/`text`/`integer`/`number`/`boolean`/`date`) to all 17. `datetime`/`time`/`decimal`/`uuid`/`json`/`color`/`email`/`url`/`rating` no longer fall through to plain text inputs.
 - **`form-schema.ts:337` `attr.format === 'URL'` (uppercase) bug fixed.** Format strings are now case-insensitive everywhere via `getKind`.

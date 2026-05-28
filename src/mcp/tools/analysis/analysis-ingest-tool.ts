@@ -4,6 +4,7 @@ import { z } from 'zod'
 import type { SearchService } from '#src/api-extensions/search/index.js'
 import { createSearchService, getSearchConfig } from '#src/api-extensions/search/index.js'
 import { pickFields } from '#src/core/helpers.js'
+import type { SummaryInput } from '#src/core/summary-strategies/index.js'
 import { defaultSummaryStrategyRegistry } from '#src/core/summary-strategies/index.js'
 import { defaultConvention } from '#src/mcp/api-conventions/index.js'
 import { buildCollectionPath } from '#src/mcp/services/compound-id.js'
@@ -135,6 +136,18 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         .optional()
         .describe(
           "Nested resource name (e.g., 'metadata_errors', 'conflicts'). Required when parent_model is set."
+        ),
+
+      summary_strategy: this.zodEnum(this._availableStrategyNames())
+        .optional()
+        .describe(this._summaryStrategyParamDescription()),
+      summary_strategies: z
+        .array(this.zodEnum(this._availableStrategyNames()))
+        .optional()
+        .describe(
+          'Run multiple summary strategies per page; each produces a separate page_summary:<strategy> memory. ' +
+            'Mutually exclusive with `summary_strategy`. Order is preserved. Strategies whose `appliesTo` ' +
+            'returns false for a given page are silently skipped.'
         )
     }
   }
@@ -159,7 +172,9 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         user_id,
         parent_model,
         parent_ids,
-        child_resource
+        child_resource,
+        summary_strategy,
+        summary_strategies
       } = args as {
         model?: string
         analysis_id: string
@@ -173,6 +188,18 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         parent_model?: string
         parent_ids?: string[]
         child_resource?: string
+        summary_strategy?: string
+        summary_strategies?: string[]
+      }
+
+      let strategies: string[]
+      try {
+        strategies = this._resolveStrategies({ summary_strategy, summary_strategies })
+      } catch (err) {
+        return {
+          content: [{ type: 'text', text: (err as Error).message }],
+          isError: true
+        }
       }
 
       const options = user_id ? { userId: user_id } : {}
@@ -197,7 +224,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
           child_resource,
           parent_ids,
           fields,
-          options
+          options,
+          strategies
         )
       }
 
@@ -253,7 +281,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
           per_page,
           fields,
           options,
-          resume
+          resume,
+          strategies
         )
       } else {
         return await this._ingestPage(
@@ -266,7 +295,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
           page ?? 1,
           per_page,
           fields,
-          options
+          options,
+          strategies
         )
       }
     } catch (error) {
@@ -285,7 +315,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     page: number,
     perPage: number,
     fields: string[] | undefined,
-    apiOptions: Record<string, unknown>
+    apiOptions: Record<string, unknown>,
+    strategies: ReadonlyArray<string>
   ): Promise<ToolResult> {
     let rawRecords: Record<string, unknown>[]
     let totalPages: number | null
@@ -351,8 +382,15 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       records: records.map((r) => ({ id: r.id as string, data: r }))
     })
 
-    // Store page summary as analysis memory
-    await this._storePageSummary(analysisId, model, page, totalPages, records, effectiveFields)
+    // Store page summary as analysis memory (one per strategy)
+    await this._runStrategies(strategies, {
+      analysisId,
+      model,
+      page,
+      totalPages,
+      records,
+      fields: effectiveFields
+    })
 
     const fieldsNote = fields ? ` (${fields.length} fields per record)` : ''
     return this.formatResponse(
@@ -374,7 +412,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     perPage: number,
     fields: string[] | undefined,
     apiOptions: Record<string, unknown>,
-    resume = false
+    resume = false,
+    strategies: ReadonlyArray<string> = ['distribution']
   ): Promise<ToolResult> {
     let currentPage = 1
     let totalStored = 0
@@ -463,15 +502,15 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       })
       totalStored += stored
 
-      // Store page summary
-      await this._storePageSummary(
+      // Store page summary (one memory per strategy)
+      await this._runStrategies(strategies, {
         analysisId,
         model,
-        currentPage,
+        page: currentPage,
         totalPages,
         records,
-        effectiveFields
-      )
+        fields: effectiveFields
+      })
 
       // Report progress
       await this.sendProgress({
@@ -512,7 +551,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     childResource: string,
     explicitParentIds: string[] | undefined,
     fields: string[] | undefined,
-    apiOptions: Record<string, unknown>
+    apiOptions: Record<string, unknown>,
+    strategies: ReadonlyArray<string> = ['distribution']
   ): Promise<ToolResult> {
     this.validateModel(parentModel)
 
@@ -655,8 +695,15 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         }))
       })
 
-      // Store page summary for the batch
-      await this._storePageSummary(analysisId, childModelName, 1, 1, allRecords, fields)
+      // Store page summary for the batch (one memory per strategy)
+      await this._runStrategies(strategies, {
+        analysisId,
+        model: childModelName,
+        page: 1,
+        totalPages: 1,
+        records: allRecords,
+        fields
+      })
     }
 
     // Build result summary with logging of successes and failures
@@ -763,33 +810,61 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     )
   }
 
-  /** Store a compact page summary as an analysis memory finding */
-  private async _storePageSummary(
-    analysisId: string,
-    model: string,
-    page: number,
-    totalPages: number | null,
-    records: Record<string, unknown>[],
-    fields: string[] | undefined
+  /** Names of all strategies registered with this tool (used for the LLM-facing enum). */
+  private _availableStrategyNames(): string[] {
+    return (this.summaryStrategies ?? defaultSummaryStrategyRegistry()).names()
+  }
+
+  /** Build the schema-level description shown to the LLM for the strategy enum. */
+  private _summaryStrategyParamDescription(): string {
+    const registry = this.summaryStrategies ?? defaultSummaryStrategyRegistry()
+    const head =
+      'Summary strategy generating the per-page analysis memory. Default: "distribution". Available:'
+    const lines = registry.all().map((s) => `- ${s.name}: ${s.description}`)
+    return `${head}\n${lines.join('\n')}`
+  }
+
+  /**
+   * Resolve which strategy names to run for this invocation. Returns
+   * ['distribution'] when neither param is set. Throws if both are set.
+   */
+  private _resolveStrategies(args: {
+    summary_strategy?: string
+    summary_strategies?: string[]
+  }): string[] {
+    if (args.summary_strategy && args.summary_strategies) {
+      throw new Error('Provide either `summary_strategy` or `summary_strategies`, not both.')
+    }
+    if (args.summary_strategies && args.summary_strategies.length > 0) {
+      return args.summary_strategies
+    }
+    if (args.summary_strategy) return [args.summary_strategy]
+    return ['distribution']
+  }
+
+  /**
+   * Run the named strategies against a page of records. Each strategy
+   * produces one analysis_memories row with category page_summary:<strategy>;
+   * strategies whose `appliesTo` returns false are silently skipped.
+   */
+  private async _runStrategies(
+    strategyNames: ReadonlyArray<string>,
+    input: SummaryInput
   ): Promise<void> {
     const registry = this.summaryStrategies ?? defaultSummaryStrategyRegistry()
-    const strategy = registry.get('distribution')
-    if (!strategy) {
-      throw new Error('Built-in "distribution" summary strategy is missing from the registry.')
+    for (const name of strategyNames) {
+      const strategy = registry.get(name)
+      if (!strategy) {
+        throw new Error(`Unknown summary strategy: "${name}"`)
+      }
+      if (strategy.appliesTo && !strategy.appliesTo(input)) continue
+      const output = await strategy.generate(input)
+      await storeAnalysisMemory({
+        analysisId: input.analysisId,
+        finding: output.finding,
+        category: output.category ?? `page_summary:${strategy.name}`,
+        metadata: { ...output.metadata, strategy: strategy.name }
+      })
     }
-    const output = await strategy.generate({
-      analysisId,
-      model,
-      page,
-      totalPages,
-      records,
-      fields
-    })
-    await storeAnalysisMemory({
-      analysisId,
-      finding: output.finding,
-      category: 'page_summary',
-      metadata: output.metadata
-    })
   }
 }
