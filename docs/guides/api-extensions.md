@@ -125,12 +125,13 @@ interface ApiExtensionContext {
   logger: typeof logger
   registerTool(name: string, ToolClass: ToolClass): void
   registerModelServiceMixin(mixin: ModelServiceMixin): void
+  registerSummaryStrategy(strategy: SummaryStrategy): void
 }
 ```
 
 What the context deliberately does **not** expose:
 
-- Raw access to `ToolRegistry` internals. Extensions get narrowed collectors (`registerTool`, `registerModelServiceMixin`); they cannot mutate `_toolClasses` directly or reach into the gate list.
+- Raw access to `ToolRegistry` internals. Extensions get narrowed collectors (`registerTool`, `registerModelServiceMixin`, `registerSummaryStrategy`); they cannot mutate `_toolClasses` directly or reach into the gate list.
 - Other extensions' contributions. There is no "extension registry" you can iterate at runtime.
 - The `McpServer` instance. Tool registration happens later, via `registerTools(mcpServer, ...)`.
 
@@ -189,6 +190,34 @@ A mixin is a function `(service) => Record<string, Function>`. The host applies 
 - `service.apiClient` — read-only access to the underlying client (for `baseUrl`, etc.)
 
 Reaching into private internals (`_apiClient`, `_models`, anything prefixed with `_`) is not part of the contract and may break in any release.
+
+### Summary strategies
+
+```ts
+import type { SummaryStrategy } from '@mcp-rune/mcp-rune/extensions'
+
+const salesNarrativeStrategy: SummaryStrategy = {
+  name: 'sales-narrative',
+  description: 'Prose summary tuned for deal records: pipeline stage, $ amount, owner.',
+  appliesTo: (input) => input.model === 'deal',
+  generate: (input) => ({
+    finding: `Page ${input.page}: ${input.records.length} deals — ${summarizeDeals(input.records)}`,
+    metadata: { page: input.page, model: input.model }
+  })
+}
+
+register(ctx) {
+  ctx.registerSummaryStrategy(salesNarrativeStrategy)
+}
+```
+
+A `SummaryStrategy` is a deterministic pure function (sync or async, but no LLM or network I/O) that takes a page of stored records and produces a `{ finding, metadata }` to persist as an `analysis_memories` row. Strategies become callable on `analysis_ingest` (via `summary_strategy` / `summary_strategies`) and on `analysis_summarize` (which re-runs them against already-ingested data without re-fetching).
+
+Strategy names must be **globally unique** across built-ins and all extensions — kebab-case, starting with a letter. Collisions throw at boot with both owner keys in the error.
+
+The optional `appliesTo(input)` returns `false` to silently skip the strategy for a given page — useful when a multi-strategy ingest passes e.g. `['distribution', 'temporal', 'entity-extraction']` and not every page has the prerequisites for each.
+
+See [Summary Strategies](./summary-strategies.md) for the full catalog of built-ins, the strategy interface, and an authoring walkthrough.
 
 Mixins run lazily: each `BaseTool` instance constructs its own `ModelService` on first access, and mixins are applied at that moment. There is one `ModelService` per tool instance; mixin state does not leak between tools.
 
