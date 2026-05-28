@@ -4,6 +4,7 @@ import { z } from 'zod'
 export type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 import type { RequestOptions } from '#src/core/api-client.js'
 import type { DataLayer } from '#src/core/data-layer.js'
+import type { SummaryStrategyRegistry } from '#src/core/summary-strategies/index.js'
 import { storeOperation } from '#src/services/vector-storage.js'
 
 import type { AssociationConfig, BaseConvention } from '../api-conventions/base-convention.js'
@@ -109,6 +110,12 @@ export interface ToolDependencies {
   promptRegistry?: PromptRegistry
   serverContext?: ServerContext
   domainRegistry?: DomainRegistry
+  /**
+   * Registry of pluggable summary strategies for the analysis_* tool family.
+   * Threaded in by `ToolRegistry`; absent for ad-hoc tool instantiations
+   * (which fall back to a process-wide default seeded with built-ins).
+   */
+  summaryStrategies?: SummaryStrategyRegistry
 }
 
 /** Tool response content item */
@@ -197,6 +204,7 @@ export class BaseTool {
   promptRegistry: PromptRegistry | undefined
   serverContext: ServerContext
   domainRegistry: DomainRegistry | undefined
+  summaryStrategies: SummaryStrategyRegistry | undefined
 
   /** @internal Set by ToolRegistry before execute(). Exposes SDK request context (progress, abort). */
   _extra?: ToolHandlerExtra
@@ -208,6 +216,7 @@ export class BaseTool {
     this.promptRegistry = dependencies.promptRegistry
     this.serverContext = dependencies.serverContext ?? {}
     this.domainRegistry = dependencies.domainRegistry
+    this.summaryStrategies = dependencies.summaryStrategies
   }
 
   /** Tool name (override in subclasses) */
