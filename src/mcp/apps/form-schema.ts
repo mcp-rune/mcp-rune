@@ -31,6 +31,24 @@ import type {
   FormSchema
 } from './types.js'
 
+/** Map model attribute types to HTML form field types */
+const TYPE_MAP: Record<string, string> = {
+  string: 'text',
+  text: 'textarea',
+  integer: 'number',
+  number: 'number',
+  boolean: 'checkbox',
+  date: 'date'
+}
+
+/**
+ * Enums with this many options or fewer render as a segmented-chip control
+ * instead of a `<select>` dropdown. Beyond this threshold, a chip row gets
+ * too wide and falls back to the dropdown — UX research, not arbitrary
+ * (8 chips fit comfortably across a typical form-card width without wrap).
+ */
+const CHIPS_MAX_OPTIONS = 8
+
 interface FormSchemaOptions {
   allModelClasses?: Record<string, AppModelClass>
 }
@@ -322,7 +340,10 @@ function buildField(
       field.association = { endpoint: pluralize(assoc.target_model), labelField: 'name' }
     }
   } else if (attr.type === 'enum' || (attr.enumValues && attr.type !== 'array')) {
-    field.type = 'select'
+    // Small enums render as a chips/segmented control; larger ones stay
+    // as a <select> for compactness. The client UI dispatches on
+    // `field.type === 'chips'`.
+    field.type = attr.enumValues!.length <= CHIPS_MAX_OPTIONS ? 'chips' : 'select'
     field.options = attr.enumValues!.map((v) => ({ value: v, label: humanize(v) }))
     if (attr.default !== undefined) field.default = attr.default
   } else {

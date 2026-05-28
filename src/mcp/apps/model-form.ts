@@ -218,6 +218,19 @@ export function createCreateFormApp({
         }
       }
 
+      // Resolve a parent-context banner when the model is nested and we
+      // know the parent id. The parent typically has no form of its own
+      // (e.g. `domain` is the parent of `subdomain` but isn't authored
+      // through this form factory), so we pass the full modelClasses map —
+      // not the eligible subset.
+      const parentContext = await resolveParentContext(
+        ModelClass,
+        modelClasses,
+        hiddenValues,
+        defaults,
+        dataLayer
+      )
+
       return {
         content: [
           {
@@ -227,7 +240,8 @@ export function createCreateFormApp({
               defaults,
               mode: 'create',
               submitMode: formSubmitMode,
-              ...(Object.keys(hiddenValues).length > 0 && { hiddenValues })
+              ...(Object.keys(hiddenValues).length > 0 && { hiddenValues }),
+              ...(parentContext && { parentContext })
             })
           }
         ]
@@ -353,6 +367,58 @@ async function fetchRecord(
     })
     return {}
   }
+}
+
+/**
+ * When the form is for a nested model (e.g. `subdomain` under `domains/`),
+ * resolve the parent record so the client can render a context banner
+ * (`"Adding subdomain to Software Engineering"`). Returns `null` when
+ * the model is standalone, the parent id isn't known, or fetching fails —
+ * the banner is a UX nicety, not a hard requirement.
+ */
+async function resolveParentContext(
+  ModelClass: AppModelClass,
+  allModelClasses: Record<string, AppModelClass>,
+  hiddenValues: Record<string, unknown>,
+  defaults: Record<string, unknown>,
+  dataLayer?: DataLayer
+): Promise<{ parentModel: string; parentId: string; label: string } | null> {
+  if (!dataLayer) return null
+  const parent = ModelClass.api.parent
+  if (!parent) return null
+  const parentNames = Array.isArray(parent) ? parent : [parent]
+  for (const parentName of parentNames) {
+    const parentIdKey = `${parentName}_id`
+    const parentIdRaw = hiddenValues[parentIdKey] ?? defaults[parentIdKey]
+    if (parentIdRaw === undefined || parentIdRaw === null || parentIdRaw === '') continue
+    const parentClass = allModelClasses[parentName]
+    if (!parentClass) continue
+    try {
+      const data = await dataLayer.dispatch(
+        'GET',
+        `${parentClass.api.endpoint}/${String(parentIdRaw)}`
+      )
+      const record = (data.data as Record<string, unknown>) || data
+      const labelField = ['name', 'title', 'slug'].find(
+        (f) => typeof record[f] === 'string' && (record[f] as string).length > 0
+      )
+      const label =
+        labelField !== undefined ? String(record[labelField]) : `${parentName} #${parentIdRaw}`
+      return {
+        parentModel: parentName,
+        parentId: String(parentIdRaw),
+        label
+      }
+    } catch (err) {
+      logger.warn('Failed to resolve parent context for form', {
+        service: 'mcp-app',
+        parentModel: parentName,
+        parentId: String(parentIdRaw),
+        ...errorMeta(err)
+      })
+    }
+  }
+  return null
 }
 
 /**
