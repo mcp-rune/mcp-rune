@@ -28,6 +28,7 @@ import { errorMeta } from '#src/mcp/apps/helpers.js'
 import { normalizeListWithConvention } from '#src/mcp/services/model-service.js'
 import * as logger from '#src/services/logger.js'
 
+import type { FormSubmitMode } from '../extensions/tool-flow.js'
 import type { AppModelClass, DataLayer, FormFieldDefinition, ToolResult } from './types.js'
 
 const DIST_DIR = path.resolve(import.meta.dirname, 'dist')
@@ -73,7 +74,7 @@ interface AppDefinition {
   toolInputSchema: Record<string, z.ZodTypeAny>
   handleToolCall(
     args: Record<string, unknown>,
-    context: { dataLayer?: DataLayer }
+    context: { dataLayer?: DataLayer; formSubmitMode?: FormSubmitMode }
   ): Promise<ToolResult>
   getHtml: () => string
 }
@@ -122,7 +123,16 @@ export function createCreateFormApp({
         )
     },
 
-    async handleToolCall(args: Record<string, unknown> = {}, { dataLayer } = {}) {
+    async handleToolCall(
+      args: Record<string, unknown> = {},
+      {
+        dataLayer,
+        formSubmitMode = 'direct'
+      }: {
+        dataLayer?: DataLayer
+        formSubmitMode?: FormSubmitMode
+      } = {}
+    ) {
       const { model, mode, prefill, ...extraArgs } = args
 
       if (mode !== 'form') {
@@ -216,6 +226,7 @@ export function createCreateFormApp({
               schema,
               defaults,
               mode: 'create',
+              submitMode: formSubmitMode,
               ...(Object.keys(hiddenValues).length > 0 && { hiddenValues })
             })
           }
@@ -258,7 +269,16 @@ export function createUpdateFormApp({
       record_id: z.string().describe('ID of the record to edit')
     },
 
-    async handleToolCall(args: Record<string, unknown> = {}, { dataLayer } = {}) {
+    async handleToolCall(
+      args: Record<string, unknown> = {},
+      {
+        dataLayer,
+        formSubmitMode = 'direct'
+      }: {
+        dataLayer?: DataLayer
+        formSubmitMode?: FormSubmitMode
+      } = {}
+    ) {
       const { model, record_id, ...prefillArgs } = args
 
       if (!model || !eligible[model as string]) {
@@ -303,6 +323,7 @@ export function createUpdateFormApp({
               schema,
               defaults,
               mode: 'update',
+              submitMode: formSubmitMode,
               ...(record_id ? { recordId: record_id } : {})
             })
           }

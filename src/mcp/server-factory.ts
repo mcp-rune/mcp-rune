@@ -18,8 +18,13 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
-import { FormDataStore } from '#src/mcp/apps/form-data-store.js'
+import type { AppDefinition } from '#src/mcp/apps/registry.js'
 import { SelectionStore } from '#src/mcp/apps/selection-store.js'
+import type {
+  ToolFlowExtension,
+  ToolFlowExtensionContext,
+  ToolFlowExtensionMap
+} from '#src/mcp/extensions/tool-flow.js'
 import { setMcpClientContext } from '#src/services/error-tracking.js'
 import * as logger from '#src/services/logger.js'
 import { setSessionContext } from '#src/services/tracing.js'
@@ -70,12 +75,15 @@ interface FieldDefinition {
 /** Minimal interface for the app registry */
 interface AppRegistry {
   getToolNames(): string[]
+  registerApp(app: AppDefinition): unknown
+  getApp(toolName: string): AppDefinition | undefined
+  setFormSubmitMode(mode: 'direct' | 'collect'): void
   registerTools(
     mcpServer: McpServer,
     options: {
       getAccessToken: () => Promise<string | null | undefined>
       selectionStore: SelectionStore
-      formDataStore: FormDataStore
+      extraContext?: Record<string, unknown>
     }
   ): void
   registerResources(mcpServer: McpServer): void
@@ -89,6 +97,12 @@ interface CreateServerConfig {
   toolRegistry: ToolRegistry
   promptRegistry?: PromptRegistry
   appRegistry?: AppRegistry
+  /**
+   * Opt-in tool-flow extensions. Applied before app tools are registered on
+   * the underlying McpServer; capabilities are validated at boot. See
+   * `docs/guides/extensions.md`.
+   */
+  toolFlowExtensions?: ToolFlowExtensionMap
   getAccessToken: () => Promise<string | null | undefined>
 }
 
@@ -101,10 +115,27 @@ export function createServer({
   toolRegistry,
   promptRegistry,
   appRegistry,
+  toolFlowExtensions,
   getAccessToken
 }: CreateServerConfig): McpServer {
   const mcpServer = new McpServer({ name, version })
   const logContext: Record<string, unknown> = { service: name }
+
+  // ============================================================================
+  // TOOL-FLOW EXTENSIONS (must run before app tool registration)
+  // ============================================================================
+
+  const extraContext: Record<string, unknown> = {}
+
+  if (toolFlowExtensions && Object.keys(toolFlowExtensions).length > 0) {
+    if (!appRegistry) {
+      throw new Error(
+        'createServer: toolFlowExtensions require an appRegistry. ' +
+          'Either remove the extensions or provide an AppRegistry.'
+      )
+    }
+    applyToolFlowExtensions(toolFlowExtensions, appRegistry, extraContext, name)
+  }
 
   // ============================================================================
   // TOOL REGISTRATION
@@ -126,8 +157,7 @@ export function createServer({
 
   if (appRegistry) {
     const selectionStore = new SelectionStore()
-    const formDataStore = new FormDataStore()
-    appRegistry.registerTools(mcpServer, { getAccessToken, selectionStore, formDataStore })
+    appRegistry.registerTools(mcpServer, { getAccessToken, selectionStore, extraContext })
     appRegistry.registerResources(mcpServer)
   }
 
@@ -262,4 +292,66 @@ export function createServer({
   }
 
   return mcpServer
+}
+
+/**
+ * Validate + apply each tool-flow extension. The context exposes a narrow
+ * surface (`registerTool`, `getApp`, `setFormSubmitMode`, `provideContext`)
+ * mirroring the `HttpExtensionContext` design — extensions cannot reach the
+ * raw `AppRegistry` or `McpServer`.
+ */
+function applyToolFlowExtensions(
+  extensions: ToolFlowExtensionMap,
+  appRegistry: AppRegistry,
+  extraContext: Record<string, unknown>,
+  mcpName: string
+): void {
+  for (const [name, extension] of Object.entries(extensions) as Array<
+    [string, ToolFlowExtension]
+  >) {
+    if (extension.requires?.includes('apps') && !appRegistry) {
+      throw new Error(
+        `Tool-flow extension "${name}" requires apps, but no AppRegistry is configured.`
+      )
+    }
+
+    const ctx: ToolFlowExtensionContext = {
+      name,
+      mcpName,
+      registerTool(app: AppDefinition): void {
+        appRegistry.registerApp(app)
+      },
+      getApp(toolName: string): AppDefinition | undefined {
+        return appRegistry.getApp(toolName)
+      },
+      setFormSubmitMode(mode): void {
+        appRegistry.setFormSubmitMode(mode)
+      },
+      provideContext(key: string, value: unknown): void {
+        extraContext[key] = value
+      },
+      logger
+    }
+
+    const result = extension.register(ctx)
+
+    // register() may return a Promise; surface failures as a boot-time throw so
+    // misconfiguration cannot quietly leave the server in a half-applied state.
+    if (result instanceof Promise) {
+      result.catch((err: Error) => {
+        logger.error(`Tool-flow extension "${name}" failed to register`, {
+          service: mcpName,
+          extensionName: name,
+          error: err.message,
+          stack: err.stack
+        })
+        process.exit(1)
+      })
+    }
+
+    logger.info(`Tool-flow extension "${name}" registered`, {
+      service: mcpName,
+      extensionName: name
+    })
+  }
 }
