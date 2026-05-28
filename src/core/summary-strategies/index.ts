@@ -7,18 +7,20 @@
  * `ApiExtensionContext`.
  */
 
+import { anomalyStrategy } from './anomaly.js'
 import { coverageStrategy } from './coverage.js'
 import { distributionStrategy } from './distribution.js'
 import { SummaryStrategyRegistry } from './registry.js'
 import type { SummaryStrategy } from './types.js'
 
 export type { SummaryInput, SummaryOutput, SummaryStrategy } from './types.js'
-export { coverageStrategy, distributionStrategy }
+export { anomalyStrategy, coverageStrategy, distributionStrategy }
 export { SummaryStrategyRegistry }
 
 export const BUILT_IN_SUMMARY_STRATEGIES: ReadonlyArray<SummaryStrategy> = Object.freeze([
   distributionStrategy,
-  coverageStrategy
+  coverageStrategy,
+  anomalyStrategy
 ])
 
 let _defaultRegistry: SummaryStrategyRegistry | undefined
