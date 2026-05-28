@@ -68,7 +68,7 @@
 }
 
 .result-item.selected {
-  background: rgba(196, 112, 75, 0.12);
+  background: var(--color-accent-soft);
 }
 
 .result-item input[type='checkbox'] {

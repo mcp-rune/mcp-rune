@@ -196,4 +196,64 @@ describe('AppRegistry logging', () => {
       expect(registry.getToolNames()).toEqual([])
     })
   })
+
+  describe('injectIntoHead', () => {
+    const BASE_HTML = '<html><head><title>App</title></head><body></body></html>'
+
+    it('returns the html unchanged when no overrides or header icon are configured', () => {
+      const registry = new AppRegistry()
+      expect(registry.injectIntoHead(BASE_HTML)).toBe(BASE_HTML)
+    })
+
+    it('injects the header icon as a CSS variable inside a single style block', () => {
+      const registry = new AppRegistry([], { headerIcon: 'data:image/svg+xml,icon' })
+
+      const out = registry.injectIntoHead(BASE_HTML)
+
+      expect(out).toContain('<style>:root{--header-icon:url("data:image/svg+xml,icon");}</style>')
+      expect(out).toContain('</style></head>')
+      expect(out.match(/<style>/g)).toHaveLength(1)
+    })
+
+    it('merges themeOverrides cssVariables and raw css into one style block', () => {
+      const registry = new AppRegistry([], {
+        themeOverrides: {
+          cssVariables: { '--color-accent': '#0a84ff', '--border-radius-md': '10px' },
+          css: '.app{margin:0}'
+        }
+      })
+
+      const out = registry.injectIntoHead(BASE_HTML)
+
+      expect(out).toContain('--color-accent:#0a84ff')
+      expect(out).toContain('--border-radius-md:10px')
+      expect(out).toContain('.app{margin:0}')
+      expect(out.match(/<style>/g)).toHaveLength(1)
+    })
+
+    it('combines headerIcon and themeOverrides into the same style block', () => {
+      const registry = new AppRegistry([], {
+        headerIcon: 'data:icon',
+        themeOverrides: { cssVariables: { '--color-accent': '#0a84ff' } }
+      })
+
+      const out = registry.injectIntoHead(BASE_HTML)
+      const styleMatch = out.match(/<style>([^<]*)<\/style>/)
+
+      expect(styleMatch).not.toBeNull()
+      expect(styleMatch![1]).toContain('--header-icon:url("data:icon")')
+      expect(styleMatch![1]).toContain('--color-accent:#0a84ff')
+    })
+
+    it('emits only raw css when no cssVariables are configured', () => {
+      const registry = new AppRegistry([], {
+        themeOverrides: { css: '.app{padding:8px}' }
+      })
+
+      const out = registry.injectIntoHead(BASE_HTML)
+
+      expect(out).toContain('<style>.app{padding:8px}</style></head>')
+      expect(out).not.toContain(':root{')
+    })
+  })
 })

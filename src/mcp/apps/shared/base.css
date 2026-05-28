@@ -23,6 +23,7 @@
 
   --color-accent: #c4704b;
   --color-accent-hover: #d4845f;
+  --color-accent-soft: rgba(196, 112, 75, 0.12);
   --color-text-on-accent: #ffffff;
   --header-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='4' y='3' width='4' height='18' rx='1.5' fill='white'/%3E%3Crect x='4' y='3' width='15' height='3.5' rx='1.5' fill='white'/%3E%3Crect x='4' y='10.25' width='12' height='3.5' rx='1.5' fill='white'/%3E%3Crect x='4' y='17.5' width='15' height='3.5' rx='1.5' fill='white'/%3E%3C/svg%3E");
   --color-success: light-dark(#3a7d44, #5cb85c);

@@ -12,6 +12,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **`DataLayer.listNormalized(model, filters?, pagination?, options?)`** on the seam at `@mcp-rune/mcp-rune/core`. Returns a convention-applied `{ records, pagination }` envelope so callers — notably the MCP apps — never need to import `defaultConvention` themselves. `ModelService` is the sole sanctioned implementation site for the default convention path; `InMemoryDataLayer` reuses its already-normalized `list()` output.
 - **`normalizeListWithConvention(rawData, convention, pagination?)`** exported from `src/mcp/services/model-service.js`. Used by `model-form`'s `resolveAssociationOptions` where the endpoint is a nested association URL (so a model-level `listNormalized` is the wrong shape) and the convention may differ per association. Falls back to `defaultConvention` when `undefined` is passed.
+- **`themeOverrides` on `AppRegistry`** — `{ cssVariables?: Record<string, string>; css?: string }`. Deployers integrating mcp-rune for different aesthetics now have a first-class override channel: variables write a `:root { … }` block, `css` is appended verbatim, and both ride into every app's bundled HTML at serve time. Variable names should match the tokens in `src/mcp/apps/shared/base.css`.
+- **`AppRegistry.injectIntoHead(html)`** is now the single seam that mutates app HTML before it is returned as an MCP resource. Public so tests and future extensions can exercise it directly; previously the rewrite lived inline inside `registerResources`.
+- **`--color-accent-soft` design token** added to `src/mcp/apps/shared/base.css`. Replaces the literal `rgba(196, 112, 75, 0.12)` in `autocomplete-picker-ui/styles.css:71`, restoring full theming coverage to the picker app.
 
 ### Changed (BREAKING)
 

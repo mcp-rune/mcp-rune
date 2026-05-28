@@ -60,6 +60,18 @@ interface AppDefinition {
   getHtml?: () => string
 }
 
+/**
+ * Per-deployment theming applied to every app's bundled HTML at serve time.
+ * Both fields are optional and additive: `cssVariables` writes a `:root { … }`
+ * block, `css` is appended verbatim. Variable names should match the tokens
+ * defined in `src/mcp/apps/shared/base.css` (e.g. `--color-accent`,
+ * `--color-accent-soft`, `--border-radius-md`).
+ */
+export interface ThemeOverrides {
+  cssVariables?: Record<string, string>
+  css?: string
+}
+
 interface RegistryOptions {
   apiUrl?: string
   createApiClient?: (token: string, options: { apiUrl: string }) => ApiClient
@@ -80,8 +92,14 @@ interface RegistryOptions {
   dataLayer?: DataLayerFactory
   searchGroups?: Record<string, SearchGroup>
   defaultAdapter?: SearchAdapter
-  /** SVG data URI for the h1::before header icon (overrides --header-icon CSS variable) */
+  /**
+   * SVG data URI for the h1::before header icon. Kept as a top-level option
+   * because it is the common case; equivalent to setting
+   * `themeOverrides.cssVariables['--header-icon']` to `url("…")`.
+   */
   headerIcon?: string
+  /** Per-deployment CSS variable + raw-CSS overrides applied to every app. */
+  themeOverrides?: ThemeOverrides
 }
 
 interface RegisterToolsOptions {
@@ -100,6 +118,7 @@ export class AppRegistry {
   private _searchGroups: Record<string, SearchGroup>
   private _defaultAdapter?: SearchAdapter
   private _headerIcon?: string
+  private _themeOverrides?: ThemeOverrides
 
   constructor(
     apps: AppDefinition[] = [],
@@ -110,7 +129,8 @@ export class AppRegistry {
       dataLayer,
       searchGroups = {},
       defaultAdapter,
-      headerIcon
+      headerIcon,
+      themeOverrides
     }: RegistryOptions = {}
   ) {
     this._apiUrl = apiUrl
@@ -119,6 +139,7 @@ export class AppRegistry {
     this._searchGroups = searchGroups
     this._defaultAdapter = defaultAdapter
     this._headerIcon = headerIcon
+    this._themeOverrides = themeOverrides
 
     // Default DataLayer factory wraps ModelService. Apps share the same
     // pluggable seam as ToolRegistry — integrators can swap the adapter
@@ -243,13 +264,7 @@ export class AppRegistry {
         { description: app.description },
         () => {
           try {
-            let html = app.getHtml!()
-            if (this._headerIcon) {
-              html = html.replace(
-                '</head>',
-                `<style>:root{--header-icon:url("${this._headerIcon}");}</style></head>`
-              )
-            }
+            const html = this.injectIntoHead(app.getHtml!())
             return {
               contents: [
                 {
@@ -271,5 +286,31 @@ export class AppRegistry {
         }
       )
     }
+  }
+
+  /**
+   * Inject per-deployment overrides into an app's bundled HTML just before
+   * serving it as a resource. Collects `--header-icon`, `themeOverrides`
+   * variables, and raw CSS into one `<style>` block placed before `</head>`.
+   * Returns the input unchanged when nothing needs injecting.
+   *
+   * Public so tests can exercise it without going through `registerResources`.
+   */
+  injectIntoHead(html: string): string {
+    const cssVariables: Record<string, string> = {
+      ...(this._themeOverrides?.cssVariables ?? {})
+    }
+    if (this._headerIcon) {
+      cssVariables['--header-icon'] = `url("${this._headerIcon}")`
+    }
+
+    const rawCss = this._themeOverrides?.css ?? ''
+    if (Object.keys(cssVariables).length === 0 && !rawCss) return html
+
+    const rootDecls = Object.entries(cssVariables)
+      .map(([name, value]) => `${name}:${value};`)
+      .join('')
+    const rootBlock = rootDecls ? `:root{${rootDecls}}` : ''
+    return html.replace('</head>', `<style>${rootBlock}${rawCss}</style></head>`)
   }
 }
