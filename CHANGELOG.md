@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — 0.50.0 (BREAKING)
+
+> v0.50 is a multi-gap overhaul of the MCP apps surface. Gaps land as separate commits on the same PR (#135) and the entry below grows as each gap merges. `[Unreleased]` switches to a dated heading when the last gap lands.
+
+### Added
+
+- **`DataLayer.listNormalized(model, filters?, pagination?, options?)`** on the seam at `@mcp-rune/mcp-rune/core`. Returns a convention-applied `{ records, pagination }` envelope so callers — notably the MCP apps — never need to import `defaultConvention` themselves. `ModelService` is the sole sanctioned implementation site for the default convention path; `InMemoryDataLayer` reuses its already-normalized `list()` output.
+- **`normalizeListWithConvention(rawData, convention, pagination?)`** exported from `src/mcp/services/model-service.js`. Used by `model-form`'s `resolveAssociationOptions` where the endpoint is a nested association URL (so a model-level `listNormalized` is the wrong shape) and the convention may differ per association. Falls back to `defaultConvention` when `undefined` is passed.
+
+### Changed (BREAKING)
+
+- **`DataLayer` interface gains `listNormalized`.** Third-party `DataLayer` adapters (in-memory stubs beyond the bundled one, GraphQL or fetch-only wrappers shipped as separate packages) must implement this method. `ModelService` and `InMemoryDataLayer` already do.
+- **`defaultConvention` is no longer importable from app code.** The three apps that previously called `dataLayer.dispatch()` and then ran `defaultConvention.normalizeListResponse()` themselves — `list-view`, `multi-select`, `model-form` — now call `listNormalized` (or `normalizeListWithConvention` for the per-association case). Apps no longer import from `#src/mcp/api-conventions/index.js`. Custom apps following the same pattern must migrate similarly.
+
+[Unreleased]: https://github.com/mcp-rune/mcp-rune/compare/v0.49.2...HEAD
+
 ## [0.49.2] — 2026-05-28
 
 ### Fixed

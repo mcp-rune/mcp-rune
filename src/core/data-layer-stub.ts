@@ -36,6 +36,7 @@ import type {
   ModelConfig,
   ModelRequestOptions,
   ModelsRegistry,
+  NormalizedListResponse,
   PaginationParams
 } from './data-layer.js'
 
@@ -142,6 +143,23 @@ export class InMemoryDataLayer implements DataLayer {
         total: records.length,
         total_pages: Math.max(1, Math.ceil(records.length / perPage))
       }
+    }
+  }
+
+  /**
+   * The stub's `list()` already returns the normalized shape (fixtures are
+   * canonical), so `listNormalized` reuses it and reshapes the envelope.
+   */
+  async listNormalized(
+    model: string,
+    filters?: Record<string, unknown>,
+    pagination?: PaginationParams,
+    options?: ModelRequestOptions
+  ): Promise<NormalizedListResponse> {
+    const raw = await this.list(model, filters, pagination, options)
+    return {
+      records: (raw.records as Record<string, unknown>[]) ?? [],
+      pagination: raw.pagination as NormalizedListResponse['pagination']
     }
   }
 

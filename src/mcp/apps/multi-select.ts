@@ -16,7 +16,6 @@ import { z } from 'zod'
 import type { SearchService } from '#src/api-extensions/search/index.js'
 import { getSearchConfig } from '#src/api-extensions/search/index.js'
 import type { DataLayer } from '#src/core/data-layer.js'
-import { defaultConvention } from '#src/mcp/api-conventions/index.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
 import { createSelectionTools } from '#src/mcp/apps/selection-tools.js'
 import * as logger from '#src/services/logger.js'
@@ -118,14 +117,11 @@ export function createMultiSelectApp({ modelClasses, namespace }: MultiSelectOpt
         }
       } else if (dataLayer) {
         try {
-          const data = await dataLayer.dispatch('GET', ModelClass.api.endpoint, undefined, {
-            per_page: MAX_RECORDS
-          })
-          const convention = ModelClass.api?.convention ?? defaultConvention
-          const { records: rawRecords } = convention.normalizeListResponse(data, {
-            page: 1,
-            perPage: MAX_RECORDS
-          })
+          const { records: rawRecords } = await dataLayer.listNormalized(
+            model as string,
+            undefined,
+            { page: 1, perPage: MAX_RECORDS }
+          )
           records = rawRecords.map((record) => {
             const instance = new ModelClass(record)
             return {

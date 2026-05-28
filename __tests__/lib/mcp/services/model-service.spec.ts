@@ -4,6 +4,7 @@ import {
   MissingRequiredFieldsError,
   ModelReadOnlyError,
   ModelService,
+  normalizeListWithConvention,
   UnknownModelError
 } from '../../../../src/mcp/services/model-service.js'
 import type { ModelConfig } from '../../../../src/mcp/tools/base-tool.js'
@@ -193,6 +194,49 @@ describe('lib/mcp/services/model-service', () => {
         { status: 'active', page: 2, per_page: 10 },
         undefined
       )
+    })
+  })
+
+  // =========================================================================
+  // listNormalized
+  // =========================================================================
+
+  describe('listNormalized', () => {
+    it("applies the model's convention to flatten { data, meta } envelopes", async () => {
+      const { service } = makeService({
+        get: vi.fn().mockResolvedValue({
+          data: [
+            { id: '1', title: 'A' },
+            { id: '2', title: 'B' }
+          ],
+          meta: { page: 1, per_page: 20, total: 42 }
+        })
+      })
+
+      const result = await service.listNormalized('book')
+
+      expect(result.records).toEqual([
+        { id: '1', title: 'A' },
+        { id: '2', title: 'B' }
+      ])
+      expect(result.pagination).toEqual({ page: 1, per_page: 20, total: 42 })
+    })
+
+    it('falls back to the default convention when none is configured', async () => {
+      // The 'review' model in makeModels() has no api.convention set.
+      const { service } = makeService({
+        get: vi.fn().mockResolvedValue([{ id: '1', rating: 5 }])
+      })
+
+      const result = await service.listNormalized('review')
+
+      expect(result.records).toEqual([{ id: '1', rating: 5 }])
+      expect(result.pagination.page).toBe(1)
+    })
+
+    it('throws UnknownModelError for an unregistered model', async () => {
+      const { service } = makeService()
+      await expect(service.listNormalized('nope')).rejects.toBeInstanceOf(UnknownModelError)
     })
   })
 
@@ -463,6 +507,30 @@ describe('lib/mcp/services/model-service', () => {
     it('exposes apiClient', () => {
       const { service, apiClient } = makeService()
       expect(service.apiClient).toBe(apiClient)
+    })
+  })
+
+  // =========================================================================
+  // normalizeListWithConvention
+  // =========================================================================
+
+  describe('normalizeListWithConvention', () => {
+    it('flattens a { data, meta } envelope through the given convention', () => {
+      const raw = {
+        data: [{ id: '1' }, { id: '2' }],
+        meta: { page: 1, per_page: 20, total: 9 }
+      }
+      const result = normalizeListWithConvention(raw, jsonApiConvention, { page: 1, perPage: 20 })
+
+      expect(result.records).toHaveLength(2)
+      expect(result.pagination.total).toBe(9)
+    })
+
+    it('falls back to the default convention when undefined is passed', () => {
+      const raw = { data: [{ id: '1' }], meta: { page: 1, per_page: 20, total: 1 } }
+      const result = normalizeListWithConvention(raw, undefined)
+
+      expect(result.records).toEqual([{ id: '1' }])
     })
   })
 })

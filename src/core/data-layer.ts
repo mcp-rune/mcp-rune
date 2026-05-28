@@ -23,6 +23,7 @@
  *     reasonably implement. Escape hatches live behind `dispatch`.
  */
 
+import type { NormalizedListResponse } from '#src/api-extensions/search/types.js'
 import type { EndpointResolver } from '#src/mcp/services/endpoint-resolver.js'
 import type { ModelRequestOptions, PaginationParams } from '#src/mcp/services/model-service.js'
 // These types describe the contract surface; they live in non-core modules
@@ -37,6 +38,7 @@ export type {
   ModelConfig,
   ModelRequestOptions,
   ModelsRegistry,
+  NormalizedListResponse,
   PaginationParams,
   RequestOptions
 }
@@ -73,6 +75,22 @@ export interface DataLayer {
     pagination?: PaginationParams,
     options?: ModelRequestOptions
   ): Promise<Record<string, unknown>>
+
+  /**
+   * List records and return a convention-normalized `{ records, pagination }`
+   * envelope. Adapters apply the model's convention internally so callers
+   * (notably MCP apps) never need to reach for `defaultConvention` themselves.
+   *
+   * The seam-level normalization point. Prefer this over `list()` whenever
+   * the caller wants flat records and pagination metadata without taking on
+   * convention awareness.
+   */
+  listNormalized(
+    model: string,
+    filters?: Record<string, unknown>,
+    pagination?: PaginationParams,
+    options?: ModelRequestOptions
+  ): Promise<NormalizedListResponse>
 
   /** Partial update of an existing record. Compound IDs supported. */
   update(

@@ -12,6 +12,7 @@
  * - Does NOT absorb vector storage, usage rules, or schema derivation
  */
 
+import type { NormalizedListResponse } from '#src/api-extensions/search/types.js'
 import type { ApiClient, RequestOptions } from '#src/core/api-client.js'
 import type { DataLayer } from '#src/core/data-layer.js'
 
@@ -187,6 +188,26 @@ export class ModelService implements DataLayer {
 
     this._log('info', 'Listing models', { model, impersonating: options?.userId ?? null })
     return await this._apiClient.get(endpoint, queryParams, options)
+  }
+
+  /**
+   * List records and return a convention-normalized `{ records, pagination }`
+   * envelope. Composes `list()` with the model's `BaseConvention` so callers
+   * (notably MCP apps) never need to import `defaultConvention` themselves.
+   */
+  async listNormalized(
+    model: string,
+    filters?: Record<string, unknown>,
+    pagination?: PaginationParams,
+    options?: ModelRequestOptions
+  ): Promise<NormalizedListResponse> {
+    const modelConfig = this._validateModel(model)
+    const data = await this.list(model, filters, pagination, options)
+    const convention = this._getConvention(modelConfig)
+    return convention.normalizeListResponse(data, {
+      page: pagination?.page ?? 1,
+      perPage: pagination?.perPage ?? 20
+    })
   }
 
   /** Update a record (partial attributes). Supports compound IDs. */
@@ -381,4 +402,22 @@ export class ModelService implements DataLayer {
       this._logger[level](message, { service: 'model-service', ...meta })
     }
   }
+}
+
+/**
+ * Normalize a raw list response with an explicit convention. Used by callers
+ * that dispatch to a custom endpoint (e.g. nested-association lookups) and so
+ * cannot resolve the convention from a model name. Keeps `defaultConvention`
+ * out of consumer code; pass `undefined` to fall back to the framework default.
+ */
+export function normalizeListWithConvention(
+  rawData: Record<string, unknown>,
+  convention: BaseConvention | undefined,
+  pagination: { page?: number; perPage?: number } = {}
+): NormalizedListResponse {
+  const conv = convention ?? defaultConvention
+  return conv.normalizeListResponse(rawData, {
+    page: pagination.page ?? 1,
+    perPage: pagination.perPage ?? 20
+  })
 }

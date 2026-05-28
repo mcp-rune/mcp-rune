@@ -16,7 +16,6 @@ import type { SearchService } from '#src/api-extensions/search/index.js'
 import { getSearchConfig } from '#src/api-extensions/search/index.js'
 import type { DataLayer } from '#src/core/data-layer.js'
 import { resolveDerivedFields } from '#src/core/derived-fields.js'
-import { defaultConvention } from '#src/mcp/api-conventions/index.js'
 import { appResponseMeta, extractIds, formatAppSummary } from '#src/mcp/apps/format-summary.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
 import {
@@ -156,18 +155,11 @@ export function createListViewApp({ modelClasses, namespace }: ListViewOptions):
         }
       } else if (dataLayer) {
         try {
-          const queryParams = { page, per_page: 20, ...(filters as Record<string, unknown>) }
-          const data = await dataLayer.dispatch(
-            'GET',
-            ModelClass.api.endpoint,
-            undefined,
-            queryParams
+          const normalized = await dataLayer.listNormalized(
+            model as string,
+            filters as Record<string, unknown>,
+            { page: page as number, perPage: 20 }
           )
-          const convention = ModelClass.api?.convention ?? defaultConvention
-          const normalized = convention.normalizeListResponse(data, {
-            page: page as number,
-            perPage: 20
-          })
           records = normalized.records
           pagination = { ...pagination, ...normalized.pagination }
         } catch (err) {
