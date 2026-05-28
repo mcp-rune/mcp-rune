@@ -137,7 +137,10 @@ export class ModelService implements DataLayer {
     const payload = this.buildPayload(model, modelConfig, attributes)
 
     this._log('info', 'Creating model', { model, impersonating: options?.userId ?? null })
-    const data = await this._apiClient.post(endpoint, payload, options)
+    const data =
+      options !== undefined
+        ? await this._apiClient.post(endpoint, payload, options)
+        : await this._apiClient.post(endpoint, payload)
     this._log('info', 'Model created successfully', {
       model,
       id: (data as Record<string, unknown>).id
@@ -159,7 +162,9 @@ export class ModelService implements DataLayer {
     )
 
     this._log('info', 'Finding model', { model, recordId, impersonating: options?.userId ?? null })
-    return await this._apiClient.get(endpoint, {}, options)
+    return options !== undefined
+      ? await this._apiClient.get(endpoint, {}, options)
+      : await this._apiClient.get(endpoint, {})
   }
 
   /** List records with optional filters and pagination. Supports parentPath for nested resources. */
@@ -187,7 +192,13 @@ export class ModelService implements DataLayer {
     }
 
     this._log('info', 'Listing models', { model, impersonating: options?.userId ?? null })
-    return await this._apiClient.get(endpoint, queryParams, options)
+    // Trim trailing `undefined` so third-party API clients see the same call
+    // shape they'd get from a direct caller. Same treatment v0.49.1 applied
+    // to `dispatch`; surfaced after v0.50 routed apps through `list()` via
+    // `listNormalized`.
+    return options !== undefined
+      ? await this._apiClient.get(endpoint, queryParams, options)
+      : await this._apiClient.get(endpoint, queryParams)
   }
 
   /**
@@ -229,7 +240,10 @@ export class ModelService implements DataLayer {
       recordId,
       impersonating: options?.userId ?? null
     })
-    const data = await this._apiClient.patch(endpoint, payload, options)
+    const data =
+      options !== undefined
+        ? await this._apiClient.patch(endpoint, payload, options)
+        : await this._apiClient.patch(endpoint, payload)
     this._log('info', 'Model updated successfully', { model, recordId })
 
     return data
@@ -252,7 +266,9 @@ export class ModelService implements DataLayer {
       recordId,
       impersonating: options?.userId ?? null
     })
-    return await this._apiClient.delete(endpoint, options)
+    return options !== undefined
+      ? await this._apiClient.delete(endpoint, options)
+      : await this._apiClient.delete(endpoint)
   }
 
   // --- Accessors ---

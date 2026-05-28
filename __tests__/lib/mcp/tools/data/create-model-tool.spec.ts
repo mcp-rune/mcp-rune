@@ -94,13 +94,9 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
         attributes: { title: 'New Session' }
       })
 
-      expect(mockApiClient.post).toHaveBeenCalledWith(
-        'activities',
-        {
-          activity: { title: 'New Session' }
-        },
-        undefined
-      )
+      expect(mockApiClient.post).toHaveBeenCalledWith('activities', {
+        activity: { title: 'New Session' }
+      })
       expect(result.isError).toBeFalsy()
     })
 
@@ -416,11 +412,7 @@ describe('lib/mcp/tools/data/create-model-tool', () => {
         attributes: { title: 'New Session' }
       })
 
-      expect(mockApiClient.post).toHaveBeenCalledWith(
-        'activities',
-        { title: 'New Session' },
-        undefined
-      )
+      expect(mockApiClient.post).toHaveBeenCalledWith('activities', { title: 'New Session' })
       expect(result.isError).toBeFalsy()
     })
 

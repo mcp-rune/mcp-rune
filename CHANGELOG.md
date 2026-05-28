@@ -44,6 +44,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **`draft-view` Vite target removed** from `src/mcp/apps/vite.config.js`. The orphan never had a source folder or server factory; it was a placeholder for unfinished work that confused the build matrix.
 
+### Changed (Gap 4 follow-up — BREAKING for tests asserting call shape)
+
+- **`ModelService` trims trailing `undefined` from all CRUD calls** (`find`, `list`, `create`, `update`, `delete`), matching the treatment v0.49.1 introduced for `dispatch`. Surfaced after v0.50 routed apps through `list()` via `listNormalized` — dependent test suites (e.g. engineer-mcp) saw the call shape change. The fix is for `ModelService` to call `apiClient.method(endpoint, …)` without the trailing `undefined`, so third-party API clients (axios, fetch, custom) see the same call shape they'd get from a direct caller. Real HTTP transport (`axios`, `fetch`) is unaffected; only assertions like `vi.fn().toHaveBeenCalledWith(url, body, undefined)` need to drop the trailing `undefined`.
+
 [0.50.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.49.2...v0.50.0
 
 ## [0.49.2] — 2026-05-28
