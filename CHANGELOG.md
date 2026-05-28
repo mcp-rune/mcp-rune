@@ -4,9 +4,9 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] — 0.50.0 (BREAKING)
+## [0.50.0] — 2026-05-28 (BREAKING)
 
-> v0.50 is a multi-gap overhaul of the MCP apps surface. Gaps land as separate commits on the same PR (#135) and the entry below grows as each gap merges. `[Unreleased]` switches to a dated heading when the last gap lands.
+> v0.50 is a multi-gap overhaul of the MCP apps surface, landing as four commits on PR #135.
 
 ### Added
 
@@ -35,7 +35,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **`src/mcp/apps/model-form-ui/field-formatters.js` deleted.** Its two kinds (`datetime-local`, `time`) become built-in formatters in the new registry, and `model-form-ui/app.js` now routes prefill / submit through `getFormatter(field.kind, field.format)` for bidirectional round-trips on every kind (including `date`, `datetime`, `time`, `boolean`, `integer`, `decimal`, `json`). Importantly: the previous wiring left `field-formatters.js` unconsumed, so dates didn't round-trip correctly at all — this commit fixes that bug as part of the registry rollout.
 - **`happy-dom` added to `devDependencies`** for vitest-based DOM testing of the formatter module.
 
-[Unreleased]: https://github.com/mcp-rune/mcp-rune/compare/v0.49.2...HEAD
+### Added (Gap 4)
+
+- **`createDefaultAppRegistry(options)`** at `@mcp-rune/mcp-rune/apps` — one-call assembly of every framework-shipped MCP App. Accepts the union of `AppRegistry` options (`themeOverrides`, `formatters`, `formatterScript`, `dataLayer`, `headerIcon`, …) and an `exclude` opt-out list. Replaces the hand-wired six-factory boilerplate every integrator was carrying.
+- **`examples/bookshelf` wires `createDefaultAppRegistry`.** The canonical demo now exercises every gap end-to-end (list, detail, create/update forms, multi-select, search, autocomplete-picker) and includes commented examples for `themeOverrides`, declarative `formatters`, and a custom-kind `formatterScript`.
+
+### Removed (Gap 4)
+
+- **`draft-view` Vite target removed** from `src/mcp/apps/vite.config.js`. The orphan never had a source folder or server factory; it was a placeholder for unfinished work that confused the build matrix.
+
+[0.50.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.49.2...v0.50.0
 
 ## [0.49.2] — 2026-05-28
 

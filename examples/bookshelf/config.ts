@@ -1,6 +1,7 @@
 import { createServer } from '@mcp-rune/mcp-rune/server'
 import { DATA_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
 import { STRATEGY_TOOL_CLASSES } from '@mcp-rune/mcp-rune/prompts'
+import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
 import { Book } from './models/book.js'
 import { BookPrompt } from './prompts/book-prompt.js'
 
@@ -68,6 +69,17 @@ const toolRegistry = {
   }
 }
 
+// MCP Apps — interactive UI widgets (list, detail, form, multi-select, search,
+// autocomplete-picker). One call wires all six.
+const appRegistry = createDefaultAppRegistry({
+  modelClasses: MODEL_CLASSES,
+  namespace: 'bookshelf'
+  // Per-deployment theming and custom-kind formatters slot in here:
+  //   themeOverrides: { cssVariables: { '--color-accent': '#0a84ff' } },
+  //   formatters: { date: { display: { locale: 'en-GB' } } },
+  //   formatterScript: 'window.__MCP_RUNE_REGISTER_FORMATTERS__ = (reg, h) => { … }'
+})
+
 /** Create MCP server instance for this bookshelf server */
 export const mcpConfig = {
   name: 'bookshelf-mcp',
@@ -88,6 +100,7 @@ export const mcpConfig = {
       transport,
       toolRegistry,
       promptRegistry,
+      appRegistry,
       getAccessToken
     })
   }

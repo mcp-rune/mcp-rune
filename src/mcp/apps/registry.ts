@@ -31,7 +31,7 @@ import type { FormDataStore } from './form-data-store.js'
 import type { SelectionStore } from './selection-store.js'
 import type { ApiClient, ToolResult } from './types.js'
 
-interface AppDefinition {
+export interface AppDefinition {
   resourceUri?: string
   toolName?: string
   needsAuth?: boolean
