@@ -72,6 +72,32 @@ export interface ThemeOverrides {
   css?: string
 }
 
+/**
+ * Declarative formatter descriptor.
+ *
+ * `display.template` writes "{value}"-substituted text.
+ * `display.locale` reroutes datetime rendering through `Intl.DateTimeFormat`.
+ * `display.badge` renders the value as a status badge with the given variant.
+ * `parser.regex` + `parser.replacement` transform the API value before display.
+ *
+ * The shape is intentionally narrow — anything richer should ship as a
+ * `formatterScript` (JS hook) so deployers don't try to smuggle behavior into
+ * descriptors that are meant to stay declarative and CSP-safe.
+ */
+export interface FormatterDescriptor {
+  display?: {
+    template?: string
+    locale?: string
+    dateStyle?: 'full' | 'long' | 'medium' | 'short'
+    timeStyle?: 'full' | 'long' | 'medium' | 'short'
+    badge?: { icon?: string; className?: string }
+  }
+  parser?: {
+    regex?: string
+    replacement?: string
+  }
+}
+
 interface RegistryOptions {
   apiUrl?: string
   createApiClient?: (token: string, options: { apiUrl: string }) => ApiClient
@@ -100,6 +126,23 @@ interface RegistryOptions {
   headerIcon?: string
   /** Per-deployment CSS variable + raw-CSS overrides applied to every app. */
   themeOverrides?: ThemeOverrides
+  /**
+   * Declarative formatter overrides keyed by `"kind"` or `"kind:format"`.
+   * Translated by `formatters.runtime.js` into formatter objects through a
+   * closed allowlist of operations. CSP-safe; serialized to a `<script>` tag.
+   */
+  formatters?: Record<string, FormatterDescriptor>
+  /**
+   * Deployer-supplied JavaScript that runs inside the app iframe AFTER
+   * built-in formatters are registered. Expected to assign
+   * `window.__MCP_RUNE_REGISTER_FORMATTERS__ = (registerFormatter, helpers) => { … }`.
+   * This is the custom-kind path: register kinds the framework doesn't ship
+   * (currency, phone, isbn, deployment-specific time) with arbitrary logic.
+   *
+   * Same trust boundary as the rest of the MCP server's output; framework
+   * does no sandboxing beyond what the host provides.
+   */
+  formatterScript?: string
 }
 
 interface RegisterToolsOptions {
@@ -119,6 +162,8 @@ export class AppRegistry {
   private _defaultAdapter?: SearchAdapter
   private _headerIcon?: string
   private _themeOverrides?: ThemeOverrides
+  private _formatters?: Record<string, FormatterDescriptor>
+  private _formatterScript?: string
 
   constructor(
     apps: AppDefinition[] = [],
@@ -130,7 +175,9 @@ export class AppRegistry {
       searchGroups = {},
       defaultAdapter,
       headerIcon,
-      themeOverrides
+      themeOverrides,
+      formatters,
+      formatterScript
     }: RegistryOptions = {}
   ) {
     this._apiUrl = apiUrl
@@ -140,6 +187,8 @@ export class AppRegistry {
     this._defaultAdapter = defaultAdapter
     this._headerIcon = headerIcon
     this._themeOverrides = themeOverrides
+    this._formatters = formatters
+    this._formatterScript = formatterScript
 
     // Default DataLayer factory wraps ModelService. Apps share the same
     // pluggable seam as ToolRegistry — integrators can swap the adapter
@@ -290,27 +339,55 @@ export class AppRegistry {
 
   /**
    * Inject per-deployment overrides into an app's bundled HTML just before
-   * serving it as a resource. Collects `--header-icon`, `themeOverrides`
-   * variables, and raw CSS into one `<style>` block placed before `</head>`.
+   * serving it as a resource. Collects `--header-icon` + `themeOverrides`
+   * variables + raw CSS into one `<style>` block, and `formatters` +
+   * `formatterScript` into one `<script>` block, both placed before `</head>`.
    * Returns the input unchanged when nothing needs injecting.
+   *
+   * Order matters: the `<script>` block precedes the `<style>` block so the
+   * formatter registry is populated before the bundled app code runs. Both
+   * sit before `</head>` so the host iframe parses them before body content.
    *
    * Public so tests can exercise it without going through `registerResources`.
    */
   injectIntoHead(html: string): string {
+    const styleBlock = this._buildStyleBlock()
+    const scriptBlock = this._buildScriptBlock()
+    if (!styleBlock && !scriptBlock) return html
+
+    return html.replace('</head>', `${scriptBlock}${styleBlock}</head>`)
+  }
+
+  private _buildStyleBlock(): string {
     const cssVariables: Record<string, string> = {
       ...(this._themeOverrides?.cssVariables ?? {})
     }
     if (this._headerIcon) {
       cssVariables['--header-icon'] = `url("${this._headerIcon}")`
     }
-
     const rawCss = this._themeOverrides?.css ?? ''
-    if (Object.keys(cssVariables).length === 0 && !rawCss) return html
+    if (Object.keys(cssVariables).length === 0 && !rawCss) return ''
 
     const rootDecls = Object.entries(cssVariables)
       .map(([name, value]) => `${name}:${value};`)
       .join('')
     const rootBlock = rootDecls ? `:root{${rootDecls}}` : ''
-    return html.replace('</head>', `<style>${rootBlock}${rawCss}</style></head>`)
+    return `<style>${rootBlock}${rawCss}</style>`
   }
+
+  private _buildScriptBlock(): string {
+    const hasFormatters = this._formatters && Object.keys(this._formatters).length > 0
+    const hasScript = !!this._formatterScript
+    if (!hasFormatters && !hasScript) return ''
+
+    const declarative = hasFormatters
+      ? `window.__MCP_RUNE_FORMATTERS__=${escapeJsonForScript(JSON.stringify(this._formatters))};`
+      : ''
+    return `<script>${declarative}${hasScript ? this._formatterScript : ''}</script>`
+  }
+}
+
+/** Make a JSON literal safe to embed inside a `<script>` block. */
+function escapeJsonForScript(json: string): string {
+  return json.replace(/<\/(script)/gi, '<\\/$1').replace(/<!--/g, '<\\!--')
 }

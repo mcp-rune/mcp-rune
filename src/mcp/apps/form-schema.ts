@@ -285,7 +285,9 @@ function buildField(
     label: attr.label || humanize(name),
     group: groupKey,
     required: !!attr.required,
-    type: 'text'
+    type: 'text',
+    ...(attr.type && { kind: attr.type }),
+    ...(attr.format && { format: attr.format })
   }
 
   // Determine field type -- order matters: associations override base types

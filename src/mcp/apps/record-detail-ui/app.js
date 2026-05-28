@@ -6,8 +6,10 @@
  */
 
 import { App } from '@modelcontextprotocol/ext-apps'
-import { humanize, pluralize } from '../shared/helpers.js'
+import { pluralize } from '../shared/helpers.js'
 import { initApp, showStatus } from '../shared/app-init.js'
+import { renderCellValue } from '../shared/formatters.js'
+import '../shared/formatters.runtime.js'
 
 // ─── MCP App Connection ─────────────────────────────────────────────────────
 
@@ -127,7 +129,7 @@ function buildCard(fields, record) {
 
     const valueEl = document.createElement('div')
     valueEl.className = 'detail-value'
-    valueEl.appendChild(renderFieldValue(value, field))
+    valueEl.appendChild(renderCellValue(value, field))
 
     row.appendChild(label)
     row.appendChild(valueEl)
@@ -135,81 +137,6 @@ function buildCard(fields, record) {
   }
 
   return card
-}
-
-function renderFieldValue(value, field) {
-  const span = document.createElement('span')
-
-  // Enum values as neutral badges
-  if (field.enumValues && !Array.isArray(value)) {
-    span.className = 'status-badge'
-    span.textContent = humanize(String(value))
-    return span
-  }
-
-  // Rating as stars
-  if (field.name === 'rating' && typeof value === 'number') {
-    span.className = 'rating'
-    span.textContent = '\u2605'.repeat(value) + '\u2606'.repeat(Math.max(0, 5 - value))
-    return span
-  }
-
-  // Array values as tags
-  if (Array.isArray(value)) {
-    const container = document.createElement('div')
-    container.className = 'tag-list'
-    for (const item of value) {
-      const tag = document.createElement('span')
-      tag.className = 'tag'
-      tag.textContent = humanize(String(item))
-      container.appendChild(tag)
-    }
-    if (value.length === 0) {
-      span.className = 'empty-value'
-      span.textContent = 'None'
-      return span
-    }
-    return container
-  }
-
-  // URL values as links
-  if (field.format === 'URL' || (typeof value === 'string' && value.startsWith('https://'))) {
-    const link = document.createElement('a')
-    link.className = 'detail-link'
-    link.href = value
-    link.target = '_blank'
-    link.rel = 'noopener noreferrer'
-    link.textContent = value
-    return link
-  }
-
-  // Datetime values — format nicely
-  if (field.type === 'datetime' && value) {
-    try {
-      const date = new Date(value)
-      span.textContent = date.toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      })
-      return span
-    } catch {
-      // Fall through to default
-    }
-  }
-
-  // Boolean values as Yes/No
-  if (typeof value === 'boolean') {
-    span.textContent = value ? 'Yes' : 'No'
-    return span
-  }
-
-  // Default: plain text
-  span.textContent = String(value)
-  return span
 }
 
 // ─── Status ─────────────────────────────────────────────────────────────────

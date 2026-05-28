@@ -255,5 +255,44 @@ describe('AppRegistry logging', () => {
       expect(out).toContain('<style>.app{padding:8px}</style></head>')
       expect(out).not.toContain(':root{')
     })
+
+    it('serializes declarative formatter descriptors into a script block before the style block', () => {
+      const registry = new AppRegistry([], {
+        formatters: { date: { display: { locale: 'en-GB' } } },
+        themeOverrides: { cssVariables: { '--color-accent': '#0a84ff' } }
+      })
+
+      const out = registry.injectIntoHead(BASE_HTML)
+
+      const scriptIdx = out.indexOf('<script>')
+      const styleIdx = out.indexOf('<style>')
+      expect(scriptIdx).toBeGreaterThan(-1)
+      expect(styleIdx).toBeGreaterThan(-1)
+      expect(scriptIdx).toBeLessThan(styleIdx)
+      expect(out).toContain('window.__MCP_RUNE_FORMATTERS__=')
+      expect(out).toContain('"date"')
+      expect(out).toContain('en-GB')
+    })
+
+    it('emits formatterScript verbatim after the declarative assignment', () => {
+      const script =
+        'window.__MCP_RUNE_REGISTER_FORMATTERS__=(reg,h)=>{reg("currency",{format:(n)=>h.text("$"+n)})}'
+      const registry = new AppRegistry([], { formatterScript: script })
+
+      const out = registry.injectIntoHead(BASE_HTML)
+
+      expect(out).toContain(`<script>${script}</script>`)
+    })
+
+    it('escapes </script> sequences inside the serialized JSON', () => {
+      const registry = new AppRegistry([], {
+        formatters: { string: { display: { template: '</script><x>' } } }
+      })
+
+      const out = registry.injectIntoHead(BASE_HTML)
+
+      expect(out).not.toMatch(/<\/script><x>/)
+      expect(out).toContain('<\\/script>')
+    })
   })
 })

@@ -33,11 +33,16 @@ function buildField(
   attr: AppAttributeDefinition,
   ModelClass?: AppModelClass
 ): DetailFieldDefinition {
+  // Stamp `format: 'rating'` for integer attributes named `rating` so the
+  // shared formatter renders stars without UI-side name-matching.
+  const inferredFormat =
+    attr.format ?? (name === 'rating' && attr.type === 'integer' ? 'rating' : undefined)
+
   const field: DetailFieldDefinition = {
     name,
     label: attr.label || humanize(name),
     type: attr.type || 'string',
-    ...(attr.format && { format: attr.format }),
+    ...(inferredFormat && { format: inferredFormat }),
     ...(attr.enumValues && { enumValues: attr.enumValues }),
     ...(attr.validation && { validation: attr.validation })
   }
