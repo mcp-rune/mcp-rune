@@ -31,16 +31,6 @@ import type {
   FormSchema
 } from './types.js'
 
-/** Map model attribute types to HTML form field types */
-const TYPE_MAP: Record<string, string> = {
-  string: 'text',
-  text: 'textarea',
-  integer: 'number',
-  number: 'number',
-  boolean: 'checkbox',
-  date: 'date'
-}
-
 /**
  * Enums with this many options or fewer render as a segmented-chip control
  * instead of a `<select>` dropdown. Beyond this threshold, a chip row gets
