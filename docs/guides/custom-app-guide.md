@@ -85,8 +85,31 @@ src/mcp/apps/
 
 The server file (`record-detail.ts`):
 
-```ts
+```ts file=src/mcp/apps/record-detail.ts
 export function createRecordDetailApp(opts: { models: ModelsRegistry }): AppDefinition {
+  return {
+    name: 'record_detail',
+    description: 'Renders a read-only detail card for one or more records',
+    resourceUri: 'mcp://app/record-detail',
+    toolName: 'find_records_app',
+    toolDescription: 'Open the record-detail viewer with the given IDs.',
+    toolInputSchema: { model: z.enum(modelNames), ids: z.array(z.string()).optional() },
+    annotations: { readOnlyHint: true },
+    getHtml: () => loadHtml(),
+    needsAuth: true,
+    async handleToolCall(args, context) {
+      const records = await context.dataLayer.list(args.model, { id: args.ids })
+      return {
+        content: [{ type: 'text', text: formatAppSummary(records) }],
+        _meta: appResponseMeta({ records, schema })
+      }
+    }
+  }
+}
+```
+
+```js file=src/mcp/apps/record-detail.js
+export function createRecordDetailApp(opts) {
   return {
     name: 'record_detail',
     description: 'Renders a read-only detail card for one or more records',

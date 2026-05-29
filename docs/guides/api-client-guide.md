@@ -109,8 +109,7 @@ If you're using [`createDefaultAppRegistry`](./mcp-apps-guide.md), pass `createA
 
 A minimal `fetch` implementation with bearer-token auth and a tenant header:
 
-```ts
-// your-server/api-client.ts
+```ts file=your-server/api-client.ts
 import type { ApiClient, RequestOptions } from '@mcp-rune/mcp-rune/core'
 
 interface FetchClientOpts {
@@ -160,6 +159,58 @@ export function createFetchClient(token: string, opts: FetchClientOpts): ApiClie
     }
     if (res.status === 204) return {} as T
     return res.json() as Promise<T>
+  }
+
+  return {
+    baseUrl,
+    get: (url, params, options) =>
+      request('GET', `${url}${buildQuery(params)}`, undefined, options),
+    post: (url, data, options) => request('POST', url, data, options),
+    put: (url, data, options) => request('PUT', url, data, options),
+    patch: (url, data, options) => request('PATCH', url, data, options),
+    delete: (url, options) => request('DELETE', url, undefined, options)
+  }
+}
+```
+
+```js file=your-server/api-client.js
+export function createFetchClient(token, opts) {
+  const baseUrl = opts.apiUrl.replace(/\/$/, '')
+
+  function headers(options) {
+    const h = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    }
+    if (opts.tenant) h['X-Tenant'] = opts.tenant
+    if (options?.userId) h['X-Impersonate-User'] = String(options.userId)
+    return h
+  }
+
+  function buildQuery(params) {
+    if (!params || Object.keys(params).length === 0) return ''
+    const qs = new URLSearchParams()
+    for (const [k, v] of Object.entries(params)) {
+      if (v === undefined || v === null) continue
+      qs.set(k, String(v))
+    }
+    const s = qs.toString()
+    return s ? `?${s}` : ''
+  }
+
+  async function request(method, path, body, options) {
+    const url = `${baseUrl}${path.startsWith('/') ? path : '/' + path}`
+    const res = await fetch(url, {
+      method,
+      headers: headers(options),
+      body: body === undefined ? undefined : JSON.stringify(body)
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`${method} ${url} failed: ${res.status} ${res.statusText} ${text}`)
+    }
+    if (res.status === 204) return {}
+    return res.json()
   }
 
   return {

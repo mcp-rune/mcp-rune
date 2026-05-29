@@ -238,7 +238,7 @@ export const halConvention = new HalConvention()
 
 For a hand-rolled REST API with `{ items: [...], page, total }` lists and unwrapped POST bodies:
 
-```ts
+```ts file=src/conventions/flat-rest-convention.ts
 import { BaseConvention } from '@mcp-rune/mcp-rune'
 import { jsonApiConvention } from '@mcp-rune/mcp-rune/api-conventions'
 
@@ -266,6 +266,41 @@ export class FlatRestConvention extends BaseConvention {
   }
 
   cleanResponse(data: unknown) {
+    return data
+  }
+}
+
+export const flatRestConvention = new FlatRestConvention()
+```
+
+```js file=src/conventions/flat-rest-convention.js
+import { BaseConvention } from '@mcp-rune/mcp-rune'
+import { jsonApiConvention } from '@mcp-rune/mcp-rune/api-conventions'
+
+export class FlatRestConvention extends BaseConvention {
+  get name() {
+    return 'flat-rest'
+  }
+
+  // Associations behave like JSON:API: send IDs directly.
+  resolveAssociationFields = jsonApiConvention.resolveAssociationFields.bind(jsonApiConvention)
+  resolveAssociationValues = (attrs) => attrs
+
+  buildRequestPayload(_model, attrs) {
+    return attrs
+  }
+
+  normalizeListResponse(response, { page, perPage }) {
+    const records = response.items ?? []
+    const total = response.total ?? records.length
+    const totalPages = Math.max(1, Math.ceil(total / perPage))
+    return {
+      records,
+      pagination: { page, perPage, total, totalPages, hasMore: page < totalPages }
+    }
+  }
+
+  cleanResponse(data) {
     return data
   }
 }

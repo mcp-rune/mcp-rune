@@ -27,7 +27,7 @@ The adapter is purely about request shaping. Response normalization is the [conv
 
 `SearchAdapter` lives at `@mcp-rune/mcp-rune/api-extensions/search`. It exposes one method you'll override (`buildBody`) and two extension hooks (`buildRequest`, `_buildQueryParams`).
 
-```ts
+```ts file=src/search/my-adapter.ts
 import { SearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
 
 class MyAdapter extends SearchAdapter {
@@ -37,6 +37,16 @@ class MyAdapter extends SearchAdapter {
     pagination: { page: number; perPage: number },
     searchConfig: SearchConfig
   ): Record<string, unknown> {
+    // shape the body
+  }
+}
+```
+
+```js file=src/search/my-adapter.js
+import { SearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
+
+class MyAdapter extends SearchAdapter {
+  buildBody(query, filters, pagination, searchConfig) {
     // shape the body
   }
 }

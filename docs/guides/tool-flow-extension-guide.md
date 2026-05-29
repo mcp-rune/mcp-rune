@@ -52,7 +52,17 @@ interface ToolFlowExtensionContext {
 
 The user-facing config is a map keyed by an extension name:
 
-```ts
+```ts file=src/server.ts
+createServer({
+  // …
+  toolFlowExtensions: {
+    centerOfControl: centerOfControlExtension,
+    slackApproval: slackApprovalExtension
+  }
+})
+```
+
+```js file=src/server.js
 createServer({
   // …
   toolFlowExtensions: {

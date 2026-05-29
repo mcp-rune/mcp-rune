@@ -28,7 +28,25 @@ The built-in `cimdExtension` (see [The built-in CIMD extension](#the-built-in-ci
 
 Register extensions through the `extensions` option on `HttpServer`. The shape is `{ [name]: HttpExtension }` — a plain object keyed by an identifier you choose.
 
-```ts
+```ts file=src/server.ts
+import { HttpServer } from '@mcp-rune/mcp-rune/server'
+import { cimdExtension } from '@mcp-rune/mcp-rune/extensions/cimd'
+
+new HttpServer({
+  port: 3000,
+  oauth: new OAuthService({
+    /* ... */
+  }),
+  mcp: {
+    /* ... */
+  },
+  extensions: {
+    cimd: cimdExtension({ redirectUris: ['https://app.example.com/cb'] })
+  }
+})
+```
+
+```js file=src/server.js
 import { HttpServer } from '@mcp-rune/mcp-rune/server'
 import { cimdExtension } from '@mcp-rune/mcp-rune/extensions/cimd'
 
