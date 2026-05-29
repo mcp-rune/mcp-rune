@@ -1,3 +1,9 @@
+---
+extension:
+  kind: config
+  what: Custom actions on a model API
+---
+
 # API Configuration Guide
 
 This guide covers the `static api` configuration on models and the services that consume it: EndpointResolver and ModelService. It is the single reference for configuring how a model maps to API endpoints, HTTP methods, and payload conventions.

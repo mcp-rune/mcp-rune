@@ -1,3 +1,9 @@
+---
+extension:
+  kind: hook
+  what: askPrompts · per-section content enrichment
+---
+
 # Prompt Creation Guide
 
 This document provides guidelines for creating MCP prompts in this codebase.

@@ -1,3 +1,9 @@
+---
+extension:
+  kind: override
+  what: Implement a custom ApiClient
+---
+
 # Custom API Client Guide
 
 `ApiClient` is the universal CRUD HTTP contract every authenticated tool, every MCP App, and `ModelService` itself depends on. It sits one layer below the [`DataLayer`](./data-layer-guide.md): `DataLayer` is "data operations against models," `ApiClient` is "HTTP verbs against URLs." Most deployers never need to write their own — they pass the bundled axios-based client. You write a custom one when:

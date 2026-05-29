@@ -1,3 +1,9 @@
+---
+extension:
+  kind: plugin
+  what: Ship your own sandboxed HTML apps
+---
+
 # MCP Apps Guide
 
 MCP Apps are interactive HTML user interfaces that render inside MCP clients (Claude Desktop, COC, MCP Inspector). They use the `@modelcontextprotocol/ext-apps` extension protocol to communicate bidirectionally with the MCP server.

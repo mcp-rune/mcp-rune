@@ -1,3 +1,9 @@
+---
+extension:
+  kind: override
+  what: Per-fieldGroup layout overrides
+---
+
 # Model Form Customization Guide
 
 The generic model-form MCP app renders forms dynamically from schema. This guide covers the layout system that controls how fields are positioned — from horizontal label-field alignment to side-by-side field groups.

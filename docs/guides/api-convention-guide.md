@@ -1,3 +1,9 @@
+---
+extension:
+  kind: override
+  what: Implement a custom API convention
+---
+
 # Custom API Convention Guide
 
 A **convention** owns everything wire-format-specific about your API: how request payloads are wrapped, how association IDs translate into the form your backend expects, how list responses are unpacked into `{ records, pagination }`, and how response envelopes are stripped of protocol noise before reaching tools and prompts.
