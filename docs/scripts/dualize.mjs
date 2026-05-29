@@ -9,9 +9,10 @@
 // finds language-tagged blocks without a sibling, and synthesizes one.
 //
 // Usage:
-//   node docs/scripts/dualize.mjs                # apply transforms in place
-//   node docs/scripts/dualize.mjs --check        # dry-run; non-zero exit if unpaired exist
-//   node docs/scripts/dualize.mjs --guide=<slug> # only one guide
+//   node docs/scripts/dualize.mjs                       # apply transforms in place
+//   node docs/scripts/dualize.mjs --check               # dry-run; non-zero exit if unpaired exist
+//   node docs/scripts/dualize.mjs --report-placeholders # list auto-generated JS placeholders (hand-authoring candidates)
+//   node docs/scripts/dualize.mjs --guide=<slug>        # only one guide
 //
 // Conversion rules:
 //   ts → js   : type annotations stripped via typescript.transpileModule
@@ -33,8 +34,15 @@ const GUIDES_DIR = resolve(HERE, '..', 'guides')
 // ── CLI ─────────────────────────────────────────────────────────────
 const args = process.argv.slice(2)
 const CHECK = args.includes('--check')
+const REPORT_PLACEHOLDERS = args.includes('--report-placeholders')
 const GUIDE_FLAG = args.find((a) => a.startsWith('--guide='))
 const ONLY_GUIDE = GUIDE_FLAG ? GUIDE_FLAG.slice('--guide='.length) : null
+
+// Signature of an auto-generated placeholder JS body: the header emitted by
+// `typeOnlyToJsdoc` when the script can't transpile a type-only TS block.
+// Hand-authored JSDoc @typedef blocks do not contain this phrase.
+const PLACEHOLDER_HEADER = 'Types are a TypeScript-only artifact'
+const isPlaceholderJsBody = (body) => body.includes(PLACEHOLDER_HEADER)
 
 // ── Block parsing ───────────────────────────────────────────────────
 // State machine: track ``` openings, language tag, meta, body, line numbers.
@@ -442,6 +450,32 @@ function main() {
   if (ONLY_GUIDE && guides.length === 0) {
     console.error(`No guide matched --guide=${ONLY_GUIDE}`)
     process.exit(2)
+  }
+
+  if (REPORT_PLACEHOLDERS) {
+    // Reporting-only scan: list every js block whose body still carries the
+    // auto-generated `typeOnlyToJsdoc` header. These are the candidates for
+    // a hand-authored JSDoc @typedef upgrade (see docs/README.md).
+    const placeholders = []
+    for (const filename of guides) {
+      const source = readFileSync(join(GUIDES_DIR, filename), 'utf8')
+      const blocks = parseBlocks(source)
+      for (const b of blocks) {
+        if (!isJs(b.lang)) continue
+        if (!isPlaceholderJsBody(b.body)) continue
+        const meta = parseMeta(b.meta)
+        placeholders.push({ guide: guideSlug(filename), file: meta.file ?? '(no file=)' })
+      }
+    }
+    if (placeholders.length === 0) {
+      console.log('✓ No auto-generated JS placeholders remain.')
+      process.exit(0)
+    }
+    console.log('Auto-generated JS placeholders found (consider hand-authoring JSDoc @typedef):\n')
+    for (const p of placeholders) console.log(`  ${p.guide}:${p.file}`)
+    console.log(`\nTotal: ${placeholders.length} placeholder(s).`)
+    console.log('See docs/README.md → "Manual overrides" for the workflow.')
+    process.exit(0) // reporting-only; never fails the build
   }
 
   let totalPaired = 0

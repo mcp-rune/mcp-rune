@@ -104,19 +104,18 @@ interface ApiConfig {
 
 ```js file=src/config/api-config.js
 /**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
+ * The full shape of `static api` on a model. All fields are optional;
+ * see the per-field sections below for resolution rules and defaults.
  *
- * interface ApiConfig {
- *   endpoint?: string
- *   convention?: BaseConvention
- *   readOnly?: boolean
- *   parent?: string | string[]
- *   standalone?: boolean
- *   namespace?: string
- *   endpoints?: EndpointOverrides
- *   actions?: Record<string, ActionDefinition>
- * }
+ * @typedef {Object} ApiConfig
+ * @property {string} [endpoint]
+ * @property {BaseConvention} [convention]
+ * @property {boolean} [readOnly]
+ * @property {string | string[]} [parent]
+ * @property {boolean} [standalone]
+ * @property {string} [namespace]
+ * @property {EndpointOverrides} [endpoints]
+ * @property {Object<string, ActionDefinition>} [actions]
  */
 ```
 
@@ -269,16 +268,16 @@ interface EndpointOverrides {
 
 ```js file=src/endpoint-overrides.js
 /**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
+ * Per-action endpoint overrides for APIs with non-standard CRUD paths.
+ * Resolution priority (highest first): per-action override → `collection`
+ * / `record` → default. Explicit overrides bypass namespace.
  *
- * interface EndpointOverrides {
- *   collection?: string // list + create (unless overridden)
- *   record?: string // find + update + delete (unless overridden), :id substituted
- *   create?: string // create only — highest priority for collection ops
- *   update?: string // update only — highest priority for record ops, :id substituted
- *   delete?: string // delete only — highest priority for record ops, :id substituted
- * }
+ * @typedef {Object} EndpointOverrides
+ * @property {string} [collection] list + create (unless overridden)
+ * @property {string} [record] find + update + delete (unless overridden), `:id` substituted
+ * @property {string} [create] create only — highest priority for collection ops
+ * @property {string} [update] update only — highest priority for record ops, `:id` substituted
+ * @property {string} [delete] delete only — highest priority for record ops, `:id` substituted
  */
 ```
 
@@ -379,16 +378,15 @@ interface ActionDefinition {
 
 ```js file=src/action-definition.js
 /**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
+ * A custom action declared under `static api.actions[name]`. The path
+ * supports `:id` and arbitrary `:param` substitution.
  *
- * interface ActionDefinition {
- *   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
- *   path: string
- *   recordLevel?: boolean
- *   description?: string
- *   rawPayload?: boolean
- * }
+ * @typedef {Object} ActionDefinition
+ * @property {'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'} [method]
+ * @property {string} path
+ * @property {boolean} [recordLevel]
+ * @property {string} [description]
+ * @property {boolean} [rawPayload]
  */
 ```
 
@@ -424,22 +422,17 @@ path: 'bulk-publish'
 ```
 
 ```js file=examples/api-config-guide-12.js
-/**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
- *
- * // Single record action
- * path: ':id/publish'
- *
- * // Nested action with extra parameter
- * path: ':id/chapters/:chapter_id/approve'
- *
- * // Collection action with parameters
- * path: 'reports/:report_type/:year/generate'
- *
- * // Simple collection action
- * path: 'bulk-publish'
- */
+// Single record action
+path: ':id/publish'
+
+// Nested action with extra parameter
+path: ':id/chapters/:chapter_id/approve'
+
+// Collection action with parameters
+path: 'reports/:report_type/:year/generate'
+
+// Simple collection action
+path: 'bulk-publish'
 ```
 
 ### Path Parameter Substitution

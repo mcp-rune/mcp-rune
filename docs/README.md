@@ -147,8 +147,9 @@ authoring is safe and idempotent.
 Two npm scripts manage paired snippets in bulk:
 
 ```bash
-npm run docs:dualize    # apply: generate missing siblings, write in place
-npm run docs:check      # dry-run: report unpaired blocks, exit 1 if any exist
+npm run docs:dualize             # apply: generate missing siblings, write in place
+npm run docs:check               # dry-run: report unpaired blocks, exit 1 if any exist
+npm run docs:check-placeholders  # report auto-generated JS placeholders (manual override candidates)
 ```
 
 Both delegate to [`docs/scripts/dualize.mjs`](./scripts/dualize.mjs).
@@ -160,6 +161,10 @@ the compiler rejects (fragments, pseudocode).
 
 - `--check` — read-only; prints a per-guide count of unpaired blocks and
   exits 1 if any are found. Suitable for CI / pre-commit.
+- `--report-placeholders` — read-only; lists every `js` block whose body
+  still carries the auto-generated `Types are a TypeScript-only artifact`
+  header. These are the candidates for a hand-authored JSDoc `@typedef`
+  upgrade. Reporting-only; never fails the build.
 - `--guide=<slug>` — only process one guide. `<slug>` is the filename
   without `.md` (e.g. `--guide=api-config-guide`).
 - _(no flags)_ — apply transformations in place. Idempotent: running it
@@ -204,6 +209,100 @@ npm run docs:dualize       # add missing JS siblings
 npm run docs:check         # verify (should exit 0)
 git add docs/ && git commit
 ```
+
+---
+
+## Manual overrides
+
+The script auto-generates a sibling for every unpaired language block,
+but the auto-output is the **baseline**, not the ceiling. You can —
+and often should — hand-edit a JS body to make it more idiomatic.
+
+### The mechanism (already built in)
+
+The script's idempotency check looks at one thing: the `file=` base path
+on adjacent ts/js fences. If they match, the pair is considered "done"
+and skipped, **regardless of body content**. So:
+
+1. Run `npm run docs:dualize` (or write a pair by hand).
+2. Open the generated `js` fence. Replace the body with whatever you
+   want. **Keep `file=foo.js` unchanged**.
+3. Re-run `npm run docs:dualize`. It does nothing — your edit is
+   protected.
+
+If you ever want to discard your edit and let the script regenerate the
+sibling, just delete the entire `js` fence and re-run.
+
+### Type-only blocks → JSDoc `@typedef`
+
+The most common case for manual overrides: a TS block that's _purely_
+type declarations (interfaces, type aliases, declare). The transpiler
+produces empty output for these, so the script falls back to wrapping
+the TS source in a `/** … */` comment as a placeholder.
+
+These placeholders are valid but not idiomatic. The real JS equivalent
+of a TS interface is a JSDoc `@typedef`:
+
+````
+```ts file=src/request-options.ts
+interface RequestOptions {
+  userId?: string
+}
+
+interface ApiClient {
+  get(url: string, options?: RequestOptions): Promise<Object>
+  post(url: string, data?: Object, options?: RequestOptions): Promise<Object>
+}
+```
+
+```js file=src/request-options.js
+/**
+ * @typedef {Object} RequestOptions
+ * @property {string} [userId]
+ */
+
+/**
+ * @typedef {Object} ApiClient
+ * @property {(url: string, options?: RequestOptions) => Promise<Object>} get
+ * @property {(url: string, data?: Object, options?: RequestOptions) => Promise<Object>} post
+ */
+```
+````
+
+`@typedef` is what `tsc --checkJs` validates and what mature JS
+codebases (lodash, express, etc.) already use to document types
+without giving up on plain `.js` files.
+
+### Spotting auto-generated placeholders
+
+`docs:check-placeholders` (alias for `dualize.mjs --report-placeholders`)
+lists every `js` block whose body still contains the auto-generated
+header `Types are a TypeScript-only artifact`. Use it to find
+hand-authoring candidates as the corpus grows:
+
+```bash
+npm run docs:check-placeholders
+# →   api-client-guide:src/request-options.js
+#     api-config-guide:src/config/api-config.js
+#     …
+#   Total: 12 placeholder(s).
+```
+
+It's reporting-only — it never fails the build.
+
+### TS → JSDoc cheat sheet
+
+| TS                                 | JSDoc                                               |
+| ---------------------------------- | --------------------------------------------------- |
+| `interface Foo { … }`              | `@typedef {Object} Foo` + one `@property` per field |
+| `type Foo = string \| number`      | `@typedef {string \| number} Foo`                   |
+| `type Foo = (x: number) => string` | `@typedef {(x: number) => string} Foo`              |
+| `field: T` (required)              | `@property {T} field`                               |
+| `field?: T` (optional)             | `@property {T} [field]`                             |
+| `Record<string, T>`                | `Object<string, T>`                                 |
+| `T[]`                              | `T[]` (unchanged)                                   |
+| `ReadonlyArray<T>`                 | `ReadonlyArray<T>` (unchanged)                      |
+| `Pick<X, 'a' \| 'b'>`              | `Pick<X, 'a' \| 'b'>` (unchanged)                   |
 
 ---
 

@@ -50,25 +50,27 @@ interface ToolFlowExtensionContext {
 
 ```js file=src/extensions/tool-flow-extension.js
 /**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
+ * Extends the MCP tool surface and the per-app runtime context.
+ * `register(ctx)` runs once at server creation.
  *
- * import type { ToolFlowExtension } from '@mcp-rune/mcp-rune/extensions'
+ * @typedef {Object} ToolFlowExtension
+ * @property {Array<'apps'>} [requires]
+ * @property {(ctx: ToolFlowExtensionContext) => void | Promise<void>} register
+ */
+
+/**
+ * The context object `register` receives. Narrowed by design — extensions
+ * register tools and thread context, but cannot reach into the underlying
+ * McpServer or other extensions' state.
  *
- * interface ToolFlowExtension {
- *   requires?: 'apps'[]
- *   register(ctx: ToolFlowExtensionContext): void | Promise<void>
- * }
- *
- * interface ToolFlowExtensionContext {
- *   name: string // user-chosen key (for logs)
- *   mcpName: string // MCP server name
- *   registerTool(app: AppDefinition): void
- *   getApp(toolName: string): AppDefinition | undefined
- *   setFormSubmitMode(mode: 'direct' | 'collect'): void
- *   provideContext(key: string, value: unknown): void
- *   logger: typeof logger
- * }
+ * @typedef {Object} ToolFlowExtensionContext
+ * @property {string} name              user-chosen key (for logs)
+ * @property {string} mcpName           MCP server name
+ * @property {(app: AppDefinition) => void} registerTool
+ * @property {(toolName: string) => AppDefinition | undefined} getApp
+ * @property {(mode: 'direct' | 'collect') => void} setFormSubmitMode
+ * @property {(key: string, value: unknown) => void} provideContext
+ * @property {typeof logger} logger
  */
 ```
 

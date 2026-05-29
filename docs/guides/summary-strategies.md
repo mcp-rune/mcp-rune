@@ -51,31 +51,39 @@ export interface SummaryStrategy {
 
 ```js file=src/summary-input.js
 /**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
+ * What the framework hands to a SummaryStrategy when it asks for a
+ * per-page summary during `analysis_ingest`.
  *
- * export interface SummaryInput {
- *   analysisId: string
- *   model: string
- *   page: number
- *   totalPages: number | null
- *   records: ReadonlyArray<Record<string, unknown>>
- *   fields?: ReadonlyArray<string>
- *   options?: Readonly<Record<string, unknown>>
- * }
+ * @typedef {Object} SummaryInput
+ * @property {string} analysisId
+ * @property {string} model
+ * @property {number} page
+ * @property {number | null} totalPages
+ * @property {ReadonlyArray<Object>} records
+ * @property {ReadonlyArray<string>} [fields]
+ * @property {Readonly<Object>} [options]
+ */
+
+/**
+ * What a SummaryStrategy returns. `finding` is embedded as the memory
+ * row's searchable text; `metadata` is stored alongside.
  *
- * export interface SummaryOutput {
- *   finding: string // embedded as the memory row text
- *   metadata: Record<string, unknown> // stored alongside
- *   category?: string // defaults to `page_summary:<strategy.name>`
- * }
+ * @typedef {Object} SummaryOutput
+ * @property {string} finding
+ * @property {Object} metadata
+ * @property {string} [category]   defaults to `page_summary:<strategy.name>`
+ */
+
+/**
+ * A pluggable strategy contributed via an ApiExtension. Globally
+ * registered (single `name` namespace); strategies opt-in to specific
+ * pages via `appliesTo`.
  *
- * export interface SummaryStrategy {
- *   readonly name: string // lowercase kebab-case, globally unique
- *   readonly description: string // one-line LLM-facing hint
- *   appliesTo?(input: SummaryInput): boolean // optional gate; omit = always applies
- *   generate(input: SummaryInput): SummaryOutput | Promise<SummaryOutput>
- * }
+ * @typedef {Object} SummaryStrategy
+ * @property {string} name                       lowercase kebab-case, globally unique
+ * @property {string} description                one-line LLM-facing hint
+ * @property {(input: SummaryInput) => boolean} [appliesTo]  optional gate; omit = always applies
+ * @property {(input: SummaryInput) => SummaryOutput | Promise<SummaryOutput>} generate
  */
 ```
 
