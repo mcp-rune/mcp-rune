@@ -57,7 +57,7 @@ If you don't configure anything, `ToolRegistry` and `AppRegistry` instantiate `M
 
 Both `ToolRegistry` and `AppRegistry` accept a `dataLayer` factory option:
 
-```ts
+```ts file=src/registry.ts
 import { createInMemoryDataLayer } from '@mcp-rune/mcp-rune/core'
 
 const registry = new ToolRegistry({
@@ -68,6 +68,23 @@ const registry = new ToolRegistry({
     fixtures: {
       book: {
         '1': { id: '1', title: 'Clean Code', author: 'Bob Martin' }
+      }
+    }
+  })
+})
+```
+
+```js file=src/registry.js
+import { createInMemoryDataLayer } from '@mcp-rune/mcp-rune/core'
+
+const registry = new ToolRegistry({
+  toolClasses: { ...DATA_TOOL_CLASSES, custom_tool: MyTool },
+  models: MODEL_CLASSES,
+  createApiClient: (token) => createApiClient(token, { apiUrl }),
+  dataLayer: createInMemoryDataLayer({
+    fixtures: {
+      book: {
+        1: { id: '1', title: 'Clean Code', author: 'Bob Martin' }
       }
     }
   })
@@ -89,7 +106,7 @@ type DataLayerFactory = (ctx: {
 
 ## Using DataLayer in a Custom Tool
 
-```ts
+```ts file=src/tools/archive-project-tool.ts
 import { BaseTool, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
 
 export class ArchiveProjectTool extends BaseTool {
@@ -102,6 +119,25 @@ export class ArchiveProjectTool extends BaseTool {
   }
 
   override async execute({ project_id }: { project_id: string }) {
+    const dataLayer = this.requireDataLayer()
+    return dataLayer.dispatch('POST', `/projects/${project_id}/archive`)
+  }
+}
+```
+
+```js file=src/tools/archive-project-tool.js
+import { BaseTool, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
+
+export class ArchiveProjectTool extends BaseTool {
+  static get category() {
+    return TOOL_CATEGORIES.CUSTOM
+  }
+
+  get name() {
+    return 'archive_project'
+  }
+
+  async execute({ project_id }) {
     const dataLayer = this.requireDataLayer()
     return dataLayer.dispatch('POST', `/projects/${project_id}/archive`)
   }
@@ -123,12 +159,24 @@ const books = await this.requireDataLayer().list(
 
 `InMemoryDataLayer` (also exported from `@mcp-rune/mcp-rune/core`) is the reference adapter for offline tool tests:
 
-```ts
+```ts file=src/__tests__/find-tool.test.ts
 import { InMemoryDataLayer } from '@mcp-rune/mcp-rune/core'
 
 const dataLayer = new InMemoryDataLayer({
   models: { book: { api: { endpoint: 'books' } } },
   fixtures: { book: { '1': { id: '1', title: 'Clean Code' } } }
+})
+
+const tool = new FindRecordsTool({ dataLayer, models: dataLayer.models })
+const result = await tool.execute({ model: 'book', record_id: '1' })
+```
+
+```js file=src/__tests__/find-tool.test.js
+import { InMemoryDataLayer } from '@mcp-rune/mcp-rune/core'
+
+const dataLayer = new InMemoryDataLayer({
+  models: { book: { api: { endpoint: 'books' } } },
+  fixtures: { book: { 1: { id: '1', title: 'Clean Code' } } }
 })
 
 const tool = new FindRecordsTool({ dataLayer, models: dataLayer.models })
@@ -141,7 +189,7 @@ The stub is deliberately convention-free — it does not implement HAL `_link` d
 
 An adapter is any class or object that satisfies the `DataLayer` interface. Minimal example wrapping a fetch-based REST client:
 
-```ts
+```ts file=src/adapters/fetch-data-layer.ts
 import type { DataLayer, ModelsRegistry } from '@mcp-rune/mcp-rune/core'
 import { EndpointResolver } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
 
@@ -158,6 +206,30 @@ export class FetchDataLayer implements DataLayer {
 
   async create(model, attributes) {
     const endpoint = this.models[model]!.api.endpoint
+    const res = await fetch(`${this.baseUrl}/${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(attributes)
+    })
+    return res.json()
+  }
+  // ... find / list / update / delete / dispatch / buildPayload
+}
+```
+
+```js file=src/adapters/fetch-data-layer.js
+import { EndpointResolver } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
+
+export class FetchDataLayer {
+  endpointResolver = new EndpointResolver()
+
+  constructor(baseUrl, models) {
+    this.baseUrl = baseUrl
+    this.models = models
+  }
+
+  async create(model, attributes) {
+    const endpoint = this.models[model].api.endpoint
     const res = await fetch(`${this.baseUrl}/${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

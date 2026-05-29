@@ -73,7 +73,7 @@ export interface BulkActionsConfig {
 
 ### 3. Typed helper + reader — `capabilities.ts`
 
-```ts
+```ts file=src/api-extensions/bulk-actions/capabilities.ts
 import type { BulkActionsConfig } from './types.js'
 
 /**
@@ -93,6 +93,27 @@ export function getBulkActionsConfig(model: ModelWithExtensions): BulkActionsCon
 }
 
 export function getBulkUpdatableModelNames(models: Record<string, ModelWithExtensions>): string[] {
+  return Object.entries(models)
+    .filter(([, m]) => !!getBulkActionsConfig(m))
+    .map(([name]) => name)
+}
+```
+
+```js file=src/api-extensions/bulk-actions/capabilities.js
+/**
+ * In JavaScript the `xxxConfig()` helper is still useful as a JSDoc anchor.
+ * Drop a `@type` import if your project uses checkJs, otherwise the runtime
+ * shape is identical to the TS variant — config in, config out.
+ */
+export function bulkActionsConfig(config) {
+  return config
+}
+
+export function getBulkActionsConfig(model) {
+  return model.extensions?.['bulk-actions']
+}
+
+export function getBulkUpdatableModelNames(models) {
   return Object.entries(models)
     .filter(([, m]) => !!getBulkActionsConfig(m))
     .map(([name]) => name)

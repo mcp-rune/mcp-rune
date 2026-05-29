@@ -54,9 +54,21 @@ This guide covers the `static api` configuration on models and the services that
 
 Every model declares a `static api` configuration that describes how it maps to a REST API:
 
-```typescript
+```ts file=src/models/book.ts
 class Book extends BaseModel {
   static api: ApiConfig = {
+    endpoint: 'books',
+    convention: jsonApiConvention,
+    namespace: 'api/v1',
+    endpoints: { create: 'books/draft' },
+    actions: { publish: { path: ':id/publish' } }
+  }
+}
+```
+
+```js file=src/models/book.js
+class Book extends BaseModel {
+  static api = {
     endpoint: 'books',
     convention: jsonApiConvention,
     namespace: 'api/v1',

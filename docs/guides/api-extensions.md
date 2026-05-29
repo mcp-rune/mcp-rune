@@ -95,7 +95,23 @@ This is deliberate: the answer to "what tools are actually registered in this se
 
 Register API extensions through the `apiExtensions` option on `ToolRegistry`. The shape is `{ [name]: ApiExtension }` — a plain object keyed by an identifier you choose.
 
-```ts
+```ts file=src/registry.ts
+import { ToolRegistry, DATA_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
+import { customActionsExtension } from '@mcp-rune/mcp-rune/api-extensions/custom-actions'
+import { searchExtension } from '@mcp-rune/mcp-rune/api-extensions/search'
+
+new ToolRegistry({
+  toolClasses: DATA_TOOL_CLASSES,
+  models: MODEL_CLASSES,
+  createApiClient: (token) => createApiClient(token, { apiUrl }),
+  apiExtensions: {
+    'custom-actions': customActionsExtension(),
+    search: searchExtension()
+  }
+})
+```
+
+```js file=src/registry.js
 import { ToolRegistry, DATA_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
 import { customActionsExtension } from '@mcp-rune/mcp-rune/api-extensions/custom-actions'
 import { searchExtension } from '@mcp-rune/mcp-rune/api-extensions/search'
