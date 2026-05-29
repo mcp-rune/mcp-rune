@@ -1,3 +1,9 @@
+---
+extension:
+  kind: plugin
+  what: Implement a custom search adapter
+---
+
 # Custom Search Adapter Guide
 
 A **search adapter** translates the MCP-generic search format (`{ query, filters, page, perPage }`) into the request shape your API expects. The default adapter (`SearchAdapter`) spreads filters flat into the POST body — fine for hand-rolled REST APIs but wrong for Rails Ransack, Elasticsearch DSL, JSON:API filter syntax, or anything that requires nesting.

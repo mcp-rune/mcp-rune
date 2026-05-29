@@ -1,3 +1,9 @@
+---
+extension:
+  kind: plugin
+  what: Write a custom MCP app
+---
+
 # Writing a Custom MCP App
 
 mcp-rune ships six **MCP Apps** — interactive iframe widgets the LLM can summon: `list-view`, `record-detail`, `search-view`, `model-form`, `multi-select-picker`, `autocomplete-picker`. They share infrastructure: the kind taxonomy from [`kind-metadata`](./attribute-kinds-guide.md), the formatter registry from `apps/shared/formatters.ts`, the form-schema generator, the selection store, theming.

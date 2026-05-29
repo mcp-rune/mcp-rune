@@ -1,3 +1,9 @@
+---
+extension:
+  kind: plugin
+  what: Author multi-step workflow definitions
+---
+
 # Workflow Creation Guide
 
 This guide covers how to create effective `WorkflowDefinition` files that the LLM executes via the `suggest_workflow` tool.

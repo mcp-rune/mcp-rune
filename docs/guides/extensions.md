@@ -1,3 +1,9 @@
+---
+extension:
+  kind: plugin
+  what: Author HTTP extensions (routes + middleware)
+---
+
 # Extensions
 
 mcp-rune supports **opt-in HTTP extensions** that add routes and route-scoped middleware on top of the framework's built-in OAuth, status, and MCP transport endpoints. Use extensions to ship optional features (a built-in example is [CIMD](../../src/extensions/cimd.ts)) without pulling them into the framework's core surface.

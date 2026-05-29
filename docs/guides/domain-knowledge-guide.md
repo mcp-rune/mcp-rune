@@ -1,3 +1,9 @@
+---
+extension:
+  kind: registry
+  what: Register concepts · rules · workflows · diagrams
+---
+
 # Domain Intelligence Framework — Contributor Guide
 
 This guide explains how to extend the domain intelligence layer with new concepts, business rules, workflows, and diagram templates. The framework is declarative: all domain components are data structures, not procedural code.

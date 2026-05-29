@@ -1,3 +1,9 @@
+---
+extension:
+  kind: plugin
+  what: Author tool-flow extensions
+---
+
 # Tool Flow Extension Guide
 
 A **`ToolFlowExtension`** is a sibling to [`HttpExtension`](./extensions.md). HTTP extensions add routes and middleware; tool-flow extensions modify the MCP **tool surface** and the **runtime context** threaded into app tool handlers. Use one when you want to:
