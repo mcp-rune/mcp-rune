@@ -36,7 +36,22 @@ The LLM receives the workflow via `suggest_workflow` (roadmap + first step), the
 
 ### WorkflowDefinition
 
-```javascript
+```js file=examples/workflow-creation-guide-01.js
+import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
+
+new WorkflowDefinition({
+  name, // string — unique identifier, snake_case (e.g., 'log_study_session')
+  title, // string — human-readable title (e.g., 'Log a Study Session')
+  description, // string — what this workflow accomplishes (1-2 sentences)
+  tags, // string[] — filtering tags (e.g., ['activity', 'onboarding'])
+  models, // string[] — models involved (e.g., ['activity', 'theme', 'category'])
+  steps, // WorkflowStep[] — ordered steps (see below)
+  draftRequired, // boolean — must call preview_mutation_plan before mutations?
+  mutationPlans // object — plan definitions (see Mutation Plans section)
+})
+```
+
+```ts file=examples/workflow-creation-guide-01.ts
 import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
 
 new WorkflowDefinition({
@@ -64,7 +79,24 @@ new WorkflowDefinition({
 
 ### WorkflowStep
 
-```javascript
+```js file=examples/workflow-creation-guide-02.js
+{
+  order,           // number — step number (1-based, sequential)
+  title,           // string — short step title
+  description,     // string — what this step does (LLM reads this)
+  tool,            // string — MCP tool name to call (e.g., 'find_records', 'search_records')
+  toolArgs,        // object — example arguments (shown as JSON in rendered output)
+  decision,        // object — decision point: { question, options: [{label, description}] }
+  tips,            // string[] — guidance for the LLM
+  parallelGroup,   // string — group ID for concurrent execution (adjacent steps with same ID)
+  loopGroup,       // string — group ID for per-page iteration (adjacent steps with same ID)
+  exhaustive,      // boolean — step needs ALL paginated records (renders pagination guidance)
+  dependsOn,       // number[] — step order numbers that must complete first
+  changeset,       // object — MCP client changeset integration: { mutating?: boolean, requiresPlan?: string }
+}
+```
+
+```ts file=examples/workflow-creation-guide-02.ts
 {
   order,           // number — step number (1-based, sequential)
   title,           // string — short step title
@@ -89,7 +121,26 @@ Each step should have either `tool` (with optional `toolArgs`) or `decision`, no
 
 The most common type. Tell the LLM which tool to call and provide example arguments:
 
-```javascript
+```js file=examples/workflow-creation-guide-03.js
+{
+  order: 1,
+  title: 'Find or create the theme',
+  description:
+    'Search for the top-level learning topic this session belongs to. If the theme does not exist yet, create it.',
+  tool: 'find_records',
+  toolArgs: {
+    model: 'theme',
+    search: { name: '<topic_name>' }
+  },
+  tips: [
+    'Common themes: "Software Engineering", "Machine Learning", "DevOps"',
+    'If no matching theme exists, use create_model to create one',
+    'Note the theme ID — you need it for the category lookup in step 2'
+  ]
+}
+```
+
+```ts file=examples/workflow-creation-guide-03.ts
 {
   order: 1,
   title: 'Find or create the theme',
@@ -115,7 +166,29 @@ The most common type. Tell the LLM which tool to call and provide example argume
 
 Present the user with choices that affect workflow direction:
 
-```javascript
+```js file=examples/workflow-creation-guide-04.js
+{
+  order: 4,
+  title: 'Link learning resources',
+  description:
+    'Optionally associate books or repositories with this activity.',
+  decision: {
+    question: 'Would you like to link any learning resources to this session?',
+    options: [
+      { label: 'Link books', description: 'Search for books studied during this session' },
+      { label: 'Link repositories', description: 'Search for code repositories worked on' },
+      { label: 'Link both', description: 'Associate both books and repositories' },
+      { label: 'Skip', description: 'No resources to link — finish the session log' }
+    ]
+  },
+  tips: [
+    'Use find_records to search for existing books or repositories',
+    'You can always add links later by updating the activity'
+  ]
+}
+```
+
+```ts file=examples/workflow-creation-guide-04.ts
 {
   order: 4,
   title: 'Link learning resources',
@@ -141,7 +214,20 @@ Present the user with choices that affect workflow direction:
 
 Steps with no `tool` or `decision` — the LLM uses its own judgment:
 
-```javascript
+```js file=examples/workflow-creation-guide-05.js
+{
+  order: 5,
+  title: 'Plan next week',
+  description:
+    'Based on your review and decision, outline 2-3 planned activities for the coming week.',
+  tips: [
+    'Create activities with status "planned" for sessions you intend to do',
+    'Consider creating activities for neglected themes first'
+  ]
+}
+```
+
+```ts file=examples/workflow-creation-guide-05.ts
 {
   order: 5,
   title: 'Plan next week',
@@ -158,7 +244,30 @@ Steps with no `tool` or `decision` — the LLM uses its own judgment:
 
 Steps that modify data. Use `changeset` to integrate with the MCP client's changeset system — a human-in-the-loop layer that intercepts mutating tool calls for user approval:
 
-```javascript
+```js file=examples/workflow-creation-guide-06.js
+{
+  order: 7,
+  title: 'Apply reclassifications',
+  description:
+    'Execute the approved reclassification plan using bulk_action_models.',
+  tool: 'bulk_action_models',
+  toolArgs: {
+    model: 'activity',
+    action: 'update',
+    records: [
+      { record_id: '<id>', theme_id: '<new_theme_id>', category_id: '<new_category_id>' }
+    ],
+    plan_id: '<plan_id_from_step_6>'
+  },
+  changeset: { mutating: true },
+  tips: [
+    'Include the plan_id from step 6 in the bulk_action_models call',
+    'If more than 25 activities, split into multiple bulk calls'
+  ]
+}
+```
+
+```ts file=examples/workflow-creation-guide-06.ts
 {
   order: 7,
   title: 'Apply reclassifications',
@@ -185,7 +294,27 @@ Steps that modify data. Use `changeset` to integrate with the MCP client's chang
 
 Adjacent steps with the same `parallelGroup` are rendered as a group with a note to call them simultaneously:
 
-```javascript
+```js file=examples/workflow-creation-guide-07.js
+{
+  order: 2,
+  title: 'Fetch themes',
+  tool: 'list_models',
+  toolArgs: { model: 'theme' },
+  parallelGroup: 'initial-data',
+  tips: ['...']
+},
+{
+  order: 3,
+  title: 'Fetch categories',
+  tool: 'list_models',
+  toolArgs: { model: 'category' },
+  parallelGroup: 'initial-data',
+  dependsOn: [],
+  tips: ['...']
+}
+```
+
+```ts file=examples/workflow-creation-guide-07.ts
 {
   order: 2,
   title: 'Fetch themes',
@@ -211,7 +340,28 @@ Use `dependsOn` to express dependencies between steps when parallelism is involv
 
 Adjacent steps with the same `loopGroup` iterate together per page. Use this when an exhaustive data fetch must be paired with a processing step per page (e.g., fetch page → store analysis → fetch next page):
 
-```javascript
+```js file=examples/workflow-creation-guide-08.js
+{
+  order: 2,
+  title: 'Fetch activities for reclassification',
+  description: 'Retrieve activity data for analysis.',
+  tool: 'search_records',
+  toolArgs: { model: 'activity' },
+  exhaustive: true,
+  loopGroup: 'fetch-analyze',
+  tips: ['...']
+},
+{
+  order: 3,
+  title: 'Analyze and categorize findings',
+  description: 'Store findings as analysis memories for this page.',
+  tool: 'store_analysis_memory',
+  loopGroup: 'fetch-analyze',
+  tips: ['...']
+}
+```
+
+```ts file=examples/workflow-creation-guide-08.ts
 {
   order: 2,
   title: 'Fetch activities for reclassification',
@@ -263,7 +413,15 @@ The LLM treats `_view` tools as strictly better (same data + visual UI), so it w
 
 Data tools (`list_models`, `search_records`, `find_records`) return raw JSON for programmatic use. View tools (`list_records_app`, `search_records_app`, `find_records_app`) render interactive MCP Apps. Workflows need data, not UI.
 
-```javascript
+```js file=examples/workflow-creation-guide-09.js
+// WRONG — opens an interactive table when you just need the data
+tool: 'list_records_app'
+
+// CORRECT — returns raw JSON for the LLM to process
+tool: 'list_models'
+```
+
+```ts file=examples/workflow-creation-guide-09.ts
 // WRONG — opens an interactive table when you just need the data
 tool: 'list_records_app'
 
@@ -275,7 +433,15 @@ tool: 'list_models'
 
 The LLM matches step descriptions against tool descriptions. Words like "browse", "visually review", "display" match `_view` tools. Words like "fetch", "retrieve", "get data" match data tools.
 
-```javascript
+```js file=examples/workflow-creation-guide-10.js
+// WRONG — "browse" semantically matches search_records_app
+description: 'Browse all activities to identify misclassified ones.'
+
+// CORRECT — "retrieve" semantically matches search_records
+description: 'Retrieve activity data to identify records with incorrect assignments.'
+```
+
+```ts file=examples/workflow-creation-guide-10.ts
 // WRONG — "browse" semantically matches search_records_app
 description: 'Browse all activities to identify misclassified ones.'
 
@@ -291,7 +457,15 @@ description: 'Retrieve activity data to identify records with incorrect assignme
 
 **3. Step titles should use neutral or data-oriented verbs.**
 
-```javascript
+```js file=examples/workflow-creation-guide-11.js
+// WRONG
+title: 'Browse activities to reclassify'
+
+// CORRECT
+title: 'Fetch activities for reclassification'
+```
+
+```ts file=examples/workflow-creation-guide-11.ts
 // WRONG
 title: 'Browse activities to reclassify'
 
@@ -376,7 +550,18 @@ Decisions let the user steer the workflow at key branching points.
 
 ### Good example
 
-```javascript
+```js file=examples/workflow-creation-guide-12.js
+decision: {
+  question: 'How would you like to handle status updates?',
+  options: [
+    { label: 'Update individually', description: 'Review and update each book one at a time' },
+    { label: 'Bulk update selected', description: 'Apply the same status change to all selected books' },
+    { label: 'Skip status updates', description: 'Statuses look good — move on to tags and locations' }
+  ]
+}
+```
+
+```ts file=examples/workflow-creation-guide-12.ts
 decision: {
   question: 'How would you like to handle status updates?',
   options: [
@@ -401,7 +586,59 @@ Use mutation plans when a workflow makes bulk changes that should be previewed b
 
 On the `WorkflowDefinition`:
 
-```javascript
+```js file=examples/workflow-creation-guide-13.js
+new WorkflowDefinition({
+  name: 'reclassify_activities',
+  // ...
+  draftRequired: true,
+  mutationPlans: {
+    'reclassification-plan': {
+      title: 'Activity Reclassification',
+      description: 'Review all proposed theme/category changes before applying',
+      targetModels: ['activity'],
+      expectedActions: ['update']
+    }
+  },
+  steps: [
+    // ... earlier steps gather data ...
+    {
+      order: 6,
+      title: 'Preview the reclassification plan',
+      tool: 'preview_mutation_plan',
+      toolArgs: {
+        plan_title: 'Activity Reclassification',
+        plan_name: 'reclassification-plan',
+        entries: [
+          {
+            action: 'update',
+            model: 'activity',
+            record_id: '<activity_id>',
+            description: 'Move from <current> to <new>',
+            attributes: { theme_id: '<id>', category_id: '<id>' }
+          }
+        ]
+      },
+      changeset: { requiresPlan: 'reclassification-plan' },
+      tips: ['Build entries from the analysis in previous steps']
+    },
+    {
+      order: 7,
+      title: 'Apply reclassifications',
+      tool: 'bulk_action_models',
+      toolArgs: {
+        model: 'activity',
+        action: 'update',
+        records: [{ record_id: '<id>', theme_id: '<id>', category_id: '<id>' }],
+        plan_id: '<plan_id_from_step_6>'
+      },
+      changeset: { mutating: true },
+      tips: ['Include the plan_id from step 6']
+    }
+  ]
+})
+```
+
+```ts file=examples/workflow-creation-guide-13.ts
 new WorkflowDefinition({
   name: 'reclassify_activities',
   // ...
@@ -479,7 +716,19 @@ src/<server>/domain/workflows/<workflow-name>.js
 
 ### Export pattern
 
-```javascript
+```js file=src/my-workflows.js
+import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
+
+export const myWorkflows = [
+  new WorkflowDefinition({
+    name: 'my_workflow',
+    title: 'My Workflow'
+    // ...
+  })
+]
+```
+
+```ts file=src/my-workflows.ts
 import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
 
 export const myWorkflows = [
@@ -497,7 +746,16 @@ A file can export multiple workflow definitions in the array.
 
 Add the import and spread into the `WorkflowRegistry` in `src/<server>/domain/registry.js`:
 
-```javascript
+```js file=src/registries/create-engineer-domain-registry.js
+import { myWorkflows } from './workflows/my-workflow.js'
+
+export function createEngineerDomainRegistry() {
+  const workflows = new WorkflowRegistry([...existingWorkflows, ...myWorkflows])
+  // ...
+}
+```
+
+```ts file=src/registries/create-engineer-domain-registry.ts
 import { myWorkflows } from './workflows/my-workflow.js'
 
 export function createEngineerDomainRegistry() {

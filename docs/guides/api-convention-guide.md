@@ -34,7 +34,7 @@ The seam isolates that idiosyncrasy. Tools, prompts, apps, and `model-form-ui` n
 
 ## The Interface
 
-```ts
+```ts file=src/conventions/my-convention.ts
 import {
   BaseConvention,
   type AssociationConfig,
@@ -71,6 +71,15 @@ class MyConvention extends BaseConvention {
   parseErrorResponse(response: ErrorResponse): string[]
   flattenExpandedResources(...)
   extractNestedRecords(...)
+}
+```
+
+```js file=src/conventions/my-convention.js
+import { BaseConvention } from '@mcp-rune/mcp-rune'
+class MyConvention extends BaseConvention {
+  get name() {
+    return 'my-convention'
+  }
 }
 ```
 
@@ -116,7 +125,7 @@ Turns a non-2xx response into a flat list of error message strings the framework
 
 HAL wraps lists in `_embedded.{collection}` and pagination in `_links`. Associations are URLs, not IDs.
 
-```ts
+```ts file=src/conventions/hal-convention.ts
 // your-server/conventions/hal-convention.ts
 import {
   BaseConvention,
@@ -234,6 +243,99 @@ export class HalConvention extends BaseConvention {
 export const halConvention = new HalConvention()
 ```
 
+```js file=src/conventions/hal-convention.js
+// your-server/conventions/hal-convention.ts
+import { BaseConvention } from '@mcp-rune/mcp-rune'
+export class HalConvention extends BaseConvention {
+  get name() {
+    return 'hal'
+  }
+  resolveAssociationFields(relName, relConfig, overrides = {}) {
+    if ('many' in relConfig && relConfig.many) {
+      const name = `${relName}_ids`
+      return {
+        [name]: {
+          name,
+          type: 'array',
+          required: relConfig.required ?? false,
+          description: relConfig.description ?? `IDs of related ${relName}`,
+          items: { type: 'integer' },
+          ...overrides[name]
+        }
+      }
+    }
+    const linkName = `${relName}_link`
+    const idName = `${relName}_id`
+    return {
+      [linkName]: {
+        name: linkName,
+        type: 'string',
+        format: 'url',
+        required: relConfig.required ?? false,
+        description: `HAL link to the related ${relConfig.target_model}`,
+        ...overrides[linkName]
+      },
+      [idName]: {
+        name: idName,
+        type: 'integer',
+        required: false,
+        description: `Convenience: parsed ID of ${linkName}`,
+        ...overrides[idName]
+      }
+    }
+  }
+  resolveAssociationValues(attrs, belongsTo = {}, apiBaseUrl) {
+    const out = { ...attrs }
+    for (const [relName, relConfig] of Object.entries(belongsTo)) {
+      const idKey = `${relName}_id`
+      const linkKey = `${relName}_link`
+      if (out[idKey] !== undefined && out[linkKey] === undefined) {
+        const collection = relConfig.endpoint ?? `${relConfig.target_model}s`
+        out[linkKey] = `${apiBaseUrl}/${collection}/${out[idKey]}`
+      }
+      delete out[idKey]
+    }
+    return out
+  }
+  buildRequestPayload(_model, attrs) {
+    return attrs // HAL servers expect flat payloads
+  }
+  normalizeListResponse(response, { page, perPage }) {
+    if (Array.isArray(response)) {
+      return {
+        records: response,
+        pagination: { page, perPage, total: response.length, totalPages: 1, hasMore: false }
+      }
+    }
+    const embedded = response._embedded ?? {}
+    const collectionKey = Object.keys(embedded)[0]
+    const records = collectionKey ? embedded[collectionKey] : []
+    const total = response.total ?? records.length
+    const totalPages = Math.max(1, Math.ceil(total / perPage))
+    return {
+      records,
+      pagination: { page, perPage, total, totalPages, hasMore: page < totalPages }
+    }
+  }
+  cleanResponse(data) {
+    if (Array.isArray(data)) return data.map((d) => this.cleanResponse(d))
+    if (data && typeof data === 'object') {
+      const { _links, _embedded, ...rest } = data
+      return rest
+    }
+    return data
+  }
+  parseErrorResponse(response) {
+    const data = response.data
+    if (!data) return [`HTTP ${response.status ?? '???'}`]
+    if (typeof data.message === 'string') return [data.message]
+    if (Array.isArray(data.errors)) return data.errors.map((e) => String(e))
+    return [JSON.stringify(data)]
+  }
+}
+export const halConvention = new HalConvention()
+```
+
 ## Worked Example: Flat REST Convention
 
 For a hand-rolled REST API with `{ items: [...], page, total }` lists and unwrapped POST bodies:
@@ -314,7 +416,7 @@ You only override what differs. Reusing `jsonApiConvention.resolveAssociationFie
 
 Attach the convention to a model so the framework picks it up everywhere — schema derivation, request building, list normalization:
 
-```ts
+```ts file=src/book.ts
 import { BaseModel } from '@mcp-rune/mcp-rune'
 import { halConvention } from './conventions/hal-convention'
 
@@ -339,13 +441,34 @@ class Book extends BaseModel {
 }
 ```
 
+```js file=src/book.js
+import { BaseModel } from '@mcp-rune/mcp-rune'
+import { halConvention } from './conventions/hal-convention'
+class Book extends BaseModel {
+  static singularName = 'book'
+  static api = {
+    endpoint: 'books',
+    convention: halConvention
+  }
+  static attributes = {
+    title: { type: 'string', required: true },
+    isbn: { type: 'string', format: 'isbn' }
+  }
+  static associations = {
+    belongsTo: {
+      author: { target_model: 'author', endpoint: 'authors' }
+    }
+  }
+}
+```
+
 Different models in the same server can use different conventions. The framework looks up `Model.api.convention` per call.
 
 ## Wiring Globally
 
 If every model in your server uses the same custom convention, write a small base class and have your models extend it:
 
-```ts
+```ts file=src/models/base-hal-model.ts
 class BaseHalModel extends BaseModel {
   static api = {
     endpoint: '',
@@ -359,13 +482,25 @@ class Book extends BaseHalModel {
 }
 ```
 
+```js file=src/models/base-hal-model.js
+class BaseHalModel extends BaseModel {
+  static api = {
+    endpoint: '',
+    convention: halConvention
+  }
+}
+class Book extends BaseHalModel {
+  static api = { ...BaseHalModel.api, endpoint: 'books' }
+}
+```
+
 There's no `AppRegistry.defaultConvention` setting today — convention is a model-level property by design, because it tracks the API endpoint, not the deployment.
 
 ## Testing a Convention
 
 Conventions are pure classes with no framework dependencies. Unit-test the methods directly:
 
-```ts
+```ts file=src/convention.ts
 import { describe, expect, it } from 'vitest'
 import { HalConvention } from '../src/conventions/hal-convention'
 
@@ -405,9 +540,52 @@ describe('HalConvention', () => {
 })
 ```
 
+```js file=src/convention.js
+import { describe, expect, it } from 'vitest'
+import { HalConvention } from '../src/conventions/hal-convention'
+const convention = new HalConvention()
+describe('HalConvention', () => {
+  it('normalizes a HAL list with _embedded', () => {
+    const response = {
+      _embedded: {
+        books: [
+          { id: 1, title: 'A' },
+          { id: 2, title: 'B' }
+        ]
+      },
+      total: 42,
+      _links: { next: { href: '…' } }
+    }
+    const out = convention.normalizeListResponse(response, { page: 1, perPage: 10 })
+    expect(out.records).toHaveLength(2)
+    expect(out.pagination.total).toBe(42)
+    expect(out.pagination.hasMore).toBe(true)
+  })
+  it('rewrites belongsTo _id into _link on submit', () => {
+    const out = convention.resolveAssociationValues(
+      { title: 'A', author_id: 7 },
+      { author: { target_model: 'author', endpoint: 'authors' } },
+      'https://api.example.com'
+    )
+    expect(out).toEqual({ title: 'A', author_link: 'https://api.example.com/authors/7' })
+  })
+  it('strips _links and _embedded from clean response', () => {
+    const out = convention.cleanResponse({ id: 1, title: 'A', _links: {}, _embedded: {} })
+    expect(out).toEqual({ id: 1, title: 'A' })
+  })
+})
+```
+
 Integration-test the end-to-end pipeline through `ModelService`:
 
-```ts
+```ts file=src/clients/api-client.ts
+const apiClient = createInMemoryClient(/* … */)
+const service = new ModelService(apiClient, models, { convention: halConvention })
+const result = await service.list('book', {})
+// Assert records came back normalized, no _links etc.
+```
+
+```js file=src/clients/api-client.js
 const apiClient = createInMemoryClient(/* … */)
 const service = new ModelService(apiClient, models, { convention: halConvention })
 const result = await service.list('book', {})

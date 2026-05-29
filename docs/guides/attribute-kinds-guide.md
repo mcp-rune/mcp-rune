@@ -61,7 +61,7 @@ All 17 kinds are registered in `src/core/kind-metadata.ts`. Browser-side display
 
 ## The `KindDescriptor` Contract
 
-```ts
+```ts file=src/kind-opts.ts
 import type { KindDescriptor, KindOpts } from '@mcp-rune/mcp-rune/core'
 
 interface KindOpts {
@@ -81,6 +81,33 @@ interface KindDescriptor {
   toInput(internal: unknown, opts?: KindOpts): string
   fromInput(raw: string, opts?: KindOpts): unknown
 }
+```
+
+```js file=src/kind-opts.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * import type { KindDescriptor, KindOpts } from '@mcp-rune/mcp-rune/core'
+ *
+ * interface KindOpts {
+ *   format?: string
+ *   enumValues?: string[]
+ *   max?: number
+ * }
+ *
+ * interface KindDescriptor {
+ *   htmlInputType: string
+ *   promptType: string
+ *   label: string
+ *   describe(value: unknown, opts?: KindOpts): string
+ *   validate(value: unknown, opts?: KindOpts): string | null
+ *   parse(api: unknown, opts?: KindOpts): unknown
+ *   serialize(internal: unknown, opts?: KindOpts): unknown
+ *   toInput(internal: unknown, opts?: KindOpts): string
+ *   fromInput(raw: string, opts?: KindOpts): unknown
+ * }
+ */
 ```
 
 Each method has a precise role. Read them as a contract between three caller groups:
@@ -106,7 +133,7 @@ The declarative descriptor is the canonical path. Use it unless you genuinely ne
 
 ### The `FormatterDescriptor` shape
 
-```ts
+```ts file=src/formatter-descriptor.ts
 import type { FormatterDescriptor } from '@mcp-rune/mcp-rune/apps'
 
 interface FormatterDescriptor {
@@ -134,13 +161,54 @@ interface FormatterDescriptor {
 }
 ```
 
+```js file=src/formatter-descriptor.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * import type { FormatterDescriptor } from '@mcp-rune/mcp-rune/apps'
+ *
+ * interface FormatterDescriptor {
+ *   htmlInputType?: string
+ *   promptType?: string
+ *   label?: string
+ *   validation?: {
+ *     pattern?: string
+ *     minLength?: number
+ *     maxLength?: number
+ *     minimum?: number
+ *     maximum?: number
+ *   }
+ *   display?: {
+ *     template?: string // "{value}" substitution
+ *     locale?: string // Intl.DateTimeFormat
+ *     dateStyle?: 'full' | 'long' | 'medium' | 'short'
+ *     timeStyle?: 'full' | 'long' | 'medium' | 'short'
+ *     badge?: { icon?: string; className?: string }
+ *   }
+ *   parser?: {
+ *     regex?: string
+ *     replacement?: string
+ *   }
+ * }
+ */
+```
+
 Notice the descriptor is JSON-serializable. It rides into the iframe through `AppRegistry.injectIntoHead` as `window.__MCP_RUNE_FORMATTERS__` (CSP-safe — no inline JS), and into the server through the same `formatters` config that `AppRegistry` already has. One source of truth.
 
 ## `getKind` Lookup Rules
 
-```ts
+```ts file=examples/attribute-kinds-guide-03.ts
 import { getKind } from '@mcp-rune/mcp-rune/core'
 
+getKind('string', 'isbn') // 1. exact kind:format narrowing
+getKind('string', 'url') // 2. format hop — 'url' is a top-level kind
+getKind('uuid') // 3. base kind
+getKind('totally-fake') // 4. falls back to 'string'
+```
+
+```js file=examples/attribute-kinds-guide-03.js
+import { getKind } from '@mcp-rune/mcp-rune/core'
 getKind('string', 'isbn') // 1. exact kind:format narrowing
 getKind('string', 'url') // 2. format hop — 'url' is a top-level kind
 getKind('uuid') // 3. base kind
@@ -158,7 +226,7 @@ Suppose your books have an `isbn` attribute and you want:
 - The LLM-facing prompt docs to say "ISBN" instead of "string."
 - A clear label in the form.
 
-```ts
+```ts file=src/registries/app-registry.ts
 // your-server/config.ts
 import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
 import { MODEL_CLASSES } from './models'
@@ -182,9 +250,41 @@ export const appRegistry = createDefaultAppRegistry({
 })
 ```
 
+```js file=src/registries/app-registry.js
+// your-server/config.ts
+import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
+import { MODEL_CLASSES } from './models'
+export const appRegistry = createDefaultAppRegistry({
+  modelClasses: MODEL_CLASSES,
+  namespace: 'bookshelf',
+  formatters: {
+    'string:isbn': {
+      label: 'ISBN',
+      htmlInputType: 'text',
+      promptType: 'string',
+      validation: {
+        pattern: '^(?:97[89][- ]?)?(?:\\d[- ]?){9}[\\dX]$',
+        minLength: 10,
+        maxLength: 17
+      },
+      display: { template: 'ISBN: {value}' }
+    }
+  }
+})
+```
+
 Declare the kind on the model attribute:
 
-```ts
+```ts file=src/book.ts
+class Book extends BaseModel {
+  static attributes = {
+    isbn: { type: 'string', format: 'isbn', label: 'ISBN' }
+    // …
+  }
+}
+```
+
+```js file=src/book.js
 class Book extends BaseModel {
   static attributes = {
     isbn: { type: 'string', format: 'isbn', label: 'ISBN' }
@@ -206,10 +306,36 @@ One declaration, four surfaces.
 
 When the declarative descriptor isn't expressive enough — typically because you need custom `parse` or `serialize` logic that can't be expressed as a regex or a template — call `registerKind` directly at boot:
 
-```ts
+```ts file=examples/attribute-kinds-guide-06.ts
 // your-server/kinds/currency.ts
 import { registerKind } from '@mcp-rune/mcp-rune/core'
 
+registerKind('currency', {
+  label: 'Currency',
+  htmlInputType: 'number',
+  promptType: 'number',
+  parse: (v) => {
+    if (v === null || v === undefined || v === '') return null
+    if (typeof v === 'number') return v
+    return Number(String(v).replace(/[^0-9.-]/g, ''))
+  },
+  serialize: (v) => (typeof v === 'number' ? Math.round(v * 100) / 100 : null),
+  describe: (v) => {
+    if (v === null || v === undefined) return ''
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(v))
+  },
+  toInput: (v) => (v === null || v === undefined ? '' : String(v)),
+  fromInput: (v) => (v === '' ? null : Number(v)),
+  validate: (v) => {
+    if (v === null || v === undefined || v === '') return null
+    return typeof v === 'number' && Number.isFinite(v) ? null : 'must be a number'
+  }
+})
+```
+
+```js file=examples/attribute-kinds-guide-06.js
+// your-server/kinds/currency.ts
+import { registerKind } from '@mcp-rune/mcp-rune/core'
 registerKind('currency', {
   label: 'Currency',
   htmlInputType: 'number',
@@ -237,7 +363,7 @@ Import this file once from your server's entry point — the `registerKind` call
 
 The iframe also needs to know about it. Add a matching declarative entry in `formatters` so the iframe registry sees the descriptor (the iframe can't import server-only code):
 
-```ts
+```ts file=examples/attribute-kinds-guide-07.ts
 formatters: {
   currency: {
     label: 'Currency',
@@ -249,16 +375,49 @@ formatters: {
 }
 ```
 
+```js file=examples/attribute-kinds-guide-07.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * formatters: {
+ *   currency: {
+ *     label: 'Currency',
+ *     htmlInputType: 'number',
+ *     promptType: 'number'
+ *     // Server-side parse/serialize/describe are unused in the iframe; the
+ *     // iframe only needs htmlInputType + display rendering.
+ *   }
+ * }
+ */
+```
+
 In practice, the declarative channel covers ~80% of cases. Reach for `registerKind` only when you genuinely need imperative server-side code.
 
 ## Worked Example: DOM-Only Override
 
 Sometimes you want to keep a kind's contract intact but change the rendered widget. Example: render `rating` as a slider instead of stars.
 
-```ts
+```ts file=src/max.ts
 // your-server/apps/rating-slider.js
 import { registerFormatter, helpers } from '@mcp-rune/mcp-rune/apps'
 
+registerFormatter('rating', {
+  format: (value, opts) => {
+    const max = opts?.column?.max ?? 5
+    const span = document.createElement('span')
+    span.textContent = `${value}/${max}`
+    span.style.background = 'linear-gradient(to right, gold, gold)'
+    span.style.backgroundSize = `${(Number(value) / max) * 100}% 100%`
+    span.style.backgroundRepeat = 'no-repeat'
+    return span
+  }
+})
+```
+
+```js file=src/max.js
+// your-server/apps/rating-slider.js
+import { registerFormatter } from '@mcp-rune/mcp-rune/apps'
 registerFormatter('rating', {
   format: (value, opts) => {
     const max = opts?.column?.max ?? 5
@@ -302,7 +461,7 @@ Same kind, eight call sites, one descriptor.
 
 Test the descriptor's pure functions directly:
 
-```ts
+```ts file=examples/attribute-kinds-guide-09.ts
 import { getKind } from '@mcp-rune/mcp-rune/core'
 import './kinds/currency' // ← side-effect import to register
 
@@ -321,9 +480,36 @@ describe('currency kind', () => {
 })
 ```
 
+```js file=examples/attribute-kinds-guide-09.js
+import { getKind } from '@mcp-rune/mcp-rune/core'
+import './kinds/currency' // ← side-effect import to register
+describe('currency kind', () => {
+  it('parses string with $ sign to number', () => {
+    expect(getKind('currency').parse('$1,234.56')).toBe(1234.56)
+  })
+  it('describe humanizes for LLM summary', () => {
+    expect(getKind('currency').describe(1234.5)).toBe('$1,234.50')
+  })
+  it('validate rejects non-numbers', () => {
+    expect(getKind('currency').validate('not a number')).toBe('must be a number')
+  })
+})
+```
+
 Round-trips:
 
-```ts
+```ts file=src/k.ts
+it('round-trips through input', () => {
+  const k = getKind('currency')
+  const api = '$42.99'
+  const internal = k.parse(api)
+  const inputValue = k.toInput(internal)
+  const back = k.fromInput(inputValue)
+  expect(k.serialize(back)).toBe(42.99)
+})
+```
+
+```js file=src/k.js
 it('round-trips through input', () => {
   const k = getKind('currency')
   const api = '$42.99'
@@ -336,7 +522,7 @@ it('round-trips through input', () => {
 
 The DOM `format()` is tested in `happy-dom`:
 
-```ts
+```ts file=src/node.ts
 /**
  * @vitest-environment happy-dom
  */
@@ -349,11 +535,23 @@ it('rating renders a custom widget after override', () => {
 })
 ```
 
+```js file=src/node.js
+/**
+ * @vitest-environment happy-dom
+ */
+import { getFormatter } from '@mcp-rune/mcp-rune/apps'
+it('rating renders a custom widget after override', () => {
+  // your registerFormatter override must run before this test
+  const node = getFormatter('rating').format(3, { column: { max: 5 } })
+  expect(node.textContent).toBe('3/5')
+})
+```
+
 ## Migrating from v0.50 `formatterScript`
 
 v0.50 shipped a `formatterScript` option on `AppRegistry` — a JS hook that ran inside the iframe and could register entirely new kinds. It was deleted in v0.51 because the server couldn't see what the hook registered (the prompt system and `validate_form` had no idea your `isbn` kind existed). The declarative `FormatterDescriptor` channel covers every case the hook covered, and now the server sees the kind too.
 
-```ts
+```ts file=examples/attribute-kinds-guide-12.ts
 // BEFORE (v0.50)
 formatterScript: `
   window.__MCP_RUNE_REGISTER_FORMATTERS__ = (registerFormatter, helpers) => {
@@ -370,6 +568,33 @@ formatters: {
     htmlInputType: 'text',
     validation: { pattern: '^[0-9-]+$', minLength: 10, maxLength: 17 },
     display: { template: 'ISBN: {value}' }
+  }
+}
+```
+
+```js file=examples/attribute-kinds-guide-12.js
+// BEFORE (v0.50)
+formatterScript: `
+  window.__MCP_RUNE_REGISTER_FORMATTERS__ = (registerFormatter, helpers) => {
+    registerFormatter('isbn', {
+      format: (v) => helpers.text('ISBN: ' + v)
+    })
+  }
+`
+// AFTER (v0.51+)
+formatters: {
+  ;('string:isbn')
+  {
+    label: ('ISBN', htmlInputType)
+    ;('text', validation)
+    {
+      pattern: ('^[0-9-]+$', minLength)
+      ;(10, maxLength)
+      17
+    }
+    display: {
+      template: 'ISBN: {value}'
+    }
   }
 }
 ```

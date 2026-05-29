@@ -69,7 +69,45 @@ Add an `extensions['search']` slice to the model class via the typed `searchConf
 
 ### Example: Activity Model
 
-```javascript
+```js file=src/activity.js
+// src/{server}/models/activity.js
+import { BaseModel } from '@mcp-rune/mcp-rune/core'
+import { searchConfig } from '@mcp-rune/mcp-rune/api-extensions/search'
+
+class Activity extends BaseModel {
+  static api = { endpoint: 'activities' }
+  static extensions = {
+    search: searchConfig({
+      filters: {
+        theme_id: {
+          type: 'relation',
+          label: 'Theme',
+          relatedModel: 'theme',
+          description: 'Filter by theme'
+        },
+        category_id: {
+          type: 'relation',
+          label: 'Category',
+          relatedModel: 'category',
+          description: 'Filter by category within a theme'
+        },
+        started_at: {
+          type: 'date_range',
+          label: 'Start Date',
+          description: 'Filter by activity start date range'
+        },
+        duration_minutes: {
+          type: 'integer_range',
+          label: 'Duration (minutes)',
+          description: 'Filter by activity duration in minutes'
+        }
+      }
+    })
+  }
+}
+```
+
+```ts file=src/activity.ts
 // src/{server}/models/activity.js
 import { BaseModel } from '@mcp-rune/mcp-rune/core'
 import { searchConfig } from '@mcp-rune/mcp-rune/api-extensions/search'

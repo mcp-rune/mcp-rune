@@ -89,7 +89,7 @@ This configuration is consumed by:
 
 ## ApiConfig Reference
 
-```typescript
+```ts file=src/config/api-config.ts
 interface ApiConfig {
   endpoint?: string
   convention?: BaseConvention
@@ -102,14 +102,37 @@ interface ApiConfig {
 }
 ```
 
+```js file=src/config/api-config.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * interface ApiConfig {
+ *   endpoint?: string
+ *   convention?: BaseConvention
+ *   readOnly?: boolean
+ *   parent?: string | string[]
+ *   standalone?: boolean
+ *   namespace?: string
+ *   endpoints?: EndpointOverrides
+ *   actions?: Record<string, ActionDefinition>
+ * }
+ */
+```
+
 ### endpoint
 
 **Type:** `string` — **Required**
 
 The base API path for this model. Used by `EndpointResolver.pathForType()` as the default path segment.
 
-```typescript
+```ts file=examples/api-config-guide-02.ts
 static api = { endpoint: 'books' }
+// → GET /books, POST /books, PATCH /books/:id, DELETE /books/:id
+```
+
+```js file=examples/api-config-guide-02.js
+api = { endpoint: 'books' }
 // → GET /books, POST /books, PATCH /books/:id, DELETE /books/:id
 ```
 
@@ -123,11 +146,17 @@ Controls how request payloads are built and responses are normalized. The conven
 - How association values are transformed (`resolveAssociationValues`)
 - How list responses are extracted and paginated (`normalizeListResponse`)
 
-```typescript
+```ts file=examples/api-config-guide-03.ts
 static api = { endpoint: 'books', convention: jsonApiConvention }
 // create payload: { "book": { "title": "Test" } }
 
 static api = { endpoint: 'books', convention: flatConvention }
+// create payload: { "title": "Test" }
+```
+
+```js file=examples/api-config-guide-03.js
+api = { endpoint: 'books', convention: jsonApiConvention }
+api = { endpoint: 'books', convention: flatConvention }
 // create payload: { "title": "Test" }
 ```
 
@@ -137,8 +166,14 @@ static api = { endpoint: 'books', convention: flatConvention }
 
 When `true`, ModelService blocks write operations (create, update, delete) on this model with a `ModelReadOnlyError`. Custom actions are **not** blocked by `readOnly` — they use `_validateModel` instead of `_validateWritable`.
 
-```typescript
+```ts file=examples/api-config-guide-04.ts
 static api = { endpoint: 'reports', readOnly: true }
+// create/update/delete → throws ModelReadOnlyError
+// action('export', { recordId: '1' }) → allowed
+```
+
+```js file=examples/api-config-guide-04.js
+api = { endpoint: 'reports', readOnly: true }
 // create/update/delete → throws ModelReadOnlyError
 // action('export', { recordId: '1' }) → allowed
 ```
@@ -152,7 +187,7 @@ Configure nested resource relationships.
 - `parent` — names the parent model(s) this resource is nested under
 - `standalone: false` — this model has no standalone endpoint; a `parentPath` is required for collection operations
 
-```typescript
+```ts file=src/asset.ts
 class Asset extends BaseModel {
   static api = {
     endpoint: 'assets',
@@ -166,12 +201,33 @@ class Asset extends BaseModel {
 // Create: requires parentPath → POST /titles/42/assets
 ```
 
+```js file=src/asset.js
+class Asset extends BaseModel {
+  static api = {
+    endpoint: 'assets',
+    parent: 'title',
+    standalone: false
+  }
+}
+// List: requires parentPath → GET /titles/42/assets
+// Find: uses compound ID → GET /titles/42/assets/7
+// Create: requires parentPath → POST /titles/42/assets
+```
+
 When `standalone` is `false` and no `parentPath` is provided, `EndpointResolver` throws `MissingParentError`.
 
 Multiple parents are supported:
 
-```typescript
+```ts file=examples/api-config-guide-06.ts
 static api = {
+  endpoint: 'schedulings',
+  parent: ['title', 'title_group'],
+  standalone: false
+}
+```
+
+```js file=examples/api-config-guide-06.js
+api = {
   endpoint: 'schedulings',
   parent: ['title', 'title_group'],
   standalone: false
@@ -184,9 +240,14 @@ static api = {
 
 Per-model API namespace prefix. Overrides the server-wide namespace configured on `EndpointResolver`.
 
-```typescript
+```ts file=examples/api-config-guide-07.ts
 // Server-wide namespace: 'api/v1'
 static api = { endpoint: 'books', namespace: 'api/v2' }
+// → api/v2/books (model-level overrides server-wide)
+```
+
+```js file=examples/api-config-guide-07.js
+api = { endpoint: 'books', namespace: 'api/v2' }
 // → api/v2/books (model-level overrides server-wide)
 ```
 
@@ -196,7 +257,7 @@ static api = { endpoint: 'books', namespace: 'api/v2' }
 
 Per-action endpoint overrides for APIs with non-standard CRUD paths.
 
-```typescript
+```ts file=src/endpoint-overrides.ts
 interface EndpointOverrides {
   collection?: string // list + create (unless overridden)
   record?: string // find + update + delete (unless overridden), :id substituted
@@ -204,6 +265,21 @@ interface EndpointOverrides {
   update?: string // update only — highest priority for record ops, :id substituted
   delete?: string // delete only — highest priority for record ops, :id substituted
 }
+```
+
+```js file=src/endpoint-overrides.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * interface EndpointOverrides {
+ *   collection?: string // list + create (unless overridden)
+ *   record?: string // find + update + delete (unless overridden), :id substituted
+ *   create?: string // create only — highest priority for collection ops
+ *   update?: string // update only — highest priority for record ops, :id substituted
+ *   delete?: string // delete only — highest priority for record ops, :id substituted
+ * }
+ */
 ```
 
 Resolution priority (highest first):
@@ -216,7 +292,7 @@ Resolution priority (highest first):
 | update | `endpoints.update` → `endpoints.record` → default     |
 | delete | `endpoints.delete` → `endpoints.record` → default     |
 
-```typescript
+```ts file=examples/api-config-guide-09.ts
 static api = {
   endpoint: 'books',
   endpoints: {
@@ -235,6 +311,24 @@ static api = {
 // delete → books/123/archive        (per-action > record)
 ```
 
+```js file=examples/api-config-guide-09.js
+api = {
+  endpoint: 'books',
+  endpoints: {
+    collection: 'catalogue/book-items',
+    record: 'catalogue/book-items/:id',
+    create: 'books/draft',
+    update: 'books/:id/revise',
+    delete: 'books/:id/archive'
+  }
+}
+// list   → catalogue/book-items
+// create → books/draft              (per-action > collection)
+// find   → catalogue/book-items/123
+// update → books/123/revise         (per-action > record)
+// delete → books/123/archive        (per-action > record)
+```
+
 **Note:** Explicit overrides bypass namespace — they are treated as full paths.
 
 ### actions (custom actions)
@@ -243,7 +337,7 @@ static api = {
 
 Custom actions beyond CRUD. Each key is the action name, each value defines the HTTP method, URL path template, and behavior options. See [ActionDefinition Reference](#actiondefinition-reference).
 
-```typescript
+```ts file=examples/api-config-guide-10.ts
 static api = {
   endpoint: 'books',
   actions: {
@@ -256,11 +350,24 @@ static api = {
 }
 ```
 
+```js file=examples/api-config-guide-10.js
+api = {
+  endpoint: 'books',
+  actions: {
+    publish: { path: ':id/publish', description: 'Publish a draft book' },
+    archive: { path: ':id/archive', method: 'PATCH' },
+    export: { path: ':id/export', method: 'GET' },
+    approve_chapter: { path: ':id/chapters/:chapter_id/approve' },
+    bulk_publish: { path: 'bulk-publish', recordLevel: false, rawPayload: true }
+  }
+}
+```
+
 ---
 
 ## ActionDefinition Reference
 
-```typescript
+```ts file=src/action-definition.ts
 interface ActionDefinition {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   path: string
@@ -268,6 +375,21 @@ interface ActionDefinition {
   description?: string
   rawPayload?: boolean
 }
+```
+
+```js file=src/action-definition.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * interface ActionDefinition {
+ *   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+ *   path: string
+ *   recordLevel?: boolean
+ *   description?: string
+ *   rawPayload?: boolean
+ * }
+ */
 ```
 
 ### method
@@ -287,7 +409,7 @@ Supports two kinds of placeholders:
 - `:id` — substituted from `recordId` (the primary record parameter)
 - `:param_name` — substituted from `pathParams` (additional named parameters)
 
-```typescript
+```ts file=examples/api-config-guide-12.ts
 // Single record action
 path: ':id/publish'
 
@@ -301,6 +423,25 @@ path: 'reports/:report_type/:year/generate'
 path: 'bulk-publish'
 ```
 
+```js file=examples/api-config-guide-12.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * // Single record action
+ * path: ':id/publish'
+ *
+ * // Nested action with extra parameter
+ * path: ':id/chapters/:chapter_id/approve'
+ *
+ * // Collection action with parameters
+ * path: 'reports/:report_type/:year/generate'
+ *
+ * // Simple collection action
+ * path: 'bulk-publish'
+ */
+```
+
 ### Path Parameter Substitution
 
 `EndpointResolver.resolveAction()` substitutes path parameters in this order:
@@ -309,7 +450,7 @@ path: 'bulk-publish'
 2. All remaining `:param_name` placeholders are replaced from `pathParams`
 3. If any placeholders remain unresolved, an error is thrown
 
-```typescript
+```ts file=examples/api-config-guide-13.ts
 // recordId='42', pathParams={ chapter_id: '5' }
 ':id/chapters/:chapter_id/approve' → 'books/42/chapters/5/approve'
 
@@ -320,9 +461,26 @@ path: 'bulk-publish'
 ':id/chapters/:chapter_id/approve' → Error: "Unresolved path parameters: :chapter_id"
 ```
 
+```js file=examples/api-config-guide-13.js
+// recordId='42', pathParams={ chapter_id: '5' }
+':id/chapters/:chapter_id/approve'
+'books/42/chapters/5/approve'
+// No recordId, pathParams={ report_type: 'sales', year: '2026' }
+'reports/:report_type/:year/generate'
+'books/reports/sales/2026/generate'
+// recordId='42', no pathParams with :chapter_id
+':id/chapters/:chapter_id/approve'
+Error: 'Unresolved path parameters: :chapter_id'
+```
+
 **Compound IDs:** When `recordId` contains `/` (e.g., `'titles/42/assets/7'`), it is treated as a compound ID. After `:id` substitution, the base endpoint is **not** prepended — the compound ID already encodes the full resource hierarchy.
 
-```typescript
+```ts file=examples/api-config-guide-14.ts
+// recordId='titles/42/assets/7', path=':id/publish'
+// → 'titles/42/assets/7/publish' (no base prepend)
+```
+
+```js file=examples/api-config-guide-14.js
 // recordId='titles/42/assets/7', path=':id/publish'
 // → 'titles/42/assets/7/publish' (no base prepend)
 ```
@@ -345,10 +503,17 @@ Human-readable description. Included in the `model_action` tool description so L
 
 When `true`, `ModelService.action()` sends attributes as-is without convention wrapping. Useful for actions that accept a non-standard payload format.
 
-```typescript
+```ts file=examples/api-config-guide-15.ts
 // rawPayload: false (default) → convention wraps payload
 // POST /books/42/publish with { "book": { "publish_date": "2026-01-01" } }
 
+// rawPayload: true → attributes sent directly
+// POST /books/bulk-publish with { "ids": [1, 2, 3] }
+```
+
+```js file=examples/api-config-guide-15.js
+// rawPayload: false (default) → convention wraps payload
+// POST /books/42/publish with { "book": { "publish_date": "2026-01-01" } }
 // rawPayload: true → attributes sent directly
 // POST /books/bulk-publish with { "ids": [1, 2, 3] }
 ```
@@ -392,7 +557,7 @@ Returns `{ url: string, method: string }`.
 
 Effective namespace: model-level > server-wide > none.
 
-```typescript
+```ts file=src/resolver.ts
 const resolver = new EndpointResolver({ namespace: 'api/v1' })
 
 // Server-wide:
@@ -407,15 +572,35 @@ resolver.resolveAction({ model: 'book', modelConfig, action: 'publish', recordId
 // → { url: 'api/v1/books/42/publish', method: 'POST' }
 ```
 
+```js file=src/resolver.js
+const resolver = new EndpointResolver({ namespace: 'api/v1' })
+// Server-wide:
+resolver.resolveCollection({ model: 'book', modelConfig }) // → 'api/v1/books'
+// Model override:
+// modelConfig.api.namespace = 'api/v2'
+resolver.resolveCollection({ model: 'book', modelConfig }) // → 'api/v2/books'
+// Actions also respect namespace:
+resolver.resolveAction({ model: 'book', modelConfig, action: 'publish', recordId: '42' })
+// → { url: 'api/v1/books/42/publish', method: 'POST' }
+```
+
 **Note:** CRUD endpoint overrides bypass namespace (they are treated as full paths). Action paths do apply namespace after base prepending.
 
 ### Custom pathForType
 
 Override in a subclass for APIs with different naming conventions:
 
-```typescript
+```ts file=src/dasherized-resolver.ts
 class DasherizedResolver extends EndpointResolver {
   override pathForType(model: string): string {
+    return model.replace(/_/g, '-') + 's'
+  }
+}
+```
+
+```js file=src/dasherized-resolver.js
+class DasherizedResolver extends EndpointResolver {
+  pathForType(model) {
     return model.replace(/_/g, '-') + 's'
   }
 }
@@ -429,7 +614,7 @@ class DasherizedResolver extends EndpointResolver {
 
 ### CRUD Operations
 
-```typescript
+```ts file=examples/api-config-guide-18.ts
 await modelService.create('book', { title: 'Test', author: 'Author' })
 await modelService.find('book', '123')
 await modelService.list('book', { status: 'active' }, { page: 2, perPage: 10 })
@@ -444,9 +629,22 @@ await modelService.find('asset', 'titles/42/assets/7') // compound ID
 await modelService.create('book', attrs, { userId: 'user-123' })
 ```
 
+```js file=examples/api-config-guide-18.js
+await modelService.create('book', { title: 'Test', author: 'Author' })
+await modelService.find('book', '123')
+await modelService.list('book', { status: 'active' }, { page: 2, perPage: 10 })
+await modelService.update('book', '123', { title: 'Updated' })
+await modelService.delete('book', '123')
+// Nested resources:
+await modelService.create('asset', { name: 'HD' }, { parentPath: 'titles/42/assets' })
+await modelService.find('asset', 'titles/42/assets/7') // compound ID
+// User impersonation:
+await modelService.create('book', attrs, { userId: 'user-123' })
+```
+
 ### Custom Actions
 
-```typescript
+```ts file=examples/api-config-guide-19.ts
 // Simple record action (POST)
 await modelService.action('book', 'publish', { recordId: '42' })
 // → POST books/42/publish
@@ -484,6 +682,45 @@ await modelService.action('asset', 'publish', {
 })
 // → POST titles/42/assets/7/publish
 
+// With user impersonation
+await modelService.action('book', 'publish', {
+  recordId: '42',
+  requestOptions: { userId: 'u1' }
+})
+```
+
+```js file=examples/api-config-guide-19.js
+// Simple record action (POST)
+await modelService.action('book', 'publish', { recordId: '42' })
+// → POST books/42/publish
+// Record action with payload (convention-wrapped)
+await modelService.action('book', 'archive', {
+  recordId: '42',
+  attributes: { reason: 'outdated' }
+})
+// → PATCH books/42/archive with { "book": { "reason": "outdated" } }
+// GET action with query params
+await modelService.action('book', 'export', {
+  recordId: '42',
+  params: { format: 'pdf' }
+})
+// → GET books/42/export?format=pdf
+// Multi-param action (Rails-style)
+await modelService.action('book', 'approve_chapter', {
+  recordId: '42',
+  pathParams: { chapter_id: '5' }
+})
+// → POST books/42/chapters/5/approve
+// Collection-level action with raw payload
+await modelService.action('book', 'bulk_publish', {
+  attributes: { ids: [1, 2, 3] }
+})
+// → POST books/bulk-publish with { ids: [1, 2, 3] }
+// Compound ID (nested resource action)
+await modelService.action('asset', 'publish', {
+  recordId: 'titles/42/assets/7'
+})
+// → POST titles/42/assets/7/publish
 // With user impersonation
 await modelService.action('book', 'publish', {
   recordId: '42',
@@ -544,7 +781,7 @@ Each convention knows its API's error response shape. `BaseTool.formatError()` d
 
 The method receives an `ErrorResponse` object (`{ status?, data? }`) and returns a flat `string[]` of error messages:
 
-```typescript
+```ts file=src/data.ts
 import type { ErrorResponse } from '@mcp-rune/mcp-rune/prompts'
 
 // Base implementation: extracts from response.data, JSON dump for objects
@@ -554,6 +791,21 @@ parseErrorResponse(response: ErrorResponse): string[] {
   if (typeof data === 'string') return [data]
   return [JSON.stringify(data, null, 2)]
 }
+```
+
+```js file=src/data.js
+// Base implementation: extracts from response.data, JSON dump for objects
+parseErrorResponse(response, ErrorResponse);
+string[];
+{
+    const data = response.data;
+    if (data === undefined || data === null)
+        return [];
+    if (typeof data === 'string')
+        return [data];
+    return [JSON.stringify(data, null, 2)];
+}
+export {};
 ```
 
 **JSON API convention** handles Rails error shapes:
@@ -580,7 +832,21 @@ This format is optimized for LLM consumption: `isError: true` already signals th
 
 Nested resources are handled through **compound IDs** and `parentPath`:
 
-```typescript
+```ts file=src/asset.ts
+// Model configuration
+class Asset extends BaseModel {
+  static api = {
+    endpoint: 'assets',
+    parent: 'title',
+    standalone: false,
+    actions: {
+      publish: { path: ':id/publish' }
+    }
+  }
+}
+```
+
+```js file=src/asset.js
 // Model configuration
 class Asset extends BaseModel {
   static api = {
@@ -596,14 +862,25 @@ class Asset extends BaseModel {
 
 **Collection operations** use `parentPath`:
 
-```typescript
+```ts file=examples/api-config-guide-22.ts
+await modelService.list('asset', {}, {}, { parentPath: 'titles/42/assets' })
+await modelService.create('asset', attrs, { parentPath: 'titles/42/assets' })
+```
+
+```js file=examples/api-config-guide-22.js
 await modelService.list('asset', {}, {}, { parentPath: 'titles/42/assets' })
 await modelService.create('asset', attrs, { parentPath: 'titles/42/assets' })
 ```
 
 **Record operations** use compound IDs:
 
-```typescript
+```ts file=examples/api-config-guide-23.ts
+await modelService.find('asset', 'titles/42/assets/7')
+await modelService.update('asset', 'titles/42/assets/7', attrs)
+await modelService.delete('asset', 'titles/42/assets/7')
+```
+
+```js file=examples/api-config-guide-23.js
 await modelService.find('asset', 'titles/42/assets/7')
 await modelService.update('asset', 'titles/42/assets/7', attrs)
 await modelService.delete('asset', 'titles/42/assets/7')
@@ -611,16 +888,28 @@ await modelService.delete('asset', 'titles/42/assets/7')
 
 **Custom actions** on nested resources:
 
-```typescript
+```ts file=examples/api-config-guide-24.ts
+await modelService.action('asset', 'publish', { recordId: 'titles/42/assets/7' })
+// → POST titles/42/assets/7/publish (compound ID — no base prepend)
+```
+
+```js file=examples/api-config-guide-24.js
 await modelService.action('asset', 'publish', { recordId: 'titles/42/assets/7' })
 // → POST titles/42/assets/7/publish (compound ID — no base prepend)
 ```
 
 The `compound-id` module provides utilities:
 
-```typescript
+```ts file=examples/api-config-guide-25.ts
 import { buildCompoundId, buildCollectionPath, parseId } from '@mcp-rune/mcp-rune/services'
 
+buildCompoundId('titles', '42', 'assets', '7') // → 'titles/42/assets/7'
+buildCollectionPath('titles', '42', 'assets') // → 'titles/42/assets'
+parseId('titles/42/assets/7', 'assets') // → { isCompound: true, leafId: '7', ... }
+```
+
+```js file=examples/api-config-guide-25.js
+import { buildCompoundId, buildCollectionPath, parseId } from '@mcp-rune/mcp-rune/services'
 buildCompoundId('titles', '42', 'assets', '7') // → 'titles/42/assets/7'
 buildCollectionPath('titles', '42', 'assets') // → 'titles/42/assets'
 parseId('titles/42/assets/7', 'assets') // → { isCompound: true, leafId: '7', ... }
@@ -632,7 +921,18 @@ parseId('titles/42/assets/7', 'assets') // → { isCompound: true, leafId: '7', 
 
 ### Standard REST Model
 
-```typescript
+```ts file=src/book.ts
+class Book extends BaseModel {
+  static api = { endpoint: 'books' }
+}
+// list   → GET /books
+// create → POST /books
+// find   → GET /books/123
+// update → PATCH /books/123
+// delete → DELETE /books/123
+```
+
+```js file=src/book.js
 class Book extends BaseModel {
   static api = { endpoint: 'books' }
 }
@@ -645,7 +945,26 @@ class Book extends BaseModel {
 
 ### Non-Standard CRUD Paths
 
-```typescript
+```ts file=src/book.ts
+class Book extends BaseModel {
+  static api = {
+    endpoint: 'books',
+    endpoints: {
+      collection: 'catalogue/book-items',
+      create: 'books/draft',
+      update: 'books/:id/revise',
+      delete: 'books/:id/archive'
+    }
+  }
+}
+// list   → GET /catalogue/book-items
+// create → POST /books/draft
+// find   → GET /catalogue/book-items/123
+// update → PATCH /books/123/revise
+// delete → DELETE /books/123/archive
+```
+
+```js file=src/book.js
 class Book extends BaseModel {
   static api = {
     endpoint: 'books',
@@ -666,7 +985,7 @@ class Book extends BaseModel {
 
 ### Custom Actions (Publish, Archive, Export)
 
-```typescript
+```ts file=src/book.ts
 class Book extends BaseModel {
   static api = {
     endpoint: 'books',
@@ -695,9 +1014,35 @@ await modelService.action('book', 'export', {
 // → GET /books/42/export?format=pdf
 ```
 
+```js file=src/book.js
+class Book extends BaseModel {
+  static api = {
+    endpoint: 'books',
+    convention: jsonApiConvention,
+    actions: {
+      publish: { path: ':id/publish', description: 'Publish a draft book' },
+      archive: { path: ':id/archive', method: 'PATCH', description: 'Archive a book' },
+      export: { path: ':id/export', method: 'GET', description: 'Export book data' }
+    }
+  }
+}
+await modelService.action('book', 'publish', { recordId: '42' })
+// → POST /books/42/publish
+await modelService.action('book', 'archive', {
+  recordId: '42',
+  attributes: { reason: 'outdated' }
+})
+// → PATCH /books/42/archive { "book": { "reason": "outdated" } }
+await modelService.action('book', 'export', {
+  recordId: '42',
+  params: { format: 'pdf' }
+})
+// → GET /books/42/export?format=pdf
+```
+
 ### Multi-Param Actions (Rails-Style)
 
-```typescript
+```ts file=src/book.ts
 class Book extends BaseModel {
   static api = {
     endpoint: 'books',
@@ -728,9 +1073,38 @@ await modelService.action('book', 'generate_report', {
 // → GET /books/reports/sales/2026/generate
 ```
 
+```js file=src/book.js
+class Book extends BaseModel {
+  static api = {
+    endpoint: 'books',
+    actions: {
+      approve_chapter: {
+        path: ':id/chapters/:chapter_id/approve',
+        description: 'Approve a specific chapter'
+      },
+      generate_report: {
+        path: 'reports/:report_type/:year/generate',
+        method: 'GET',
+        recordLevel: false,
+        description: 'Generate a report'
+      }
+    }
+  }
+}
+await modelService.action('book', 'approve_chapter', {
+  recordId: '42',
+  pathParams: { chapter_id: '5' }
+})
+// → POST /books/42/chapters/5/approve
+await modelService.action('book', 'generate_report', {
+  pathParams: { report_type: 'sales', year: '2026' }
+})
+// → GET /books/reports/sales/2026/generate
+```
+
 ### Nested-Only Model with Custom Actions
 
-```typescript
+```ts file=src/asset.ts
 class Asset extends BaseModel {
   static api = {
     endpoint: 'assets',
@@ -758,9 +1132,34 @@ await modelService.action('asset', 'transcode', {
 // → POST /titles/42/assets/7/transcode { "asset": { "format": "h265", "resolution": "4k" } }
 ```
 
+```js file=src/asset.js
+class Asset extends BaseModel {
+  static api = {
+    endpoint: 'assets',
+    parent: 'title',
+    standalone: false,
+    actions: {
+      publish: { path: ':id/publish', description: 'Publish an asset' },
+      transcode: { path: ':id/transcode', method: 'POST', description: 'Start transcoding' }
+    }
+  }
+}
+// CRUD uses compound IDs / parentPath:
+await modelService.find('asset', 'titles/42/assets/7')
+await modelService.list('asset', {}, {}, { parentPath: 'titles/42/assets' })
+// Actions use compound IDs:
+await modelService.action('asset', 'publish', { recordId: 'titles/42/assets/7' })
+// → POST /titles/42/assets/7/publish
+await modelService.action('asset', 'transcode', {
+  recordId: 'titles/42/assets/7',
+  attributes: { format: 'h265', resolution: '4k' }
+})
+// → POST /titles/42/assets/7/transcode { "asset": { "format": "h265", "resolution": "4k" } }
+```
+
 ### Read-Only Model with GET Actions
 
-```typescript
+```ts file=src/report.ts
 class Report extends BaseModel {
   static api = {
     endpoint: 'reports',
@@ -783,9 +1182,30 @@ await modelService.action('report', 'download', {
 // → GET /reports/42/download?format=csv
 ```
 
+```js file=src/report.js
+class Report extends BaseModel {
+  static api = {
+    endpoint: 'reports',
+    readOnly: true,
+    actions: {
+      download: { path: ':id/download', method: 'GET', description: 'Download report' },
+      preview: { path: ':id/preview', method: 'GET', description: 'Preview report' }
+    }
+  }
+}
+// CRUD writes blocked:
+await modelService.create('report', {}) // → throws ModelReadOnlyError
+// Custom GET actions allowed:
+await modelService.action('report', 'download', {
+  recordId: '42',
+  params: { format: 'csv' }
+})
+// → GET /reports/42/download?format=csv
+```
+
 ### Collection-Level Action with Raw Payload
 
-```typescript
+```ts file=src/book.ts
 class Book extends BaseModel {
   static api = {
     endpoint: 'books',
@@ -800,6 +1220,26 @@ class Book extends BaseModel {
   }
 }
 
+await modelService.action('book', 'bulk_publish', {
+  attributes: { ids: [1, 2, 3], publish_date: '2026-01-01' }
+})
+// → POST /books/bulk-publish { "ids": [1, 2, 3], "publish_date": "2026-01-01" }
+```
+
+```js file=src/book.js
+class Book extends BaseModel {
+  static api = {
+    endpoint: 'books',
+    actions: {
+      bulk_publish: {
+        path: 'bulk-publish',
+        recordLevel: false,
+        rawPayload: true,
+        description: 'Publish multiple books at once'
+      }
+    }
+  }
+}
 await modelService.action('book', 'bulk_publish', {
   attributes: { ids: [1, 2, 3], publish_date: '2026-01-01' }
 })

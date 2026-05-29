@@ -24,7 +24,7 @@ For the broader analysis-tool family, see [Analysis Memories Guide](./analysis-m
 
 A strategy is a deterministic pure function over a page of records.
 
-```ts
+```ts file=src/summary-input.ts
 export interface SummaryInput {
   analysisId: string
   model: string
@@ -47,6 +47,36 @@ export interface SummaryStrategy {
   appliesTo?(input: SummaryInput): boolean // optional gate; omit = always applies
   generate(input: SummaryInput): SummaryOutput | Promise<SummaryOutput>
 }
+```
+
+```js file=src/summary-input.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * export interface SummaryInput {
+ *   analysisId: string
+ *   model: string
+ *   page: number
+ *   totalPages: number | null
+ *   records: ReadonlyArray<Record<string, unknown>>
+ *   fields?: ReadonlyArray<string>
+ *   options?: Readonly<Record<string, unknown>>
+ * }
+ *
+ * export interface SummaryOutput {
+ *   finding: string // embedded as the memory row text
+ *   metadata: Record<string, unknown> // stored alongside
+ *   category?: string // defaults to `page_summary:<strategy.name>`
+ * }
+ *
+ * export interface SummaryStrategy {
+ *   readonly name: string // lowercase kebab-case, globally unique
+ *   readonly description: string // one-line LLM-facing hint
+ *   appliesTo?(input: SummaryInput): boolean // optional gate; omit = always applies
+ *   generate(input: SummaryInput): SummaryOutput | Promise<SummaryOutput>
+ * }
+ */
 ```
 
 **Guarantees the framework gives you:**
@@ -119,7 +149,7 @@ Use this when you ingested with the default `distribution`, looked at the result
 
 ## Authoring a custom strategy
 
-```ts
+```ts file=src/count-by.ts
 import type { SummaryStrategy, SummaryInput, SummaryOutput } from '@mcp-rune/mcp-rune/extensions'
 
 export const dealNarrativeStrategy: SummaryStrategy = {
@@ -176,9 +206,59 @@ function topEntry(counts: Record<string, number>) {
 }
 ```
 
+```js file=src/count-by.js
+export const dealNarrativeStrategy = {
+  name: 'deal-narrative',
+  description:
+    'One-paragraph prose summary of a deal page: pipeline mix, total dollar value, ' +
+    'top owners. Pick this when preparing a status report.',
+  // Only run when the page looks like deals.
+  appliesTo(input) {
+    return input.model === 'deal' && input.records.length > 0
+  },
+  generate(input) {
+    const total = input.records.length
+    const totalValue = input.records.reduce(
+      (acc, r) => acc + (typeof r.amount === 'number' ? r.amount : 0),
+      0
+    )
+    const byStage = countBy(input.records, 'stage')
+    const topStage = topEntry(byStage)
+    const ownerCounts = countBy(input.records, 'owner_id')
+    const topOwner = topEntry(ownerCounts)
+    return {
+      finding:
+        `Page ${input.page}: ${total} deals worth $${totalValue.toLocaleString()}. ` +
+        `Stage mix favors ${topStage.key} (${topStage.count}/${total}). ` +
+        `Top owner ${topOwner.key} carries ${topOwner.count} deals.`,
+      metadata: {
+        page: input.page,
+        total_value: totalValue,
+        by_stage: byStage,
+        owner_counts: ownerCounts
+      }
+    }
+  }
+}
+function countBy(records, field) {
+  const out = {}
+  for (const r of records) {
+    const v = r[field]
+    if (v === null || v === undefined) continue
+    const key = String(v)
+    out[key] = (out[key] ?? 0) + 1
+  }
+  return out
+}
+function topEntry(counts) {
+  const [key, count] = Object.entries(counts).sort(([, a], [, b]) => b - a)[0] ?? ['—', 0]
+  return { key, count }
+}
+```
+
 Register it on `ToolRegistry` via an `ApiExtension`:
 
-```ts
+```ts file=examples/summary-strategies-03.ts
 import { dealNarrativeStrategy } from './deal-narrative-strategy.js'
 
 const salesExtension: ApiExtension = {
@@ -187,6 +267,20 @@ const salesExtension: ApiExtension = {
   }
 }
 
+new ToolRegistry({
+  toolClasses: DATA_TOOL_CLASSES,
+  models: MODEL_CLASSES,
+  apiExtensions: { sales: salesExtension }
+})
+```
+
+```js file=examples/summary-strategies-03.js
+import { dealNarrativeStrategy } from './deal-narrative-strategy.js'
+const salesExtension = {
+  register(ctx) {
+    ctx.registerSummaryStrategy(dealNarrativeStrategy)
+  }
+}
 new ToolRegistry({
   toolClasses: DATA_TOOL_CLASSES,
   models: MODEL_CLASSES,

@@ -43,7 +43,29 @@ A 5-layer architecture for generating prompt documentation from model and prompt
 
 Generates `fieldDefinitions` from model's `attributes`. This is the foundation — all field metadata comes from the model.
 
-```javascript
+```js file=src/schema.js
+import { derivePromptSchema } from '#src/mcp/prompts/schema-derivation.js'
+import { Activity } from '../models/index.js'
+
+static {
+  const schema = derivePromptSchema(Activity, {
+    fieldGroups: this.fieldGroups,
+    fieldOverrides: {
+      // Override/extend fields from model
+      theme_id: { required: true }
+    },
+    promptFields: {
+      // Prompt-only fields not in model
+      book_ids: { name: 'book_ids', type: 'array', required: false }
+    }
+  })
+
+  this.fieldGroups = schema.fieldGroups
+  this.fieldDefinitions = schema.fieldDefinitions
+}
+```
+
+```ts file=src/schema.ts
 import { derivePromptSchema } from '#src/mcp/prompts/schema-derivation.js'
 import { Activity } from '../models/index.js'
 
@@ -77,7 +99,22 @@ Two complementary structures organize fields:
 
 ### Sections (User-facing)
 
-```javascript
+```js file=examples/prompt-derivation-framework-guide-02.js
+static sections = {
+  classification: {
+    title: 'Classification',
+    description: 'Theme and category',
+    required: true,
+    groups: ['classification'],
+    content: {
+      intro: 'Classification determines how activities are organized.',
+      notes: ['Use find_records to look up themes']
+    }
+  }
+}
+```
+
+```ts file=examples/prompt-derivation-framework-guide-02.ts
 static sections = {
   classification: {
     title: 'Classification',
@@ -94,7 +131,17 @@ static sections = {
 
 ### FieldGroups (Validation)
 
-```javascript
+```js file=examples/prompt-derivation-framework-guide-03.js
+static fieldGroups = {
+  classification: {
+    fields: ['theme_id', 'category_id'],
+    context: 'Classification',
+    required: true
+  }
+}
+```
+
+```ts file=examples/prompt-derivation-framework-guide-03.ts
 static fieldGroups = {
   classification: {
     fields: ['theme_id', 'category_id'],
@@ -138,7 +185,25 @@ Generates per-section documentation from config. Includes:
 
 When a model field has `enumDescriptions`, enum tables are automatically generated:
 
-```javascript
+```js file=examples/prompt-derivation-framework-guide-04.js
+// In model:
+static attributes = {
+  status: {
+    type: 'enum',
+    enumValues: ['planned', 'active', 'paused', 'completed', 'archived'],
+    default: 'planned',
+    enumDescriptions: {
+      planned: 'Not yet started',
+      active: 'Currently in progress',
+      paused: 'Temporarily on hold',
+      completed: 'Finished',
+      archived: 'No longer relevant'
+    }
+  }
+}
+```
+
+```ts file=examples/prompt-derivation-framework-guide-04.ts
 // In model:
 static attributes = {
   status: {
@@ -175,7 +240,21 @@ Generated output:
 
 The `PromptContentGenerator` builder composes all layers into final `promptContent`.
 
-```javascript
+```js file=examples/prompt-derivation-framework-guide-05.js
+get promptContent() {
+  return PromptContentGenerator.for(ActivityPrompt, 'activity')
+    .add(`# Activity Creation Guide
+
+## What is an Activity?
+Custom intro text...`)
+    .standard()           // flowDiagram → guidance → allSections → summary
+    .add(this.generateToolUsageSection())  // Custom tool usage
+    .attributeReference() // Layer 3: attribute reference table
+    .build()              // Join with '\n\n---\n\n'
+}
+```
+
+```ts file=examples/prompt-derivation-framework-guide-05.ts
 get promptContent() {
   return PromptContentGenerator.for(ActivityPrompt, 'activity')
     .add(`# Activity Creation Guide
@@ -208,7 +287,11 @@ Accessed via `.guidance()` in the builder.
 
 ### Factory
 
-```javascript
+```js file=examples/prompt-derivation-framework-guide-06.js
+PromptContentGenerator.for(PromptClass, 'model_name')
+```
+
+```ts file=examples/prompt-derivation-framework-guide-06.ts
 PromptContentGenerator.for(PromptClass, 'model_name')
 ```
 
@@ -227,7 +310,17 @@ PromptContentGenerator.for(PromptClass, 'model_name')
 
 ### `.allSections()` Options
 
-```javascript
+```js file=examples/prompt-derivation-framework-guide-07.js
+.allSections({
+  skip: ['content'],  // Skip sections handled by custom .add() calls
+  customSections: {
+    // Override specific sections with custom generators
+    resources: (sectionNum) => `## SECTION ${sectionNum}: Resources\n...custom content...`
+  }
+})
+```
+
+```ts file=examples/prompt-derivation-framework-guide-07.ts
 .allSections({
   skip: ['content'],  // Skip sections handled by custom .add() calls
   customSections: {
@@ -241,7 +334,27 @@ PromptContentGenerator.for(PromptClass, 'model_name')
 
 ### Before (manual documentation)
 
-```javascript
+```js file=examples/prompt-derivation-framework-guide-08.js
+get promptContent() {
+  return `
+# My Guide
+...intro...
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| name | Yes | The name |        ← Hardcoded, will drift from model
+| type | No | The type |
+
+## Summary
+...manual summary...
+
+## Attribute Reference
+${this.generateAttributeReference()}  ← Custom method per prompt
+`
+}
+```
+
+```ts file=examples/prompt-derivation-framework-guide-08.ts
 get promptContent() {
   return `
 # My Guide
@@ -263,7 +376,20 @@ ${this.generateAttributeReference()}  ← Custom method per prompt
 
 ### After (framework)
 
-```javascript
+```js file=examples/prompt-derivation-framework-guide-09.js
+import { PromptContentGenerator } from '#src/mcp/prompts/prompt-content-generator.js'
+
+get promptContent() {
+  return PromptContentGenerator.for(MyPrompt, 'my_model')
+    .add(`# My Guide\n\n...intro...`)
+    .standard()
+    .add(this.generateToolUsageSection())
+    .attributeReference()  // One line replaces 20+ lines
+    .build()
+}
+```
+
+```ts file=examples/prompt-derivation-framework-guide-09.ts
 import { PromptContentGenerator } from '#src/mcp/prompts/prompt-content-generator.js'
 
 get promptContent() {

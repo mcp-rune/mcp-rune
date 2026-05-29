@@ -25,7 +25,7 @@ The seam exists for two reasons:
 
 ## The Interface
 
-```ts
+```ts file=src/layers/data-layer.ts
 import type { DataLayer } from '@mcp-rune/mcp-rune/core'
 
 interface DataLayer {
@@ -39,6 +39,27 @@ interface DataLayer {
   readonly models: ModelsRegistry
   readonly endpointResolver: EndpointResolver // unstable; for custom-actions
 }
+```
+
+```js file=src/layers/data-layer.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * import type { DataLayer } from '@mcp-rune/mcp-rune/core'
+ *
+ * interface DataLayer {
+ *   create(model, attributes, options?)
+ *   find(model, recordId, options?)
+ *   list(model, filters?, pagination?, options?)
+ *   update(model, recordId, attributes, options?)
+ *   delete(model, recordId, options?)
+ *   dispatch(method, url, payload?, params?, options?)
+ *   buildPayload(model, modelConfig, attrs)
+ *   readonly models: ModelsRegistry
+ *   readonly endpointResolver: EndpointResolver // unstable; for custom-actions
+ * }
+ */
 ```
 
 Every method returns `Promise<Record<string, unknown>>`. Adapters are responsible for their own response normalization upstream of this boundary; the projection layer treats payloads as opaque.
@@ -93,13 +114,27 @@ const registry = new ToolRegistry({
 
 The factory signature is:
 
-```ts
+```ts file=src/data-layer-factory.ts
 type DataLayerFactory = (ctx: {
   apiClient?: ApiClient
   models: ModelsRegistry
   namespace?: string
   logger?: ToolLogger
 }) => DataLayer
+```
+
+```js file=src/data-layer-factory.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * type DataLayerFactory = (ctx: {
+ *   apiClient?: ApiClient
+ *   models: ModelsRegistry
+ *   namespace?: string
+ *   logger?: ToolLogger
+ * }) => DataLayer
+ */
 ```
 
 `apiClient` is passed by the registry whenever `createApiClient` is configured. Adapters that don't need HTTP (in-memory stub, library-backed wrappers) can ignore it.
@@ -146,7 +181,16 @@ export class ArchiveProjectTool extends BaseTool {
 
 `requireDataLayer()` returns the bound `DataLayer` and throws `Error('Not authenticated. Please authenticate first.')` if the tool ran without authentication. For typed CRUD, prefer the named methods over `dispatch`:
 
-```ts
+```ts file=src/book.ts
+const book = await this.requireDataLayer().find('book', '42')
+const books = await this.requireDataLayer().list(
+  'book',
+  { status: 'unread' },
+  { page: 1, perPage: 20 }
+)
+```
+
+```js file=src/book.js
 const book = await this.requireDataLayer().find('book', '42')
 const books = await this.requireDataLayer().list(
   'book',

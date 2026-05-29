@@ -117,7 +117,7 @@ Namespaces prefix all model endpoints with an API path segment.
 
 **Server-wide namespace** (applies to all models):
 
-```typescript
+```ts file=src/resolver.ts
 const resolver = new EndpointResolver({ namespace: 'api/v1' })
 
 // book.endpoint = 'books'
@@ -125,9 +125,16 @@ resolver.resolveCollection({ model: 'book', modelConfig }) // → 'api/v1/books'
 resolver.resolveRecord({ model: 'book', modelConfig, recordId: '1' }) // → 'api/v1/books/1'
 ```
 
+```js file=src/resolver.js
+const resolver = new EndpointResolver({ namespace: 'api/v1' })
+// book.endpoint = 'books'
+resolver.resolveCollection({ model: 'book', modelConfig }) // → 'api/v1/books'
+resolver.resolveRecord({ model: 'book', modelConfig, recordId: '1' }) // → 'api/v1/books/1'
+```
+
 **Per-model override** (model-level takes priority):
 
-```typescript
+```ts file=examples/service-layer-guide-02.ts
 // Model config:
 { endpoint: 'books', api: { namespace: 'api/v2' } }
 
@@ -135,11 +142,23 @@ resolver.resolveRecord({ model: 'book', modelConfig, recordId: '1' }) // → 'ap
 resolver.resolveCollection(...) // → 'api/v2/books'
 ```
 
+```js file=examples/service-layer-guide-02.js
+// Model config:
+{
+    endpoint: 'books', api;
+    {
+        namespace: 'api/v2';
+    }
+}
+// Server namespace is 'api/v1', but this model uses 'api/v2':
+resolver.resolveCollection(...); // → 'api/v2/books'
+```
+
 ### Per-Action Endpoint Overrides
 
 For APIs with non-standard paths, override specific actions on `ApiConfig`:
 
-```typescript
+```ts file=src/book.ts
 class Book extends BaseModel {
   static api = {
     endpoint: 'books',
@@ -161,11 +180,32 @@ class Book extends BaseModel {
 // delete → 'books/123/archive'     (per-action > record)
 ```
 
+```js file=src/book.js
+class Book extends BaseModel {
+  static api = {
+    endpoint: 'books',
+    endpoints: {
+      collection: 'catalogue/book-items', // list + create
+      record: 'catalogue/book-items/:id', // find + update + delete
+      create: 'books/draft', // create only (overrides collection)
+      update: 'books/:id/revise', // update only (overrides record)
+      delete: 'books/:id/archive' // delete only (overrides record)
+    }
+  }
+}
+// Resolution:
+// list   → 'catalogue/book-items'
+// create → 'books/draft'           (per-action > collection)
+// find   → 'catalogue/book-items/123'
+// update → 'books/123/revise'      (per-action > record)
+// delete → 'books/123/archive'     (per-action > record)
+```
+
 ### Compound IDs and Nested Resources
 
 Nested resources are handled through **compound IDs** and the `parentPath` parameter, eliminating the need for separate nested routing configuration:
 
-```typescript
+```ts file=src/asset.ts
 class Asset extends BaseModel {
   static api = {
     endpoint: 'assets',
@@ -185,9 +225,26 @@ resolver.resolveCollection({ model: 'asset', modelConfig, parentPath: 'titles/42
 // Nested-only model without parentPath → throws MissingParentError
 ```
 
+```js file=src/asset.js
+class Asset extends BaseModel {
+  static api = {
+    endpoint: 'assets',
+    parent: 'title', // Parent model name(s)
+    standalone: false // No standalone endpoint (nested-only)
+  }
+}
+// Record operations use compound IDs (the ID encodes the full path):
+resolver.resolveRecord({ model: 'asset', modelConfig, recordId: 'titles/42/assets/7' })
+// → 'titles/42/assets/7'
+// Collection operations use parentPath:
+resolver.resolveCollection({ model: 'asset', modelConfig, parentPath: 'titles/42/assets' })
+// → 'titles/42/assets'
+// Nested-only model without parentPath → throws MissingParentError
+```
+
 The `compound-id` module provides utilities for building these paths:
 
-```typescript
+```ts file=examples/service-layer-guide-05.ts
 import {
   buildCompoundId,
   buildCollectionPath,
@@ -199,11 +256,22 @@ buildCollectionPath('titles', '42', 'assets') // → 'titles/42/assets'
 parseId('titles/42/assets/7', 'assets') // → { isCompound: true, leafId: '7', ... }
 ```
 
+```js file=examples/service-layer-guide-05.js
+import {
+  buildCompoundId,
+  buildCollectionPath,
+  parseId
+} from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
+buildCompoundId('titles', '42', 'assets', '7') // → 'titles/42/assets/7'
+buildCollectionPath('titles', '42', 'assets') // → 'titles/42/assets'
+parseId('titles/42/assets/7', 'assets') // → { isCompound: true, leafId: '7', ... }
+```
+
 ### Custom pathForType
 
 Override `pathForType` in a subclass for APIs that use different naming conventions:
 
-```typescript
+```ts file=src/dasherized-resolver.ts
 class DasherizedResolver extends EndpointResolver {
   override pathForType(model: string): string {
     return model.replace(/_/g, '-') + 's'
@@ -215,6 +283,17 @@ const resolver = new DasherizedResolver({ namespace: 'api/v1' })
 resolver.resolveCollection(...) // → 'api/v1/book-items'
 ```
 
+```js file=src/dasherized-resolver.js
+class DasherizedResolver extends EndpointResolver {
+    pathForType(model) {
+        return model.replace(/_/g, '-') + 's';
+    }
+}
+const resolver = new DasherizedResolver({ namespace: 'api/v1' });
+// model 'book_item', endpoint 'book_items'
+resolver.resolveCollection(...); // → 'api/v1/book-items'
+```
+
 ---
 
 ## ModelService
@@ -223,7 +302,7 @@ resolver.resolveCollection(...) // → 'api/v1/book-items'
 
 ### Setup
 
-```typescript
+```ts file=src/services/model-service.ts
 import { ModelService } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
 
 const modelService = new ModelService({
@@ -235,9 +314,20 @@ const modelService = new ModelService({
 })
 ```
 
+```js file=src/services/model-service.js
+import { ModelService } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
+const modelService = new ModelService({
+  apiClient, // Required — HTTP client implementing ApiClient
+  models: modelsRegistry, // Required — model name → ModelConfig map
+  namespace: 'api/v1', // Optional — server-wide namespace
+  endpointResolver: resolver, // Optional — custom resolver (default created from namespace)
+  logger // Optional — ToolLogger for debug output
+})
+```
+
 ### CRUD Operations
 
-```typescript
+```ts file=src/data.ts
 // Create — validates required fields, resolves endpoint, builds convention payload
 const data = await modelService.create('book', { title: 'Test', author: 'Author' })
 
@@ -280,6 +370,39 @@ await modelService.action('book', 'export', {
 // → GET /books/42/export?format=pdf
 ```
 
+```js file=src/data.js
+// Create — validates required fields, resolves endpoint, builds convention payload
+const data = await modelService.create('book', { title: 'Test', author: 'Author' })
+// Create nested — use parentPath for nested-only models
+const asset = await modelService.create('asset', { name: 'HD' }, { parentPath: 'titles/42/assets' })
+// Find — resolves record endpoint (supports compound IDs)
+const book = await modelService.find('book', '123')
+const nested = await modelService.find('asset', 'titles/42/assets/7')
+// List — merges filters with pagination
+const results = await modelService.list('book', { status: 'active' }, { page: 2, perPage: 10 })
+// List nested — use parentPath for nested collections
+const assets = await modelService.list('asset', {}, {}, { parentPath: 'titles/42/assets' })
+// Update — builds convention payload (supports compound IDs)
+const updated = await modelService.update('book', '123', { title: 'New Title' })
+// Delete (supports compound IDs)
+await modelService.delete('book', '123')
+// With userId impersonation
+const impersonated = await modelService.create('book', attrs, { userId: 'user-123' })
+// Custom action — any HTTP method, any URL pattern
+await modelService.action('book', 'publish', { recordId: '42' })
+// → POST /books/42/publish
+await modelService.action('book', 'approve_chapter', {
+  recordId: '42',
+  pathParams: { chapter_id: '5' }
+})
+// → POST /books/42/chapters/5/approve
+await modelService.action('book', 'export', {
+  recordId: '42',
+  params: { format: 'pdf' }
+})
+// → GET /books/42/export?format=pdf
+```
+
 All methods return raw API responses (`Record<string, unknown>`) — no MCP formatting.
 
 For the complete reference on custom actions, `ActionDefinition`, path parameter substitution, and `rawPayload`, see the [API Configuration Guide](api-config-guide.md).
@@ -296,9 +419,20 @@ ModelService throws typed errors that tools catch and format for the MCP protoco
 | `MissingParentError`         | Nested-only model without `parentPath` | —                           |
 | `UnknownActionError`         | Custom action not declared on model    | —                           |
 
-```typescript
+```ts file=examples/service-layer-guide-09.ts
 import { MissingRequiredFieldsError } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
 
+try {
+  await modelService.create('book', { title: 'Test' }) // missing 'author'
+} catch (error) {
+  if (error instanceof MissingRequiredFieldsError) {
+    return { content: [{ type: 'text', text: error.message }], isError: true }
+  }
+}
+```
+
+```js file=examples/service-layer-guide-09.js
+import { MissingRequiredFieldsError } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
 try {
   await modelService.create('book', { title: 'Test' }) // missing 'author'
 } catch (error) {
@@ -318,9 +452,24 @@ try {
 
 The recommended construction site is the shared `createSearchService` factory:
 
-```typescript
+```ts file=src/services/search-service.ts
 import { createSearchService, RailsSearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
 
+const searchService = createSearchService(apiClient, {
+  searchGroups: {
+    // Optional — named group search endpoints
+    catalogue: {
+      endpoint: 'catalogue/search',
+      modelsParam: 'models',
+      queryParam: 'q'
+    }
+  },
+  defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' }) // Optional — server-wide adapter
+})
+```
+
+```js file=src/services/search-service.js
+import { createSearchService, RailsSearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
 const searchService = createSearchService(apiClient, {
   searchGroups: {
     // Optional — named group search endpoints
@@ -344,7 +493,7 @@ Direct `new SearchService(apiClient, { ... })` is still supported for advanced u
 2. **Group search** — `searchCfg.query.group` exists → POST to shared group endpoint, scoped to this model's type
 3. **List fallback** — neither configured → GET listing with first lookup field as filter
 
-```typescript
+```ts file=src/activity.ts
 import { searchConfig } from '@mcp-rune/mcp-rune/api-extensions/search'
 
 // Path 1: Direct search endpoint
@@ -389,6 +538,48 @@ const results = await searchService.search(Platform, 'Netflix')
 // → GET /platforms?name=Netflix&page=1&per_page=20
 ```
 
+```js file=src/activity.js
+import { searchConfig } from '@mcp-rune/mcp-rune/api-extensions/search'
+// Path 1: Direct search endpoint
+class Activity extends BaseModel {
+  static api = { endpoint: 'activities' }
+  static extensions = {
+    search: searchConfig({
+      query: { endpoint: 'activities/search', method: 'POST', queryParam: 'q' },
+      filters: { theme_id: { type: 'relation' } },
+      lookup: { fields: ['title'] }
+    })
+  }
+}
+const results = await searchService.search(Activity, 'React', {
+  page: 1,
+  perPage: 20,
+  filters: { theme_id: '5' }
+})
+// → POST /activities/search { q: "React", theme_id: "5", page: 1, per_page: 20 }
+// Path 2: Group search (multiple models share one search endpoint)
+class Title extends BaseModel {
+  static api = { endpoint: 'titles' }
+  static extensions = {
+    search: searchConfig({
+      query: { group: 'catalogue', modelName: ['episode', 'feature'] },
+      lookup: { fields: ['external_id'] }
+    })
+  }
+}
+const results = await searchService.search(Title, 'drama')
+// → POST /catalogue/search { q: "drama", models: ["episode", "feature"], page: 1, per_page: 20 }
+// Path 3: List fallback (no query config)
+class Platform extends BaseModel {
+  static api = { endpoint: 'platforms' }
+  static extensions = {
+    search: searchConfig({ lookup: { fields: ['name'] } })
+  }
+}
+const results = await searchService.search(Platform, 'Netflix')
+// → GET /platforms?name=Netflix&page=1&per_page=20
+```
+
 ### Lookup Resolution Chain
 
 `searchService.lookup(ModelClass, query, { perPage })` resolves typeahead/autocomplete with its own 3-tier chain:
@@ -397,7 +588,7 @@ const results = await searchService.search(Platform, 'Netflix')
 2. **Search fallback** — `searchCfg.query` exists → delegates to `search()`
 3. **List fallback** — neither configured → GET listing with first lookup field
 
-```typescript
+```ts file=src/brand.ts
 // Path 1: Dedicated lookup endpoint
 class Brand extends BaseModel {
   static api = { endpoint: 'brands' }
@@ -424,11 +615,47 @@ const results = await searchService.lookup(Activity, 'Haskell')
 // → POST /activities/search { q: "Haskell", page: 1, per_page: 10 }
 ```
 
+```js file=src/brand.js
+// Path 1: Dedicated lookup endpoint
+class Brand extends BaseModel {
+  static api = { endpoint: 'brands' }
+  static extensions = {
+    search: searchConfig({
+      query: { group: 'catalogue' },
+      lookup: { endpoint: 'brands/autocomplete', fields: ['external_id'] }
+    })
+  }
+}
+const results = await searchService.lookup(Brand, 'BBC')
+// → GET /brands/autocomplete?external_id=BBC&per_page=10
+// Path 2: Falls through to search()
+class Activity extends BaseModel {
+  static extensions = {
+    search: searchConfig({
+      query: { endpoint: 'activities/search', method: 'POST', queryParam: 'q' },
+      lookup: { fields: ['title'] }
+    })
+  }
+}
+const results = await searchService.lookup(Activity, 'Haskell')
+// → POST /activities/search { q: "Haskell", page: 1, per_page: 10 }
+```
+
 ### Group Search
 
 Multi-model search across a named endpoint:
 
-```typescript
+```ts file=src/results.ts
+const results = await searchService.groupSearch('catalogue', 'drama', {
+  page: 1,
+  perPage: 20,
+  models: ['episode', 'feature'], // scope to specific model types
+  filters: { status: 'published' }
+})
+// → POST /catalogue/search { q: "drama", models: [...], status: "published", page: 1, per_page: 20 }
+```
+
+```js file=src/results.js
 const results = await searchService.groupSearch('catalogue', 'drama', {
   page: 1,
   perPage: 20,
@@ -442,7 +669,17 @@ const results = await searchService.groupSearch('catalogue', 'drama', {
 
 Paginated listing via GET — always works regardless of search configuration:
 
-```typescript
+```ts file=src/results.ts
+const results = await searchService.list(BookModel, {
+  page: 2,
+  perPage: 50,
+  status: 'reading',
+  sort: 'title'
+})
+// → GET /books?page=2&per_page=50&status=reading&sort=title
+```
+
+```js file=src/results.js
 const results = await searchService.list(BookModel, {
   page: 2,
   perPage: 50,
@@ -464,12 +701,21 @@ Request bodies are built by pluggable adapters. The adapter is selected at three
 
 The base `SearchAdapter` spreads filters flat into the body. For Rails APIs that nest filters, use `RailsSearchAdapter`:
 
-```typescript
+```ts file=src/adapter.ts
 import { RailsSearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
 
 // Nests filters under a key + flattens range mappings
 const adapter = new RailsSearchAdapter({ filtersParam: 'filters' })
 
+// Input:  { duration_minutes: { from: 40, to: 120 } }
+// Output: { filters: { min_duration: 40, max_duration: 120 } }
+//   (via adapterConfig.rangeMappings on the model's search.query)
+```
+
+```js file=src/adapter.js
+import { RailsSearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
+// Nests filters under a key + flattens range mappings
+const adapter = new RailsSearchAdapter({ filtersParam: 'filters' })
 // Input:  { duration_minutes: { from: 40, to: 120 } }
 // Output: { filters: { min_duration: 40, max_duration: 120 } }
 //   (via adapterConfig.rangeMappings on the model's search.query)
@@ -481,7 +727,13 @@ See the [Search & Filter Integration Guide](search-filter-integration-guide.md) 
 
 Query a model's search/lookup capability without instantiating a service:
 
-```typescript
+```ts file=examples/service-layer-guide-16.ts
+SearchService.getSearchCapability(BookModel) // → 'direct' | 'group' | 'list-only'
+SearchService.getLookupCapability(BookModel) // → 'dedicated' | 'search-fallback' | 'list-fallback'
+SearchService.getSearchGroup(BookModel) // → 'catalogue' | null
+```
+
+```js file=examples/service-layer-guide-16.js
 SearchService.getSearchCapability(BookModel) // → 'direct' | 'group' | 'list-only'
 SearchService.getLookupCapability(BookModel) // → 'dedicated' | 'search-fallback' | 'list-fallback'
 SearchService.getSearchGroup(BookModel) // → 'catalogue' | null
@@ -491,7 +743,7 @@ SearchService.getSearchGroup(BookModel) // → 'catalogue' | null
 
 All SearchService methods return a normalized `SearchResult`:
 
-```typescript
+```ts file=src/search-result.ts
 interface SearchResult {
   records: Record<string, unknown>[]
   pagination: {
@@ -503,6 +755,23 @@ interface SearchResult {
 }
 ```
 
+```js file=src/search-result.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * interface SearchResult {
+ *   records: Record<string, unknown>[]
+ *   pagination: {
+ *     page: number
+ *     per_page: number
+ *     total: number
+ *     total_pages?: number
+ *   }
+ * }
+ */
+```
+
 ---
 
 ## Tool Integration
@@ -511,7 +780,7 @@ interface SearchResult {
 
 Construct both services in your tool registry and pass them as dependencies:
 
-```typescript
+```ts file=src/token.ts
 import { ModelService } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
 import {
   createSearchService,
@@ -537,6 +806,37 @@ async _createAuthenticatedInstance(ToolClass, getAccessToken) {
   return new ToolClass({
     apiClient,
     modelService,        // CRUD tools delegate here
+    // searchService — passed via serverContext for search tools/apps
+    logger: this.logger,
+    models: this.models,
+    promptRegistry: this.promptRegistry,
+    serverContext: { ...this.serverContext, searchService },
+    domainRegistry: this.domainRegistry
+  })
+}
+```
+
+```js file=src/token.js
+import { ModelService } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
+import { createSearchService, RailsSearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
+async
+_createAuthenticatedInstance(ToolClass, getAccessToken)
+{
+  const token = await getAccessToken()
+  const apiClient = createApiClient(token, { apiUrl })
+  // Construct services from shared apiClient + models
+  const modelService = new ModelService({
+    apiClient,
+    models: this.models,
+    namespace: 'api/v1'
+  })
+  const searchService = createSearchService(apiClient, {
+    searchGroups: this.serverContext.searchGroups,
+    defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
+  })
+  return new ToolClass({
+    apiClient,
+    modelService, // CRUD tools delegate here
     // searchService — passed via serverContext for search tools/apps
     logger: this.logger,
     models: this.models,
@@ -575,7 +875,7 @@ CRUD tools access `ModelService` via `this.requireModelService()`. `BaseTool` la
 
 All `ApiClient` methods now accept an optional third parameter for request options:
 
-```typescript
+```ts file=src/request-options.ts
 interface RequestOptions {
   userId?: string
   [key: string]: unknown
@@ -587,6 +887,25 @@ interface ApiClient {
   patch(url: string, data?: Record<string, unknown>, options?: RequestOptions): Promise<...>
   delete(url: string, options?: RequestOptions): Promise<...>
 }
+```
+
+```js file=src/request-options.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * interface RequestOptions {
+ *   userId?: string
+ *   [key: string]: unknown
+ * }
+ *
+ * interface ApiClient {
+ *   get(url: string, params?: Record<string, unknown>, options?: RequestOptions): Promise<...>
+ *   post(url: string, data?: Record<string, unknown>, options?: RequestOptions): Promise<...>
+ *   patch(url: string, data?: Record<string, unknown>, options?: RequestOptions): Promise<...>
+ *   delete(url: string, options?: RequestOptions): Promise<...>
+ * }
+ */
 ```
 
 This is backward-compatible — existing ApiClient implementations that only accept 2 parameters continue to work. The extra argument is silently ignored by JavaScript until the implementation is updated to handle it.

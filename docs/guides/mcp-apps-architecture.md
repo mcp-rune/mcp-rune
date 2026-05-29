@@ -266,7 +266,15 @@ Association fields (belongsTo selects, hasMany multiselects) are detected by:
 
 The schema generator marks these fields with `association: { endpoint, labelField }`. The app's `handleToolCall` fetches options from the API separately:
 
-```javascript
+```js file=examples/mcp-apps-architecture-01.js
+// In handleToolCall (server-side):
+await resolveAssociationOptions(schema.fields, apiClient)
+
+// Fetches: GET /locations → [{ id: 1, name: 'Office' }, ...]
+// Produces: field.options = [{ value: 1, label: 'Office' }, ...]
+```
+
+```ts file=examples/mcp-apps-architecture-01.ts
 // In handleToolCall (server-side):
 await resolveAssociationOptions(schema.fields, apiClient)
 
@@ -302,7 +310,16 @@ registry.registerResources(mcpServer)
 
 Apps declaring `needsAuth: true` receive an authenticated API client:
 
-```javascript
+```js file=src/token.js
+// AppRegistry.registerTools():
+if (app.needsAuth && getAccessToken && this._apiUrl) {
+  const token = await getAccessToken()
+  context.apiClient = createApiClient(token, { apiUrl: this._apiUrl })
+}
+return app.handleToolCall(args, context)
+```
+
+```ts file=src/token.ts
 // AppRegistry.registerTools():
 if (app.needsAuth && getAccessToken && this._apiUrl) {
   const token = await getAccessToken()
@@ -317,7 +334,18 @@ The `getAccessToken` function comes from the OAuth2 session — it returns the c
 
 Multiple tools can share the same HTML resource. For example, `create_model_form` and `update_model_form` both use `ui://engineer/model-form`. The registry deduplicates by tracking registered URIs:
 
-```javascript
+```js file=src/registered.js
+registerResources(mcpServer) {
+  const registered = new Set()
+  for (const app of this._apps.values()) {
+    if (registered.has(app.resourceUri)) continue
+    registered.add(app.resourceUri)
+    // ...register once
+  }
+}
+```
+
+```ts file=src/registered.ts
 registerResources(mcpServer) {
   const registered = new Set()
   for (const app of this._apps.values()) {
@@ -332,7 +360,30 @@ registerResources(mcpServer) {
 
 The registry wires models to apps via configuration maps:
 
-```javascript
+```js file=src/filters.js
+import { getSearchConfig } from '@mcp-rune/mcp-rune/api-extensions/search'
+
+const FORM_MODEL_CLASSES = { activity: Activity, book: Book, ... }
+const FORM_PROMPT_CLASSES = { activity: ActivityPrompt, book: BookPrompt, ... }
+
+// Browse view excludes models with filters (those go to search view only):
+const LIST_VIEW_MODELS = Object.fromEntries(
+  Object.entries(FORM_MODEL_CLASSES).filter(([, M]) => {
+    const filters = getSearchConfig(M)?.filters
+    return !filters || Object.keys(filters).length === 0
+  })
+)
+
+// Search view includes only models that declare at least one filter:
+const SEARCH_VIEW_MODELS = Object.fromEntries(
+  Object.entries(FORM_MODEL_CLASSES).filter(([, M]) => {
+    const filters = getSearchConfig(M)?.filters
+    return filters && Object.keys(filters).length > 0
+  })
+)
+```
+
+```ts file=src/filters.ts
 import { getSearchConfig } from '@mcp-rune/mcp-rune/api-extensions/search'
 
 const FORM_MODEL_CLASSES = { activity: Activity, book: Book, ... }
@@ -365,7 +416,35 @@ const SEARCH_VIEW_MODELS = Object.fromEntries(
 
 All client-side apps follow the same initialization pattern:
 
-```javascript
+```js file=src/app.js
+import {
+  App,
+  applyDocumentTheme,
+  applyHostStyleVariables,
+  applyHostFonts
+} from '@modelcontextprotocol/ext-apps'
+
+const app = new App({ name: 'App Name', version: '1.0.0' })
+
+app.ontoolresult = (result) => {
+  const data = JSON.parse(result.content.find((c) => c.type === 'text').text)
+  // Render from data (schema, records, etc.)
+}
+
+app.onhostcontextchanged = (params) => {
+  if (params?.theme) applyDocumentTheme(params.theme)
+  if (params?.styles?.variables) applyHostStyleVariables(params.styles.variables)
+  if (params?.styles?.css?.fonts) applyHostFonts(params.styles.css.fonts)
+}
+
+await app.connect()
+
+// Apply initial host context
+const ctx = app.getHostContext()
+if (ctx?.theme) applyDocumentTheme(ctx.theme)
+```
+
+```ts file=src/app.ts
 import {
   App,
   applyDocumentTheme,
@@ -408,7 +487,24 @@ Each app maintains minimal client-side state:
 
 The model form app dynamically creates HTML elements from the schema:
 
-```javascript
+```js file=examples/mcp-apps-architecture-06.js
+// For each field in schema.fields:
+switch (field.type) {
+  case 'text':
+    renderTextInput(field)
+  case 'textarea':
+    renderTextarea(field)
+  case 'select':
+    renderSelect(field, field.options)
+  case 'multiselect':
+    renderCheckboxList(field, field.options)
+  case 'checkbox_group':
+    renderCheckboxGroup(field, field.options)
+  // ...
+}
+```
+
+```ts file=examples/mcp-apps-architecture-06.ts
 // For each field in schema.fields:
 switch (field.type) {
   case 'text':
@@ -431,7 +527,17 @@ Fields are grouped into `<fieldset>` elements based on `field.group` matching `s
 
 Table-based apps (list_records_app, search_records_app) paginate by calling their own tool:
 
-```javascript
+```js file=src/fetch-page.js
+async function fetchPage(page) {
+  await app.callServerTool({
+    name: 'list_records_app', // or 'search_records_app'
+    arguments: { model: modelName, page, ...extraArgs }
+  })
+  // ontoolresult fires → re-renders table
+}
+```
+
+```ts file=src/fetch-page.ts
 async function fetchPage(page) {
   await app.callServerTool({
     name: 'list_records_app', // or 'search_records_app'
@@ -469,7 +575,18 @@ Apps are built with Vite and `vite-plugin-singlefile`, which inlines all CSS and
 
 ### Build Configuration
 
-```javascript
+```js file=src/configs.js
+// src/engineer/apps/vite.config.js
+const configs = {
+  'model-form': { root: 'model-form-ui', outFile: 'model-form.html' },
+  'list-view': { root: 'list-view-ui', outFile: 'list-view.html' },
+  'record-detail': { root: 'record-detail-ui', outFile: 'record-detail.html' },
+  'search-view': { root: 'search-view-ui', outFile: 'search-view.html' },
+  'create-book': { root: 'create-book-ui', outFile: 'create-book.html' }
+}
+```
+
+```ts file=src/configs.ts
 // src/engineer/apps/vite.config.js
 const configs = {
   'model-form': { root: 'model-form-ui', outFile: 'model-form.html' },
@@ -502,7 +619,18 @@ Output goes to `src/engineer/apps/dist/` (git-tracked).
 
 At runtime, each app reads its HTML once from disk and caches it:
 
-```javascript
+```js file=src/get-html.js
+let _cachedHtml = null
+
+function getHtml() {
+  if (!_cachedHtml) {
+    _cachedHtml = fs.readFileSync(HTML_PATH, 'utf-8')
+  }
+  return _cachedHtml
+}
+```
+
+```ts file=src/get-html.ts
 let _cachedHtml = null
 
 function getHtml() {
@@ -664,7 +792,21 @@ The search view app works alongside the search tool system:
 
 Ensure the model has `attributes`, `endpoint`, and optionally `associations`:
 
-```javascript
+```js file=src/project.js
+export class Project extends BaseModel {
+  static api = { endpoint: 'projects' }
+  static associations = {
+    belongsTo: { category: { rel: 'category', target_model: 'category' } }
+  }
+  static attributes = {
+    name: { type: 'string', required: true, label: 'Name' },
+    status: { type: 'enum', enumValues: ['planning', 'active'], default: 'planning' },
+    category_id: { type: 'integer', label: 'Category' }
+  }
+}
+```
+
+```ts file=src/project.ts
 export class Project extends BaseModel {
   static api = { endpoint: 'projects' }
   static associations = {
@@ -682,7 +824,22 @@ export class Project extends BaseModel {
 
 Ensure the prompt has `fieldGroups` and `sections`:
 
-```javascript
+```js file=src/prompts/project-prompt.js
+export class ProjectPrompt extends BasePrompt {
+  static strategy = 'hybrid'
+  static fieldGroups = {
+    identity: { fields: ['name', 'status', 'category_id'], context: 'Project Identity' }
+  }
+  static sections = {
+    identity: { title: 'Project Identity', groups: ['identity'], required: true }
+  }
+  getDefaultFormState() {
+    return { name: '', status: 'planning', category_id: null }
+  }
+}
+```
+
+```ts file=src/prompts/project-prompt.ts
 export class ProjectPrompt extends BasePrompt {
   static strategy = 'hybrid'
   static fieldGroups = {
@@ -701,7 +858,19 @@ export class ProjectPrompt extends BasePrompt {
 
 Add entries to the model/prompt maps in `src/engineer/apps/index.js`:
 
-```javascript
+```js file=examples/mcp-apps-architecture-12.js
+import { Project } from '../models/project.js'
+import { ProjectPrompt } from '../prompts/project_prompt.js'
+
+const FORM_MODEL_CLASSES = { ..., project: Project }
+const FORM_PROMPT_CLASSES = { ..., project: ProjectPrompt }
+// LIST_VIEW_MODELS and SEARCH_VIEW_MODELS are derived automatically from FORM_MODEL_CLASSES.
+// Models with filters declared via `searchConfig({ filters: ... })` in their `extensions['search']`
+// slice go to the search view; models without go to browse view. The `getSearchConfig` reader
+// from `@mcp-rune/mcp-rune/api-extensions/search` is the single read site.
+```
+
+```ts file=examples/mcp-apps-architecture-12.ts
 import { Project } from '../models/project.js'
 import { ProjectPrompt } from '../prompts/project_prompt.js'
 
@@ -761,7 +930,13 @@ Search results use a dedicated app (`search_records_app`) rather than overloadin
 
 The search view app is only registered when models with declared search filters exist. This avoids exposing a non-functional tool:
 
-```javascript
+```js file=examples/mcp-apps-architecture-13.js
+if (Object.keys(SEARCH_VIEW_MODELS).length > 0) {
+  apps.push(createSearchViewApp({ modelClasses: SEARCH_VIEW_MODELS }))
+}
+```
+
+```ts file=examples/mcp-apps-architecture-13.ts
 if (Object.keys(SEARCH_VIEW_MODELS).length > 0) {
   apps.push(createSearchViewApp({ modelClasses: SEARCH_VIEW_MODELS }))
 }
@@ -782,7 +957,19 @@ For tools where the LLM needs the data for follow-up (e.g., record lists, search
 | 1st `text` block | UI app + LLM     | Full JSON payload: schema, records, metadata      |
 | 2nd `text` block | LLM context only | Minimal summary: count, status, interaction hints |
 
-```javascript
+```js file=examples/mcp-apps-architecture-14.js
+return {
+  content: [
+    { type: 'text', text: JSON.stringify({ schema, records, pagination }) },
+    {
+      type: 'text',
+      text: `${totalRecords} records displayed. Do not repeat or summarize the data.`
+    }
+  ]
+}
+```
+
+```ts file=examples/mcp-apps-architecture-14.ts
 return {
   content: [
     { type: 'text', text: JSON.stringify({ schema, records, pagination }) },
@@ -796,7 +983,11 @@ return {
 
 The client-side app reads only the first text block via `.find()`:
 
-```javascript
+```js file=src/data.js
+const data = JSON.parse(result.content.find((c) => c.type === 'text').text)
+```
+
+```ts file=src/data.ts
 const data = JSON.parse(result.content.find((c) => c.type === 'text').text)
 ```
 
@@ -806,7 +997,20 @@ For tools where the LLM does NOT need the data (e.g., workflow panel, dashboards
 
 **Server-side** — branch on an internal `action` parameter:
 
-```javascript
+```js file=examples/mcp-apps-architecture-16.js
+handleToolCall(args) {
+  // App-initiated: return full data (invisible to LLM)
+  if (args?.action === 'fetch_data') {
+    return { content: [{ type: 'text', text: JSON.stringify({ items }) }] }
+  }
+  // LLM-initiated: return minimal summary only
+  return {
+    content: [{ type: 'text', text: `Panel displayed with ${items.length} items.` }]
+  }
+}
+```
+
+```ts file=examples/mcp-apps-architecture-16.ts
 handleToolCall(args) {
   // App-initiated: return full data (invisible to LLM)
   if (args?.action === 'fetch_data') {
@@ -821,7 +1025,18 @@ handleToolCall(args) {
 
 **Client-side** — fetch data on tool result:
 
-```javascript
+```js file=src/response.js
+app.ontoolresult = async () => {
+  const response = await app.callServerTool({
+    name: 'my_panel',
+    arguments: { action: 'fetch_data' }
+  })
+  const data = JSON.parse(response.content.find((c) => c.type === 'text').text)
+  renderItems(data.items)
+}
+```
+
+```ts file=src/response.ts
 app.ontoolresult = async () => {
   const response = await app.callServerTool({
     name: 'my_panel',

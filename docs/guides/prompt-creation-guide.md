@@ -58,7 +58,38 @@ Field definitions are derived from model classes via `derivePromptSchema()`. Thi
 
 ### How It Works
 
-```javascript
+```js file=src/prompts/activity-prompt.js
+import { derivePromptSchema } from '#src/mcp/prompts/schema-derivation.js'
+import { Activity } from '../models/index.js'
+
+export class ActivityPrompt extends BasePrompt {
+  static fieldGroups = {
+    basics: {
+      fields: ['title', 'description'],
+      context: 'Basic Information',
+      required: true
+    }
+  }
+
+  // Schema derivation: generates fieldDefinitions FROM model's attributes
+  static {
+    const schema = derivePromptSchema(Activity, {
+      fieldGroups: this.fieldGroups,
+      fieldOverrides: {
+        theme_id: { required: true }
+      },
+      promptFields: {
+        book_ids: { name: 'book_ids', type: 'array', required: false }
+      }
+    })
+
+    this.fieldGroups = schema.fieldGroups
+    this.fieldDefinitions = schema.fieldDefinitions
+  }
+}
+```
+
+```ts file=src/prompts/activity-prompt.ts
 import { derivePromptSchema } from '#src/mcp/prompts/schema-derivation.js'
 import { Activity } from '../models/index.js'
 
@@ -102,7 +133,23 @@ The `PromptContentGenerator` is a fluent builder for assembling prompt content f
 
 ### Usage
 
-```javascript
+```js file=examples/prompt-creation-guide-02.js
+import { PromptContentGenerator } from '#src/mcp/prompts/prompt-content-generator.js'
+
+get promptContent() {
+  return PromptContentGenerator.for(ActivityPrompt, 'activity')
+    .add(`# Activity Creation Guide
+
+## What is an Activity?
+...custom intro text...`)
+    .standard()           // flowDiagram → guidance → allSections → summary
+    .add(this.generateToolUsageSection())  // Custom tool usage
+    .attributeReference() // Auto-generated attribute reference table
+    .build()
+}
+```
+
+```ts file=examples/prompt-creation-guide-02.ts
 import { PromptContentGenerator } from '#src/mcp/prompts/prompt-content-generator.js'
 
 get promptContent() {
@@ -146,7 +193,16 @@ The builder delegates to these static methods on BasePrompt:
 
 **Standard** (all strategies — preferred):
 
-```javascript
+```js file=examples/prompt-creation-guide-03.js
+PromptContentGenerator.for(ActivityPrompt, 'activity')
+  .add(intro)
+  .standard() // Enforces canonical ordering
+  .add(toolUsage)
+  .attributeReference()
+  .build()
+```
+
+```ts file=examples/prompt-creation-guide-03.ts
 PromptContentGenerator.for(ActivityPrompt, 'activity')
   .add(intro)
   .standard() // Enforces canonical ordering
@@ -157,7 +213,19 @@ PromptContentGenerator.for(ActivityPrompt, 'activity')
 
 **With custom sections** (skip pattern):
 
-```javascript
+```js file=examples/prompt-creation-guide-04.js
+PromptContentGenerator.for(MyPrompt, 'model')
+  .add(intro)
+  .standard({
+    beforeSections: [customSection], // Inserted before allSections
+    skip: ['content'] // Skipped in allSections
+  })
+  .add(toolUsage)
+  .attributeReference()
+  .build()
+```
+
+```ts file=examples/prompt-creation-guide-04.ts
 PromptContentGenerator.for(MyPrompt, 'model')
   .add(intro)
   .standard({
@@ -179,7 +247,23 @@ For mode configuration, the prompt class structure, the `BasePrompt` helpers, th
 
 For simple models (< 10 fields), use stateless strategy:
 
-```javascript
+```js file=src/prompts/theme-prompt.js
+export class ThemePrompt extends BasePrompt {
+  static strategy = 'stateless'
+
+  static fieldGroups = {
+    theme_identity: {
+      fields: ['name', 'slug'],
+      required: true
+    }
+  }
+
+  // No mode argument needed - stateless prompts don't have sections
+  static arguments = [{ name: 'name', description: 'Theme name', required: false }]
+}
+```
+
+```ts file=src/prompts/theme-prompt.ts
 export class ThemePrompt extends BasePrompt {
   static strategy = 'stateless'
 
@@ -205,7 +289,19 @@ Stateless prompts:
 
 Register prompts in `prompts/registry.js`:
 
-```javascript
+```js file=examples/prompt-creation-guide-06.js
+const PROMPT_CLASSES = {
+  create_activity: {
+    promptClass: ActivityPrompt,
+    model: 'activity',
+    toolDocDescription: 'For tracking learning activities with timing and resources',
+    required: true,
+    recommendedForBulk: false
+  }
+}
+```
+
+```ts file=examples/prompt-creation-guide-06.ts
 const PROMPT_CLASSES = {
   create_activity: {
     promptClass: ActivityPrompt,
@@ -229,7 +325,47 @@ const PROMPT_CLASSES = {
 
 Test files should verify sections architecture:
 
-```javascript
+```js file=src/arg-names.js
+describe('ActivityPrompt', () => {
+  describe('static properties', () => {
+    it('should have strategy of stateful', () => {
+      expect(ActivityPrompt.strategy).toBe('stateful')
+    })
+
+    it('should have mode in arguments', () => {
+      const argNames = ActivityPrompt.arguments.map((a) => a.name)
+      expect(argNames).toContain('mode')
+    })
+  })
+
+  describe('sections architecture', () => {
+    it('should have sections defined', () => {
+      expect(ActivityPrompt.sections).toBeDefined()
+      expect(Object.keys(ActivityPrompt.sections).length).toBeGreaterThan(0)
+    })
+
+    it('each section has required properties', () => {
+      for (const [name, section] of Object.entries(ActivityPrompt.sections)) {
+        expect(section.title).toBeDefined()
+        expect(section.description).toBeDefined()
+        expect(typeof section.required).toBe('boolean')
+        expect(Array.isArray(section.groups)).toBe(true)
+      }
+    })
+
+    it('all groups in sections exist in fieldGroups', () => {
+      const fieldGroupNames = Object.keys(ActivityPrompt.fieldGroups)
+      for (const [, section] of Object.entries(ActivityPrompt.sections)) {
+        for (const groupName of section.groups) {
+          expect(fieldGroupNames).toContain(groupName)
+        }
+      }
+    })
+  })
+})
+```
+
+```ts file=src/arg-names.ts
 describe('ActivityPrompt', () => {
   describe('static properties', () => {
     it('should have strategy of stateful', () => {
@@ -273,7 +409,26 @@ describe('ActivityPrompt', () => {
 
 Use `toMatchFileSnapshot()` to capture the complete rendered `promptContent` as individual `.prompt.md` files:
 
-```javascript
+```js file=src/snap.js
+import { join } from 'node:path'
+
+const SNAP_DIR = join(import.meta.dirname, '__file_snapshots__')
+const snap = (name) => join(SNAP_DIR, `${name}.prompt.md`)
+
+describe('Prompt Snapshots', () => {
+  it('ActivityPrompt renders full output', async () => {
+    const instance = new ActivityPrompt({})
+    await expect(instance.promptContent).toMatchFileSnapshot(snap('activity-prompt'))
+  })
+
+  it('BookPrompt renders full output', async () => {
+    const instance = new BookPrompt({})
+    await expect(instance.promptContent).toMatchFileSnapshot(snap('book-prompt'))
+  })
+})
+```
+
+```ts file=src/snap.ts
 import { join } from 'node:path'
 
 const SNAP_DIR = join(import.meta.dirname, '__file_snapshots__')

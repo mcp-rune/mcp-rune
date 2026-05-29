@@ -22,7 +22,42 @@ This guide is the reference for how the two work together. For the strategy that
 
 ## Defining sections
 
-```javascript
+```js file=examples/sections-groups-guide-01.js
+static sections = {
+  basics: {
+    title: 'Basic Information',
+    description: 'Title and description for the activity',
+    required: true,
+    groups: ['basics'],
+    content: {
+      intro: 'The title and description that identify the activity.'
+    }
+  },
+  classification: {
+    title: 'Classification',
+    description: 'Theme and category for organizing the activity',
+    required: true,
+    groups: ['classification'],
+    content: {
+      notes: [
+        'Use `find_records(model: "theme")` to find the theme',
+        'Use `find_records(model: "category")` to find the category'
+      ]
+    }
+  },
+  timing: {
+    title: 'Timing',
+    description: 'When the activity occurred and how long it lasted',
+    required: false,
+    groups: ['timing'],
+    content: {
+      intro: 'When the activity occurred and how long it lasted.'
+    }
+  }
+}
+```
+
+```ts file=examples/sections-groups-guide-01.ts
 static sections = {
   basics: {
     title: 'Basic Information',
@@ -92,7 +127,24 @@ When a section contains multiple groups (`groups: ['group_a', 'group_b']`), each
 
 With sections as first-class citizens, fieldGroups focus on validation:
 
-```javascript
+```js file=examples/sections-groups-guide-02.js
+static fieldGroups = {
+  basics: {
+    fields: ['title', 'description'],
+    context: 'Basic Information',
+    required: true,
+    description: 'Title and description for the activity'
+  },
+  classification: {
+    fields: ['theme_id', 'category_id'],
+    context: 'Classification',
+    required: true,
+    description: 'Theme and category for organizing the activity'
+  }
+}
+```
+
+```ts file=examples/sections-groups-guide-02.ts
 static fieldGroups = {
   basics: {
     fields: ['title', 'description'],
@@ -124,7 +176,17 @@ static fieldGroups = {
 
 The `generateFlowDiagramFromConfig()` method uses sections to create a compact flow overview:
 
-```javascript
+```js file=examples/sections-groups-guide-03.js
+// Auto-generated from sections config
+**Flow:** (● required, ○ optional)
+● 1. BASIC INFORMATION - title, description
+● 2. CLASSIFICATION - theme_id, category_id
+○ 3. TIMING - started_at, ended_at, duration_minutes
+○ 4. RESOURCES - book_ids, notes_generated
+● 5. SUMMARY
+```
+
+```ts file=examples/sections-groups-guide-03.ts
 // Auto-generated from sections config
 **Flow:** (● required, ○ optional)
 ● 1. BASIC INFORMATION - title, description
