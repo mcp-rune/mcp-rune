@@ -139,7 +139,7 @@ Registration happens in object insertion order, which is the order JavaScript gu
 
 ## The context object
 
-```ts
+```ts file=src/api-extension-context.ts
 interface ApiExtensionContext {
   name: string // the key you registered the extension under
   models: ModelsRegistry // read-only view of the registry
@@ -149,6 +149,23 @@ interface ApiExtensionContext {
   registerModelServiceMixin(mixin: ModelServiceMixin): void
   registerSummaryStrategy(strategy: SummaryStrategy): void
 }
+```
+
+```js file=src/api-extension-context.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * interface ApiExtensionContext {
+ *   name: string // the key you registered the extension under
+ *   models: ModelsRegistry // read-only view of the registry
+ *   serverContext: ServerContext // server name, description, etc.
+ *   logger: typeof logger
+ *   registerTool(name: string, ToolClass: ToolClass): void
+ *   registerModelServiceMixin(mixin: ModelServiceMixin): void
+ *   registerSummaryStrategy(strategy: SummaryStrategy): void
+ * }
+ */
 ```
 
 What the context deliberately does **not** expose:
@@ -163,8 +180,19 @@ This narrowing is deliberate. Extensions can break their own tools, but they can
 
 Declare host capabilities your extension depends on:
 
-```ts
+```ts file=src/extensions/my-extension.ts
 export function myExtension(): ApiExtension {
+  return {
+    requires: [],
+    register(ctx) {
+      /* ... */
+    }
+  }
+}
+```
+
+```js file=src/extensions/my-extension.js
+export function myExtension() {
   return {
     requires: [],
     register(ctx) {
@@ -180,8 +208,15 @@ No capabilities are defined yet (the type is `never`). The field is reserved so 
 
 ### Tools
 
-```ts
+```ts file=examples/api-extensions-03.ts
 register(ctx) {
+  ctx.registerTool('graphql_select', GraphqlSelectTool)
+}
+```
+
+```js file=examples/api-extensions-03.js
+register(ctx)
+{
   ctx.registerTool('graphql_select', GraphqlSelectTool)
 }
 ```
@@ -192,11 +227,24 @@ The contributed `ToolClass` follows the same contract as core tools: it extends 
 
 ### `ModelService` mixins
 
-```ts
+```ts file=src/config.ts
 register(ctx) {
   ctx.registerModelServiceMixin((service) => ({
     publish: async (model: string, recordId: string) => {
       const config = (service as unknown as { models: ModelsRegistry })
+      const url = service.endpointResolver.pathForType(/* ... */)
+      return service.dispatch('POST', url)
+    }
+  }))
+}
+```
+
+```js file=src/config.js
+register(ctx)
+{
+  ctx.registerModelServiceMixin((service) => ({
+    publish: async (model, recordId) => {
+      const config = service
       const url = service.endpointResolver.pathForType(/* ... */)
       return service.dispatch('POST', url)
     }
@@ -215,7 +263,7 @@ Reaching into private internals (`_apiClient`, `_models`, anything prefixed with
 
 ### Summary strategies
 
-```ts
+```ts file=examples/api-extensions-05.ts
 import type { SummaryStrategy } from '@mcp-rune/mcp-rune/extensions'
 
 const salesNarrativeStrategy: SummaryStrategy = {
@@ -233,6 +281,23 @@ register(ctx) {
 }
 ```
 
+```js file=examples/api-extensions-05.js
+const salesNarrativeStrategy = {
+  name: 'sales-narrative',
+  description: 'Prose summary tuned for deal records: pipeline stage, $ amount, owner.',
+  appliesTo: (input) => input.model === 'deal',
+  generate: (input) => ({
+    finding: `Page ${input.page}: ${input.records.length} deals — ${summarizeDeals(input.records)}`,
+    metadata: { page: input.page, model: input.model }
+  })
+}
+register(ctx)
+{
+  ctx.registerSummaryStrategy(salesNarrativeStrategy)
+}
+export {}
+```
+
 A `SummaryStrategy` is a deterministic pure function (sync or async, but no LLM or network I/O) that takes a page of stored records and produces a `{ finding, metadata }` to persist as an `analysis_memories` row. Strategies become callable on `analysis_ingest` (via `summary_strategy` / `summary_strategies`) and on `analysis_summarize` (which re-runs them against already-ingested data without re-fetching).
 
 Strategy names must be **globally unique** across built-ins and all extensions — kebab-case, starting with a letter. Collisions throw at boot with both owner keys in the error.
@@ -247,7 +312,21 @@ Mixins run lazily: each `BaseTool` instance constructs its own `ModelService` on
 
 Per-model config for an extension lives on `BaseModel.extensions`, keyed by the extension's registration name:
 
-```ts
+```ts file=src/models/book-model.ts
+class BookModel extends BaseModel {
+  static api = { endpoint: 'books', namespace: 'api/v1' } // pure CRUD
+  static extensions = {
+    'custom-actions': customActionsConfig({
+      actions: { publish: { path: ':id/publish' } }
+    }),
+    search: searchConfig({
+      lookup: { fields: ['title'] }
+    })
+  }
+}
+```
+
+```js file=src/models/book-model.js
 class BookModel extends BaseModel {
   static api = { endpoint: 'books', namespace: 'api/v1' } // pure CRUD
   static extensions = {
@@ -291,7 +370,7 @@ Do **not** prefix helpers with `api` (e.g. `apiSearchConfig`, `customApiActionsC
 
 Each extension exports a typed getter that reads its slice from the bag, returning `undefined` when the extension's key is absent. This lets core code (e.g. `list_models` output) tolerate the extension being unregistered:
 
-```ts
+```ts file=src/config/get-actions-config.ts
 import type { ModelConfig } from '@mcp-rune/mcp-rune/tools'
 
 export interface CustomActionsConfig {
@@ -303,11 +382,17 @@ export function getActionsConfig(model: ModelConfig): CustomActionsConfig | unde
 }
 ```
 
+```js file=src/config/get-actions-config.js
+export function getActionsConfig(model) {
+  return model.extensions?.['custom-actions']
+}
+```
+
 ## A worked example
 
 A minimal "echo" extension that contributes one tool and one mixin method:
 
-```ts
+```ts file=src/tools/echo-tool.ts
 import type { ApiExtension } from '@mcp-rune/mcp-rune/api-extensions'
 import { BaseTool, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
 
@@ -341,6 +426,47 @@ export function echoExtension(): ApiExtension {
   }
 }
 
+// Register:
+new ToolRegistry({
+  toolClasses: DATA_TOOL_CLASSES,
+  models: MODEL_CLASSES,
+  createApiClient,
+  apiExtensions: {
+    echo: echoExtension()
+  }
+})
+```
+
+```js file=src/tools/echo-tool.js
+import { BaseTool, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
+class EchoTool extends BaseTool {
+  static get category() {
+    return TOOL_CATEGORIES.STRATEGY
+  }
+  get name() {
+    return 'echo'
+  }
+  get baseDescription() {
+    return 'Echo a message back.'
+  }
+  get inputSchema() {
+    return { message: z.string() }
+  }
+  async execute({ message }) {
+    return { content: [{ type: 'text', text: message }] }
+  }
+}
+export function echoExtension() {
+  return {
+    register(ctx) {
+      ctx.registerTool('echo', EchoTool)
+      ctx.registerModelServiceMixin((_service) => ({
+        echoMixin: (msg) => `echo: ${msg}`
+      }))
+      ctx.logger.info(`echo extension wired up`, { service: ctx.name })
+    }
+  }
+}
 // Register:
 new ToolRegistry({
   toolClasses: DATA_TOOL_CLASSES,

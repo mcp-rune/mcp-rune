@@ -123,7 +123,18 @@ Tools are organized by category which determines authentication requirements:
 
 Override the static `category` property:
 
-```javascript
+```js file=src/tools/my-tool.js
+import { TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
+
+export class MyTool extends ServerBaseTool {
+  static get category() {
+    return TOOL_CATEGORIES.STRATEGY
+  } // No auth required
+  // ...
+}
+```
+
+```ts file=src/tools/my-tool.ts
 import { TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
 
 export class MyTool extends ServerBaseTool {
@@ -154,7 +165,18 @@ If the user has not specified which application to use, confirm they intend to u
 
 Models define relationships using the `associations` property with `belongsTo`, `hasMany`, and `custom`:
 
-```javascript
+```js file=examples/tool-creation-guide-02.js
+static associations = {
+  belongsTo: {
+    theme: { rel: 'theme', target_model: 'theme' }
+  },
+  hasMany: {
+    activities: { rel: 'activities', target_model: 'activity' }
+  }
+}
+```
+
+```ts file=examples/tool-creation-guide-02.ts
 static associations = {
   belongsTo: {
     theme: { rel: 'theme', target_model: 'theme' }
@@ -182,7 +204,29 @@ The `list_models` tool exposes these associations in its output. Nested resource
 
 `ToolRegistry` from `@mcp-rune/mcp-rune/tools` handles all registration boilerplate: schema validation, auth wrapping per tool category, tracing, logging, and error catching.
 
-```javascript
+```js file=src/registries/tool-registry.js
+import { ToolRegistry, DATA_TOOL_CLASSES, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
+import { STRATEGY_TOOL_CLASSES } from '@mcp-rune/mcp-rune/prompts'
+
+const toolRegistry = new ToolRegistry({
+  toolClasses: {
+    ...DATA_TOOL_CLASSES,
+    ...STRATEGY_TOOL_CLASSES,
+    my_custom_tool: MyCustomTool
+  },
+  models: MODEL_CLASSES,
+  serverContext: { name: 'My Server', namespace: 'my-server' },
+  createApiClient: (token) => createApiClient(token, { apiUrl }),
+  promptRegistry,
+  // Feature gates: disable categories when their dependencies are unavailable
+  gates: {
+    [TOOL_CATEGORIES.ANALYSIS]: vectorStorage.isVectorStorageEnabled(),
+    [TOOL_CATEGORIES.DOMAIN]: !!domainRegistry
+  }
+})
+```
+
+```ts file=src/registries/tool-registry.ts
 import { ToolRegistry, DATA_TOOL_CLASSES, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
 import { STRATEGY_TOOL_CLASSES } from '@mcp-rune/mcp-rune/prompts'
 
@@ -217,7 +261,35 @@ For each tool, ToolRegistry automatically:
 
 Interceptors add cross-cutting concerns to all tool executions. ToolRegistry applies built-in interceptors automatically and accepts custom ones:
 
-```javascript
+```js file=src/audit-interceptor.js
+const auditInterceptor = {
+  name: 'audit',
+  before(ctx) {
+    ctx.meta.startedAt = Date.now()
+  },
+  after(ctx, result) {
+    auditLog.write({
+      tool: ctx.toolName,
+      args: ctx.args,
+      duration: Date.now() - ctx.meta.startedAt
+    })
+    return result
+  },
+  onError(ctx, error) {
+    auditLog.write({ tool: ctx.toolName, error: error.message })
+    // Return void to let the error propagate
+  }
+}
+
+const toolRegistry = new ToolRegistry({
+  toolClasses: DATA_TOOL_CLASSES,
+  models: MODEL_CLASSES,
+  createApiClient: (token) => createApiClient(token, { apiUrl }),
+  interceptors: [auditInterceptor]
+})
+```
+
+```ts file=src/audit-interceptor.ts
 const auditInterceptor = {
   name: 'audit',
   before(ctx) {
@@ -262,7 +334,19 @@ Tracing via `traceToolCall()` wraps the entire interceptor chain externally.
 
 **Manual composition** — for tools registered outside ToolRegistry:
 
-```javascript
+```js file=src/handler.js
+import { wrapToolHandler, loggingInterceptor, errorInterceptor } from '@mcp-rune/mcp-rune/tools'
+
+const handler = wrapToolHandler(
+  'my_tool',
+  [loggingInterceptor(), errorInterceptor()],
+  async (args) => {
+    return tool.execute(args)
+  }
+)
+```
+
+```ts file=src/handler.ts
 import { wrapToolHandler, loggingInterceptor, errorInterceptor } from '@mcp-rune/mcp-rune/tools'
 
 const handler = wrapToolHandler(
@@ -282,7 +366,50 @@ For tools with server-specific logic:
 
 #### 1. Create the Tool Class
 
-```javascript
+```js file=src/tools/my-new-tool.js
+import { ServerBaseTool } from './base-tool.js'
+
+export class MyNewTool extends ServerBaseTool {
+  get name() {
+    return 'my_new_tool'
+  }
+
+  get baseDescription() {
+    return `Brief description of what the tool does.
+
+Include:
+- What it returns
+- When to use it
+- Any important constraints`
+  }
+
+  get inputSchema() {
+    return {
+      type: 'object',
+      properties: {
+        required_param: {
+          type: 'string',
+          description: 'Description of this parameter'
+        }
+      },
+      required: ['required_param']
+    }
+  }
+
+  async execute(args) {
+    try {
+      this.requireApiClient()
+      const { required_param } = args
+      const data = await this.apiClient.get(`endpoint/${required_param}`)
+      return this.formatResponse(data)
+    } catch (error) {
+      return this.formatError(error)
+    }
+  }
+}
+```
+
+```ts file=src/tools/my-new-tool.ts
 import { ServerBaseTool } from './base-tool.js'
 
 export class MyNewTool extends ServerBaseTool {
@@ -329,7 +456,17 @@ Include:
 
 Add to the `toolClasses` map in your `ToolRegistry` configuration:
 
-```javascript
+```js file=src/registries/tool-registry.js
+const toolRegistry = new ToolRegistry({
+  toolClasses: {
+    ...DATA_TOOL_CLASSES,
+    my_new_tool: MyNewTool
+  }
+  // ...
+})
+```
+
+```ts file=src/registries/tool-registry.ts
 const toolRegistry = new ToolRegistry({
   toolClasses: {
     ...DATA_TOOL_CLASSES,
@@ -347,12 +484,17 @@ Create `__tests__/tools/my-new-tool.spec.js`.
 
 For tools that are reusable across servers, create them in `src/mcp/tools/`:
 
-```typescript
+```ts file=src/tools/my-generic-tool.ts
 import { BaseTool } from './base-tool.js'
 
 export class MyGenericTool extends BaseTool {
   // Extend BaseTool directly (not server-specific base)
 }
+```
+
+```js file=src/tools/my-generic-tool.js
+import { BaseTool } from './base-tool.js'
+export class MyGenericTool extends BaseTool {}
 ```
 
 ## Tool Base Class Methods
@@ -410,7 +552,19 @@ Write descriptions that help LLMs understand:
 
 Always wrap execute logic in try/catch:
 
-```javascript
+```js file=examples/tool-creation-guide-09.js
+async execute(args) {
+  try {
+    this.requireApiClient()
+    // ... tool logic
+    return this.formatResponse(data)
+  } catch (error) {
+    return this.formatError(error)
+  }
+}
+```
+
+```ts file=examples/tool-creation-guide-09.ts
 async execute(args) {
   try {
     this.requireApiClient()
@@ -434,7 +588,18 @@ No "Error:" prefix is added — `isError: true` on the MCP response already sign
 
 Write tools that modify data should record operations for retrospective analysis using `storeToolMemory()`:
 
-```javascript
+```js file=src/data.js
+const data = await service.create(model, attributes, options)
+
+this.storeToolMemory({
+  toolName: 'create_model',
+  toolArgs: { model, attributes },
+  toolOutput: data,
+  userId: user_id
+})
+```
+
+```ts file=src/data.ts
 const data = await service.create(model, attributes, options)
 
 this.storeToolMemory({

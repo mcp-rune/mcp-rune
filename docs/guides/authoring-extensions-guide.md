@@ -64,11 +64,23 @@ src/api-extensions/bulk-actions/
 
 ### 2. Define the config type — `types.ts`
 
-```ts
+```ts file=src/config/bulk-actions-config.ts
 export interface BulkActionsConfig {
   /** Collection endpoint that accepts a PATCH with `{ ids, attributes }`. */
   endpoint: string
 }
+```
+
+```js file=src/config/bulk-actions-config.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * export interface BulkActionsConfig {
+ *   /** Collection endpoint that accepts a PATCH with `{ ids, attributes }`. */
+ *   endpoint: string
+ * }
+ */
 ```
 
 ### 3. Typed helper + reader — `capabilities.ts`
@@ -124,7 +136,7 @@ The `xxxConfig()` helper looks pointless because it's `(config) => config`. It i
 
 ### 4. The MCP tool + extension factory — `extension.ts`
 
-```ts
+```ts file=src/tools/bulk-update-records-tool.ts
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
@@ -220,11 +232,81 @@ export function bulkActionsExtension(): ApiExtension {
 }
 ```
 
+```js file=src/tools/bulk-update-records-tool.js
+import { z } from 'zod'
+import { BaseTool } from '@mcp-rune/mcp-rune/tools'
+import { getBulkActionsConfig, getBulkUpdatableModelNames } from './capabilities.js'
+/**
+ * MCP tool — `bulk_update_records`.
+ *
+ * Reads the model's `extensions['bulk-actions']` slice for the endpoint
+ * and delegates to the `bulkUpdate` mixin contributed by this extension.
+ */
+export class BulkUpdateRecordsTool extends BaseTool {
+  get name() {
+    return 'bulk_update_records'
+  }
+  get annotations() {
+    return {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true
+    }
+  }
+  get baseDescription() {
+    return (
+      `Patch many records at once via a single bulk-update endpoint. ` +
+      `Models must declare a bulk-update endpoint via bulkActionsConfig.`
+    )
+  }
+  get inputSchema() {
+    return {
+      model: this.zodEnum(getBulkUpdatableModelNames(this.models)).describe('Model name'),
+      ids: z.array(z.string()).describe('Record IDs to update'),
+      attributes: z.record(z.string(), z.unknown()).describe('Patch to apply to every record')
+    }
+  }
+  async execute(args) {
+    try {
+      const service = this.requireModelService()
+      const { model, ids, attributes } = args
+      this.validateModel(model)
+      const data = await service.bulkUpdate(model, ids, attributes)
+      return this.formatResponse({ status: 'success', model, updated: ids.length, data })
+    } catch (error) {
+      return this.formatError(error)
+    }
+  }
+}
+const bulkActionsMixin = (service) => {
+  return {
+    bulkUpdate: async (model, ids, attributes) => {
+      const modelConfig = service.models[model]
+      if (!modelConfig) throw new Error(`Unknown model: ${model}`)
+      const cfg = getBulkActionsConfig(modelConfig)
+      if (!cfg) throw new Error(`Model '${model}' has no bulk-actions config`)
+      const payload = service.buildPayload(model, modelConfig, { ids, attributes })
+      return service.dispatch('PATCH', cfg.endpoint, payload)
+    }
+  }
+}
+/** The opt-in `bulk-actions` API extension. */
+export function bulkActionsExtension() {
+  return {
+    register(ctx) {
+      ctx.registerTool('bulk_update_records', BulkUpdateRecordsTool)
+      ctx.registerModelServiceMixin(bulkActionsMixin)
+    }
+  }
+}
+```
+
 Notice the mixin composes the **stable `ModelService` contract** — `service.models`, `service.buildPayload`, `service.dispatch` — instead of reaching into private internals. Anything prefixed with `_` is not part of the contract and may change.
 
 ### 5. Public surface — `index.ts`
 
-```ts
+```ts file=examples/authoring-extensions-guide-03.ts
 export type { BulkActionsConfig } from './types.js'
 export {
   bulkActionsConfig,
@@ -236,11 +318,20 @@ export { bulkActionsExtension, BulkUpdateRecordsTool } from './extension.js'
 export type { BulkActionServiceMethods } from './extension.js'
 ```
 
+```js file=examples/authoring-extensions-guide-03.js
+export {
+  bulkActionsConfig,
+  getBulkActionsConfig,
+  getBulkUpdatableModelNames
+} from './capabilities.js'
+export { bulkActionsExtension, BulkUpdateRecordsTool } from './extension.js'
+```
+
 That's the entire extension. Now wire it up.
 
 ### 6. Register on a model
 
-```ts
+```ts file=src/book.ts
 import { BaseModel } from '@mcp-rune/mcp-rune/core'
 import { bulkActionsConfig } from './bulk-actions/index.js'
 
@@ -252,12 +343,36 @@ class Book extends BaseModel {
 }
 ```
 
+```js file=src/book.js
+import { BaseModel } from '@mcp-rune/mcp-rune/core'
+import { bulkActionsConfig } from './bulk-actions/index.js'
+class Book extends BaseModel {
+  static api = { endpoint: 'books' }
+  static extensions = {
+    'bulk-actions': bulkActionsConfig({ endpoint: 'books/bulk-update' })
+  }
+}
+```
+
 ### 7. Register on `ToolRegistry`
 
-```ts
+```ts file=examples/authoring-extensions-guide-05.ts
 import { ToolRegistry, DATA_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
 import { bulkActionsExtension } from './bulk-actions/index.js'
 
+new ToolRegistry({
+  toolClasses: DATA_TOOL_CLASSES,
+  models: { book: Book },
+  createApiClient,
+  apiExtensions: {
+    'bulk-actions': bulkActionsExtension()
+  }
+})
+```
+
+```js file=examples/authoring-extensions-guide-05.js
+import { ToolRegistry, DATA_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
+import { bulkActionsExtension } from './bulk-actions/index.js'
 new ToolRegistry({
   toolClasses: DATA_TOOL_CLASSES,
   models: { book: Book },
@@ -287,7 +402,7 @@ The built-in extensions ship the test patterns you should mirror — they exerci
 
 The "capture the mixin" helper is small and worth copying verbatim:
 
-```ts
+```ts file=src/capture-mixin.ts
 import { vi } from 'vitest'
 import type { ModelServiceMixin } from '@mcp-rune/mcp-rune/api-extensions'
 
@@ -304,6 +419,24 @@ function captureMixin(extensionFactory: () => { register: (ctx: any) => void }):
     }
   })
   return captured!
+}
+```
+
+```js file=src/capture-mixin.js
+import { vi } from 'vitest'
+function captureMixin(extensionFactory) {
+  let captured
+  extensionFactory().register({
+    name: 'test',
+    models: {},
+    serverContext: {},
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    registerTool: () => {},
+    registerModelServiceMixin: (m) => {
+      captured = m
+    }
+  })
+  return captured
 }
 ```
 

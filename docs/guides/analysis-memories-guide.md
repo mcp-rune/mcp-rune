@@ -167,9 +167,17 @@ The dividing line: if you need the raw data **in context**, use the data tools. 
 
 mcp-rune ships migrations as data under the `@mcp-rune/mcp-rune/db/migrations` subpath import. The analysis tables (`analysis_memories`, `ingested_records`) are tagged `feature: 'analysis'` — apply them conditionally:
 
-```typescript
+```ts file=src/needed.ts
 import { migrations } from '@mcp-rune/mcp-rune/db/migrations'
 
+const needed = migrations.filter(
+  (m) => m.feature === 'core' || process.env.ANALYSIS_ENABLED === 'true'
+)
+// ...apply each migration.up against your pool
+```
+
+```js file=src/needed.js
+import { migrations } from '@mcp-rune/mcp-rune/db/migrations'
 const needed = migrations.filter(
   (m) => m.feature === 'core' || process.env.ANALYSIS_ENABLED === 'true'
 )
@@ -180,12 +188,26 @@ See the **Database** section of the root README for the full migration runner sn
 
 ### 3. Initialise vector storage at startup
 
-```typescript
+```ts file=src/pool.ts
 import pg from 'pg'
 import { initVectorStorage } from '@mcp-rune/mcp-rune/services'
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
 
+initVectorStorage({
+  pool, // required — pool injection only; mcp-rune never creates pools
+  serviceName: 'my-mcp-server',
+  version: '1.0.0',
+  retentionDays: 30, // default: 30 — sweep window for tool_memories (operations feature)
+  ingestedRecordsRetentionDays: 7, // default: 7 — TTL for ingested_records (analysis feature)
+  backgroundCleanupIntervalMs: 6 * 60 * 60 * 1000 // optional — periodic cleanup across all three tables; omit to disable
+})
+```
+
+```js file=src/pool.js
+import pg from 'pg'
+import { initVectorStorage } from '@mcp-rune/mcp-rune/services'
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
 initVectorStorage({
   pool, // required — pool injection only; mcp-rune never creates pools
   serviceName: 'my-mcp-server',

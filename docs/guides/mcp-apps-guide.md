@@ -219,7 +219,41 @@ Adding a form for a new model requires **zero new HTML** — just one entry in t
 
 ### Step 1: Ensure Model Has Attributes and Associations
 
-```javascript
+```js file=src/project.js
+// src/engineer/models/project.js
+export class Project extends BaseModel {
+  static api = { endpoint: 'projects' }
+
+  static associations = {
+    belongsTo: {
+      category: { rel: 'category', target_model: 'category' }
+    }
+  }
+
+  static attributes = {
+    name: {
+      type: 'string',
+      required: true,
+      description: 'Project name',
+      examples: ['My App']
+    },
+    status: {
+      type: 'enum',
+      enumValues: ['planning', 'active', 'completed'],
+      default: 'planning',
+      description: 'Project status'
+    },
+    category_id: {
+      type: 'integer',
+      label: 'Category',
+      description: 'Category this project belongs to'
+    }
+    // ...
+  }
+}
+```
+
+```ts file=src/project.ts
 // src/engineer/models/project.js
 export class Project extends BaseModel {
   static api = { endpoint: 'projects' }
@@ -255,7 +289,34 @@ export class Project extends BaseModel {
 
 ### Step 2: Ensure Prompt Has fieldGroups and sections
 
-```javascript
+```js file=src/prompts/project-prompt.js
+// src/engineer/prompts/project_prompt.js
+export class ProjectPrompt extends BasePrompt {
+  static strategy = 'hybrid'
+  static title = 'Create Project'
+
+  static fieldGroups = {
+    identity: {
+      fields: ['name', 'status', 'category_id'],
+      context: 'Project Identity'
+    }
+  }
+
+  static sections = {
+    identity: {
+      title: 'Project Identity',
+      groups: ['identity'],
+      required: true
+    }
+  }
+
+  getDefaultFormState() {
+    return { name: '', status: 'planning', category_id: null }
+  }
+}
+```
+
+```ts file=src/prompts/project-prompt.ts
 // src/engineer/prompts/project_prompt.js
 export class ProjectPrompt extends BasePrompt {
   static strategy = 'hybrid'
@@ -286,7 +347,19 @@ export class ProjectPrompt extends BasePrompt {
 
 Add an entry to `MODEL_FORM_CONFIGS` in `src/engineer/apps/index.js`. Both `create_project_form` and `update_project_form` tools are generated automatically:
 
-```javascript
+```js file=examples/mcp-apps-guide-03.js
+// src/engineer/apps/index.js — MODEL_FORM_CONFIGS array
+{
+  ModelClass: Project,
+  PromptClass: ProjectPrompt,
+  slug: 'project',
+  prefillSchema: {
+    name: z.string().describe('Pre-fill the project name').optional()
+  }
+}
+```
+
+```ts file=examples/mcp-apps-guide-03.ts
 // src/engineer/apps/index.js — MODEL_FORM_CONFIGS array
 {
   ModelClass: Project,
@@ -300,7 +373,17 @@ Add an entry to `MODEL_FORM_CONFIGS` in `src/engineer/apps/index.js`. Both `crea
 
 ### Step 4: Register in Prompt Registry
 
-```javascript
+```js file=examples/mcp-apps-guide-04.js
+// src/engineer/prompts/registry.js
+create_project: {
+  promptClass: ProjectPrompt,
+  model: 'project',
+  toolDocDescription: 'For creating projects',
+  appToolName: 'create_project_form'  // Links prompt to MCP App
+}
+```
+
+```ts file=examples/mcp-apps-guide-04.ts
 // src/engineer/prompts/registry.js
 create_project: {
   promptClass: ProjectPrompt,
@@ -434,7 +517,16 @@ The palette uses warm parchment cream for light mode and neutral dark grays for 
 
 MCP Apps are linked to prompts via the `appToolName` property in the prompt registry:
 
-```javascript
+```js file=examples/mcp-apps-guide-05.js
+// prompts/registry.js
+create_book: {
+  promptClass: BookPrompt,
+  model: 'book',
+  appToolName: 'create_book_form'  // Links to MCP App tool
+}
+```
+
+```ts file=examples/mcp-apps-guide-05.ts
 // prompts/registry.js
 create_book: {
   promptClass: BookPrompt,
@@ -467,7 +559,58 @@ The generic schema-driven approach handles most model forms. However, if you nee
 
 A custom app is a plain object with `handleToolCall` and `getHtml`. No schema generation — you control everything.
 
-```javascript
+```js file=src/get-html.js
+// src/engineer/apps/custom-example.js
+import { z } from 'zod'
+import fs from 'node:fs'
+import path from 'node:path'
+
+const DIST_DIR = path.resolve(import.meta.dirname, 'dist')
+let _cachedHtml = null
+
+function getHtml() {
+  if (!_cachedHtml) {
+    _cachedHtml = fs.readFileSync(path.join(DIST_DIR, 'index.html'), 'utf-8')
+  }
+  return _cachedHtml
+}
+
+export function createCustomApp() {
+  return {
+    resourceUri: 'ui://engineer/custom-tool',
+    toolName: 'custom_tool',
+    name: 'Custom Tool',
+    description: 'A fully custom interactive UI',
+    toolDescription: 'Show a custom interactive form.',
+    needsAuth: false, // set true if handleToolCall needs apiClient
+
+    toolInputSchema: {
+      title: z.string().describe('Pre-fill the title').optional()
+    },
+
+    handleToolCall(args = {}) {
+      // Return whatever JSON your client-side app expects
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              model: 'custom',
+              defaults: { title: args.title || '' },
+              statusOptions: ['draft', 'published'],
+              formatOptions: ['html', 'pdf']
+            })
+          }
+        ]
+      }
+    },
+
+    getHtml
+  }
+}
+```
+
+```ts file=src/get-html.ts
 // src/engineer/apps/custom-example.js
 import { z } from 'zod'
 import fs from 'node:fs'
@@ -522,7 +665,87 @@ export function createCustomApp() {
 
 The client uses `@modelcontextprotocol/ext-apps` `App` class. Unlike the generic renderer, you write the HTML form by hand and wire up fields directly.
 
-```javascript
+```js file=src/prefill-form.js
+// src/engineer/apps/custom-ui/app.js
+import {
+  App,
+  applyDocumentTheme,
+  applyHostStyleVariables,
+  applyHostFonts
+} from '@modelcontextprotocol/ext-apps'
+
+const app = new App({ name: 'Custom Tool', version: '1.0.0' })
+
+// Receive tool result (initial data from handleToolCall)
+app.ontoolresult = (result) => {
+  const text = result?.content?.find((c) => c.type === 'text')?.text
+  if (!text) return
+  const data = JSON.parse(text)
+  prefillForm(data.defaults)
+}
+
+// Receive tool input (LLM pre-fill arguments)
+app.ontoolinput = (params) => {
+  if (params?.arguments) prefillForm(params.arguments)
+}
+
+// Theme support
+app.onhostcontextchanged = (params) => {
+  if (params?.theme) applyDocumentTheme(params.theme)
+  if (params?.styles?.variables) applyHostStyleVariables(params.styles.variables)
+  if (params?.styles?.css?.fonts) applyHostFonts(params.styles.css.fonts)
+}
+
+await app.connect()
+
+// Apply initial theme
+const ctx = app.getHostContext()
+if (ctx?.theme) applyDocumentTheme(ctx.theme)
+if (ctx?.styles?.variables) applyHostStyleVariables(ctx.styles.variables)
+
+// --- Form Logic (hardcoded to your specific fields) ---
+
+function prefillForm(values) {
+  for (const [key, val] of Object.entries(values)) {
+    if (val == null || val === '') continue
+    const input = document.getElementById(key)
+    if (input) input.value = val
+  }
+}
+
+function collectFormData() {
+  const data = {}
+  for (const id of ['title', 'status', 'description']) {
+    const el = document.getElementById(id)
+    if (!el) continue
+    const val = el.value.trim()
+    if (val) data[id] = val
+  }
+  return data
+}
+
+// Validate via MCP tool
+document.getElementById('btn-validate').addEventListener('click', async () => {
+  const fields = collectFormData()
+  const result = await app.callServerTool({
+    name: 'validate_form',
+    arguments: { model: 'custom', fields }
+  })
+  // Handle validation result...
+})
+
+// Submit via MCP tool
+document.getElementById('btn-submit').addEventListener('click', async () => {
+  const fields = collectFormData()
+  const result = await app.callServerTool({
+    name: 'create_model',
+    arguments: { model: 'custom', attributes: fields }
+  })
+  // Handle creation result...
+})
+```
+
+```ts file=src/prefill-form.ts
 // src/engineer/apps/custom-ui/app.js
 import {
   App,
@@ -616,7 +839,14 @@ document.getElementById('btn-submit').addEventListener('click', async () => {
 
 Custom apps are registered the same way — add them to the `apps` array passed to `AppRegistry`:
 
-```javascript
+```js file=src/apps/custom-app.js
+// In createAppRegistry or similar
+const customApp = createCustomApp()
+const apps = [...modelFormApps, customApp]
+return new AppRegistry(apps, { apiUrl })
+```
+
+```ts file=src/apps/custom-app.ts
 // In createAppRegistry or similar
 const customApp = createCustomApp()
 const apps = [...modelFormApps, customApp]
@@ -652,7 +882,14 @@ Client renders 3-column table (no horizontal scroll)
 
 Define `static defaultColumns` on the model class to control which columns appear when the LLM omits the `columns` parameter:
 
-```javascript
+```js file=src/activity.js
+export class Activity extends BaseModel {
+  static defaultColumns = ['title', 'description', 'started_at', 'duration_minutes']
+  // ...
+}
+```
+
+```ts file=src/activity.ts
 export class Activity extends BaseModel {
   static defaultColumns = ['title', 'description', 'started_at', 'duration_minutes']
   // ...

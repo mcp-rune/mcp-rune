@@ -29,7 +29,7 @@ This guide walks through the interface, the Center-of-Control implementation, an
 
 ## The Interface
 
-```ts
+```ts file=src/extensions/tool-flow-extension.ts
 import type { ToolFlowExtension } from '@mcp-rune/mcp-rune/extensions'
 
 interface ToolFlowExtension {
@@ -46,6 +46,30 @@ interface ToolFlowExtensionContext {
   provideContext(key: string, value: unknown): void
   logger: typeof logger
 }
+```
+
+```js file=src/extensions/tool-flow-extension.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * import type { ToolFlowExtension } from '@mcp-rune/mcp-rune/extensions'
+ *
+ * interface ToolFlowExtension {
+ *   requires?: 'apps'[]
+ *   register(ctx: ToolFlowExtensionContext): void | Promise<void>
+ * }
+ *
+ * interface ToolFlowExtensionContext {
+ *   name: string // user-chosen key (for logs)
+ *   mcpName: string // MCP server name
+ *   registerTool(app: AppDefinition): void
+ *   getApp(toolName: string): AppDefinition | undefined
+ *   setFormSubmitMode(mode: 'direct' | 'collect'): void
+ *   provideContext(key: string, value: unknown): void
+ *   logger: typeof logger
+ * }
+ */
 ```
 
 `register` runs **once at server creation**, before app tools are registered on the underlying `McpServer`. It's synchronous from the server factory's perspective (Promises are awaited).
@@ -86,7 +110,22 @@ If your extension only needs to register a tool or read state, you can omit `req
 
 Register a new app tool. The shape is identical to anything you'd pass to `AppRegistry`:
 
-```ts
+```ts file=examples/tool-flow-extension-guide-02.ts
+ctx.registerTool({
+  name: 'review_pending_form',
+  description: 'Show the user the staged form payload and let them confirm or edit.',
+  toolName: 'review_pending_form',
+  toolDescription: 'Returns the form HTML for review.',
+  toolInputSchema: z.object({}),
+  resourceUri: formApp.resourceUri,
+  getHtml: formApp.getHtml,
+  async handleToolCall(input, context) {
+    // context includes whatever provideContext() injected
+  }
+})
+```
+
+```js file=examples/tool-flow-extension-guide-02.js
 ctx.registerTool({
   name: 'review_pending_form',
   description: 'Show the user the staged form payload and let them confirm or edit.',
@@ -105,7 +144,14 @@ ctx.registerTool({
 
 Look up an already-registered app. Useful when your extension needs to clone metadata from a framework app (the way Center-of-Control reuses the create-form's `resourceUri` and `getHtml`):
 
-```ts
+```ts file=src/apps/form-app.ts
+const formApp = ctx.getApp('create_model_form')
+if (!formApp?.resourceUri) {
+  throw new Error('myExtension: create_model_form must be registered first')
+}
+```
+
+```js file=src/apps/form-app.js
 const formApp = ctx.getApp('create_model_form')
 if (!formApp?.resourceUri) {
   throw new Error('myExtension: create_model_form must be registered first')
@@ -122,13 +168,25 @@ Use `'collect'` to insert a human-in-the-loop review interstitial. Use `'direct'
 
 Inject a value into the shared context passed to **every app tool handler** in this server. Use it to thread extension-owned state (stores, clients, queues) into handlers without coupling them to the extension:
 
-```ts
+```ts file=src/store.ts
 const store = new MyApprovalStore()
 ctx.provideContext('approvalStore', store)
 
 // Later, inside any app tool's handleToolCall:
 async handleToolCall(input, context) {
   const store = context.approvalStore as MyApprovalStore
+  await store.enqueue(input)
+}
+```
+
+```js file=src/store.js
+const store = new MyApprovalStore()
+ctx.provideContext('approvalStore', store)
+// Later, inside any app tool's handleToolCall:
+async
+handleToolCall(input, context)
+{
+  const store = context.approvalStore
   await store.enqueue(input)
 }
 ```
@@ -143,7 +201,7 @@ A shared logger. Use `ctx.logger.info(...)` with structured metadata so log line
 
 The framework's built-in extension — short enough to fit in 30 lines and a perfect template:
 
-```ts
+```ts file=src/apps/form-app.ts
 // src/extensions/center-of-control.ts
 import { FormDataStore } from '#src/mcp/apps/form-data-store.js'
 import { createFormDataTools } from '#src/mcp/apps/form-data-tools.js'
@@ -177,12 +235,50 @@ export const centerOfControlExtension: ToolFlowExtension = {
 }
 ```
 
+```js file=src/apps/form-app.js
+// src/extensions/center-of-control.ts
+import { FormDataStore } from '#src/mcp/apps/form-data-store.js'
+import { createFormDataTools } from '#src/mcp/apps/form-data-tools.js'
+export const centerOfControlExtension = {
+  requires: ['apps'],
+  register(ctx) {
+    const formApp = ctx.getApp('create_model_form')
+    if (!formApp?.resourceUri || !formApp.getHtml) {
+      throw new Error('centerOfControlExtension: create_model_form app is required')
+    }
+    // 1. Flip the submit mode.
+    ctx.setFormSubmitMode('collect')
+    // 2. Spin up a per-server FormDataStore and expose it to other tools.
+    const store = new FormDataStore()
+    ctx.provideContext('formDataStore', store)
+    // 3. Register the collect_form_data + get_form_data tools, sharing the
+    //    same resourceUri/getHtml as the create-form app.
+    const modelNames = extractModelNames(formApp.toolInputSchema)
+    const tools = createFormDataTools(formApp.resourceUri, modelNames, {
+      getHtml: formApp.getHtml
+    })
+    for (const tool of tools) ctx.registerTool(tool)
+    ctx.logger.info(`[${ctx.name}] active`, { service: ctx.mcpName, models: modelNames.length })
+  }
+}
+```
+
 Wire-up:
 
-```ts
+```ts file=examples/tool-flow-extension-guide-06.ts
 import { createServer } from '@mcp-rune/mcp-rune/server'
 import { centerOfControlExtension } from '@mcp-rune/mcp-rune/extensions/center-of-control'
 
+createServer({
+  toolRegistry,
+  appRegistry,
+  toolFlowExtensions: { centerOfControl: centerOfControlExtension }
+})
+```
+
+```js file=examples/tool-flow-extension-guide-06.js
+import { createServer } from '@mcp-rune/mcp-rune/server'
+import { centerOfControlExtension } from '@mcp-rune/mcp-rune/extensions/center-of-control'
 createServer({
   toolRegistry,
   appRegistry,
@@ -196,7 +292,7 @@ The flow becomes: user fills the form → clicks Done → iframe calls `collect_
 
 A custom extension that posts every create/update to a Slack channel and waits for an emoji reaction before allowing submission:
 
-```ts
+```ts file=src/extensions/slack-approval-extension.ts
 // your-server/extensions/slack-approval.ts
 import { z } from 'zod'
 import type { ToolFlowExtension } from '@mcp-rune/mcp-rune/extensions'
@@ -271,9 +367,67 @@ export function slackApprovalExtension(config: SlackApprovalConfig): ToolFlowExt
 }
 ```
 
+```js file=src/extensions/slack-approval-extension.js
+// your-server/extensions/slack-approval.ts
+import { z } from 'zod'
+import { SlackClient } from './slack-client.js'
+import { ApprovalStore } from './approval-store.js'
+export function slackApprovalExtension(config) {
+  return {
+    requires: ['apps'],
+    async register(ctx) {
+      const formApp = ctx.getApp('create_model_form')
+      if (!formApp) throw new Error('slackApproval: create_model_form app required')
+      ctx.setFormSubmitMode('collect')
+      const slack = new SlackClient(config.slackToken)
+      const store = new ApprovalStore({
+        slack,
+        channel: config.channel,
+        approveEmoji: config.approveEmoji ?? '✅'
+      })
+      ctx.provideContext('approvalStore', store)
+      const submitTool = {
+        name: 'request_approval',
+        description: 'Stage a model write and post it to Slack for approval.',
+        toolName: 'request_approval',
+        toolDescription: 'Posts the form payload to Slack and returns an approval ID.',
+        toolInputSchema: {
+          model: z.string(),
+          parent_path: z.string().optional(),
+          attributes: z.record(z.string(), z.unknown())
+        },
+        async handleToolCall(input, context) {
+          const approval = context.approvalStore
+          const id = await approval.post(input)
+          return { content: [{ type: 'text', text: `Approval requested: ${id}` }] }
+        }
+      }
+      const checkTool = {
+        name: 'check_approval',
+        description: 'Poll for the approval status of a staged write.',
+        toolName: 'check_approval',
+        toolDescription: 'Returns "pending" | "approved" | "rejected".',
+        toolInputSchema: { id: z.string() },
+        async handleToolCall(input, context) {
+          const approval = context.approvalStore
+          const status = approval.status(input.id)
+          return { content: [{ type: 'text', text: status }] }
+        }
+      }
+      ctx.registerTool(submitTool)
+      ctx.registerTool(checkTool)
+      ctx.logger.info(`[${ctx.name}] active`, {
+        service: ctx.mcpName,
+        channel: config.channel
+      })
+    }
+  }
+}
+```
+
 Wire-up:
 
-```ts
+```ts file=examples/tool-flow-extension-guide-08.ts
 createServer({
   // …
   toolFlowExtensions: {
@@ -281,6 +435,19 @@ createServer({
     slackApproval: slackApprovalExtension({
       channel: '#approvals',
       slackToken: process.env.SLACK_BOT_TOKEN!
+    })
+  }
+})
+```
+
+```js file=examples/tool-flow-extension-guide-08.js
+createServer({
+  // …
+  toolFlowExtensions: {
+    centerOfControl: centerOfControlExtension,
+    slackApproval: slackApprovalExtension({
+      channel: '#approvals',
+      slackToken: process.env.SLACK_BOT_TOKEN
     })
   }
 })
@@ -313,7 +480,7 @@ Practically: don't mix Center-of-Control with another extension that also flips 
 
 Extensions are functions. Test them by constructing a stub context and asserting the side effects:
 
-```ts
+```ts file=src/ctx.ts
 import { describe, expect, it, vi } from 'vitest'
 import { slackApprovalExtension } from '../src/extensions/slack-approval'
 
@@ -340,6 +507,37 @@ describe('slackApprovalExtension', () => {
     const ext = slackApprovalExtension({ channel: '#x', slackToken: 'xoxb-test' })
     await ext.register(ctx as never)
 
+    expect(ctx.setFormSubmitMode).toHaveBeenCalledWith('collect')
+    expect(tools).toHaveLength(2)
+    expect(context.approvalStore).toBeDefined()
+  })
+})
+```
+
+```js file=src/ctx.js
+import { describe, expect, it, vi } from 'vitest'
+import { slackApprovalExtension } from '../src/extensions/slack-approval'
+describe('slackApprovalExtension', () => {
+  it('registers two tools and flips submit mode', async () => {
+    const tools = []
+    const context = {}
+    const ctx = {
+      name: 'slackApproval',
+      mcpName: 'test',
+      registerTool: (t) => tools.push(t),
+      getApp: () => ({
+        resourceUri: 'mcp://app/x',
+        getHtml: () => '<html></html>',
+        toolInputSchema: {}
+      }),
+      setFormSubmitMode: vi.fn(),
+      provideContext: (k, v) => {
+        context[k] = v
+      },
+      logger: { info: vi.fn(), debug: vi.fn(), error: vi.fn(), warn: vi.fn() }
+    }
+    const ext = slackApprovalExtension({ channel: '#x', slackToken: 'xoxb-test' })
+    await ext.register(ctx)
     expect(ctx.setFormSubmitMode).toHaveBeenCalledWith('collect')
     expect(tools).toHaveLength(2)
     expect(context.approvalStore).toBeDefined()

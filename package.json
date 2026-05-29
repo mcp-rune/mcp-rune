@@ -110,6 +110,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "docs:dualize": "node docs/scripts/dualize.mjs",
+    "docs:check": "node docs/scripts/dualize.mjs --check",
     "prepublishOnly": "npm run build:full",
     "prepare": "husky"
   },

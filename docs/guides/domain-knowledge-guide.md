@@ -93,7 +93,20 @@ A `DomainConcept` captures knowledge that spans multiple models and cannot be ex
 
 ### Constructor
 
-```javascript
+```js file=examples/domain-knowledge-guide-01.js
+import { DomainConcept } from '#src/mcp/domain/knowledge.js'
+
+new DomainConcept({
+  name: 'deal_rights_hierarchy',              // Unique identifier (snake_case)
+  title: 'Deal → Rights → Platforms',          // Human-readable title
+  description: 'Deals contain rights...',      // 1-2 sentence explanation
+  models: ['deal', 'right', 'specific_platform'],  // Models this concept spans
+  tags: ['hierarchy', 'licensing'],            // For filtering and search
+  details: { ... }                             // Structured additional context
+})
+```
+
+```ts file=examples/domain-knowledge-guide-01.ts
 import { DomainConcept } from '#src/mcp/domain/knowledge.js'
 
 new DomainConcept({
@@ -135,7 +148,30 @@ You can invent new keys freely — just be descriptive. The formatting layer wil
 
 **Hierarchy concept with conventional keys:**
 
-```javascript
+```js file=examples/domain-knowledge-guide-02.js
+new DomainConcept({
+  name: 'deal_rights_hierarchy',
+  title: 'Deal → Rights → Platforms',
+  description:
+    'Deals contain rights, which in turn have platform assignments. Rights inherit certain fields from their parent deal.',
+  models: ['deal', 'right', 'specific_platform'],
+  tags: ['hierarchy', 'licensing', 'inheritance'],
+  details: {
+    inheritance: {
+      from: 'deal',
+      to: 'right',
+      fields: ['restrictions', 'transmission config', 'offset timing']
+    },
+    process: 'Create deal first → add rights under the deal → assign specific_platforms per right',
+    tips: [
+      'Create the deal before creating rights — rights are nested under deals',
+      'Platform assignment is per-right, not per-deal (use specific_platforms)'
+    ]
+  }
+})
+```
+
+```ts file=examples/domain-knowledge-guide-02.ts
 new DomainConcept({
   name: 'deal_rights_hierarchy',
   title: 'Deal → Rights → Platforms',
@@ -160,7 +196,27 @@ new DomainConcept({
 
 **Status enum concept:**
 
-```javascript
+```js file=examples/domain-knowledge-guide-03.js
+new DomainConcept({
+  name: 'rights_validation_status',
+  title: 'Rights Status Calculation',
+  description: 'When a schedule entry is created, its rights status is calculated automatically.',
+  models: ['right', 'scheduling', 'platform'],
+  tags: ['rights', 'validation', 'status'],
+  details: {
+    statuses: {
+      cleared: 'Rights are satisfied — the schedule entry is valid',
+      in_conflict: 'One or more rights exist but a restriction has been breached',
+      no_rights: 'No single right satisfies ALL platform requirements',
+      denied: 'Rights have been explicitly denied'
+    },
+    process: 'Schedule entry created → background job calculates rights status → status displayed',
+    tips: ['Rights status is calculated automatically — never set it manually']
+  }
+})
+```
+
+```ts file=examples/domain-knowledge-guide-03.ts
 new DomainConcept({
   name: 'rights_validation_status',
   title: 'Rights Status Calculation',
@@ -182,7 +238,27 @@ new DomainConcept({
 
 **Dynamic concept from model metadata:**
 
-```javascript
+```js file=src/create-mutability-concept.js
+export function createMutabilityConcept(modelClasses) {
+  const readOnlyModels = Object.entries(modelClasses)
+    .filter(([, M]) => M.readOnly)
+    .map(([name]) => name)
+
+  return new DomainConcept({
+    name: 'model_mutability',
+    title: 'Model Mutability: Read-Only Models and Immutable Fields',
+    description: 'Some models are read-only lookups...',
+    models: readOnlyModels,
+    tags: ['infrastructure', 'read-only', 'mutability'],
+    details: {
+      readOnlyModels: { models: readOnlyModels },
+      tips: ['Do not attempt to create or update read-only models']
+    }
+  })
+}
+```
+
+```ts file=src/create-mutability-concept.ts
 export function createMutabilityConcept(modelClasses) {
   const readOnlyModels = Object.entries(modelClasses)
     .filter(([, M]) => M.readOnly)
@@ -206,7 +282,27 @@ export function createMutabilityConcept(modelClasses) {
 
 Add concepts to `src/<server>/domain/knowledge/concepts.js`. Organize them by logical groups with section comments:
 
-```javascript
+```js file=src/concepts.js
+export const concepts = [
+  // ============================================================================
+  // HIERARCHY & STRUCTURE CONCEPTS
+  // ============================================================================
+  new DomainConcept({ name: 'deal_rights_hierarchy', ... }),
+  new DomainConcept({ name: 'two_step_platform_assignment', ... }),
+
+  // ============================================================================
+  // RIGHTS VALIDATION CONCEPTS
+  // ============================================================================
+  new DomainConcept({ name: 'rights_validation_status', ... }),
+
+  // ============================================================================
+  // TERMINOLOGY & WINDOWS CONCEPTS
+  // ============================================================================
+  new DomainConcept({ name: 'window_terminology', ... }),
+]
+```
+
+```ts file=src/concepts.ts
 export const concepts = [
   // ============================================================================
   // HIERARCHY & STRUCTURE CONCEPTS
@@ -236,7 +332,23 @@ A `BusinessRule` validates constraints between entities that individual model va
 
 ### Constructor
 
-```javascript
+```js file=examples/domain-knowledge-guide-06.js
+import { BusinessRule } from '#src/mcp/domain/business-rules.js'
+
+new BusinessRule({
+  name: 'catchup_requires_transmission_config', // Unique identifier (snake_case)
+  description: 'Catch-up rights must specify transmission_type and reference_tx_nth',
+  scope: ['right'], // Models this rule applies to
+  severity: 'error', // 'error' | 'warning' | 'info'
+  tags: ['catch-up', 'required-fields'], // For filtering
+  evaluate(data, context = {}) {
+    // Validation function
+    // ...
+  }
+})
+```
+
+```ts file=examples/domain-knowledge-guide-06.ts
 import { BusinessRule } from '#src/mcp/domain/business-rules.js'
 
 new BusinessRule({
@@ -265,7 +377,16 @@ The evaluate function receives two arguments and must return a result object:
 
 **Output:**
 
-```javascript
+```js file=examples/domain-knowledge-guide-07.js
+{
+  passed: true|false,        // Whether the rule passed
+  message: 'Human-readable explanation',
+  details: { ... },          // Optional: structured detail data
+  suggestion: 'How to fix'   // Optional: actionable fix suggestion
+}
+```
+
+```ts file=examples/domain-knowledge-guide-07.ts
 {
   passed: true|false,        // Whether the rule passed
   message: 'Human-readable explanation',
@@ -286,7 +407,16 @@ The evaluate function receives two arguments and must return a result object:
 
 **1. Early exit for non-applicable rules:**
 
-```javascript
+```js file=examples/domain-knowledge-guide-08.js
+evaluate(data) {
+  if (data.right_type !== 'catchup') {
+    return { passed: true, message: 'Not a catch-up right, rule not applicable' }
+  }
+  // ... actual validation
+}
+```
+
+```ts file=examples/domain-knowledge-guide-08.ts
 evaluate(data) {
   if (data.right_type !== 'catchup') {
     return { passed: true, message: 'Not a catch-up right, rule not applicable' }
@@ -297,7 +427,16 @@ evaluate(data) {
 
 **2. Use context for cross-entity validation:**
 
-```javascript
+```js file=examples/domain-knowledge-guide-09.js
+evaluate(data, context = {}) {
+  if (!context.rights || context.rights.length === 0) {
+    return { passed: true, message: 'No rights in context to validate against' }
+  }
+  // ... validate deal dates encompass rights dates
+}
+```
+
+```ts file=examples/domain-knowledge-guide-09.ts
 evaluate(data, context = {}) {
   if (!context.rights || context.rights.length === 0) {
     return { passed: true, message: 'No rights in context to validate against' }
@@ -308,7 +447,16 @@ evaluate(data, context = {}) {
 
 **3. Provide actionable suggestions:**
 
-```javascript
+```js file=examples/domain-knowledge-guide-10.js
+return {
+  passed: false,
+  message: `Catch-up rights require: ${missing.join(', ')}`,
+  suggestion:
+    'Set transmission_type (play_run/costed_run/rerun) and reference_tx_nth (e.g., "all", "1")'
+}
+```
+
+```ts file=examples/domain-knowledge-guide-10.ts
 return {
   passed: false,
   message: `Catch-up rights require: ${missing.join(', ')}`,
@@ -319,7 +467,15 @@ return {
 
 **4. A rule can apply to multiple models:**
 
-```javascript
+```js file=examples/domain-knowledge-guide-11.js
+new BusinessRule({
+  name: 'end_date_after_start_date',
+  scope: ['right', 'deal'] // Applies to both
+  // ...
+})
+```
+
+```ts file=examples/domain-knowledge-guide-11.ts
 new BusinessRule({
   name: 'end_date_after_start_date',
   scope: ['right', 'deal'] // Applies to both
@@ -331,7 +487,35 @@ new BusinessRule({
 
 **Field requirement rule:**
 
-```javascript
+```js file=src/missing.js
+new BusinessRule({
+  name: 'catchup_requires_transmission_config',
+  description: 'Catch-up rights must specify transmission_type and reference_tx_nth',
+  scope: ['right'],
+  severity: 'error',
+  tags: ['catch-up', 'required-fields'],
+  evaluate(data) {
+    if (data.right_type !== 'catchup') {
+      return { passed: true, message: 'Not a catch-up right, rule not applicable' }
+    }
+    const missing = []
+    if (!data.transmission_type) missing.push('transmission_type')
+    if (!data.reference_tx_nth) missing.push('reference_tx_nth')
+
+    if (missing.length > 0) {
+      return {
+        passed: false,
+        message: `Catch-up rights require: ${missing.join(', ')}`,
+        suggestion:
+          'Set transmission_type (play_run/costed_run/rerun) and reference_tx_nth (e.g., "all", "1", "1-3")'
+      }
+    }
+    return { passed: true, message: 'Catch-up transmission config is set' }
+  }
+})
+```
+
+```ts file=src/missing.ts
 new BusinessRule({
   name: 'catchup_requires_transmission_config',
   description: 'Catch-up rights must specify transmission_type and reference_tx_nth',
@@ -361,7 +545,43 @@ new BusinessRule({
 
 **Cross-entity validation rule (uses context):**
 
-```javascript
+```js file=src/deal-start.js
+new BusinessRule({
+  name: 'deal_dates_encompass_rights',
+  description: 'Deal date range should encompass its rights date ranges',
+  scope: ['deal'],
+  severity: 'warning',
+  tags: ['dates', 'cross-entity'],
+  evaluate(data, context = {}) {
+    if (!data.starts && !data.ends) {
+      return { passed: true, message: 'Deal has no date constraints' }
+    }
+    if (!context.rights || context.rights.length === 0) {
+      return { passed: true, message: 'No rights in context to validate against' }
+    }
+
+    const dealStart = data.starts ? new Date(data.starts) : null
+    const issues = []
+
+    for (const right of context.rights) {
+      if (dealStart && right.starts && new Date(right.starts) < dealStart) {
+        issues.push(`Right starts before deal`)
+      }
+    }
+
+    if (issues.length > 0) {
+      return {
+        passed: false,
+        message: issues.join('; '),
+        suggestion: 'Extend deal dates to encompass all rights'
+      }
+    }
+    return { passed: true, message: 'Deal dates encompass all rights' }
+  }
+})
+```
+
+```ts file=src/deal-start.ts
 new BusinessRule({
   name: 'deal_dates_encompass_rights',
   description: 'Deal date range should encompass its rights date ranges',
@@ -401,7 +621,17 @@ new BusinessRule({
 
 Add rules to `src/<server>/domain/rules/<domain>-rules.js`. Each file exports an array:
 
-```javascript
+```js file=src/rights-rules.js
+// src/<server>/domain/rules/rights-rules.js
+import { BusinessRule } from '#src/mcp/domain/business-rules.js'
+
+export const rightsRules = [
+  new BusinessRule({ ... }),
+  new BusinessRule({ ... }),
+]
+```
+
+```ts file=src/rights-rules.ts
 // src/<server>/domain/rules/rights-rules.js
 import { BusinessRule } from '#src/mcp/domain/business-rules.js'
 
@@ -426,7 +656,23 @@ A `WorkflowDefinition` is a structured multi-step process guide. It can include 
 
 ### Constructor
 
-```javascript
+```js file=examples/domain-knowledge-guide-15.js
+import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
+
+new WorkflowDefinition({
+  name: 'catchup_vod_setup',                    // Unique identifier (snake_case)
+  title: 'Set Up Catch-Up VOD',                 // Human-readable title
+  description: 'Creates a rule that generates schedulings when linear transmissions occur.',
+  tags: ['catch-up', 'vod', 'onboarding'],      // For filtering
+  models: ['title', 'rule', 'specific_platform'], // Models involved
+  steps: [
+    { order: 1, title: '...', description: '...', ... },
+    { order: 2, title: '...', description: '...', ... },
+  ]
+})
+```
+
+```ts file=examples/domain-knowledge-guide-15.ts
 import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
 
 new WorkflowDefinition({
@@ -446,7 +692,31 @@ new WorkflowDefinition({
 
 Each step is a plain object (auto-wrapped in `WorkflowStep`):
 
-```javascript
+```js file=examples/domain-knowledge-guide-16.js
+{
+  order: 1,                           // Step number (1-based)
+  title: 'Find the title',            // Step title
+  description: 'Search for the title you want to configure.',
+  tool: 'find_records',                 // Optional: MCP tool to call
+  toolArgs: {                         // Optional: example arguments
+    model: 'title',
+    search: { name: '<title_name>' }
+  },
+  decision: {                          // Optional: branching point
+    question: 'All platforms or specific ones?',
+    options: [
+      { label: 'All platforms', description: 'Skip — rule applies everywhere' },
+      { label: 'Specific platforms', description: 'Add specific_platform records', nextStep: 6 }
+    ]
+  },
+  tips: [                              // Optional: guidance for this step
+    'You need the title ID for the next step',
+    'If the title does not exist, create it first'
+  ]
+}
+```
+
+```ts file=examples/domain-knowledge-guide-16.ts
 {
   order: 1,                           // Step number (1-based)
   title: 'Find the title',            // Step title
@@ -480,7 +750,36 @@ Each step is a plain object (auto-wrapped in `WorkflowStep`):
 
 **Onboarding workflow:**
 
-```javascript
+```js file=examples/domain-knowledge-guide-17.js
+new WorkflowDefinition({
+  name: 'catchup_vod_setup',
+  title: 'Set Up Catch-Up VOD',
+  description: 'Set up catch-up VOD availability for a title.',
+  tags: ['catch-up', 'vod', 'onboarding'],
+  models: ['title', 'rule', 'specific_platform', 'scheduling'],
+  steps: [
+    {
+      order: 1,
+      title: 'Find the title',
+      description: 'Search for the title to set up catch-up VOD for.',
+      tool: 'find_records',
+      toolArgs: { model: 'title', search: { name: '<title_name>' } },
+      tips: ['You need the title ID for the next step']
+    },
+    {
+      order: 2,
+      title: 'Get the rule creation guide',
+      description: 'Load the guided creation form for VOD rules.',
+      tool: 'get_prompt_guide',
+      toolArgs: { guide_name: 'create_rule' },
+      tips: ['Use mode: "quick" if you already know the field values']
+    }
+    // ... more steps
+  ]
+})
+```
+
+```ts file=examples/domain-knowledge-guide-17.ts
 new WorkflowDefinition({
   name: 'catchup_vod_setup',
   title: 'Set Up Catch-Up VOD',
@@ -511,7 +810,36 @@ new WorkflowDefinition({
 
 **Demo workflow:**
 
-```javascript
+```js file=examples/domain-knowledge-guide-18.js
+new WorkflowDefinition({
+  name: 'catchup_vod_demo',
+  title: 'Demo: Catch-Up VOD Rules',
+  description: 'Choreographed demo with audience-friendly explanations.',
+  tags: ['catch-up', 'vod', 'demo'],
+  models: ['title', 'rule', 'specific_platform'],
+  steps: [
+    {
+      order: 1,
+      title: 'Set the scene',
+      description:
+        'Explain catch-up VOD: "Catch-up lets viewers watch on-demand after broadcast..."',
+      tips: ['Key value prop: rules automate scheduling — no manual work per transmission']
+      // No tool — narrative step
+    },
+    {
+      order: 2,
+      title: 'Find a demo title',
+      description: 'Search for a recognizable title.',
+      tool: 'find_records',
+      toolArgs: { model: 'title', search: { name: 'Breaking Bad' } },
+      tips: ['Choose a title the audience will recognize']
+    }
+    // ... more steps
+  ]
+})
+```
+
+```ts file=examples/domain-knowledge-guide-18.ts
 new WorkflowDefinition({
   name: 'catchup_vod_demo',
   title: 'Demo: Catch-Up VOD Rules',
@@ -544,7 +872,17 @@ new WorkflowDefinition({
 
 Add workflows to `src/<server>/domain/workflows/<category>.js`. Each file exports an array:
 
-```javascript
+```js file=src/catchup-workflows.js
+// src/<server>/domain/workflows/catchup-vod.js
+import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
+
+export const catchupWorkflows = [
+  new WorkflowDefinition({ ... }),  // Setup
+  new WorkflowDefinition({ ... }),  // Demo
+]
+```
+
+```ts file=src/catchup-workflows.ts
 // src/<server>/domain/workflows/catchup-vod.js
 import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
 
@@ -566,7 +904,26 @@ A `DiagramTemplate` is a pre-built Mermaid diagram for visual domain explanation
 
 ### Constructor
 
-```javascript
+```js file=examples/domain-knowledge-guide-20.js
+import { DiagramTemplate } from '#src/mcp/domain/diagrams.js'
+
+new DiagramTemplate({
+  name: 'deal_structure', // Unique identifier (snake_case)
+  title: 'Deal → Rights → Platforms', // Human-readable title
+  description: 'Shows the licensing hierarchy.',
+  type: 'graph', // Mermaid type hint
+  tags: ['licensing', 'hierarchy'], // For filtering
+  params: [], // Parameter definitions (if parameterized)
+  render(params = {}) {
+    // Returns Mermaid syntax
+    return `graph TD
+  Deal["Deal"] --> Right["Right"]
+  Right --> Platform["Platform"]`
+  }
+})
+```
+
+```ts file=examples/domain-knowledge-guide-20.ts
 import { DiagramTemplate } from '#src/mcp/domain/diagrams.js'
 
 new DiagramTemplate({
@@ -597,7 +954,24 @@ new DiagramTemplate({
 
 ### Parameterized Templates
 
-```javascript
+```js file=examples/domain-knowledge-guide-21.js
+new DiagramTemplate({
+  name: 'availability_window',
+  title: 'Availability Window',
+  type: 'graph',
+  params: [
+    { name: 'start_offset', type: 'string', description: 'Start offset', default: '0 minutes' },
+    { name: 'end_offset', type: 'string', description: 'End offset', default: '7 days' }
+  ],
+  render({ start_offset = '0 minutes', end_offset = '7 days' } = {}) {
+    return `graph LR
+  TX["Linear TX"] -->|"${start_offset}"| Start["VOD Start"]
+  Start -->|"${end_offset}"| End["VOD End"]`
+  }
+})
+```
+
+```ts file=examples/domain-knowledge-guide-21.ts
 new DiagramTemplate({
   name: 'availability_window',
   title: 'Availability Window',
@@ -618,7 +992,15 @@ new DiagramTemplate({
 
 Add diagrams to `src/<server>/domain/diagrams/<category>.js`. Each file exports an array. Create an `index.js` that aggregates all templates:
 
-```javascript
+```js file=src/diagram-templates.js
+// src/<server>/domain/diagrams/index.js
+import { dealStructureTemplates } from './deal-structure.js'
+import { availabilityWindowTemplates } from './availability.js'
+
+export const diagramTemplates = [...dealStructureTemplates, ...availabilityWindowTemplates]
+```
+
+```ts file=src/diagram-templates.ts
 // src/<server>/domain/diagrams/index.js
 import { dealStructureTemplates } from './deal-structure.js'
 import { availabilityWindowTemplates } from './availability.js'
@@ -636,7 +1018,38 @@ The `DomainRegistry` aggregates all domain intelligence into a single injectable
 
 ### Creating the Registry
 
-```javascript
+```js file=src/registries/create-my-domain-registry.js
+// src/<server>/domain/registry.js
+import { DomainKnowledge } from '#src/mcp/domain/knowledge.js'
+import { RuleSet } from '#src/mcp/domain/business-rules.js'
+import { WorkflowRegistry } from '#src/mcp/domain/workflows.js'
+import { DiagramTemplateRegistry } from '#src/mcp/domain/diagrams.js'
+import { DomainRegistry } from '#src/mcp/domain/registry.js'
+import { MODEL_CLASSES } from '../models/index.js'
+
+import { concepts } from './knowledge/concepts.js'
+import { rightsRules } from './rules/rights-rules.js'
+import { dealRules } from './rules/deal-rules.js'
+import { catchupWorkflows } from './workflows/catchup-vod.js'
+import { diagramTemplates } from './diagrams/index.js'
+
+export function createMyDomainRegistry() {
+  const knowledge = new DomainKnowledge({
+    concepts: [...concepts],
+    models: MODEL_CLASSES // Pass model classes for field metadata
+  })
+
+  const rules = new RuleSet([...rightsRules, ...dealRules])
+
+  const workflows = new WorkflowRegistry([...catchupWorkflows])
+
+  const diagrams = new DiagramTemplateRegistry(diagramTemplates)
+
+  return new DomainRegistry({ knowledge, rules, workflows, diagrams })
+}
+```
+
+```ts file=src/registries/create-my-domain-registry.ts
 // src/<server>/domain/registry.js
 import { DomainKnowledge } from '#src/mcp/domain/knowledge.js'
 import { RuleSet } from '#src/mcp/domain/business-rules.js'
@@ -671,7 +1084,20 @@ export function createMyDomainRegistry() {
 
 Pass the domain registry when creating the tool registry. The tool registry injects it into every domain tool instance:
 
-```javascript
+```js file=src/registries/domain-registry.js
+// src/<server>/config.js
+const domainRegistry = createMyDomainRegistry()
+
+const toolRegistry = createToolRegistry({
+  logger,
+  models: MODEL_CLASSES,
+  promptRegistry,
+  serverContext,
+  domainRegistry // <-- injected here
+})
+```
+
+```ts file=src/registries/domain-registry.ts
 // src/<server>/config.js
 const domainRegistry = createMyDomainRegistry()
 
@@ -769,7 +1195,26 @@ src/<server>/domain/
 
 ### 2. Define concepts
 
-```javascript
+```js file=src/concepts.js
+// src/<server>/domain/knowledge/concepts.js
+import { DomainConcept } from '#src/mcp/domain/knowledge.js'
+
+export const concepts = [
+  new DomainConcept({
+    name: 'your_concept_name',
+    title: 'Human-Readable Title',
+    description: 'What this concept explains.',
+    models: ['model_a', 'model_b'],
+    tags: ['relevant', 'tags'],
+    details: {
+      process: 'Step 1 → Step 2 → Step 3',
+      tips: ['Helpful tip 1', 'Helpful tip 2']
+    }
+  })
+]
+```
+
+```ts file=src/concepts.ts
 // src/<server>/domain/knowledge/concepts.js
 import { DomainConcept } from '#src/mcp/domain/knowledge.js'
 
@@ -790,7 +1235,32 @@ export const concepts = [
 
 ### 3. Define business rules
 
-```javascript
+```js file=src/my-rules.js
+// src/<server>/domain/rules/<domain>-rules.js
+import { BusinessRule } from '#src/mcp/domain/business-rules.js'
+
+export const myRules = [
+  new BusinessRule({
+    name: 'my_validation_rule',
+    description: 'What this rule checks',
+    scope: ['model_a'],
+    severity: 'error',
+    tags: ['validation'],
+    evaluate(data) {
+      if (!data.required_field) {
+        return {
+          passed: false,
+          message: 'required_field is missing',
+          suggestion: 'Set required_field to a valid value'
+        }
+      }
+      return { passed: true, message: 'required_field is present' }
+    }
+  })
+]
+```
+
+```ts file=src/my-rules.ts
 // src/<server>/domain/rules/<domain>-rules.js
 import { BusinessRule } from '#src/mcp/domain/business-rules.js'
 
@@ -817,7 +1287,40 @@ export const myRules = [
 
 ### 4. Define workflows
 
-```javascript
+```js file=src/my-workflows.js
+// src/<server>/domain/workflows/<category>.js
+import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
+
+export const myWorkflows = [
+  new WorkflowDefinition({
+    name: 'my_setup_workflow',
+    title: 'Set Up Feature X',
+    description: 'Guides users through setting up Feature X.',
+    tags: ['onboarding'],
+    models: ['model_a', 'model_b'],
+    steps: [
+      {
+        order: 1,
+        title: 'Find the parent entity',
+        description: 'Search for the entity to configure.',
+        tool: 'find_records',
+        toolArgs: { model: 'model_a', search: { name: '<name>' } },
+        tips: ['You need the entity ID for the next step']
+      },
+      {
+        order: 2,
+        title: 'Create the child entity',
+        description: 'Create a child entity linked to the parent.',
+        tool: 'create_model',
+        toolArgs: { model: 'model_b', attributes: { parent_id: '<from step 1>' } },
+        tips: ['Check business rules first with check_business_rules']
+      }
+    ]
+  })
+]
+```
+
+```ts file=src/my-workflows.ts
 // src/<server>/domain/workflows/<category>.js
 import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
 
@@ -852,7 +1355,32 @@ export const myWorkflows = [
 
 ### 5. Define diagrams (optional)
 
-```javascript
+```js file=src/my-diagrams.js
+// src/<server>/domain/diagrams/<category>.js
+import { DiagramTemplate } from '#src/mcp/domain/diagrams.js'
+
+export const myDiagrams = [
+  new DiagramTemplate({
+    name: 'my_hierarchy',
+    title: 'Entity Hierarchy',
+    description: 'Shows how entities relate.',
+    type: 'graph',
+    tags: ['hierarchy'],
+    params: [],
+    render() {
+      return `graph TD
+  A["Parent"] --> B["Child 1"]
+  A --> C["Child 2"]`
+    }
+  })
+]
+
+// src/<server>/domain/diagrams/index.js
+import { myDiagrams } from './my-category.js'
+export const diagramTemplates = [...myDiagrams]
+```
+
+```ts file=src/my-diagrams.ts
 // src/<server>/domain/diagrams/<category>.js
 import { DiagramTemplate } from '#src/mcp/domain/diagrams.js'
 
@@ -879,7 +1407,30 @@ export const diagramTemplates = [...myDiagrams]
 
 ### 6. Assemble the registry
 
-```javascript
+```js file=src/registries/create-my-domain-registry.js
+// src/<server>/domain/registry.js
+import { DomainKnowledge } from '#src/mcp/domain/knowledge.js'
+import { RuleSet } from '#src/mcp/domain/business-rules.js'
+import { WorkflowRegistry } from '#src/mcp/domain/workflows.js'
+import { DiagramTemplateRegistry } from '#src/mcp/domain/diagrams.js'
+import { DomainRegistry } from '#src/mcp/domain/registry.js'
+import { MODEL_CLASSES } from '../models/index.js'
+
+import { concepts } from './knowledge/concepts.js'
+import { myRules } from './rules/my-rules.js'
+import { myWorkflows } from './workflows/my-category.js'
+import { diagramTemplates } from './diagrams/index.js'
+
+export function createMyDomainRegistry() {
+  const knowledge = new DomainKnowledge({ concepts, models: MODEL_CLASSES })
+  const rules = new RuleSet([...myRules])
+  const workflows = new WorkflowRegistry([...myWorkflows])
+  const diagrams = new DiagramTemplateRegistry(diagramTemplates)
+  return new DomainRegistry({ knowledge, rules, workflows, diagrams })
+}
+```
+
+```ts file=src/registries/create-my-domain-registry.ts
 // src/<server>/domain/registry.js
 import { DomainKnowledge } from '#src/mcp/domain/knowledge.js'
 import { RuleSet } from '#src/mcp/domain/business-rules.js'
@@ -904,7 +1455,19 @@ export function createMyDomainRegistry() {
 
 ### 7. Inject into the server config
 
-```javascript
+```js file=src/registries/domain-registry.js
+// src/<server>/config.js
+import { createMyDomainRegistry } from './domain/registry.js'
+
+const domainRegistry = createMyDomainRegistry()
+
+const toolRegistry = createToolRegistry({
+  // ... other dependencies
+  domainRegistry
+})
+```
+
+```ts file=src/registries/domain-registry.ts
 // src/<server>/config.js
 import { createMyDomainRegistry } from './domain/registry.js'
 
@@ -936,7 +1499,17 @@ Domain tools use **embedding-based semantic search** over the domain knowledge b
 
 `lib/mcp/domain/semantic-search.js` is a composable utility — each registry gets its own instance:
 
-```javascript
+```js file=src/search.js
+import { SemanticSearch } from '#src/mcp/domain/semantic-search.js'
+
+const search = new SemanticSearch({ threshold: 0.3, topK: 20 })
+await search.initialize(items, (item) => `${item.name} ${item.title}: ${item.description}`)
+
+const results = await search.search('licensing hierarchy')
+// [{ item: <DomainConcept>, score: 0.72 }, ...]
+```
+
+```ts file=src/search.ts
 import { SemanticSearch } from '#src/mcp/domain/semantic-search.js'
 
 const search = new SemanticSearch({ threshold: 0.3, topK: 20 })
@@ -956,7 +1529,17 @@ const results = await search.search('licensing hierarchy')
 
 If `initEmbeddings()` hasn't completed yet (startup warmup ~2-5s) or failed, search methods fall back to substring matching automatically. Domain tools always work, even without the embedding model.
 
-```javascript
+```js file=src/results.js
+async searchConcepts(query) {
+  if (this._semanticSearch.isInitialized) {
+    const results = await this._semanticSearch.search(query)
+    if (results.length > 0) return results.map((r) => r.item)
+  }
+  return this._substringSearch(query)  // fallback
+}
+```
+
+```ts file=src/results.ts
 async searchConcepts(query) {
   if (this._semanticSearch.isInitialized) {
     const results = await this._semanticSearch.search(query)
@@ -989,7 +1572,20 @@ Each registry converts items to searchable text:
 
 ### Initialization
 
-```javascript
+```js file=examples/domain-knowledge-guide-33.js
+// src/<server>/config.js — fire-and-forget, same pattern as vector storage and tracing
+domainRegistry
+  .initEmbeddings()
+  .then(() => logger.info('Domain semantic search initialized', { service: 'mcp-config' }))
+  .catch((err) =>
+    logger.warn('Domain semantic search unavailable, using substring fallback', {
+      service: 'mcp-config',
+      error: err.message
+    })
+  )
+```
+
+```ts file=examples/domain-knowledge-guide-33.ts
 // src/<server>/config.js — fire-and-forget, same pattern as vector storage and tracing
 domainRegistry
   .initEmbeddings()
@@ -1010,7 +1606,32 @@ domainRegistry
 
 Rules are pure functions — test them directly:
 
-```javascript
+```js file=src/rule.js
+import { describe, it, expect } from 'vitest'
+import { myRules } from '../src/<server>/domain/rules/my-rules.js'
+
+describe('my_validation_rule', () => {
+  const rule = myRules.find((r) => r.name === 'my_validation_rule')
+
+  it('passes when required_field is present', () => {
+    const result = rule.evaluate({ required_field: 'value' })
+    expect(result.passed).toBe(true)
+  })
+
+  it('fails when required_field is missing', () => {
+    const result = rule.evaluate({})
+    expect(result.passed).toBe(false)
+    expect(result.suggestion).toBeDefined()
+  })
+
+  it('uses context for cross-entity validation', () => {
+    const result = rule.evaluate({ starts: '2025-01-01' }, { rights: [{ starts: '2024-12-01' }] })
+    expect(result.passed).toBe(false)
+  })
+})
+```
+
+```ts file=src/rule.ts
 import { describe, it, expect } from 'vitest'
 import { myRules } from '../src/<server>/domain/rules/my-rules.js'
 
@@ -1037,7 +1658,32 @@ describe('my_validation_rule', () => {
 
 ### Integration Testing the Registry
 
-```javascript
+```js file=src/registry.js
+import { describe, it, expect } from 'vitest'
+import { createMyDomainRegistry } from '../src/<server>/domain/registry.js'
+
+describe('domain registry', () => {
+  const registry = createMyDomainRegistry()
+
+  it('provides context for known models', () => {
+    const context = registry.getContextForModel('model_a')
+    expect(context.model).toBe('model_a')
+    expect(context.concepts.length).toBeGreaterThan(0)
+  })
+
+  it('finds concepts by search', async () => {
+    const results = await registry.searchConcepts('hierarchy')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('evaluates rules for a model', () => {
+    const result = registry.checkRules('model_a', { required_field: 'value' })
+    expect(result.passed).toBe(true)
+  })
+})
+```
+
+```ts file=src/registry.ts
 import { describe, it, expect } from 'vitest'
 import { createMyDomainRegistry } from '../src/<server>/domain/registry.js'
 

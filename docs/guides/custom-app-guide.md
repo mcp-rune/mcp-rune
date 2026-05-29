@@ -32,7 +32,7 @@ For the protocol-level deep dive — how iframe communication works, message ord
 
 ## `AppDefinition` Shape
 
-```ts
+```ts file=src/app-definition.ts
 import type { AppDefinition } from '@mcp-rune/mcp-rune/apps'
 
 interface AppDefinition {
@@ -54,6 +54,35 @@ interface AppDefinition {
   handleToolCall?(args, context): Promise<ToolResult> // server-side handler
   getHtml?(): string // HTML for the iframe
 }
+```
+
+```js file=src/app-definition.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * import type { AppDefinition } from '@mcp-rune/mcp-rune/apps'
+ *
+ * interface AppDefinition {
+ *   name: string // unique identifier
+ *   description: string // shown to the LLM
+ *   resourceUri?: string // mcp://... where the iframe HTML lives
+ *   toolName?: string // MCP tool that opens the app
+ *   toolDescription?: string
+ *   toolInputSchema?: Record<string, unknown> // Zod-flavored input schema
+ *   needsAuth?: boolean // requires an authenticated request
+ *   visibility?: string[] // optional visibility filter
+ *   annotations?: {
+ *     // MCP tool annotations
+ *     readOnlyHint?: boolean
+ *     destructiveHint?: boolean
+ *     idempotentHint?: boolean
+ *     openWorldHint?: boolean
+ *   }
+ *   handleToolCall?(args, context): Promise<ToolResult> // server-side handler
+ *   getHtml?(): string // HTML for the iframe
+ * }
+ */
 ```
 
 Every field is optional except `name` and `description`. What you populate determines which category your app falls into.
@@ -139,7 +168,7 @@ The iframe (`record-detail-ui/app.js`) reads the records out of the host message
 
 For most deployer-written apps, you don't need Vite. Ship a single inline HTML string:
 
-```ts
+```ts file=src/apps/create-booking-calendar-app.ts
 // your-server/apps/booking-calendar.ts
 import { z } from 'zod'
 import type { AppDefinition } from '@mcp-rune/mcp-rune/apps'
@@ -182,6 +211,46 @@ const HTML = `<!DOCTYPE html>
 </body></html>`
 ```
 
+```js file=src/apps/create-booking-calendar-app.js
+// your-server/apps/booking-calendar.ts
+import { z } from 'zod'
+export function createBookingCalendarApp() {
+  return {
+    name: 'booking_calendar',
+    description: 'Display a monthly calendar of bookings.',
+    resourceUri: 'mcp://app/booking-calendar',
+    toolName: 'show_booking_calendar',
+    toolDescription: 'Open the calendar for a given month.',
+    toolInputSchema: { month: z.string().regex(/^\d{4}-\d{2}$/) },
+    annotations: { readOnlyHint: true },
+    needsAuth: true,
+    getHtml: () => HTML,
+    async handleToolCall(args, context) {
+      const month = args.month
+      const records = await context.dataLayer.list('booking', { month })
+      return {
+        content: [{ type: 'text', text: `Loaded ${records.length} bookings for ${month}` }],
+        _meta: { 'mcp-rune/payload': { records, month } }
+      }
+    }
+  }
+}
+const HTML = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Bookings</title>
+<style>body { font-family: system-ui; padding: 1rem; }</style></head>
+<body>
+  <h1>Bookings</h1>
+  <div id="grid"></div>
+  <script type="module">
+    import { openWindow } from 'https://esm.sh/@modelcontextprotocol/ext-apps@1.7.1'
+    const host = await openWindow()
+    const payload = host.toolOutput?._meta?.['mcp-rune/payload']
+    document.getElementById('grid').textContent =
+      'Month: ' + payload.month + ' — ' + payload.records.length + ' bookings'
+  </script>
+</body></html>`
+```
+
 No build step. The string is the iframe HTML; mcp-rune injects theming + formatters via `injectIntoHead` before serving it. Good enough for read-only views, dashboards, and printable artifacts.
 
 The shape stays the same whether you author the HTML by hand or generate it. The `_meta` envelope is your communication channel from server to iframe — anything you put in `'mcp-rune/payload'` (or your own key) is readable inside the iframe via the SDK's `host.toolOutput`.
@@ -198,12 +267,23 @@ If your app is interactive enough to want JS modules, CSS imports, and bundled d
 3. Build into `your-server/apps/dist/booking-calendar.html`.
 4. In your `AppDefinition`, read the file at server startup:
 
-```ts
+```ts file=src/load-html.ts
 import fs from 'node:fs'
 import path from 'node:path'
 
 const HTML_PATH = path.resolve(import.meta.dirname, 'dist/booking-calendar.html')
 let _cached: string | null = null
+function loadHtml() {
+  if (!_cached) _cached = fs.readFileSync(HTML_PATH, 'utf-8')
+  return _cached
+}
+```
+
+```js file=src/load-html.js
+import fs from 'node:fs'
+import path from 'node:path'
+const HTML_PATH = path.resolve(import.meta.dirname, 'dist/booking-calendar.html')
+let _cached = null
 function loadHtml() {
   if (!_cached) _cached = fs.readFileSync(HTML_PATH, 'utf-8')
   return _cached
@@ -220,7 +300,29 @@ Use this when your app:
 
 The whole point of having a shared kind registry is so custom apps don't reinvent rendering. In a Vite-bundled custom app, import the same primitives the framework apps use:
 
-```js
+```js file=src/payload.js
+// your-server/apps/booking-calendar-ui/app.js
+import {
+  renderCellValue,
+  getFormatter,
+  helpers
+} from '../../../node_modules/@mcp-rune/mcp-rune/dist/mcp/apps/shared/formatters.js'
+
+const payload = host.toolOutput?._meta?.['mcp-rune/payload']
+const tbody = document.querySelector('tbody')
+
+for (const booking of payload.records) {
+  const tr = document.createElement('tr')
+  for (const col of payload.schema.columns) {
+    const td = document.createElement('td')
+    td.appendChild(renderCellValue(booking[col.name], col))
+    tr.appendChild(td)
+  }
+  tbody.appendChild(tr)
+}
+```
+
+```ts file=src/payload.ts
 // your-server/apps/booking-calendar-ui/app.js
 import {
   renderCellValue,
@@ -256,7 +358,7 @@ For form-style inputs, use `getFormatter(kind, format).toInput / .fromInput / .p
 
 If you use `createDefaultAppRegistry`, pass extra apps in the `apps` array:
 
-```ts
+```ts file=src/registries/app-registry.ts
 import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
 import { createBookingCalendarApp } from './apps/booking-calendar.js'
 
@@ -267,9 +369,19 @@ export const appRegistry = createDefaultAppRegistry({
 })
 ```
 
+```js file=src/registries/app-registry.js
+import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
+import { createBookingCalendarApp } from './apps/booking-calendar.js'
+export const appRegistry = createDefaultAppRegistry({
+  modelClasses: MODEL_CLASSES,
+  namespace: 'bookings',
+  apps: [createBookingCalendarApp()] // alongside the 6 framework apps
+})
+```
+
 If you're hand-wiring `AppRegistry`:
 
-```ts
+```ts file=src/registry.ts
 import { AppRegistry } from '@mcp-rune/mcp-rune/apps'
 
 const registry = new AppRegistry(
@@ -286,13 +398,28 @@ const registry = new AppRegistry(
 registry.registerApp(createBookingCalendarApp())
 ```
 
+```js file=src/registry.js
+import { AppRegistry } from '@mcp-rune/mcp-rune/apps'
+const registry = new AppRegistry(
+  [
+    createBookingCalendarApp()
+    // …
+  ],
+  {
+    /* registry options */
+  }
+)
+// Or register after construction:
+registry.registerApp(createBookingCalendarApp())
+```
+
 Apps registered after `registerResources` is called won't appear; register them all before the server accepts connections.
 
 ## Testing a Custom App
 
 Test the server-side handler with vitest, using a stub `DataLayer`:
 
-```ts
+```ts file=src/app.ts
 import { describe, expect, it } from 'vitest'
 import { createBookingCalendarApp } from '../src/apps/booking-calendar'
 
@@ -311,9 +438,27 @@ describe('booking-calendar app', () => {
 })
 ```
 
+```js file=src/app.js
+import { describe, expect, it } from 'vitest'
+import { createBookingCalendarApp } from '../src/apps/booking-calendar'
+describe('booking-calendar app', () => {
+  it('returns records under mcp-rune/payload in _meta', async () => {
+    const app = createBookingCalendarApp()
+    const result = await app.handleToolCall(
+      { month: '2026-05' },
+      { dataLayer: { list: async () => [{ id: '1', date: '2026-05-12' }] } }
+    )
+    expect(result._meta?.['mcp-rune/payload']).toMatchObject({
+      month: '2026-05',
+      records: [{ id: '1', date: '2026-05-12' }]
+    })
+  })
+})
+```
+
 Test the iframe rendering with `happy-dom`:
 
-```ts
+```ts file=src/td.ts
 /**
  * @vitest-environment happy-dom
  */
@@ -328,11 +473,35 @@ describe('booking-calendar iframe', () => {
 })
 ```
 
+```js file=src/td.js
+/**
+ * @vitest-environment happy-dom
+ */
+import { describe, expect, it } from 'vitest'
+import { renderCellValue } from '@mcp-rune/mcp-rune/apps'
+describe('booking-calendar iframe', () => {
+  it('renders a booking row through the shared formatter', () => {
+    const td = renderCellValue('2026-05-12', { kind: 'date' })
+    expect(td.textContent).toContain('2026')
+  })
+})
+```
+
 Integration-test the iframe via `injectIntoHead` to confirm theming and formatter overrides reach your HTML:
 
-```ts
+```ts file=src/registry.ts
 import { AppRegistry } from '@mcp-rune/mcp-rune/apps'
 
+const registry = new AppRegistry([createBookingCalendarApp()], {
+  formatters: { date: { display: { locale: 'en-GB' } } }
+})
+const html = registry.injectIntoHead(loadHtml())
+expect(html).toContain('window.__MCP_RUNE_FORMATTERS__')
+expect(html).toContain('en-GB')
+```
+
+```js file=src/registry.js
+import { AppRegistry } from '@mcp-rune/mcp-rune/apps'
 const registry = new AppRegistry([createBookingCalendarApp()], {
   formatters: { date: { display: { locale: 'en-GB' } } }
 })

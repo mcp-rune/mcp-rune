@@ -74,7 +74,20 @@ The `consumed: true` flag tells the client to collapse the most recent uncollaps
 
 Workflow steps declare the transient/consumer relationship via `contextHint`:
 
-```javascript
+```js file=examples/transient-context-protocol-01.js
+{
+  order: 2,
+  title: 'Fetch activities',
+  tool: 'search_records',
+  loopGroup: 'fetch-analyze',
+  contextHint: {
+    lifecycle: 'transient',
+    consumedBy: 'store_analysis_memory'
+  }
+}
+```
+
+```ts file=examples/transient-context-protocol-01.ts
 {
   order: 2,
   title: 'Fetch activities',

@@ -45,7 +45,19 @@ Field groups can declare a `layout` property to control how their fields render 
 
 Add `layout` to a field group in the prompt class:
 
-```javascript
+```js file=examples/model-form-customization-guide-01.js
+static fieldGroups = {
+  classification: {
+    fields: ['theme_id', 'category_id'],
+    context: 'Classification',
+    required: true,
+    description: 'Theme and category',
+    layout: { type: 'row' }  // renders fields side-by-side
+  }
+}
+```
+
+```ts file=examples/model-form-customization-guide-01.ts
 static fieldGroups = {
   classification: {
     fields: ['theme_id', 'category_id'],
@@ -92,7 +104,28 @@ fieldGroups: {        →   buildGroupLayouts()    →   renderFieldGroup()   �
 
 In `src/engineer/apps/model-form-ui/app.js`:
 
-```javascript
+```js file=src/render-field-group.js
+function renderFieldGroup(fields, layout) {
+  if (layout?.type === 'row') {
+    // existing row logic
+  }
+
+  if (layout?.type === 'grid') {
+    const grid = document.createElement('div')
+    grid.className = 'field-grid'
+    grid.style.gridTemplateColumns = `repeat(${layout.columns || 2}, 1fr)`
+    for (const field of fields) grid.appendChild(renderField(field))
+    return grid
+  }
+
+  // Default: sequential
+  const fragment = document.createDocumentFragment()
+  for (const field of fields) fragment.appendChild(renderField(field))
+  return fragment
+}
+```
+
+```ts file=src/render-field-group.ts
 function renderFieldGroup(fields, layout) {
   if (layout?.type === 'row') {
     // existing row logic

@@ -28,7 +28,7 @@ This guide covers writing one, plugging it in, and testing it.
 
 ## The Interface
 
-```ts
+```ts file=src/request-options.ts
 import type { ApiClient, RequestOptions } from '@mcp-rune/mcp-rune/core'
 
 interface RequestOptions {
@@ -62,6 +62,45 @@ interface ApiClient {
 }
 ```
 
+```js file=src/request-options.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * import type { ApiClient, RequestOptions } from '@mcp-rune/mcp-rune/core'
+ *
+ * interface RequestOptions {
+ *   userId?: string
+ *   [key: string]: unknown
+ * }
+ *
+ * interface ApiClient {
+ *   baseUrl?: string
+ *   get(
+ *     url: string,
+ *     params?: Record<string, unknown>,
+ *     options?: RequestOptions
+ *   ): Promise<Record<string, unknown>>
+ *   post(
+ *     url: string,
+ *     data?: Record<string, unknown>,
+ *     options?: RequestOptions
+ *   ): Promise<Record<string, unknown>>
+ *   put(
+ *     url: string,
+ *     data?: Record<string, unknown>,
+ *     options?: RequestOptions
+ *   ): Promise<Record<string, unknown>>
+ *   patch(
+ *     url: string,
+ *     data?: Record<string, unknown>,
+ *     options?: RequestOptions
+ *   ): Promise<Record<string, unknown>>
+ *   delete(url: string, options?: RequestOptions): Promise<Record<string, unknown>>
+ * }
+ */
+```
+
 Five methods, all returning `Promise<Record<string, unknown>>`. The framework treats payloads as opaque — response normalization is the [convention's](./api-convention-guide.md) job, not the client's. Your `ApiClient` is allowed to throw on non-2xx responses (the framework expects this), but everything else passes through.
 
 `RequestOptions` is intentionally open. mcp-rune populates `userId` when impersonating a user (OAuth flow); custom apps can pass any other keys and your client can pluck what it needs.
@@ -70,10 +109,21 @@ Five methods, all returning `Promise<Record<string, unknown>>`. The framework tr
 
 The framework never holds onto a single `ApiClient` instance. Tools that require authentication receive a fresh one **per request**, produced by a factory you provide:
 
-```ts
+```ts file=src/api-client-factory.ts
 import type { ApiClientFactory } from '@mcp-rune/mcp-rune/tools'
 
 type ApiClientFactory = (token: string) => ApiClient
+```
+
+```js file=src/api-client-factory.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * import type { ApiClientFactory } from '@mcp-rune/mcp-rune/tools'
+ *
+ * type ApiClientFactory = (token: string) => ApiClient
+ */
 ```
 
 The token is the OAuth access token (when OAuth is enabled) or whatever scheme your `getAccessToken` callback returns. Your factory is responsible for injecting auth headers, the base URL, and any per-request transport setup.
@@ -82,7 +132,7 @@ The token is the OAuth access token (when OAuth is enabled) or whatever scheme y
 
 `ToolRegistry` and `AppRegistry` both accept the factory:
 
-```ts
+```ts file=src/registries/tool-registry.ts
 import { ToolRegistry, DATA_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
 
 const toolRegistry = new ToolRegistry({
@@ -92,9 +142,26 @@ const toolRegistry = new ToolRegistry({
 })
 ```
 
-```ts
+```js file=src/registries/tool-registry.js
+import { ToolRegistry, DATA_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
+const toolRegistry = new ToolRegistry({
+  toolClasses: DATA_TOOL_CLASSES,
+  models: MODEL_CLASSES,
+  createApiClient: (token) => myCustomClient(token, { apiUrl })
+})
+```
+
+```ts file=src/registries/app-registry.ts
 import { AppRegistry } from '@mcp-rune/mcp-rune/apps'
 
+const appRegistry = new AppRegistry(apps, {
+  apiUrl,
+  createApiClient: (token) => myCustomClient(token, { apiUrl })
+})
+```
+
+```js file=src/registries/app-registry.js
+import { AppRegistry } from '@mcp-rune/mcp-rune/apps'
 const appRegistry = new AppRegistry(apps, {
   apiUrl,
   createApiClient: (token) => myCustomClient(token, { apiUrl })
@@ -227,7 +294,7 @@ export function createFetchClient(token, opts) {
 
 Wire it up:
 
-```ts
+```ts file=src/registries/tool-registry.ts
 // your-server/config.ts
 import { createFetchClient } from './api-client.js'
 
@@ -242,13 +309,27 @@ export const toolRegistry = new ToolRegistry({
 })
 ```
 
+```js file=src/registries/tool-registry.js
+// your-server/config.ts
+import { createFetchClient } from './api-client.js'
+export const toolRegistry = new ToolRegistry({
+  toolClasses: DATA_TOOL_CLASSES,
+  models: MODEL_CLASSES,
+  createApiClient: (token) =>
+    createFetchClient(token, {
+      apiUrl: process.env.API_URL,
+      tenant: process.env.TENANT_ID
+    })
+})
+```
+
 The factory closes over `apiUrl` and `tenant` at startup; the token rotates per request.
 
 ## Composing with `OAuthService`
 
 When OAuth is enabled, the token comes from the [`OAuthService`](./oauth2-discovery-flow.md) — you don't fetch it yourself in the factory. `ToolRegistry.registerTools` accepts a `getAccessToken` callback that closes over the request context:
 
-```ts
+```ts file=src/oauth.ts
 import { HttpServer } from '@mcp-rune/mcp-rune/server'
 import { OAuthService } from '@mcp-rune/mcp-rune/oauth2'
 
@@ -274,11 +355,40 @@ const httpServer = new HttpServer({
 })
 ```
 
+```js file=src/oauth.js
+import { HttpServer } from '@mcp-rune/mcp-rune/server'
+import { OAuthService } from '@mcp-rune/mcp-rune/oauth2'
+const oauth = new OAuthService({
+  authServerUrl: process.env.AUTH_SERVER_URL,
+  clientId: process.env.CLIENT_ID,
+  clientSecret: process.env.CLIENT_SECRET,
+  redirectUri: 'https://example.com/oauth/callback',
+  scopes: ['mcp:read', 'mcp:write'],
+  resourceUri: 'https://api.example.com',
+  isProduction: true
+})
+const httpServer = new HttpServer({
+  oauth,
+  createServer: ({ sessionId, transport }) => {
+    const mcpServer = createMcpServer(/* … */)
+    toolRegistry.registerTools(mcpServer, {
+      getAccessToken: async () => oauth.getAccessToken(sessionId)
+    })
+    return mcpServer
+  }
+})
+```
+
 `registerTools` calls `getAccessToken` once per tool invocation, then invokes `createApiClient(token)`. Your factory stays simple — it doesn't know OAuth exists.
 
 For requests that need impersonation, pass `userId` through the tool invocation context, and the framework threads it into `RequestOptions`:
 
-```ts
+```ts file=examples/api-client-guide-07.ts
+// Inside a custom tool's execute():
+await this.dataLayer.find('book', recordId, { userId: this.context.userId })
+```
+
+```js file=examples/api-client-guide-07.js
 // Inside a custom tool's execute():
 await this.dataLayer.find('book', recordId, { userId: this.context.userId })
 ```
@@ -289,7 +399,7 @@ Your client picks `userId` out of `options` and sets the impersonation header. T
 
 For integration tests, you usually want to bypass HTTP entirely. Provide a stub client backed by a `Map`:
 
-```ts
+```ts file=src/clients/create-in-memory-client.ts
 // __tests__/helpers/in-memory-client.ts
 import type { ApiClient } from '@mcp-rune/mcp-rune/core'
 
@@ -343,13 +453,72 @@ export function createInMemoryClient(seed: Record<string, unknown[]> = {}): ApiC
 }
 ```
 
+```js file=src/clients/create-in-memory-client.js
+export function createInMemoryClient(seed = {}) {
+  const store = new Map()
+  for (const [collection, records] of Object.entries(seed)) {
+    const bucket = new Map()
+    for (const r of records) bucket.set(String(r.id), r)
+    store.set(collection, bucket)
+  }
+  function bucket(url) {
+    const segments = url.replace(/^\/+|\/+$/g, '').split('/')
+    const collection = segments[0]
+    if (!store.has(collection)) store.set(collection, new Map())
+    return store.get(collection)
+  }
+  return {
+    async get(url) {
+      const segments = url.replace(/^\/+|\/+$/g, '').split('/')
+      if (segments.length === 1) {
+        return { data: Array.from(bucket(url).values()) }
+      }
+      const record = bucket(url).get(segments[1])
+      if (!record) throw new Error(`Not found: ${url}`)
+      return { data: record }
+    },
+    async post(url, data) {
+      const id = String(bucket(url).size + 1)
+      const record = { ...data, id }
+      bucket(url).set(id, record)
+      return { data: record }
+    },
+    async put(url, data) {
+      const segments = url.replace(/^\/+|\/+$/g, '').split('/')
+      const id = segments[1]
+      bucket(url).set(id, { ...(data ?? {}), id })
+      return { data: bucket(url).get(id) }
+    },
+    patch(url, data) {
+      return this.put(url, data)
+    },
+    async delete(url) {
+      const segments = url.replace(/^\/+|\/+$/g, '').split('/')
+      bucket(url).delete(segments[1])
+      return {}
+    }
+  }
+}
+```
+
 Use it in tests:
 
-```ts
+```ts file=src/clients/api-client.ts
 const apiClient = createInMemoryClient({
   books: [{ id: '1', title: 'Clean Code' }]
 })
 
+const toolRegistry = new ToolRegistry({
+  toolClasses: DATA_TOOL_CLASSES,
+  models: MODEL_CLASSES,
+  createApiClient: () => apiClient
+})
+```
+
+```js file=src/clients/api-client.js
+const apiClient = createInMemoryClient({
+  books: [{ id: '1', title: 'Clean Code' }]
+})
 const toolRegistry = new ToolRegistry({
   toolClasses: DATA_TOOL_CLASSES,
   models: MODEL_CLASSES,
@@ -363,10 +532,21 @@ For stub testing at the higher `DataLayer` boundary (so you don't have to mock t
 
 The `SearchService` and other read-only consumers depend on a narrower interface:
 
-```ts
+```ts file=src/clients/search-api-client.ts
 import type { SearchApiClient } from '@mcp-rune/mcp-rune/core'
 
 type SearchApiClient = Pick<ApiClient, 'get' | 'post'>
+```
+
+```js file=src/clients/search-api-client.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * import type { SearchApiClient } from '@mcp-rune/mcp-rune/core'
+ *
+ * type SearchApiClient = Pick<ApiClient, 'get' | 'post'>
+ */
 ```
 
 If you're writing a client that only ever serves search (e.g. an Elasticsearch bridge that exposes nothing else), implement `SearchApiClient` and use a separate full `ApiClient` for CRUD. The narrow type makes the seam auditable.

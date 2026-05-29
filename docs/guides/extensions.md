@@ -74,7 +74,7 @@ Registration happens in object insertion order, which is the order JavaScript gu
 
 ## The context object
 
-```ts
+```ts file=src/http-extension-context.ts
 interface HttpExtensionContext {
   name: string // the key you registered the extension under
   router: Router // pre-created Express Router, mounted at pathPrefix
@@ -84,6 +84,23 @@ interface HttpExtensionContext {
   oauth: OAuthService | null // null in token mode
   logger: typeof logger
 }
+```
+
+```js file=src/http-extension-context.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * interface HttpExtensionContext {
+ *   name: string // the key you registered the extension under
+ *   router: Router // pre-created Express Router, mounted at pathPrefix
+ *   baseUrl: string // server origin + pathPrefix, no trailing slash
+ *   pathPrefix: string // '' or e.g. '/api'
+ *   mcpName: string // mcp.name from HttpServer config
+ *   oauth: OAuthService | null // null in token mode
+ *   logger: typeof logger
+ * }
+ */
 ```
 
 What the context deliberately does **not** expose:
@@ -98,8 +115,19 @@ This narrowing is deliberate. It is the framework's contract: extensions can bre
 
 Declare host capabilities your extension depends on:
 
-```ts
+```ts file=src/extensions/my-extension.ts
 export function myExtension(): HttpExtension {
+  return {
+    requires: ['oauth'],
+    register(ctx) {
+      /* ... */
+    }
+  }
+}
+```
+
+```js file=src/extensions/my-extension.js
+export function myExtension() {
   return {
     requires: ['oauth'],
     register(ctx) {
@@ -134,7 +162,7 @@ Consequences:
 
 A request-ID echo extension that adds a small helper endpoint at `/whoami` for debugging:
 
-```ts
+```ts file=src/extensions/whoami-extension.ts
 import type { HttpExtension } from '@mcp-rune/mcp-rune/extensions'
 
 export function whoamiExtension(): HttpExtension {
@@ -166,15 +194,59 @@ new HttpServer({
 })
 ```
 
+```js file=src/extensions/whoami-extension.js
+export function whoamiExtension() {
+  return {
+    register(ctx) {
+      ctx.router.get('/whoami', (req, res) => {
+        ctx.logger.info('whoami requested', {
+          service: ctx.mcpName,
+          requestId: req.requestId
+        })
+        res.json({
+          server: ctx.mcpName,
+          baseUrl: ctx.baseUrl,
+          oauthMode: ctx.oauth !== null
+        })
+      })
+    }
+  }
+}
+// Register:
+new HttpServer({
+  port: 3000,
+  oauth,
+  mcp,
+  extensions: {
+    whoami: whoamiExtension()
+  }
+})
+```
+
 That's a complete extension — interface, factory, registration. No decorators, no DI container, no plugin manifest.
 
 ## The built-in CIMD extension
 
 CIMD (Client ID Metadata Document) support ships as a built-in extension. The MCP server publishes a JSON metadata document at `GET /oauth/client-metadata.json` so upstream authorization servers can dereference it as a `client_id` and auto-register the OAuth client — eliminating DCR or pre-registration in test environments.
 
-```ts
+```ts file=examples/extensions-04.ts
 import { cimdExtension } from '@mcp-rune/mcp-rune/extensions/cimd'
 
+new HttpServer({
+  oauth,
+  mcp,
+  extensions: {
+    cimd: cimdExtension({
+      redirectUris: ['https://app.example.com/callback'],
+      clientName: 'My MCP Server', // defaults to mcp.name
+      scope: 'read write' // defaults to oauth.scopes
+    })
+  }
+})
+```
+
+```js file=examples/extensions-04.js
+import { cimdExtension } from '@mcp-rune/mcp-rune/extensions/cimd'
 new HttpServer({
   oauth,
   mcp,
