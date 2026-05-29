@@ -64,40 +64,26 @@ interface ApiClient {
 
 ```js file=src/request-options.js
 /**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
+ * Optional per-request context. Tools receive a fresh client per request;
+ * `userId` is populated by mcp-rune when impersonating during an OAuth
+ * flow. Additional keys are passed through to your transport.
  *
- * import type { ApiClient, RequestOptions } from '@mcp-rune/mcp-rune/core'
+ * @typedef {Object} RequestOptions
+ * @property {string} [userId]
+ */
+
+/**
+ * Universal CRUD HTTP contract. Every authenticated tool, every MCP App,
+ * and ModelService itself depend on a JS object exposing these methods.
+ * Implementations should throw on non-2xx responses.
  *
- * interface RequestOptions {
- *   userId?: string
- *   [key: string]: unknown
- * }
- *
- * interface ApiClient {
- *   baseUrl?: string
- *   get(
- *     url: string,
- *     params?: Record<string, unknown>,
- *     options?: RequestOptions
- *   ): Promise<Record<string, unknown>>
- *   post(
- *     url: string,
- *     data?: Record<string, unknown>,
- *     options?: RequestOptions
- *   ): Promise<Record<string, unknown>>
- *   put(
- *     url: string,
- *     data?: Record<string, unknown>,
- *     options?: RequestOptions
- *   ): Promise<Record<string, unknown>>
- *   patch(
- *     url: string,
- *     data?: Record<string, unknown>,
- *     options?: RequestOptions
- *   ): Promise<Record<string, unknown>>
- *   delete(url: string, options?: RequestOptions): Promise<Record<string, unknown>>
- * }
+ * @typedef {Object} ApiClient
+ * @property {string} [baseUrl]
+ * @property {(url: string, params?: Object, options?: RequestOptions) => Promise<Object>} get
+ * @property {(url: string, data?: Object, options?: RequestOptions) => Promise<Object>} post
+ * @property {(url: string, data?: Object, options?: RequestOptions) => Promise<Object>} put
+ * @property {(url: string, data?: Object, options?: RequestOptions) => Promise<Object>} patch
+ * @property {(url: string, options?: RequestOptions) => Promise<Object>} delete
  */
 ```
 
@@ -117,12 +103,11 @@ type ApiClientFactory = (token: string) => ApiClient
 
 ```js file=src/api-client-factory.js
 /**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
+ * A factory the framework calls per request to produce a fresh ApiClient.
+ * The token argument is the OAuth access token (or whatever your
+ * `getAccessToken` callback returns).
  *
- * import type { ApiClientFactory } from '@mcp-rune/mcp-rune/tools'
- *
- * type ApiClientFactory = (token: string) => ApiClient
+ * @typedef {(token: string) => ApiClient} ApiClientFactory
  */
 ```
 
@@ -540,12 +525,11 @@ type SearchApiClient = Pick<ApiClient, 'get' | 'post'>
 
 ```js file=src/clients/search-api-client.js
 /**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
+ * Read-only subset of ApiClient: only `get` and `post` are required.
+ * SearchService accepts this narrower contract so a search-only adapter
+ * doesn't have to implement `put` / `patch` / `delete`.
  *
- * import type { SearchApiClient } from '@mcp-rune/mcp-rune/core'
- *
- * type SearchApiClient = Pick<ApiClient, 'get' | 'post'>
+ * @typedef {Pick<ApiClient, 'get' | 'post'>} SearchApiClient
  */
 ```
 

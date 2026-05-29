@@ -43,22 +43,21 @@ interface DataLayer {
 
 ```js file=src/layers/data-layer.js
 /**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
+ * The seam between the projection layer (polymorphic CRUD tools, prompt
+ * strategies, schema-driven apps) and any concrete data backend. Every
+ * method returns Promise<Object> — adapters are responsible for response
+ * normalization upstream of this boundary.
  *
- * import type { DataLayer } from '@mcp-rune/mcp-rune/core'
- *
- * interface DataLayer {
- *   create(model, attributes, options?)
- *   find(model, recordId, options?)
- *   list(model, filters?, pagination?, options?)
- *   update(model, recordId, attributes, options?)
- *   delete(model, recordId, options?)
- *   dispatch(method, url, payload?, params?, options?)
- *   buildPayload(model, modelConfig, attrs)
- *   readonly models: ModelsRegistry
- *   readonly endpointResolver: EndpointResolver // unstable; for custom-actions
- * }
+ * @typedef {Object} DataLayer
+ * @property {(model: string, attributes: Object, options?: Object) => Promise<Object>} create
+ * @property {(model: string, recordId: string, options?: Object) => Promise<Object>} find
+ * @property {(model: string, filters?: Object, pagination?: Object, options?: Object) => Promise<Object>} list
+ * @property {(model: string, recordId: string, attributes: Object, options?: Object) => Promise<Object>} update
+ * @property {(model: string, recordId: string, options?: Object) => Promise<Object>} delete
+ * @property {(method: string, url: string, payload?: Object, params?: Object, options?: Object) => Promise<Object>} dispatch
+ * @property {(model: string, modelConfig: Object, attrs: Object) => Object} buildPayload
+ * @property {ModelsRegistry} models
+ * @property {EndpointResolver} endpointResolver  unstable; for custom-actions
  */
 ```
 
@@ -125,15 +124,17 @@ type DataLayerFactory = (ctx: {
 
 ```js file=src/data-layer-factory.js
 /**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
+ * The factory ToolRegistry / AppRegistry call to build a DataLayer.
+ * `apiClient` is populated whenever `createApiClient` is configured;
+ * adapters that don't need HTTP can ignore it.
  *
- * type DataLayerFactory = (ctx: {
- *   apiClient?: ApiClient
- *   models: ModelsRegistry
- *   namespace?: string
- *   logger?: ToolLogger
- * }) => DataLayer
+ * @typedef {Object} DataLayerFactoryCtx
+ * @property {ApiClient} [apiClient]
+ * @property {ModelsRegistry} models
+ * @property {string} [namespace]
+ * @property {ToolLogger} [logger]
+ *
+ * @typedef {(ctx: DataLayerFactoryCtx) => DataLayer} DataLayerFactory
  */
 ```
 

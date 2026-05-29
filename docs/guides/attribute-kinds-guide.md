@@ -85,28 +85,30 @@ interface KindDescriptor {
 
 ```js file=src/kind-opts.js
 /**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
+ * Per-attribute kind configuration. Passed to every KindDescriptor method
+ * so kinds can specialize (e.g. `format: 'iso8601'` for dates).
  *
- * import type { KindDescriptor, KindOpts } from '@mcp-rune/mcp-rune/core'
+ * @typedef {Object} KindOpts
+ * @property {string} [format]
+ * @property {string[]} [enumValues]
+ * @property {number} [max]
+ */
+
+/**
+ * The contract a kind implementation satisfies. Each method receives the
+ * value plus the per-attribute opts; together they handle the three
+ * representations (wire / validation / render).
  *
- * interface KindOpts {
- *   format?: string
- *   enumValues?: string[]
- *   max?: number
- * }
- *
- * interface KindDescriptor {
- *   htmlInputType: string
- *   promptType: string
- *   label: string
- *   describe(value: unknown, opts?: KindOpts): string
- *   validate(value: unknown, opts?: KindOpts): string | null
- *   parse(api: unknown, opts?: KindOpts): unknown
- *   serialize(internal: unknown, opts?: KindOpts): unknown
- *   toInput(internal: unknown, opts?: KindOpts): string
- *   fromInput(raw: string, opts?: KindOpts): unknown
- * }
+ * @typedef {Object} KindDescriptor
+ * @property {string} htmlInputType
+ * @property {string} promptType
+ * @property {string} label
+ * @property {(value: unknown, opts?: KindOpts) => string} describe
+ * @property {(value: unknown, opts?: KindOpts) => string | null} validate
+ * @property {(api: unknown, opts?: KindOpts) => unknown} parse
+ * @property {(internal: unknown, opts?: KindOpts) => unknown} serialize
+ * @property {(internal: unknown, opts?: KindOpts) => string} toInput
+ * @property {(raw: string, opts?: KindOpts) => unknown} fromInput
  */
 ```
 
@@ -163,34 +165,34 @@ interface FormatterDescriptor {
 
 ```js file=src/formatter-descriptor.js
 /**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
+ * Iframe-side rendering metadata for a kind. Every field is optional —
+ * the iframe only reads what the kind populates.
  *
- * import type { FormatterDescriptor } from '@mcp-rune/mcp-rune/apps'
+ * @typedef {Object} FormatterValidation
+ * @property {string} [pattern]
+ * @property {number} [minLength]
+ * @property {number} [maxLength]
+ * @property {number} [minimum]
+ * @property {number} [maximum]
  *
- * interface FormatterDescriptor {
- *   htmlInputType?: string
- *   promptType?: string
- *   label?: string
- *   validation?: {
- *     pattern?: string
- *     minLength?: number
- *     maxLength?: number
- *     minimum?: number
- *     maximum?: number
- *   }
- *   display?: {
- *     template?: string // "{value}" substitution
- *     locale?: string // Intl.DateTimeFormat
- *     dateStyle?: 'full' | 'long' | 'medium' | 'short'
- *     timeStyle?: 'full' | 'long' | 'medium' | 'short'
- *     badge?: { icon?: string; className?: string }
- *   }
- *   parser?: {
- *     regex?: string
- *     replacement?: string
- *   }
- * }
+ * @typedef {Object} FormatterDisplay
+ * @property {string} [template]   `{value}` substitution
+ * @property {string} [locale]     Intl.DateTimeFormat
+ * @property {'full' | 'long' | 'medium' | 'short'} [dateStyle]
+ * @property {'full' | 'long' | 'medium' | 'short'} [timeStyle]
+ * @property {{ icon?: string, className?: string }} [badge]
+ *
+ * @typedef {Object} FormatterParser
+ * @property {string} [regex]
+ * @property {string} [replacement]
+ *
+ * @typedef {Object} FormatterDescriptor
+ * @property {string} [htmlInputType]
+ * @property {string} [promptType]
+ * @property {string} [label]
+ * @property {FormatterValidation} [validation]
+ * @property {FormatterDisplay} [display]
+ * @property {FormatterParser} [parser]
  */
 ```
 
@@ -376,20 +378,15 @@ formatters: {
 ```
 
 ```js file=examples/attribute-kinds-guide-07.js
-/**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
- *
- * formatters: {
- *   currency: {
- *     label: 'Currency',
- *     htmlInputType: 'number',
- *     promptType: 'number'
- *     // Server-side parse/serialize/describe are unused in the iframe; the
- *     // iframe only needs htmlInputType + display rendering.
- *   }
- * }
- */
+formatters: {
+  currency: {
+    label: 'Currency',
+    htmlInputType: 'number',
+    promptType: 'number'
+    // Server-side parse/serialize/describe are unused in the iframe; the
+    // iframe only needs htmlInputType + display rendering.
+  }
+}
 ```
 
 In practice, the declarative channel covers ~80% of cases. Reach for `registerKind` only when you genuinely need imperative server-side code.

@@ -757,18 +757,19 @@ interface SearchResult {
 
 ```js file=src/search-result.js
 /**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
+ * The shape SearchService returns: a paginated slice of records plus
+ * pagination metadata. Backend-specific shapes are normalized upstream by
+ * the SearchAdapter.
  *
- * interface SearchResult {
- *   records: Record<string, unknown>[]
- *   pagination: {
- *     page: number
- *     per_page: number
- *     total: number
- *     total_pages?: number
- *   }
- * }
+ * @typedef {Object} SearchPagination
+ * @property {number} page
+ * @property {number} per_page
+ * @property {number} total
+ * @property {number} [total_pages]
+ *
+ * @typedef {Object} SearchResult
+ * @property {Object[]} records
+ * @property {SearchPagination} pagination
  */
 ```
 
@@ -891,20 +892,22 @@ interface ApiClient {
 
 ```js file=src/request-options.js
 /**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
+ * Optional per-request context — `userId` is populated when impersonating
+ * during an OAuth flow. Additional keys flow through to your transport.
  *
- * interface RequestOptions {
- *   userId?: string
- *   [key: string]: unknown
- * }
+ * @typedef {Object} RequestOptions
+ * @property {string} [userId]
+ */
+
+/**
+ * The subset of ApiClient ModelService consumes. (Full ApiClient also has
+ * `put` and `baseUrl`; ModelService doesn't reach for them.)
  *
- * interface ApiClient {
- *   get(url: string, params?: Record<string, unknown>, options?: RequestOptions): Promise<...>
- *   post(url: string, data?: Record<string, unknown>, options?: RequestOptions): Promise<...>
- *   patch(url: string, data?: Record<string, unknown>, options?: RequestOptions): Promise<...>
- *   delete(url: string, options?: RequestOptions): Promise<...>
- * }
+ * @typedef {Object} ApiClient
+ * @property {(url: string, params?: Object, options?: RequestOptions) => Promise<Object>} get
+ * @property {(url: string, data?: Object, options?: RequestOptions) => Promise<Object>} post
+ * @property {(url: string, data?: Object, options?: RequestOptions) => Promise<Object>} patch
+ * @property {(url: string, options?: RequestOptions) => Promise<Object>} delete
  */
 ```
 

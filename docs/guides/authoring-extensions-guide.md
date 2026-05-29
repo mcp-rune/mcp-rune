@@ -73,13 +73,10 @@ export interface BulkActionsConfig {
 
 ```js file=src/config/bulk-actions-config.js
 /**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
+ * Per-model configuration for the bulk-actions extension.
  *
- * export interface BulkActionsConfig {
- *   /** Collection endpoint that accepts a PATCH with `{ ids, attributes }`. */
- *   endpoint: string
- * }
+ * @typedef {Object} BulkActionsConfig
+ * @property {string} endpoint Collection endpoint that accepts a PATCH with `{ ids, attributes }`.
  */
 ```
 

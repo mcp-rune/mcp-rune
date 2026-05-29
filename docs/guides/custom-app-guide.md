@@ -58,30 +58,28 @@ interface AppDefinition {
 
 ```js file=src/app-definition.js
 /**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
+ * Full shape of an MCP App. Every field is optional except `name` and
+ * `description`; what you populate determines the app's category
+ * (pure UI / tool-backed / resource + tool).
  *
- * import type { AppDefinition } from '@mcp-rune/mcp-rune/apps'
+ * @typedef {Object} AppAnnotations
+ * @property {boolean} [readOnlyHint]
+ * @property {boolean} [destructiveHint]
+ * @property {boolean} [idempotentHint]
+ * @property {boolean} [openWorldHint]
  *
- * interface AppDefinition {
- *   name: string // unique identifier
- *   description: string // shown to the LLM
- *   resourceUri?: string // mcp://... where the iframe HTML lives
- *   toolName?: string // MCP tool that opens the app
- *   toolDescription?: string
- *   toolInputSchema?: Record<string, unknown> // Zod-flavored input schema
- *   needsAuth?: boolean // requires an authenticated request
- *   visibility?: string[] // optional visibility filter
- *   annotations?: {
- *     // MCP tool annotations
- *     readOnlyHint?: boolean
- *     destructiveHint?: boolean
- *     idempotentHint?: boolean
- *     openWorldHint?: boolean
- *   }
- *   handleToolCall?(args, context): Promise<ToolResult> // server-side handler
- *   getHtml?(): string // HTML for the iframe
- * }
+ * @typedef {Object} AppDefinition
+ * @property {string} name              unique identifier
+ * @property {string} description       shown to the LLM
+ * @property {string} [resourceUri]     `mcp://...` where the iframe HTML lives
+ * @property {string} [toolName]        MCP tool that opens the app
+ * @property {string} [toolDescription]
+ * @property {Object} [toolInputSchema] Zod-flavored input schema
+ * @property {boolean} [needsAuth]      requires an authenticated request
+ * @property {string[]} [visibility]    optional visibility filter
+ * @property {AppAnnotations} [annotations]
+ * @property {(args: Object, context: Object) => Promise<ToolResult>} [handleToolCall]
+ * @property {() => string} [getHtml]   HTML for the iframe
  */
 ```
 

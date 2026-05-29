@@ -88,18 +88,18 @@ interface HttpExtensionContext {
 
 ```js file=src/http-extension-context.js
 /**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
+ * The context object handed to an HttpExtension's `register(ctx)` function.
+ * Narrowed by design — extensions own a Router but cannot mutate global
+ * middleware, error handlers, or other extensions' state.
  *
- * interface HttpExtensionContext {
- *   name: string // the key you registered the extension under
- *   router: Router // pre-created Express Router, mounted at pathPrefix
- *   baseUrl: string // server origin + pathPrefix, no trailing slash
- *   pathPrefix: string // '' or e.g. '/api'
- *   mcpName: string // mcp.name from HttpServer config
- *   oauth: OAuthService | null // null in token mode
- *   logger: typeof logger
- * }
+ * @typedef {Object} HttpExtensionContext
+ * @property {string} name             key you registered the extension under
+ * @property {Router} router           pre-created Express Router, mounted at pathPrefix
+ * @property {string} baseUrl          server origin + pathPrefix, no trailing slash
+ * @property {string} pathPrefix       '' or e.g. '/api'
+ * @property {string} mcpName          `mcp.name` from HttpServer config
+ * @property {OAuthService | null} oauth   `null` in token mode
+ * @property {typeof logger} logger
  */
 ```
 

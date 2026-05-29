@@ -153,18 +153,18 @@ interface ApiExtensionContext {
 
 ```js file=src/api-extension-context.js
 /**
- * Types are a TypeScript-only artifact — no JS runtime equivalent.
- * The contract below is duck-typed at runtime.
+ * The context object handed to an ApiExtension's `register(ctx)` function.
+ * Narrowed by design — extensions can break their own tools but cannot
+ * reach into other extensions' state or the underlying ToolRegistry.
  *
- * interface ApiExtensionContext {
- *   name: string // the key you registered the extension under
- *   models: ModelsRegistry // read-only view of the registry
- *   serverContext: ServerContext // server name, description, etc.
- *   logger: typeof logger
- *   registerTool(name: string, ToolClass: ToolClass): void
- *   registerModelServiceMixin(mixin: ModelServiceMixin): void
- *   registerSummaryStrategy(strategy: SummaryStrategy): void
- * }
+ * @typedef {Object} ApiExtensionContext
+ * @property {string} name             key you registered the extension under
+ * @property {ModelsRegistry} models   read-only view of the registry
+ * @property {ServerContext} serverContext   server name, description, etc.
+ * @property {typeof logger} logger
+ * @property {(name: string, ToolClass: ToolClass) => void} registerTool
+ * @property {(mixin: ModelServiceMixin) => void} registerModelServiceMixin
+ * @property {(strategy: SummaryStrategy) => void} registerSummaryStrategy
  */
 ```
 
