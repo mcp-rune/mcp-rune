@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.54.0] - 2026-05-30 (BREAKING)
+
+> Removes the framework-baked multi-product disambiguation note from `BaseTool`. The opinionated paragraph and the parallel `getDisambiguationNote()` seam collapse into the existing, actively-used `getUsageRules()` seam — one composition seam for description text injection, zero new plugin points, no opinionated default.
+
+### Removed (BREAKING)
+
+- **`BaseTool.getDisambiguationNote()` deleted.** The unconditional append in the `description` getter is gone; tool descriptions are now `baseDescription + getUsageRules()` only.
+- **`ServerContext.description` and `ServerContext.productLines` fields deleted.** Both had zero consumers outside the removed method. `ServerContext.name` and `ServerContext.sessionId` remain unchanged — `name` is still read by ~10 tools as API-scope context ("in the X API") and `sessionId` is read by `storeToolMemory`.
+
+### Migration
+
+Deployers who want the prior multi-product warning paragraph in their tool descriptions add it in their server-specific base tool class by overriding `getUsageRules()`. See the "Multi-product disambiguation (deployer recipe)" section in `docs/guides/tool-creation-guide.md` for the copy-pasteable snippet.
+
+[0.54.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.53.0...v0.54.0
+
 ## [0.53.0] - 2026-05-29 (BREAKING)
 
 > Two breaking change sets ship together:

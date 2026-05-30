@@ -616,8 +616,30 @@ describe('lib/mcp/tools/tool-registry', () => {
     })
 
     it('should pass serverContext to tool instances', () => {
+      class ServerAwareTool extends BaseTool {
+        static override get category() {
+          return TOOL_CATEGORIES.STRATEGY
+        }
+        get name() {
+          return 'server_aware_tool'
+        }
+        get baseDescription() {
+          return 'A tool that reads its serverContext'
+        }
+        get inputSchema() {
+          return {}
+        }
+        override getUsageRules(): string[] {
+          const { name } = this.serverContext
+          return name ? [`Operates on ${name}.`] : []
+        }
+        async execute(_args: Record<string, unknown>): Promise<ToolResult> {
+          return { content: [{ type: 'text', text: 'ok' }] }
+        }
+      }
+
       const registry = new ToolRegistry({
-        toolClasses: { no_auth_tool: NoAuthTool as any },
+        toolClasses: { server_aware_tool: ServerAwareTool as any },
         models: {},
         serverContext: { name: 'My Server' }
       })
@@ -626,9 +648,8 @@ describe('lib/mcp/tools/tool-registry', () => {
         getAccessToken: async () => null
       })
 
-      // Tool description includes disambiguation note from serverContext
-      const config = mockMcpServer.registeredTools.get('no_auth_tool')?.config as any
-      expect(config.description).toContain('My Server')
+      const config = mockMcpServer.registeredTools.get('server_aware_tool')?.config as any
+      expect(config.description).toContain('Operates on My Server.')
     })
   })
 })
