@@ -147,19 +147,41 @@ export class MyTool extends ServerBaseTool {
 
 Default category is `DATA` (requires authentication).
 
-## Server Context and Disambiguation
+## Multi-product disambiguation (deployer recipe)
 
-When multiple MCP servers are connected to the same AI agent, tool names may overlap. The `serverContext` mechanism provides automatic disambiguation.
+When multiple MCP servers are connected to the same AI agent, tool names may overlap and the LLM needs a hint about which product a tool belongs to. mcp-rune does not bake an opinionated disambiguation paragraph into core; instead, deployers add it themselves by overriding `getUsageRules()` in their server-specific base tool class.
 
-### How It Works
-
-`BaseTool.getDisambiguationNote()` generates a note from `serverContext` that is appended to every tool description:
-
+```ts file=examples/tool-creation-guide-03.ts
+override getUsageRules(): string[] {
+  const rules = super.getUsageRules()
+  const { name } = this.serverContext
+  if (name) {
+    rules.push(
+      `IMPORTANT: This tool operates on ${name} specifically. ` +
+      `If the user has not specified which application to use, ` +
+      `confirm they intend to use this application before proceeding.`
+    )
+  }
+  return rules
+}
 ```
-IMPORTANT: This tool operates on Engineer specifically.
-Engineer is the learning tracking application.
-If the user has not specified which application to use, confirm they intend to use this application before proceeding.
+
+```js file=examples/tool-creation-guide-03.js
+getUsageRules() {
+  const rules = super.getUsageRules()
+  const { name } = this.serverContext
+  if (name) {
+    rules.push(
+      `IMPORTANT: This tool operates on ${name} specifically. ` +
+      `If the user has not specified which application to use, ` +
+      `confirm they intend to use this application before proceeding.`
+    )
+  }
+  return rules
+}
 ```
+
+Tailor the wording to your product. Add product-line callouts, "X is the Y application" descriptors, or compliance language as your deployment requires — the framework stays out of the way.
 
 ## Model Associations
 
@@ -525,11 +547,10 @@ export class MyGenericTool extends BaseTool {}
 
 ### Optional Overrides
 
-| Method                    | Description                               |
-| ------------------------- | ----------------------------------------- |
-| `static get category()`   | Tool category (auth requirements)         |
-| `getUsageRules()`         | Add behavioral rules to description       |
-| `getDisambiguationNote()` | Add server/product disambiguation context |
+| Method                  | Description                         |
+| ----------------------- | ----------------------------------- |
+| `static get category()` | Tool category (auth requirements)   |
+| `getUsageRules()`       | Add behavioral rules to description |
 
 ## Best Practices
 

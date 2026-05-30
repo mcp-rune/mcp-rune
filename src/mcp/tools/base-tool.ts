@@ -27,11 +27,9 @@ export interface ToolLogger {
   debug(message: string, meta?: Record<string, unknown>): void
 }
 
-/** Server context for multi-product disambiguation */
+/** Server context surfaced to tools (API-scope name, session id, etc.) */
 export interface ServerContext {
   name?: string
-  description?: string
-  productLines?: string[]
   sessionId?: string
 }
 
@@ -171,7 +169,7 @@ interface HttpError extends Error {
  * - execute(args): Implementation logic
  *
  * Server-specific bases (e.g., EngineerBaseTool) should extend this and:
- * - Override getDisambiguationNote() for multi-product environments
+ * - Override getUsageRules() to add server-specific behavioral rules (e.g. multi-product disambiguation)
  * - Add server-specific helpers
  *
  * Tool categories determine auth requirements:
@@ -246,20 +244,16 @@ export class BaseTool {
   }
 
   /**
-   * Full tool description with usage rules and disambiguation.
-   * Combines baseDescription + usageRules + disambiguationNote.
+   * Full tool description with usage rules appended.
+   * Combines baseDescription + usageRules.
    */
   get description(): string {
     let desc = this.baseDescription
 
-    // Add usage rules if needed
     const rules = this.getUsageRules()
     if (rules.length > 0) {
       desc += '\n\n' + rules.join('\n\n')
     }
-
-    // Add disambiguation note
-    desc += '\n' + this.getDisambiguationNote()
 
     return desc
   }
@@ -270,24 +264,6 @@ export class BaseTool {
    */
   getUsageRules(): string[] {
     return []
-  }
-
-  /**
-   * Disambiguation note for multi-product environments.
-   * Generates from serverContext when available, otherwise returns empty string.
-   * Can be overridden in subclasses for custom behavior.
-   */
-  getDisambiguationNote(): string {
-    const { name, description, productLines } = this.serverContext
-    if (!name) return ''
-    let note = `\nIMPORTANT: This tool operates on ${name} specifically.`
-    if (description) note += `\n${name} is the ${description}.`
-    note +=
-      '\nIf the user has not specified which application to use, confirm they intend to use this application before proceeding.'
-    if (productLines && productLines.length > 1) {
-      note += `\nMultiple product lines may be available (${productLines.join(', ')}) - each is a separate system.`
-    }
-    return note
   }
 
   /** Generate model names from models configuration */

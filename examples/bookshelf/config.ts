@@ -22,8 +22,7 @@ const promptRegistry = {
 const toolRegistry = {
   serverContext: {
     name: 'Bookshelf',
-    namespace: 'bookshelf',
-    description: 'personal book library'
+    namespace: 'bookshelf'
   },
 
   registerTools(mcpServer: unknown) {
