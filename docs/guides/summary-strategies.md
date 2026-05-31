@@ -158,7 +158,11 @@ Use this when you ingested with the default `distribution`, looked at the result
 ## Authoring a custom strategy
 
 ```ts file=src/count-by.ts
-import type { SummaryStrategy, SummaryInput, SummaryOutput } from '@mcp-rune/mcp-rune/extensions'
+import type {
+  SummaryStrategy,
+  SummaryInput,
+  SummaryOutput
+} from '@mcp-rune/mcp-rune/api-extensions'
 
 export const dealNarrativeStrategy: SummaryStrategy = {
   name: 'deal-narrative',

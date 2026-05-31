@@ -268,7 +268,7 @@ Mixin method names must be **globally unique** across all registered extensions.
 ### Summary strategies
 
 ```ts file=examples/api-extensions-05.ts
-import type { SummaryStrategy } from '@mcp-rune/mcp-rune/extensions'
+import type { SummaryStrategy } from '@mcp-rune/mcp-rune/api-extensions'
 
 const salesNarrativeStrategy: SummaryStrategy = {
   name: 'sales-narrative',

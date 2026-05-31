@@ -397,7 +397,7 @@ Sometimes you want to keep a kind's contract intact but change the rendered widg
 
 ```ts file=src/max.ts
 // your-server/apps/rating-slider.js
-import { registerFormatter, helpers } from '@mcp-rune/mcp-rune/apps'
+import { registerFormatter, helpers } from '@mcp-rune/mcp-rune/apps/formatters'
 
 registerFormatter('rating', {
   format: (value, opts) => {
@@ -414,7 +414,7 @@ registerFormatter('rating', {
 
 ```js file=src/max.js
 // your-server/apps/rating-slider.js
-import { registerFormatter } from '@mcp-rune/mcp-rune/apps'
+import { registerFormatter } from '@mcp-rune/mcp-rune/apps/formatters'
 registerFormatter('rating', {
   format: (value, opts) => {
     const max = opts?.column?.max ?? 5
@@ -523,7 +523,7 @@ The DOM `format()` is tested in `happy-dom`:
 /**
  * @vitest-environment happy-dom
  */
-import { getFormatter } from '@mcp-rune/mcp-rune/apps'
+import { getFormatter } from '@mcp-rune/mcp-rune/apps/formatters'
 
 it('rating renders a custom widget after override', () => {
   // your registerFormatter override must run before this test
@@ -536,7 +536,7 @@ it('rating renders a custom widget after override', () => {
 /**
  * @vitest-environment happy-dom
  */
-import { getFormatter } from '@mcp-rune/mcp-rune/apps'
+import { getFormatter } from '@mcp-rune/mcp-rune/apps/formatters'
 it('rating renders a custom widget after override', () => {
   // your registerFormatter override must run before this test
   const node = getFormatter('rating').format(3, { column: { max: 5 } })

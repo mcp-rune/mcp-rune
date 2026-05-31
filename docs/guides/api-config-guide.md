@@ -894,7 +894,7 @@ await modelService.action('asset', 'publish', { recordId: 'titles/42/assets/7' }
 The `compound-id` module provides utilities:
 
 ```ts file=examples/api-config-guide-25.ts
-import { buildCompoundId, buildCollectionPath, parseId } from '@mcp-rune/mcp-rune/services'
+import { buildCompoundId, buildCollectionPath, parseId } from '@mcp-rune/mcp-rune/model-service'
 
 buildCompoundId('titles', '42', 'assets', '7') // → 'titles/42/assets/7'
 buildCollectionPath('titles', '42', 'assets') // → 'titles/42/assets'
@@ -902,7 +902,7 @@ parseId('titles/42/assets/7', 'assets') // → { isCompound: true, leafId: '7', 
 ```
 
 ```js file=examples/api-config-guide-25.js
-import { buildCompoundId, buildCollectionPath, parseId } from '@mcp-rune/mcp-rune/services'
+import { buildCompoundId, buildCollectionPath, parseId } from '@mcp-rune/mcp-rune/model-service'
 buildCompoundId('titles', '42', 'assets', '7') // → 'titles/42/assets/7'
 buildCollectionPath('titles', '42', 'assets') // → 'titles/42/assets'
 parseId('titles/42/assets/7', 'assets') // → { isCompound: true, leafId: '7', ... }

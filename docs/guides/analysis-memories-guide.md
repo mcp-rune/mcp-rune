@@ -190,11 +190,11 @@ See the **Database** section of the root README for the full migration runner sn
 
 ```ts file=src/pool.ts
 import pg from 'pg'
-import { initVectorStorage } from '@mcp-rune/mcp-rune/services'
+import { vectorStorage } from '@mcp-rune/mcp-rune/services'
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
 
-initVectorStorage({
+vectorStorage.initVectorStorage({
   pool, // required — pool injection only; mcp-rune never creates pools
   serviceName: 'my-mcp-server',
   version: '1.0.0',
@@ -206,9 +206,9 @@ initVectorStorage({
 
 ```js file=src/pool.js
 import pg from 'pg'
-import { initVectorStorage } from '@mcp-rune/mcp-rune/services'
+import { vectorStorage } from '@mcp-rune/mcp-rune/services'
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
-initVectorStorage({
+vectorStorage.initVectorStorage({
   pool, // required — pool injection only; mcp-rune never creates pools
   serviceName: 'my-mcp-server',
   version: '1.0.0',

@@ -1,4 +1,14 @@
 // mcp-rune/prompts — base prompt, strategies, pipeline, strategy tools
+export type {
+  AssociationConfig,
+  BelongsToAssociation,
+  CompletionConfig,
+  ErrorResponse,
+  FieldDefinition,
+  HasManyAssociation,
+  NormalizedListResponse,
+  PaginationInfo
+} from './mcp/api-conventions/index.js'
 export {
   BaseConvention,
   defaultConvention,
