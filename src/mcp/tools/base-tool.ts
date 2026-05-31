@@ -182,12 +182,30 @@ export class BaseTool {
   }
 
   /**
-   * Whether this tool requires authentication.
-   * Derived from category but can be overridden in subclasses.
+   * Per-tool authentication policy. Override in subclasses to depart from the
+   * category default — e.g. an ANALYSIS tool that fetches from the upstream
+   * API still needs auth despite the category being vector-storage-gated:
+   *
+   *   class AnalysisIngestTool extends BaseAnalysisTool {
+   *     static override requiresAuth = true
+   *   }
+   *
+   * When undefined, `getRequiresAuth()` falls back to the category default
+   * from `getCategoryConfig(this.category).requiresAuth`. Declaring the
+   * override as a field rather than a getter keeps the override path
+   * one-line and declarative.
    */
-  static get requiresAuth(): boolean {
-    const config = getCategoryConfig(this.category)
-    return config.requiresAuth
+  static requiresAuth?: boolean
+
+  /**
+   * Resolves the effective auth requirement for this tool class. Reads the
+   * per-tool `requiresAuth` field if set; otherwise falls back to the
+   * category default. Consumers (notably `ToolRegistry`) should call this
+   * rather than reading `requiresAuth` directly so unset tools resolve
+   * correctly.
+   */
+  static getRequiresAuth(): boolean {
+    return this.requiresAuth ?? getCategoryConfig(this.category).requiresAuth
   }
 
   dataLayer: DataLayer | undefined

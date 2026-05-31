@@ -44,7 +44,7 @@ describe('AnalysisSummarizeTool', () => {
   it('has the expected name and is not auth-required', () => {
     const tool = makeTool()
     expect(tool.name).toBe('analysis_summarize')
-    expect(AnalysisSummarizeTool.requiresAuth).toBe(false)
+    expect(AnalysisSummarizeTool.getRequiresAuth()).toBe(false)
   })
 
   it('defaults to the distribution strategy when neither param is given', async () => {

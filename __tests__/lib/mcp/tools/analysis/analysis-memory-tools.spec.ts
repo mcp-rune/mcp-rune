@@ -43,7 +43,7 @@ describe('Analysis Memory Tools', () => {
     it('should have correct metadata', () => {
       expect(tool.name).toBe('analysis_store')
       expect(AnalysisStoreTool.category).toBe(TOOL_CATEGORIES.ANALYSIS)
-      expect(AnalysisStoreTool.requiresAuth).toBe(false)
+      expect(AnalysisStoreTool.getRequiresAuth()).toBe(false)
     })
 
     it('should store a single finding via findings array', async () => {

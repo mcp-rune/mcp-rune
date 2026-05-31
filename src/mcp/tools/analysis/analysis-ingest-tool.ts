@@ -40,10 +40,8 @@ const MAX_NESTED_CONCURRENCY = 5
  * summary is returned to context — no raw data pollutes the LLM window.
  */
 export class AnalysisIngestTool extends BaseAnalysisTool {
-  /** Requires API auth (fetches records) despite being ANALYSIS category (vector storage gate) */
-  static override get requiresAuth(): boolean {
-    return true
-  }
+  /** Requires API auth (fetches records) despite being ANALYSIS category (vector storage gate). */
+  static override requiresAuth = true
 
   override get name(): string {
     return 'analysis_ingest'

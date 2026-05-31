@@ -24,7 +24,7 @@ describe('FindSimilarOperationsTool', () => {
   })
 
   it('should not require auth', () => {
-    expect(FindSimilarOperationsTool.requiresAuth).toBe(false)
+    expect(FindSimilarOperationsTool.getRequiresAuth()).toBe(false)
   })
 
   it('should have required query parameter', () => {

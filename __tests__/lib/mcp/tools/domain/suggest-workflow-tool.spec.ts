@@ -56,7 +56,7 @@ describe('SuggestWorkflowTool', () => {
   it('should have correct name and category', () => {
     expect(tool.name).toBe('suggest_workflow')
     expect(SuggestWorkflowTool.category).toBe(TOOL_CATEGORIES.DOMAIN)
-    expect(SuggestWorkflowTool.requiresAuth).toBe(false)
+    expect(SuggestWorkflowTool.getRequiresAuth()).toBe(false)
   })
 
   it('should list all workflows when no params', async () => {

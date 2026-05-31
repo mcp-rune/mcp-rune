@@ -86,11 +86,18 @@ const SENTINEL_MODEL_SERVICE: ModelService = (() => {
 // Types
 // ============================================================================
 
-/** A tool class constructor (static class with `category`, `requiresAuth`, and instance methods) */
+/**
+ * A tool class constructor. Static metadata:
+ * - `category` (required) — drives the auth and annotation defaults.
+ * - `requiresAuth` (optional) — per-tool override of the category's auth
+ *    default. Resolved via `getRequiresAuth()` rather than read directly so
+ *    unset tools fall back to the category.
+ */
 export interface ToolClass {
   new (deps: ToolDependencies): BaseTool
   readonly category: string
-  readonly requiresAuth: boolean
+  readonly requiresAuth?: boolean
+  getRequiresAuth(): boolean
 }
 
 /** Map of tool names to tool class constructors */
@@ -370,7 +377,7 @@ export class ToolRegistry {
         args: Record<string, unknown>,
         extra?: ToolHandlerExtra
       ): Promise<ToolResult> => {
-        const instance = ToolCls.requiresAuth
+        const instance = ToolCls.getRequiresAuth()
           ? await this._createAuthenticatedInstance(ToolCls, getAccessToken)
           : this._createInstance(ToolCls)
 

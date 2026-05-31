@@ -45,7 +45,7 @@ describe('CheckBusinessRulesTool', () => {
   it('should have correct name and category', () => {
     expect(tool.name).toBe('check_business_rules')
     expect(CheckBusinessRulesTool.category).toBe(TOOL_CATEGORIES.DOMAIN)
-    expect(CheckBusinessRulesTool.requiresAuth).toBe(false)
+    expect(CheckBusinessRulesTool.getRequiresAuth()).toBe(false)
   })
 
   it('should pass when all rules pass', async () => {
