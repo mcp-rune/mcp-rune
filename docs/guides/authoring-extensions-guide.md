@@ -453,6 +453,222 @@ It exercises the **real** extension factory rather than exporting the mixin for 
 
 If you find yourself wanting per-model config or `ModelService` integration in an HTTP extension, you actually want an `ApiExtension`.
 
+## Co-locating a multi-surface extension
+
+Non-trivial integrations rarely fit in one extension type. A Stripe integration might need an `ApiExtension` (a `charge` mixin on `ModelService`), an `HttpExtension` (a `/webhooks/stripe` route receiver), and a `ToolFlowExtension` (a `stripe_charge_review` app tool with `'collect'` submit mode). Same feature, three surfaces.
+
+**The convention: co-locate the pieces in one file and export them as siblings.** The deployer imports from one place and wires to the three config maps. Three lines of wiring is acceptable. A fourth abstraction layer (a `defineExtension({...})` wrapper that collapses the three) is not — see the [extensibility ADR](#why-no-definewrapper) below for why.
+
+### File and naming convention
+
+- **Filename:** `<feature>-integration.ts` (e.g. `stripe-integration.ts`, `audit-integration.ts`).
+- **Export names:** `<feature><Surface>Extension` — `stripeApiExtension`, `stripeHttpExtension`, `stripeToolFlowExtension`. Surface names are exactly the ones on the extension's interface, so a reader can pattern-match the export to the config map it goes in.
+- **Shared types** (a `StripeConfig` object, a typed `ContextKey<T>`, a `ModelService` mixin type) live next to the extensions in the same file. They're the integration's internal API.
+
+### Worked example: an audit-log integration
+
+The audit integration ships a tool, an HTTP webhook receiver, and a `ToolFlowExtension` that threads a `Map`-backed log into every app handler. All three live in `src/integrations/audit-integration.ts`.
+
+```ts file=src/integrations/audit-integration.ts
+import type { ApiExtension } from '@mcp-rune/mcp-rune/api-extensions'
+import {
+  defineContextKey,
+  type HttpExtension,
+  type ToolFlowExtension
+} from '@mcp-rune/mcp-rune/extensions'
+import { BaseTool, TOOL_CATEGORIES, type ToolResult } from '@mcp-rune/mcp-rune/tools'
+import { z } from 'zod'
+
+/** Shared store typed key — consumers import this to read the audit log. */
+export const AUDIT_LOG_KEY = defineContextKey<Map<string, unknown>>('auditLog')
+
+class AuditRecentTool extends BaseTool {
+  static override get category() {
+    return TOOL_CATEGORIES.DATA
+  }
+  override get name() {
+    return 'audit_recent'
+  }
+  override get baseDescription() {
+    return 'Return the last N audit log entries.'
+  }
+  override get inputSchema() {
+    return { limit: z.number().int().min(1).max(100).default(20) }
+  }
+  override async execute(args: { limit: number }): Promise<ToolResult> {
+    const entries = await this.dataLayer!.dispatch('GET', `audit?limit=${args.limit}`)
+    return { content: [{ type: 'text', text: JSON.stringify(entries) }] }
+  }
+}
+
+export const auditApiExtension: ApiExtension = {
+  register(ctx) {
+    ctx.registerTool('audit_recent', AuditRecentTool)
+  }
+}
+
+export function auditHttpExtension(secret: string): HttpExtension {
+  return {
+    register(ctx) {
+      ctx.router.post('/webhooks/audit', (req, res) => {
+        /* verify req.headers['x-signature'] against `secret`, persist event */
+        res.status(200).end()
+      })
+    }
+  }
+}
+
+export const auditToolFlowExtension: ToolFlowExtension = {
+  register(ctx) {
+    ctx.provideContext(AUDIT_LOG_KEY, new Map<string, unknown>())
+  }
+}
+```
+
+```js file=src/integrations/audit-integration.js
+import { defineContextKey } from '@mcp-rune/mcp-rune/extensions'
+import { BaseTool, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
+import { z } from 'zod'
+
+export const AUDIT_LOG_KEY = defineContextKey('auditLog')
+
+class AuditRecentTool extends BaseTool {
+  static get category() {
+    return TOOL_CATEGORIES.DATA
+  }
+  get name() {
+    return 'audit_recent'
+  }
+  get baseDescription() {
+    return 'Return the last N audit log entries.'
+  }
+  get inputSchema() {
+    return { limit: z.number().int().min(1).max(100).default(20) }
+  }
+  async execute(args) {
+    const entries = await this.dataLayer.dispatch('GET', `audit?limit=${args.limit}`)
+    return { content: [{ type: 'text', text: JSON.stringify(entries) }] }
+  }
+}
+
+export const auditApiExtension = {
+  register(ctx) {
+    ctx.registerTool('audit_recent', AuditRecentTool)
+  }
+}
+
+export function auditHttpExtension(secret) {
+  return {
+    register(ctx) {
+      ctx.router.post('/webhooks/audit', (req, res) => {
+        /* verify req.headers['x-signature'] against `secret`, persist event */
+        res.status(200).end()
+      })
+    }
+  }
+}
+
+export const auditToolFlowExtension = {
+  register(ctx) {
+    ctx.provideContext(AUDIT_LOG_KEY, new Map())
+  }
+}
+```
+
+### The wire-up
+
+Three sibling imports, three config maps. The wiring stays at the deployer's call sites — it's the framework's auditability contract that anyone reading the server entry point can answer "what's registered here?" without grep:
+
+```ts file=src/server-audit.ts
+import { HttpServer, createServer } from '@mcp-rune/mcp-rune/server'
+import { ToolRegistry, DATA_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
+import {
+  auditApiExtension,
+  auditHttpExtension,
+  auditToolFlowExtension
+} from './integrations/audit-integration.js'
+
+const toolRegistry = new ToolRegistry({
+  toolClasses: DATA_TOOL_CLASSES,
+  models: MODEL_CLASSES,
+  createApiClient: (token) => createApiClient(token, { apiUrl }),
+  apiExtensions: { audit: auditApiExtension }
+})
+
+const mcp = {
+  name: 'my-server',
+  createServer: ({ sessionId, transport, getAccessToken }) =>
+    createServer({
+      name: 'my-server',
+      version: '1.0.0',
+      sessionId,
+      transport,
+      toolRegistry,
+      appRegistry,
+      toolFlowExtensions: { audit: auditToolFlowExtension },
+      getAccessToken
+    })
+}
+
+new HttpServer({
+  port: 3000,
+  oauth,
+  mcp,
+  extensions: { audit: auditHttpExtension(process.env.AUDIT_SECRET!) }
+})
+```
+
+```js file=src/server-audit.js
+import { HttpServer, createServer } from '@mcp-rune/mcp-rune/server'
+import { ToolRegistry, DATA_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
+import {
+  auditApiExtension,
+  auditHttpExtension,
+  auditToolFlowExtension
+} from './integrations/audit-integration.js'
+
+const toolRegistry = new ToolRegistry({
+  toolClasses: DATA_TOOL_CLASSES,
+  models: MODEL_CLASSES,
+  createApiClient: (token) => createApiClient(token, { apiUrl }),
+  apiExtensions: { audit: auditApiExtension }
+})
+
+const mcp = {
+  name: 'my-server',
+  createServer: ({ sessionId, transport, getAccessToken }) =>
+    createServer({
+      name: 'my-server',
+      version: '1.0.0',
+      sessionId,
+      transport,
+      toolRegistry,
+      appRegistry,
+      toolFlowExtensions: { audit: auditToolFlowExtension },
+      getAccessToken
+    })
+}
+
+new HttpServer({
+  port: 3000,
+  oauth,
+  mcp,
+  extensions: { audit: auditHttpExtension(process.env.AUDIT_SECRET) }
+})
+```
+
+### Cross-references between siblings
+
+When one surface needs to share state with another — the tool needs to read the `Map` the `ToolFlowExtension` provides, the HTTP handler needs to persist into the same `Map` — the typed `ContextKey<T>` defined at file top is the contract. Producers call `ctx.provideContext(KEY, value)`; consumers (app-tool handlers, custom tools that read context) reach into the bag by `context[KEY.name]`. The key is the integration's internal API.
+
+For per-model config that one of the surfaces consumes (e.g. an `ApiExtension`'s `customActionsConfig`-style typed helper), follow the [Step-by-step: build a `bulk-actions` extension](#step-by-step-build-a-bulk-actions-extension) recipe earlier in this guide — that pattern works identically when used as a sibling inside a multi-surface integration file.
+
+### Why no `defineExtension({...})` wrapper
+
+A "one function that registers all three surfaces" sugar layer would have to keep a parallel API in sync with the three underlying typed contexts, hide the layer model from deployers when something breaks at the wrong layer, and encourage cross-cutting extensions that should be split into independent units. The framework deliberately preserves the **"one call site answers what is running"** invariant (`extensions.md:23`) — that property is more valuable than saving two lines of wiring boilerplate per integration.
+
+The decision is documented in the extensibility ADR with a concrete trigger for revisiting: if real-world deployers consistently ship integrations where >50% of LOC is wiring boilerplate across the three config maps, the sugar becomes justified. Until then, the convention is documentation, not API. For the deployer-facing version of this recipe, see [Extension Recipes — Stripe-style integration](./extension-recipes.md#add-a-feature-that-touches-more-than-one-surface-stripe-style-integration).
+
 ## Pre-1.0 stability
 
 `ApiExtensionContext`, `HttpExtensionContext`, and the `ModelService` mixin contract (`dispatch`, `buildPayload`, `endpointResolver`, `apiClient`, `models`) are **pre-1.0** — they may change in minor releases. Breaking changes are called out in `CHANGELOG.md`. Post-1.0 these shapes are major-version-locked.
