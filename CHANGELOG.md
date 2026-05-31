@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.58.1] - 2026-05-31
+
+> Closes #166. Closes the bookshelf example's data-tool loop with the framework's shipped `InMemoryDataLayer`. Before this change, `examples/bookshelf/config.ts` set `tool.dataLayer = undefined`, so every advertised CRUD tool silently no-op'd — newcomers cloning the repo couldn't exercise the projection layer end-to-end. The fix is wiring, not framework code: `src/` is untouched.
+
+### Changed
+
+- **`examples/bookshelf/config.ts`** — replaces the hand-rolled per-tool registration loop with a real `ToolRegistry` instance wired to `createInMemoryDataLayer({ fixtures, idGenerator })`. Seeds three books (Clean Code, Pragmatic Programmer, Design Patterns) and uses a custom `idGenerator` so newly-created records don't overwrite the seed fixtures. A `Proxy`-backed stub `ApiClient` surfaces a clear error if the in-memory path is ever bypassed.
+- **`examples/bookshelf/README.md`** — collapses the "works immediately / needs API backend" tables into a single "all nine tools work out of the box" section. Fixes the tool inventory (9, not 11 — `search_records` / `get_filters_guide` belong to the optional `search` ApiExtension, which the example does not register). Replaces the "Connecting to a Real API" code block with a pointer to `data-layer-guide.md` ("Swapping the Adapter") and `api-client-guide.md`.
+- **`docs/guides/quickstart-guide.md`** — leads with the in-memory adapter framing, walks through five concrete Inspector calls (`list_models` → `get_prompt_guide` → `validate_form` → `find_records` → `create_model`), and ends with the one-line factory swap for going to a real backend. Tool names corrected (`find_records`, not `find_model`).
+
+### Fixed
+
+- Tool inventory and tool-name accuracy in the bookshelf README and the Quickstart guide. `find_model` (which does not exist) → `find_records`; "11 tools" → 9.
+
 ## [0.58.0] - 2026-05-31 (BREAKING)
 
 > Closes #157. Last of four "Frankenstein-seed" cleanups from the extensibility ADR. Replaces the untyped `provideContext(key: string, value: unknown)` with a typed-key API: `defineContextKey<T>(name)` produces a `ContextKey<T>`, and `provideContext<T>(key, value)` enforces that the value's type matches the key's declared type. Adds fail-fast collision detection across all tool-flow extensions, completing the symmetry with tool names (#152), summary strategies (v0.53), mixin methods (#155), and prompt names (#154).
@@ -51,6 +65,7 @@ ctx.provideContext(MY_STATE_KEY, state)
 
 The runtime context bag is unchanged — `context[MY_STATE_KEY.name]` (i.e. `context.myState`) is the same property handlers always read. Consumers can keep reading `context.myState` directly or migrate to `context[MY_STATE_KEY.name]` for symbol-style indirection. No consumer-side migration is required by this release.
 
+[0.58.1]: https://github.com/mcp-rune/mcp-rune/compare/v0.58.0...v0.58.1
 [0.58.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.57.0...v0.58.0
 
 ## [0.57.0] - 2026-05-31 (BREAKING)
