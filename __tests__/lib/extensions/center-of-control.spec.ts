@@ -61,7 +61,7 @@ function buildContext(
     getApp: (toolName) => registry.getApp(toolName),
     setFormSubmitMode: (mode) => registry.setFormSubmitMode(mode),
     provideContext: (key, value) => {
-      extraContext[key] = value
+      extraContext[key.name] = value
     },
     logger: { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} } as never,
     ...overrides

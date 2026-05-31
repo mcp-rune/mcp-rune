@@ -39,6 +39,35 @@ export type ToolFlowExtensionCapability = 'apps'
 /** Form submission mode advertised in `create_model_form` / `update_model_form` responses. */
 export type FormSubmitMode = 'direct' | 'collect'
 
+/**
+ * Typed handle for a value threaded into the app-tool context bag. Define
+ * once per producer, share with consumers as a typed import. The `name`
+ * becomes the property key in the runtime context object; two keys with the
+ * same `name` will collide at `provideContext` time.
+ *
+ * The phantom `__type` field is type-only and never assigned at runtime —
+ * it's what lets `provideContext<T>(key: ContextKey<T>, value: T)` enforce
+ * that the value's type matches what the key was declared with.
+ */
+export interface ContextKey<T> {
+  readonly name: string
+  /** @internal Phantom type marker; never read at runtime. */
+  readonly __type?: T
+}
+
+/**
+ * Define a typed context key. Use the returned key with
+ * `ToolFlowExtensionContext.provideContext(key, value)`.
+ *
+ * Producers typically `export const MY_KEY = defineContextKey<MyType>('myKey')`
+ * so consumer modules can import the key and read `context[MY_KEY.name]` (or
+ * a typed accessor built on top) without re-declaring the property name as
+ * a string literal.
+ */
+export function defineContextKey<T>(name: string): ContextKey<T> {
+  return { name }
+}
+
 export interface ToolFlowExtensionContext {
   /** Key the user registered this extension under. Used for log lines. */
   name: string
@@ -64,11 +93,17 @@ export interface ToolFlowExtensionContext {
    */
   setFormSubmitMode(mode: FormSubmitMode): void
   /**
-   * Inject a value into the shared context object passed to every app tool
-   * handler. Use this to thread extension-owned state (e.g. a `FormDataStore`)
-   * into handlers without coupling them to the extension itself.
+   * Inject a typed value into the shared context object passed to every app
+   * tool handler. Use this to thread extension-owned state (e.g. a
+   * `FormDataStore`) into handlers without coupling them to the extension
+   * itself.
+   *
+   * The `key` is a `ContextKey<T>` produced by `defineContextKey<T>(name)`;
+   * the value's type must match the key's declared type. Two extensions that
+   * provide keys with the same `name` fail fast at registration with both
+   * contributor keys in the error message.
    */
-  provideContext(key: string, value: unknown): void
+  provideContext<T>(key: ContextKey<T>, value: T): void
   /** Shared logger. */
   logger: typeof logger
 }

@@ -21,6 +21,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { AppDefinition } from '#src/mcp/apps/registry.js'
 import { SelectionStore } from '#src/mcp/apps/selection-store.js'
 import type {
+  ContextKey,
   ToolFlowExtension,
   ToolFlowExtensionContext,
   ToolFlowExtensionMap
@@ -289,6 +290,10 @@ function applyToolFlowExtensions(
   extraContext: Record<string, unknown>,
   mcpName: string
 ): void {
+  // Tracks which extension contributed each context key name, for collision
+  // diagnostics. Mirrors `_toolOwners` / `_mixinMethodOwners` on ToolRegistry.
+  const contextKeyOwners = new Map<string, string>()
+
   for (const [name, extension] of Object.entries(extensions) as Array<
     [string, ToolFlowExtension]
   >) {
@@ -310,8 +315,17 @@ function applyToolFlowExtensions(
       setFormSubmitMode(mode): void {
         appRegistry.setFormSubmitMode(mode)
       },
-      provideContext(key: string, value: unknown): void {
-        extraContext[key] = value
+      provideContext<T>(key: ContextKey<T>, value: T): void {
+        const existingOwner = contextKeyOwners.get(key.name)
+        if (existingOwner !== undefined) {
+          throw new Error(
+            `ToolFlowExtension "${name}" attempted to provide context key "${key.name}", ` +
+              `which is already provided by "${existingOwner}". Context key names must be ` +
+              `globally unique across all tool-flow extensions.`
+          )
+        }
+        contextKeyOwners.set(key.name, name)
+        extraContext[key.name] = value
       },
       logger
     }
