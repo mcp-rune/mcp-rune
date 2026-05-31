@@ -13,15 +13,13 @@
 import type { Request, Response } from 'express'
 import { Router } from 'express'
 
-export interface PromptRegistryWithStats {
-  getStats?: () => Record<string, unknown>
-}
+import type { PromptRegistry } from '#src/mcp/prompts/prompt-registry.js'
 
 export interface StatusRouterConfig {
   serviceName: string
   /** Live read so /health reflects current state without holding a reference to the map. */
   getActiveSessions: () => number
-  promptRegistry?: PromptRegistryWithStats
+  promptRegistry?: Pick<PromptRegistry, 'getStats'>
 }
 
 export function createStatusRouter({

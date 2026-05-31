@@ -108,35 +108,10 @@ function baseFile(filePath) {
 
 const TS_TAGS = new Set(['ts', 'typescript'])
 const JS_TAGS = new Set(['js', 'javascript'])
-const SKIP_PAIR_TAGS = new Set([
-  'bash',
-  'sh',
-  'zsh',
-  'shell',
-  'json',
-  'json5',
-  'yaml',
-  'yml',
-  'toml',
-  'text',
-  'txt',
-  'output',
-  'console',
-  'diff',
-  'mermaid',
-  'sql',
-  'html',
-  'css',
-  'md',
-  'markdown',
-  'xml',
-  ''
-])
 
 const isTs = (lang) => TS_TAGS.has(lang)
 const isJs = (lang) => JS_TAGS.has(lang)
 const isLanguageBlock = (lang) => isTs(lang) || isJs(lang)
-const isSkipPair = (lang) => SKIP_PAIR_TAGS.has(lang)
 
 // ── Naming rule ─────────────────────────────────────────────────────
 // Derive a `src/<dir>/<kebab-name>.<ext>` path from the first identifier in
@@ -367,8 +342,8 @@ function renderFence(lang, meta, body) {
   return '```' + lang + (meta ? ' ' + meta : '') + '\n' + body + '\n```'
 }
 
-function dualizeGuide({ filePath, source, blocks, tasks, slug }) {
-  if (tasks.length === 0) return { filename: filePath, paired: 0, skipped: 0, errored: 0 }
+function dualizeGuide({ filePath, source, tasks, slug }) {
+  if (tasks.length === 0) return { filename: filePath, paired: 0, errored: 0 }
 
   const lines = source.split('\n')
   // Process tasks in reverse line order so insertions don't shift later
@@ -376,7 +351,6 @@ function dualizeGuide({ filePath, source, blocks, tasks, slug }) {
   const ordered = [...tasks].sort((a, b) => b.block.startLine - a.block.startLine)
 
   let paired = 0
-  let skipped = 0
   let errored = 0
 
   for (const task of ordered) {
@@ -436,7 +410,7 @@ function dualizeGuide({ filePath, source, blocks, tasks, slug }) {
   if (!CHECK && out !== source) {
     writeFileSync(filePath, out, 'utf8')
   }
-  return { filename: filePath, paired, skipped, errored }
+  return { filename: filePath, paired, errored }
 }
 
 function checkGuide({ tasks }) {

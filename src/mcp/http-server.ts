@@ -39,6 +39,7 @@ import { createRequestIdMiddleware } from './middleware/request-id.js'
 import { createRequestLoggerMiddleware } from './middleware/request-logger.js'
 import { createSecurityHeadersMiddleware } from './middleware/security-headers.js'
 import { createStatusRouter } from './middleware/status-router.js'
+import type { PromptRegistry } from './prompts/prompt-registry.js'
 import { SessionManager } from './session-manager.js'
 
 interface McpConfig {
@@ -50,11 +51,7 @@ interface McpConfig {
     transport: string
     getAccessToken: () => Promise<string | null | undefined>
   }) => McpServer
-  promptRegistry?: PromptRegistryWithStats
-}
-
-interface PromptRegistryWithStats {
-  getStats?: () => Record<string, unknown>
+  promptRegistry?: Pick<PromptRegistry, 'getStats'>
 }
 
 interface HttpServerConfig {

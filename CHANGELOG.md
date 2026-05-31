@@ -4,6 +4,60 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.55.0] - 2026-05-31 (BREAKING)
+
+> Closes #154. First of four "Frankenstein-seed" cleanups identified in the extensibility ADR: promotes `PromptRegistry` to a first-class, exported contract with a minimal concrete implementation and fail-fast collision detection. Four duplicate interface declarations across the framework collapse into one canonical type.
+
+### Added
+
+- **`PromptRegistry` canonical interface** in `src/mcp/prompts/prompt-registry.ts`, re-exported from `@mcp-rune/mcp-rune/prompts`. Single source of truth for the contract the framework consumes — required methods (`getDefinitions`, `getPrompt`, `getPromptClass`) plus optional enrichment hooks for `SaveModelBaseTool` description rendering, `PromptCache` delegation, and `GetPromptGuideTool` deployer-specific instance construction.
+- **`BasePromptRegistry` concrete class** — minimal in-memory registry with `register(name, promptClass, options?)`, name + model lookup, and **fail-fast collision detection** (error includes both contributor keys, mirroring `SummaryStrategyRegistry`). Deployers extend it for the standard pattern; deployers with bespoke prompt-lookup logic implement `PromptRegistry` directly.
+- **`PromptClass`, `PromptDefinition`, `PromptResult`, `RegisterOptions`** types exported from the same module.
+- **Unit tests** in `__tests__/lib/mcp/prompts/prompt-registry.spec.ts` covering register/lookup, definitions surfacing, collision detection (both duplicate name and duplicate model binding), and owner tracking.
+
+### Removed (BREAKING)
+
+- **`PromptRegistry` duck-typed interface deleted from `src/mcp/tools/base-tool.ts`.** The interface declared all methods optional with a `[key: string]: unknown` escape hatch — any object satisfied it. Tools now import the canonical type. `base-tool.ts` re-exports `PromptRegistry` so existing imports from `'@mcp-rune/mcp-rune/tools'` resolve to the same type.
+- **`PromptRegistry` and `PromptClass` local interfaces deleted from `src/mcp/server-factory.ts`.** The local `PromptClass` was an instance-shape interface with `fieldDefinitions`; the canonical `PromptClass = typeof BasePrompt` carries the static directly.
+- **`PromptRegistryLike` interface deleted from `src/mcp/prompts/prompt-cache.ts`.** `PromptCache` now `implements PromptRegistry` and accepts a `PromptRegistryForCache` (canonical interface with delegation methods required) — the cache's contract becomes type-checked rather than duck-typed.
+- **`PromptRegistryWithStats` interface deleted from both `src/mcp/middleware/status-router.ts` and `src/mcp/http-server.ts`.** The two duplicate declarations are replaced with `Pick<PromptRegistry, 'getStats'>` against the canonical type.
+
+### Changed
+
+- **`PromptCache` is now `implements PromptRegistry`**, so it can be substituted anywhere a `PromptRegistry` is accepted. Delegation method return types align with the canonical interface (`getDefinitions` now returns `PromptDefinition[]`, `getRequiredPromptRestrictions` and `getBulkRecommendations` return `string | null`).
+- **`GetPromptGuideTool` and `BaseStrategyTool` no longer cast through `Record<string, unknown> & {...}`** to call optional registry methods. The casts existed because the duck-typed interface lacked the methods; `PromptRegistry` now lists `getAllPromptNames`, `getToolDocDescriptionList`, `getPromptInstance`, `getUnknownPromptError`, and `getPromptClassByModel` as optional, so consumers feature-detect directly.
+- **`examples/bookshelf/config.ts`** uses `new BasePromptRegistry()` + `.register('book', BookPrompt, { description, required, model })` instead of the inline `{ getDefinitions, getPrompt }` object literal — the recommended pattern for deployers.
+
+### Migration
+
+Deployers who hand-rolled a `PromptRegistry` object literal continue to work as long as the object satisfies the canonical interface. The most common shape (just `getDefinitions` + `getPrompt` + `getPromptClass`) is unchanged. Deployers who relied on the `[key: string]: unknown` escape hatch to attach arbitrary methods must either (a) move those methods onto the optional surface listed in `PromptRegistry` if the framework calls them, or (b) keep them as private members of the object and cast at the call site.
+
+For new servers, prefer the `BasePromptRegistry` pattern:
+
+```ts file=src/config.ts
+import { BasePromptRegistry } from '@mcp-rune/mcp-rune/prompts'
+
+const promptRegistry = new BasePromptRegistry()
+promptRegistry.register('book', BookPrompt, {
+  description: Book.description,
+  required: true,
+  model: 'book'
+})
+```
+
+```js file=src/config.js
+import { BasePromptRegistry } from '@mcp-rune/mcp-rune/prompts'
+
+const promptRegistry = new BasePromptRegistry()
+promptRegistry.register('book', BookPrompt, {
+  description: Book.description,
+  required: true,
+  model: 'book'
+})
+```
+
+[0.55.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.54.0...v0.55.0
+
 ## [0.54.0] - 2026-05-30 (BREAKING)
 
 > Removes the framework-baked multi-product disambiguation note from `BaseTool`. The opinionated paragraph and the parallel `getDisambiguationNote()` seam collapse into the existing, actively-used `getUsageRules()` seam — one composition seam for description text injection, zero new plugin points, no opinionated default.

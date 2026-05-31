@@ -22,10 +22,7 @@ export class GetPromptGuideTool extends BaseStrategyTool {
   }
 
   get inputSchema(): Record<string, ZodTypeAny> {
-    const allGuideNames =
-      (
-        this.promptRegistry as Record<string, unknown> & { getAllPromptNames?: () => string[] }
-      )?.getAllPromptNames?.() || []
+    const allGuideNames = this.promptRegistry?.getAllPromptNames?.() || []
 
     return {
       guide_name: this.zodEnum(allGuideNames).describe('Name of the guide to retrieve'),
@@ -97,11 +94,8 @@ Then call this tool with the chosen mode parameter.`
       )
     }
 
-    const registry = this.promptRegistry as Record<string, unknown> & {
-      getToolDocDescriptionList?: () => string
-    }
-    if (registry?.getToolDocDescriptionList) {
-      const allGuidesList = registry.getToolDocDescriptionList()
+    if (this.promptRegistry?.getToolDocDescriptionList) {
+      const allGuidesList = this.promptRegistry.getToolDocDescriptionList()
       rules.push(`Available guides:\n${allGuidesList}`)
     }
 
@@ -150,31 +144,25 @@ After calling this tool, follow the mode-specific workflow in the documentation.
     if (parent_type) promptArgs.parent_type = parent_type
     if (parent_id) promptArgs.parent_id = parent_id
 
-    const registry = this.promptRegistry as Record<string, unknown>
+    const registry = this.promptRegistry
 
-    // Use registry to get prompt instance
+    // Use registry to get prompt instance — prefer the deployer's explicit hook,
+    // fall back to constructing the prompt class with args. Guard with
+    // `typeof === 'function'` so misshapen registries fall back rather than throw.
     const getPromptInstance =
-      (registry.getPromptInstance as
-        | ((
-            name: string,
-            args: Record<string, string>
-          ) => { promptContent: string; description: string } | null)
-        | undefined) ||
-      ((name: string, pArgs: Record<string, string>) => {
-        const getPromptClass = registry.getPromptClass as
-          | ((
-              n: string
-            ) =>
+      typeof registry.getPromptInstance === 'function'
+        ? registry.getPromptInstance.bind(registry)
+        : (name: string, pArgs: Record<string, string>) => {
+            const PromptCtor = registry.getPromptClass(name) as unknown as
               | (new (a: Record<string, string>) => { promptContent: string; description: string })
-              | null)
-          | undefined
-        const PromptClass = getPromptClass?.(name)
-        return PromptClass ? new PromptClass(pArgs) : null
-      })
+              | null
+            return PromptCtor ? new PromptCtor(pArgs) : null
+          }
 
     const getUnknownPromptError =
-      (registry.getUnknownPromptError as ((name: string) => string) | undefined) ||
-      ((name: string) => `Unknown prompt: ${name}`)
+      typeof registry.getUnknownPromptError === 'function'
+        ? registry.getUnknownPromptError.bind(registry)
+        : (name: string) => `Unknown prompt: ${name}`
 
     const prompt =
       typeof getPromptInstance === 'function' ? getPromptInstance(guide_name, promptArgs) : null

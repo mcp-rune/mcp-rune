@@ -9,8 +9,11 @@ import { storeOperation } from '#src/services/vector-storage.js'
 
 import type { AssociationConfig, BaseConvention } from '../api-conventions/base-convention.js'
 import { defaultConvention } from '../api-conventions/index.js'
+import type { PromptRegistry } from '../prompts/prompt-registry.js'
 import type { ToolCategory } from './categories.js'
 import { getCategoryConfig, TOOL_CATEGORIES } from './categories.js'
+
+export type { PromptRegistry } from '../prompts/prompt-registry.js'
 
 // ============================================================================
 // Types
@@ -31,15 +34,6 @@ export interface ToolLogger {
 export interface ServerContext {
   name?: string
   sessionId?: string
-}
-
-/** Prompt registry interface for dynamic descriptions */
-export interface PromptRegistry {
-  getRequiredPromptRestrictions?(): string | null
-  getBulkRecommendations?(): string | null
-  getPromptRequiredModels?(): string[]
-  getPromptNameByModel?(model: string): string | null
-  [key: string]: unknown
 }
 
 /** Domain intelligence registry */

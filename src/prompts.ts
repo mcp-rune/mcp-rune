@@ -8,6 +8,14 @@ export { BasePrompt } from './mcp/prompts/base-prompt.js'
 export { createPromptCache } from './mcp/prompts/prompt-cache.js'
 export { PromptContentGenerator } from './mcp/prompts/prompt-content-generator.js'
 export {
+  BasePromptRegistry,
+  type PromptClass,
+  type PromptDefinition,
+  type PromptRegistry,
+  type PromptResult,
+  type RegisterOptions
+} from './mcp/prompts/prompt-registry.js'
+export {
   clearSchemaCaches,
   deriveFieldDefinitions,
   derivePromptSchema,

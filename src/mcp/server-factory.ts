@@ -25,6 +25,7 @@ import type {
   ToolFlowExtensionContext,
   ToolFlowExtensionMap
 } from '#src/mcp/extensions/tool-flow.js'
+import type { PromptRegistry } from '#src/mcp/prompts/prompt-registry.js'
 import { setMcpClientContext } from '#src/services/error-tracking.js'
 import * as logger from '#src/services/logger.js'
 import { setSessionContext } from '#src/services/tracing.js'
@@ -52,24 +53,6 @@ interface ToolRegistry {
       logContext: Record<string, unknown>
     }
   ): void
-}
-
-/** Minimal interface for the prompt registry */
-interface PromptRegistry {
-  getDefinitions(): unknown[]
-  getPrompt(name: string, args?: Record<string, unknown>): unknown
-  getPromptClass(name: string): PromptClass | null
-  getStats?(): Record<string, unknown>
-}
-
-/** A prompt class with optional field definitions for completion */
-interface PromptClass {
-  fieldDefinitions?: Record<string, FieldDefinition>
-}
-
-interface FieldDefinition {
-  completion?: { enabled: boolean }
-  enumValues?: string[]
 }
 
 /** Minimal interface for the app registry */

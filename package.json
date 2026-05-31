@@ -1,6 +1,6 @@
 {
   "name": "@mcp-rune/mcp-rune",
-  "version": "0.54.0",
+  "version": "0.55.0",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "restricted"
@@ -194,7 +194,7 @@
     "vitest": "^4.0.17"
   },
   "lint-staged": {
-    "*.{ts,js}": [
+    "*.{ts,js,mjs,cjs}": [
       "eslint --fix",
       "prettier --write"
     ],
