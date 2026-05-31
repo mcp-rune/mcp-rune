@@ -65,6 +65,23 @@ import type { ToolInterceptor } from './tool-pipeline.js'
 import { wrapToolHandler } from './tool-pipeline.js'
 import { validateToolSchema } from './validators.js'
 
+/**
+ * A recursive Proxy used as a stand-in `ModelService` during boot-time mixin
+ * factory invocation. The factory is called once per registration just to
+ * collect the method names it contributes — the actual `service` argument is
+ * bound lazily per tool instance via the `DataLayer` factory. Any property
+ * chain on the sentinel returns another callable Proxy so factories that
+ * dereference `service.endpointResolver.pathForType(...)` at factory time
+ * (rather than inside their returned methods) still evaluate cleanly.
+ */
+const SENTINEL_MODEL_SERVICE: ModelService = (() => {
+  const handler: ProxyHandler<() => void> = {
+    get: () => new Proxy(() => undefined, handler),
+    apply: () => new Proxy(() => undefined, handler)
+  }
+  return new Proxy(() => undefined, handler) as unknown as ModelService
+})()
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -185,6 +202,8 @@ export class ToolRegistry {
   private _modelServiceMixins: ModelServiceMixin[] = []
   /** Tracks which extension contributed each tool name, for collision diagnostics. */
   private _toolOwners: Map<string, string> = new Map()
+  /** Tracks which extension contributed each mixin method name, for collision diagnostics. */
+  private _mixinMethodOwners: Map<string, string> = new Map()
   private _summaryStrategies: SummaryStrategyRegistry
 
   constructor(config: ToolRegistryConfig) {
@@ -269,6 +288,23 @@ export class ToolRegistry {
           this._toolOwners.set(toolName, name)
         },
         registerModelServiceMixin: (mixin) => {
+          // Invoke the factory with a sentinel ModelService just to collect
+          // the method names — the actual `service` is bound lazily per tool
+          // instance via the DataLayer factory below. Fail fast on duplicate
+          // names across extensions (mirrors tool-name and summary-strategy
+          // collision rules).
+          const methods = mixin(SENTINEL_MODEL_SERVICE)
+          for (const methodName of Object.keys(methods)) {
+            const existingOwner = this._mixinMethodOwners.get(methodName)
+            if (existingOwner !== undefined) {
+              throw new Error(
+                `ApiExtension "${name}" attempted to register ModelService mixin method ` +
+                  `"${methodName}", which is already registered by "${existingOwner}". ` +
+                  `Mixin method names must be globally unique across all extensions.`
+              )
+            }
+            this._mixinMethodOwners.set(methodName, name)
+          }
           this._modelServiceMixins.push(mixin)
         },
         registerSummaryStrategy: (strategy) => {
