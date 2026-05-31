@@ -261,6 +261,8 @@ A mixin is a function `(service) => Record<string, Function>`. The host applies 
 
 Reaching into private internals (`_apiClient`, `_models`, anything prefixed with `_`) is not part of the contract and may break in any release.
 
+Mixin method names must be **globally unique** across all registered extensions. Collisions throw at `ToolRegistry` boot with both extension keys in the error — never silent overwrites. The collision check invokes each mixin factory once at boot with a sentinel `ModelService` purely to read the contributed method names; the real `service` is bound lazily per tool instance.
+
 ### Summary strategies
 
 ```ts file=examples/api-extensions-05.ts

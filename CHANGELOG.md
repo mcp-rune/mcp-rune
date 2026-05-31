@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.56.0] - 2026-05-31
+
+> Closes #155. Second of four "Frankenstein-seed" cleanups from the extensibility ADR. Closes a documentation-implementation gap: `docs/guides/api-extensions.md` and `src/mcp/api-extensions/types.ts` already promised that "Mixin method names must be globally unique across all registered extensions; collisions throw at boot." The code did not enforce it — `Object.assign(service, mixin(service))` silently overwrote. Now it throws fast with both contributor keys in the error message, mirroring the rules already enforced for tool names (`api-extensions.md:224`) and summary-strategy names (`api-extensions.md:303`).
+
+### Added
+
+- **Boot-time mixin name-collision detection** in `ToolRegistry._applyApiExtensions`. Each mixin factory is invoked once at registration with a sentinel `ModelService` purely to read the method names it contributes. Duplicate names across two extensions — or across two `registerModelServiceMixin` calls from one extension — throw at `ToolRegistry` construction with both contributor keys named.
+- **`SENTINEL_MODEL_SERVICE`** — a recursive Proxy used only at boot for name collection. Any property chain on it returns another callable Proxy so factories that dereference `service.endpointResolver.pathForType(...)` at factory time (rather than only inside their returned methods) still evaluate cleanly. The real `service` is bound lazily per tool instance via the existing `DataLayer` factory path — no change to runtime semantics.
+- **`_mixinMethodOwners: Map<string, string>`** on `ToolRegistry`, tracking which extension contributed each mixin method name. Parallels the existing `_toolOwners` tracking for tools.
+- **6 new unit tests** in `__tests__/lib/mcp/tools/tool-registry-mixin-collisions.spec.ts` covering: disjoint mixins compose cleanly; same name across two extensions fails at boot with both keys in the error; messages name both contributors and the offending method; multi-method extension overlap detected; single-extension duplicate calls detected; factories that touch `service` at factory time don't crash the sentinel.
+
+### Changed
+
+- **`docs/guides/api-extensions.md`** — the "ModelService mixins" section gains an explicit "globally unique" paragraph parallel to the equivalent text for tool names and summary-strategy names. The new paragraph documents the sentinel-driven collision check.
+
+### Migration
+
+This is a defensive fix: deployers with disjoint mixin method names see no change. Deployers whose extensions happened to register the same mixin method name will now see a clear error at boot identifying both extensions and the conflicting method. Resolution: rename one of the mixin methods (the host had no way to call the overwritten one anyway). Not marked BREAKING because correct configurations are unaffected and broken configurations were already broken (silent overwrite).
+
+[0.56.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.55.0...v0.56.0
+
 ## [0.55.0] - 2026-05-31 (BREAKING)
 
 > Closes #154. First of four "Frankenstein-seed" cleanups identified in the extensibility ADR: promotes `PromptRegistry` to a first-class, exported contract with a minimal concrete implementation and fail-fast collision detection. Four duplicate interface declarations across the framework collapse into one canonical type.
