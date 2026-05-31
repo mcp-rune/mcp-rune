@@ -8,7 +8,16 @@ export {
   AnalysisStoreTool,
   BaseAnalysisTool
 } from './mcp/tools/analysis/index.js'
-export type { ToolAnnotations, ToolHandlerExtra } from './mcp/tools/base-tool.js'
+export type {
+  ModelConfig,
+  ModelsRegistry,
+  ToolAnnotations,
+  ToolErrorResponse,
+  ToolHandlerExtra,
+  ToolResponseContent,
+  ToolResult,
+  ToolSuccessResponse
+} from './mcp/tools/base-tool.js'
 export { BaseTool } from './mcp/tools/base-tool.js'
 export {
   CATEGORY_CONFIG,

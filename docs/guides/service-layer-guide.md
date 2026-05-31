@@ -245,11 +245,7 @@ resolver.resolveCollection({ model: 'asset', modelConfig, parentPath: 'titles/42
 The `compound-id` module provides utilities for building these paths:
 
 ```ts file=examples/service-layer-guide-05.ts
-import {
-  buildCompoundId,
-  buildCollectionPath,
-  parseId
-} from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
+import { buildCompoundId, buildCollectionPath, parseId } from '@mcp-rune/mcp-rune/model-service'
 
 buildCompoundId('titles', '42', 'assets', '7') // → 'titles/42/assets/7'
 buildCollectionPath('titles', '42', 'assets') // → 'titles/42/assets'
@@ -257,11 +253,7 @@ parseId('titles/42/assets/7', 'assets') // → { isCompound: true, leafId: '7', 
 ```
 
 ```js file=examples/service-layer-guide-05.js
-import {
-  buildCompoundId,
-  buildCollectionPath,
-  parseId
-} from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
+import { buildCompoundId, buildCollectionPath, parseId } from '@mcp-rune/mcp-rune/model-service'
 buildCompoundId('titles', '42', 'assets', '7') // → 'titles/42/assets/7'
 buildCollectionPath('titles', '42', 'assets') // → 'titles/42/assets'
 parseId('titles/42/assets/7', 'assets') // → { isCompound: true, leafId: '7', ... }
@@ -303,7 +295,7 @@ resolver.resolveCollection(...); // → 'api/v1/book-items'
 ### Setup
 
 ```ts file=src/services/model-service.ts
-import { ModelService } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
+import { ModelService } from '@mcp-rune/mcp-rune/model-service'
 
 const modelService = new ModelService({
   apiClient, // Required — HTTP client implementing ApiClient
@@ -315,7 +307,7 @@ const modelService = new ModelService({
 ```
 
 ```js file=src/services/model-service.js
-import { ModelService } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
+import { ModelService } from '@mcp-rune/mcp-rune/model-service'
 const modelService = new ModelService({
   apiClient, // Required — HTTP client implementing ApiClient
   models: modelsRegistry, // Required — model name → ModelConfig map
@@ -420,7 +412,7 @@ ModelService throws typed errors that tools catch and format for the MCP protoco
 | `UnknownActionError`         | Custom action not declared on model    | —                           |
 
 ```ts file=examples/service-layer-guide-09.ts
-import { MissingRequiredFieldsError } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
+import { MissingRequiredFieldsError } from '@mcp-rune/mcp-rune/model-service'
 
 try {
   await modelService.create('book', { title: 'Test' }) // missing 'author'
@@ -432,7 +424,7 @@ try {
 ```
 
 ```js file=examples/service-layer-guide-09.js
-import { MissingRequiredFieldsError } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
+import { MissingRequiredFieldsError } from '@mcp-rune/mcp-rune/model-service'
 try {
   await modelService.create('book', { title: 'Test' }) // missing 'author'
 } catch (error) {
@@ -782,7 +774,7 @@ interface SearchResult {
 Construct both services in your tool registry and pass them as dependencies:
 
 ```ts file=src/token.ts
-import { ModelService } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
+import { ModelService } from '@mcp-rune/mcp-rune/model-service'
 import {
   createSearchService,
   RailsSearchAdapter
@@ -818,7 +810,7 @@ async _createAuthenticatedInstance(ToolClass, getAccessToken) {
 ```
 
 ```js file=src/token.js
-import { ModelService } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
+import { ModelService } from '@mcp-rune/mcp-rune/model-service'
 import { createSearchService, RailsSearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
 async
 _createAuthenticatedInstance(ToolClass, getAccessToken)

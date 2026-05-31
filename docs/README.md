@@ -27,23 +27,24 @@ CodeSnippet on the site, with a segmented TS ⇄ JS switch in the header.
 
 ````markdown
 ```ts file=src/models/book.ts
-import { BaseModel, string, integer } from '@mcp-rune/mcp-rune'
+import { BaseModel } from '@mcp-rune/mcp-rune'
+import type { AttributeDefinition } from '@mcp-rune/mcp-rune/core'
 
 export class Book extends BaseModel {
-  static attributes = {
-    title: string().required(),
-    duration_min: integer().range(30, 180)
+  static override attributes: Record<string, AttributeDefinition> = {
+    title: { type: 'string', required: true },
+    duration_min: { type: 'integer', validation: { min: 30, max: 180 } }
   }
 }
 ```
 
 ```js file=src/models/book.js
-import { BaseModel, string, integer } from '@mcp-rune/mcp-rune'
+import { BaseModel } from '@mcp-rune/mcp-rune'
 
 export class Book extends BaseModel {
   static attributes = {
-    title: string().required(),
-    duration_min: integer().range(30, 180)
+    title: { type: 'string', required: true },
+    duration_min: { type: 'integer', validation: { min: 30, max: 180 } }
   }
 }
 ```

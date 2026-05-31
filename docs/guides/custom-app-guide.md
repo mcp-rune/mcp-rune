@@ -300,11 +300,7 @@ The whole point of having a shared kind registry is so custom apps don't reinven
 
 ```js file=src/payload.js
 // your-server/apps/booking-calendar-ui/app.js
-import {
-  renderCellValue,
-  getFormatter,
-  helpers
-} from '../../../node_modules/@mcp-rune/mcp-rune/dist/mcp/apps/shared/formatters.js'
+import { renderCellValue, getFormatter, helpers } from '@mcp-rune/mcp-rune/apps/formatters'
 
 const payload = host.toolOutput?._meta?.['mcp-rune/payload']
 const tbody = document.querySelector('tbody')
@@ -322,11 +318,7 @@ for (const booking of payload.records) {
 
 ```ts file=src/payload.ts
 // your-server/apps/booking-calendar-ui/app.js
-import {
-  renderCellValue,
-  getFormatter,
-  helpers
-} from '../../../node_modules/@mcp-rune/mcp-rune/dist/mcp/apps/shared/formatters.js'
+import { renderCellValue, getFormatter, helpers } from '@mcp-rune/mcp-rune/apps/formatters'
 
 const payload = host.toolOutput?._meta?.['mcp-rune/payload']
 const tbody = document.querySelector('tbody')
@@ -461,7 +453,7 @@ Test the iframe rendering with `happy-dom`:
  * @vitest-environment happy-dom
  */
 import { describe, expect, it } from 'vitest'
-import { renderCellValue } from '@mcp-rune/mcp-rune/apps'
+import { renderCellValue } from '@mcp-rune/mcp-rune/apps/formatters'
 
 describe('booking-calendar iframe', () => {
   it('renders a booking row through the shared formatter', () => {
@@ -476,7 +468,7 @@ describe('booking-calendar iframe', () => {
  * @vitest-environment happy-dom
  */
 import { describe, expect, it } from 'vitest'
-import { renderCellValue } from '@mcp-rune/mcp-rune/apps'
+import { renderCellValue } from '@mcp-rune/mcp-rune/apps/formatters'
 describe('booking-calendar iframe', () => {
   it('renders a booking row through the shared formatter', () => {
     const td = renderCellValue('2026-05-12', { kind: 'date' })

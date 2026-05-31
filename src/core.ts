@@ -1,5 +1,6 @@
 // mcp-rune/core — config, env, helpers, validators, base model, api-client primitive
 export type { ApiClient, RequestOptions, SearchApiClient } from './core/api-client.js'
+export type { AttributeDefinition } from './core/base-model.js'
 export { BaseModel } from './core/base-model.js'
 export { loadConfig } from './core/config.js'
 export type {
@@ -23,6 +24,8 @@ export {
   sanitizeResponseData,
   truncateString
 } from './core/helpers.js'
+export type { KindDescriptor, KindOpts } from './core/kind-metadata.js'
+export { getKind, KIND_REGISTRY, registerKind } from './core/kind-metadata.js'
 export { readPackageInfo } from './core/package-info.js'
 export { StartupTracker } from './core/startup-tracker.js'
 export {

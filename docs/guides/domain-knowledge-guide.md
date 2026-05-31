@@ -1,12 +1,12 @@
 ---
 extension:
   kind: registry
-  what: Register concepts · rules · workflows · diagrams
+  what: Register concepts · rules · workflows
 ---
 
 # Domain Intelligence Framework — Contributor Guide
 
-This guide explains how to extend the domain intelligence layer with new concepts, business rules, workflows, and diagram templates. The framework is declarative: all domain components are data structures, not procedural code.
+This guide explains how to extend the domain intelligence layer with new concepts, business rules, and workflows. The framework is declarative: all domain components are data structures, not procedural code.
 
 ## Table of Contents
 
@@ -15,11 +15,10 @@ This guide explains how to extend the domain intelligence layer with new concept
 3. [DomainConcept — Cross-Entity Knowledge](#domainconcept--cross-entity-knowledge)
 4. [BusinessRule — Declarative Constraints](#businessrule--declarative-constraints)
 5. [WorkflowDefinition — Multi-Step Guides](#workflowdefinition--multi-step-guides)
-6. [DiagramTemplate — Visual Explanations](#diagramtemplate--visual-explanations)
-7. [Wiring It Up — The Domain Registry](#wiring-it-up--the-domain-registry)
-8. [How Domain Tools Consume the Registry](#how-domain-tools-consume-the-registry)
-9. [Step-by-Step: Adding Domain Intelligence to a New Server](#step-by-step-adding-domain-intelligence-to-a-new-server)
-10. [Testing](#testing)
+6. [Wiring It Up — The Domain Registry](#wiring-it-up--the-domain-registry)
+7. [How Domain Tools Consume the Registry](#how-domain-tools-consume-the-registry)
+8. [Step-by-Step: Adding Domain Intelligence to a New Server](#step-by-step-adding-domain-intelligence-to-a-new-server)
+9. [Testing](#testing)
 
 ---
 
@@ -30,15 +29,14 @@ lib/mcp/domain/                      # Framework classes (shared)
 ├── knowledge.js                     # DomainConcept + DomainKnowledge
 ├── business-rules.js                # BusinessRule + RuleSet
 ├── workflows.js                     # WorkflowStep + WorkflowDefinition + WorkflowRegistry
-├── diagrams.js                      # DiagramTemplate + DiagramTemplateRegistry
 └── registry.js                      # DomainRegistry (aggregates all of the above)
 
 lib/mcp/tools/domain/                # Domain tools (shared)
 ├── base-domain-tool.js              # BaseDomainTool (DOMAIN category, no auth)
 ├── get-domain-context-tool.js       # Retrieves composed context for a model/concept
 ├── check-business-rules-tool.js     # Validates data against business rules
-├── suggest-workflow-tool.js         # Finds and displays workflows
-└── generate-diagram-tool.js         # Renders diagram templates
+├── suggest-workflow-tool.js         # Returns a workflow roadmap + first step
+└── get-workflow-step-tool.js        # Returns detail for a specific workflow step
 
 src/<server>/domain/                 # Server-specific domain data
 ├── registry.js                      # Factory: createXxxDomainRegistry()
@@ -47,19 +45,16 @@ src/<server>/domain/                 # Server-specific domain data
 ├── rules/
 │   ├── <domain>-rules.js            # BusinessRule instances
 │   └── mutability-rules.js          # Auto-generated from model metadata
-├── workflows/
-│   └── <workflow-category>.js       # WorkflowDefinition instances
-└── diagrams/
-    ├── <diagram-category>.js        # DiagramTemplate instances
-    └── index.js                     # Aggregates all templates
+└── workflows/
+    └── <workflow-category>.js       # WorkflowDefinition instances
 ```
 
 **Data flow:**
 
-1. Server-specific code creates `DomainConcept`, `BusinessRule`, `WorkflowDefinition`, and `DiagramTemplate` instances
+1. Server-specific code creates `DomainConcept`, `BusinessRule`, and `WorkflowDefinition` instances
 2. These are assembled into a `DomainRegistry` via a factory function
 3. The registry is dependency-injected into the tool registry
-4. Four domain tools (`get_domain_context`, `check_business_rules`, `suggest_workflow`, `generate_diagram`) consume the registry and expose it to users
+4. Four domain tools (`get_domain_context`, `check_business_rules`, `suggest_workflow`, `get_workflow_step`) consume the registry and expose it to users
 
 ---
 
@@ -73,7 +68,6 @@ src/<server>/domain/                 # Server-specific domain data
 | Catch field-level errors before API calls       | **BusinessRule**       |
 | Guide users through a multi-step process        | **WorkflowDefinition** |
 | Create a demo or troubleshooting script         | **WorkflowDefinition** |
-| Visualize relationships or decisions            | **DiagramTemplate**    |
 
 **Key distinction: Concept vs Rule vs Workflow**
 
@@ -896,120 +890,6 @@ Group related workflows in the same file (e.g., setup + demo variant of the same
 
 ---
 
-## DiagramTemplate — Visual Explanations
-
-**Source:** `lib/mcp/domain/diagrams.js`
-
-A `DiagramTemplate` is a pre-built Mermaid diagram for visual domain explanations. Templates can be static or parameterized.
-
-### Constructor
-
-```js file=examples/domain-knowledge-guide-20.js
-import { DiagramTemplate } from '#src/mcp/domain/diagrams.js'
-
-new DiagramTemplate({
-  name: 'deal_structure', // Unique identifier (snake_case)
-  title: 'Deal → Rights → Platforms', // Human-readable title
-  description: 'Shows the licensing hierarchy.',
-  type: 'graph', // Mermaid type hint
-  tags: ['licensing', 'hierarchy'], // For filtering
-  params: [], // Parameter definitions (if parameterized)
-  render(params = {}) {
-    // Returns Mermaid syntax
-    return `graph TD
-  Deal["Deal"] --> Right["Right"]
-  Right --> Platform["Platform"]`
-  }
-})
-```
-
-```ts file=examples/domain-knowledge-guide-20.ts
-import { DiagramTemplate } from '#src/mcp/domain/diagrams.js'
-
-new DiagramTemplate({
-  name: 'deal_structure', // Unique identifier (snake_case)
-  title: 'Deal → Rights → Platforms', // Human-readable title
-  description: 'Shows the licensing hierarchy.',
-  type: 'graph', // Mermaid type hint
-  tags: ['licensing', 'hierarchy'], // For filtering
-  params: [], // Parameter definitions (if parameterized)
-  render(params = {}) {
-    // Returns Mermaid syntax
-    return `graph TD
-  Deal["Deal"] --> Right["Right"]
-  Right --> Platform["Platform"]`
-  }
-})
-```
-
-### Mermaid Diagram Types
-
-| Type              | Use Case                      |
-| ----------------- | ----------------------------- |
-| `graph`           | Hierarchical/network diagrams |
-| `flowchart`       | Decision flowcharts           |
-| `gantt`           | Timeline/scheduling charts    |
-| `sequenceDiagram` | Interaction sequences         |
-| `erDiagram`       | Entity-relationship diagrams  |
-
-### Parameterized Templates
-
-```js file=examples/domain-knowledge-guide-21.js
-new DiagramTemplate({
-  name: 'availability_window',
-  title: 'Availability Window',
-  type: 'graph',
-  params: [
-    { name: 'start_offset', type: 'string', description: 'Start offset', default: '0 minutes' },
-    { name: 'end_offset', type: 'string', description: 'End offset', default: '7 days' }
-  ],
-  render({ start_offset = '0 minutes', end_offset = '7 days' } = {}) {
-    return `graph LR
-  TX["Linear TX"] -->|"${start_offset}"| Start["VOD Start"]
-  Start -->|"${end_offset}"| End["VOD End"]`
-  }
-})
-```
-
-```ts file=examples/domain-knowledge-guide-21.ts
-new DiagramTemplate({
-  name: 'availability_window',
-  title: 'Availability Window',
-  type: 'graph',
-  params: [
-    { name: 'start_offset', type: 'string', description: 'Start offset', default: '0 minutes' },
-    { name: 'end_offset', type: 'string', description: 'End offset', default: '7 days' }
-  ],
-  render({ start_offset = '0 minutes', end_offset = '7 days' } = {}) {
-    return `graph LR
-  TX["Linear TX"] -->|"${start_offset}"| Start["VOD Start"]
-  Start -->|"${end_offset}"| End["VOD End"]`
-  }
-})
-```
-
-### Where to Put Diagrams
-
-Add diagrams to `src/<server>/domain/diagrams/<category>.js`. Each file exports an array. Create an `index.js` that aggregates all templates:
-
-```js file=src/diagram-templates.js
-// src/<server>/domain/diagrams/index.js
-import { dealStructureTemplates } from './deal-structure.js'
-import { availabilityWindowTemplates } from './availability.js'
-
-export const diagramTemplates = [...dealStructureTemplates, ...availabilityWindowTemplates]
-```
-
-```ts file=src/diagram-templates.ts
-// src/<server>/domain/diagrams/index.js
-import { dealStructureTemplates } from './deal-structure.js'
-import { availabilityWindowTemplates } from './availability.js'
-
-export const diagramTemplates = [...dealStructureTemplates, ...availabilityWindowTemplates]
-```
-
----
-
 ## Wiring It Up — The Domain Registry
 
 **Source:** `lib/mcp/domain/registry.js`
@@ -1023,7 +903,6 @@ The `DomainRegistry` aggregates all domain intelligence into a single injectable
 import { DomainKnowledge } from '#src/mcp/domain/knowledge.js'
 import { RuleSet } from '#src/mcp/domain/business-rules.js'
 import { WorkflowRegistry } from '#src/mcp/domain/workflows.js'
-import { DiagramTemplateRegistry } from '#src/mcp/domain/diagrams.js'
 import { DomainRegistry } from '#src/mcp/domain/registry.js'
 import { MODEL_CLASSES } from '../models/index.js'
 
@@ -1031,7 +910,6 @@ import { concepts } from './knowledge/concepts.js'
 import { rightsRules } from './rules/rights-rules.js'
 import { dealRules } from './rules/deal-rules.js'
 import { catchupWorkflows } from './workflows/catchup-vod.js'
-import { diagramTemplates } from './diagrams/index.js'
 
 export function createMyDomainRegistry() {
   const knowledge = new DomainKnowledge({
@@ -1043,9 +921,7 @@ export function createMyDomainRegistry() {
 
   const workflows = new WorkflowRegistry([...catchupWorkflows])
 
-  const diagrams = new DiagramTemplateRegistry(diagramTemplates)
-
-  return new DomainRegistry({ knowledge, rules, workflows, diagrams })
+  return new DomainRegistry({ knowledge, rules, workflows })
 }
 ```
 
@@ -1054,7 +930,6 @@ export function createMyDomainRegistry() {
 import { DomainKnowledge } from '#src/mcp/domain/knowledge.js'
 import { RuleSet } from '#src/mcp/domain/business-rules.js'
 import { WorkflowRegistry } from '#src/mcp/domain/workflows.js'
-import { DiagramTemplateRegistry } from '#src/mcp/domain/diagrams.js'
 import { DomainRegistry } from '#src/mcp/domain/registry.js'
 import { MODEL_CLASSES } from '../models/index.js'
 
@@ -1062,7 +937,6 @@ import { concepts } from './knowledge/concepts.js'
 import { rightsRules } from './rules/rights-rules.js'
 import { dealRules } from './rules/deal-rules.js'
 import { catchupWorkflows } from './workflows/catchup-vod.js'
-import { diagramTemplates } from './diagrams/index.js'
 
 export function createMyDomainRegistry() {
   const knowledge = new DomainKnowledge({
@@ -1074,9 +948,7 @@ export function createMyDomainRegistry() {
 
   const workflows = new WorkflowRegistry([...catchupWorkflows])
 
-  const diagrams = new DiagramTemplateRegistry(diagramTemplates)
-
-  return new DomainRegistry({ knowledge, rules, workflows, diagrams })
+  return new DomainRegistry({ knowledge, rules, workflows })
 }
 ```
 
@@ -1151,25 +1023,27 @@ Output is grouped by severity: Errors (must fix) → Warnings (should fix) → I
 
 ### `suggest_workflow`
 
-Finds and displays workflows.
+Returns a workflow roadmap (all step titles) plus the first step in full detail. The LLM executes one step at a time, calling `get_workflow_step` for each subsequent step.
 
-| Input                               | Behavior                            |
-| ----------------------------------- | ----------------------------------- |
-| No args                             | Lists all workflows                 |
-| `{ goal: 'catch-up' }`              | Searches by title/description/tags  |
-| `{ workflow: 'catchup_vod_setup' }` | Returns full workflow by exact name |
-| `{ tag: 'demo' }`                   | Filters by tag                      |
+| Input                               | Behavior                                                   |
+| ----------------------------------- | ---------------------------------------------------------- |
+| No args                             | Lists all workflows                                        |
+| `{ goal: 'catch-up' }`              | Searches by title/description/tags, returns best match     |
+| `{ workflow: 'catchup_vod_setup' }` | Returns the full roadmap + first step for a named workflow |
+| `{ tag: 'demo' }`                   | Filters by tag                                             |
 
-### `generate_diagram`
+### `get_workflow_step`
 
-Renders diagram templates.
+Returns detailed instructions for a single workflow step — the tool to call, arguments to pass, tips, and exclusion warnings. For loop and parallel groups, returns all steps in the group together with a hint about the next step after the group.
 
-| Input                                                                   | Behavior                              |
-| ----------------------------------------------------------------------- | ------------------------------------- |
-| No args                                                                 | Lists all available templates         |
-| `{ template: 'deal_structure' }`                                        | Renders pre-built template            |
-| `{ template: 'availability_window', params: { end_offset: '3 days' } }` | Renders with custom parameters        |
-| `{ mermaid: 'graph TD\n  A --> B' }`                                    | Renders raw Mermaid syntax (freeform) |
+| Input                                         | Behavior                                                         |
+| --------------------------------------------- | ---------------------------------------------------------------- |
+| `{ workflow: 'catchup_vod_setup', step: 1 }`  | Detail for step 1: tool, args, tips, next-step hint              |
+| `{ workflow: 'catchup_vod_setup', step: 3 }`  | If step 3 is in a loop or parallel group, returns the full group |
+| `{ workflow: 'unknown', step: 1 }`            | Error: lists available workflow names                            |
+| `{ workflow: 'catchup_vod_setup', step: 99 }` | Error: lists the workflow's available step numbers               |
+
+The tool is stateless. The LLM (or a coordinating agent) drives progression by calling `get_workflow_step` once per step; the framework never tracks "current step" on the server side. Steps may declare a `contextHint` payload that surfaces in the response's `_meta.contextHints` for the transient-context protocol.
 
 ---
 
@@ -1186,11 +1060,8 @@ src/<server>/domain/
 │   └── concepts.js
 ├── rules/
 │   └── <domain>-rules.js
-├── workflows/
-│   └── <category>.js
-└── diagrams/
-    ├── <category>.js
-    └── index.js
+└── workflows/
+    └── <category>.js
 ```
 
 ### 2. Define concepts
@@ -1353,80 +1224,25 @@ export const myWorkflows = [
 ]
 ```
 
-### 5. Define diagrams (optional)
-
-```js file=src/my-diagrams.js
-// src/<server>/domain/diagrams/<category>.js
-import { DiagramTemplate } from '#src/mcp/domain/diagrams.js'
-
-export const myDiagrams = [
-  new DiagramTemplate({
-    name: 'my_hierarchy',
-    title: 'Entity Hierarchy',
-    description: 'Shows how entities relate.',
-    type: 'graph',
-    tags: ['hierarchy'],
-    params: [],
-    render() {
-      return `graph TD
-  A["Parent"] --> B["Child 1"]
-  A --> C["Child 2"]`
-    }
-  })
-]
-
-// src/<server>/domain/diagrams/index.js
-import { myDiagrams } from './my-category.js'
-export const diagramTemplates = [...myDiagrams]
-```
-
-```ts file=src/my-diagrams.ts
-// src/<server>/domain/diagrams/<category>.js
-import { DiagramTemplate } from '#src/mcp/domain/diagrams.js'
-
-export const myDiagrams = [
-  new DiagramTemplate({
-    name: 'my_hierarchy',
-    title: 'Entity Hierarchy',
-    description: 'Shows how entities relate.',
-    type: 'graph',
-    tags: ['hierarchy'],
-    params: [],
-    render() {
-      return `graph TD
-  A["Parent"] --> B["Child 1"]
-  A --> C["Child 2"]`
-    }
-  })
-]
-
-// src/<server>/domain/diagrams/index.js
-import { myDiagrams } from './my-category.js'
-export const diagramTemplates = [...myDiagrams]
-```
-
-### 6. Assemble the registry
+### 5. Assemble the registry
 
 ```js file=src/registries/create-my-domain-registry.js
 // src/<server>/domain/registry.js
 import { DomainKnowledge } from '#src/mcp/domain/knowledge.js'
 import { RuleSet } from '#src/mcp/domain/business-rules.js'
 import { WorkflowRegistry } from '#src/mcp/domain/workflows.js'
-import { DiagramTemplateRegistry } from '#src/mcp/domain/diagrams.js'
 import { DomainRegistry } from '#src/mcp/domain/registry.js'
 import { MODEL_CLASSES } from '../models/index.js'
 
 import { concepts } from './knowledge/concepts.js'
 import { myRules } from './rules/my-rules.js'
 import { myWorkflows } from './workflows/my-category.js'
-import { diagramTemplates } from './diagrams/index.js'
 
 export function createMyDomainRegistry() {
   const knowledge = new DomainKnowledge({ concepts, models: MODEL_CLASSES })
   const rules = new RuleSet([...myRules])
   const workflows = new WorkflowRegistry([...myWorkflows])
-  const diagrams = new DiagramTemplateRegistry(diagramTemplates)
-  return new DomainRegistry({ knowledge, rules, workflows, diagrams })
+  return new DomainRegistry({ knowledge, rules, workflows })
 }
 ```
 
@@ -1435,25 +1251,22 @@ export function createMyDomainRegistry() {
 import { DomainKnowledge } from '#src/mcp/domain/knowledge.js'
 import { RuleSet } from '#src/mcp/domain/business-rules.js'
 import { WorkflowRegistry } from '#src/mcp/domain/workflows.js'
-import { DiagramTemplateRegistry } from '#src/mcp/domain/diagrams.js'
 import { DomainRegistry } from '#src/mcp/domain/registry.js'
 import { MODEL_CLASSES } from '../models/index.js'
 
 import { concepts } from './knowledge/concepts.js'
 import { myRules } from './rules/my-rules.js'
 import { myWorkflows } from './workflows/my-category.js'
-import { diagramTemplates } from './diagrams/index.js'
 
 export function createMyDomainRegistry() {
   const knowledge = new DomainKnowledge({ concepts, models: MODEL_CLASSES })
   const rules = new RuleSet([...myRules])
   const workflows = new WorkflowRegistry([...myWorkflows])
-  const diagrams = new DiagramTemplateRegistry(diagramTemplates)
-  return new DomainRegistry({ knowledge, rules, workflows, diagrams })
+  return new DomainRegistry({ knowledge, rules, workflows })
 }
 ```
 
-### 7. Inject into the server config
+### 6. Inject into the server config
 
 ```js file=src/registries/domain-registry.js
 // src/<server>/config.js
@@ -1479,7 +1292,7 @@ const toolRegistry = createToolRegistry({
 })
 ```
 
-That's it. The four domain tools will automatically appear in the tool list and serve your domain knowledge, rules, workflows, and diagrams.
+That's it. The four domain tools will automatically appear in the tool list and serve your domain knowledge, rules, and workflows.
 
 ---
 
@@ -1490,7 +1303,7 @@ Domain tools use **embedding-based semantic search** over the domain knowledge b
 ### How It Works
 
 1. At server startup, `domainRegistry.initEmbeddings()` is called (fire-and-forget)
-2. Each registry (knowledge, workflows, diagrams) converts its items to text using a text function
+2. Each registry (knowledge, workflows) converts its items to text using a text function
 3. Text is embedded into 384-dim vectors via `embedBatch()` (local MiniLM-L6-v2, no API keys)
 4. At search time, the query is embedded via `embed()` and compared against all pre-computed vectors
 5. Results above a similarity threshold are returned, ranked by score (highest first)
@@ -1561,10 +1374,10 @@ Each registry converts items to searchable text:
 
 ### Configuration
 
-| Option      | Default | Description                                                  |
-| ----------- | ------- | ------------------------------------------------------------ |
-| `threshold` | 0.3     | Minimum cosine similarity to include in results              |
-| `topK`      | 10-20   | Maximum results (20 for concepts, 10 for workflows/diagrams) |
+| Option      | Default | Description                                         |
+| ----------- | ------- | --------------------------------------------------- |
+| `threshold` | 0.3     | Minimum cosine similarity to include in results     |
+| `topK`      | 10-20   | Maximum results (20 for concepts, 10 for workflows) |
 
 **Why threshold 0.3:** MiniLM-L6-v2 normalized embeddings produce lower similarity scores than larger models. A threshold of 0.3 catches semantically relevant results without noise. The threshold is configurable per-instance and overridable per-search call.
 

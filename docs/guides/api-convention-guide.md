@@ -43,7 +43,7 @@ import {
   type FieldDefinition,
   type HasManyAssociation,
   type NormalizedListResponse
-} from '@mcp-rune/mcp-rune'
+} from '@mcp-rune/mcp-rune/prompts'
 
 class MyConvention extends BaseConvention {
   get name(): string { return 'my-convention' }
@@ -75,7 +75,7 @@ class MyConvention extends BaseConvention {
 ```
 
 ```js file=src/conventions/my-convention.js
-import { BaseConvention } from '@mcp-rune/mcp-rune'
+import { BaseConvention } from '@mcp-rune/mcp-rune/prompts'
 class MyConvention extends BaseConvention {
   get name() {
     return 'my-convention'
@@ -133,7 +133,7 @@ import {
   type HasManyAssociation,
   type FieldDefinition,
   type NormalizedListResponse
-} from '@mcp-rune/mcp-rune'
+} from '@mcp-rune/mcp-rune/prompts'
 
 export class HalConvention extends BaseConvention {
   get name() {
@@ -245,7 +245,7 @@ export const halConvention = new HalConvention()
 
 ```js file=src/conventions/hal-convention.js
 // your-server/conventions/hal-convention.ts
-import { BaseConvention } from '@mcp-rune/mcp-rune'
+import { BaseConvention } from '@mcp-rune/mcp-rune/prompts'
 export class HalConvention extends BaseConvention {
   get name() {
     return 'hal'
@@ -341,8 +341,8 @@ export const halConvention = new HalConvention()
 For a hand-rolled REST API with `{ items: [...], page, total }` lists and unwrapped POST bodies:
 
 ```ts file=src/conventions/flat-rest-convention.ts
-import { BaseConvention } from '@mcp-rune/mcp-rune'
-import { jsonApiConvention } from '@mcp-rune/mcp-rune/api-conventions'
+import { BaseConvention } from '@mcp-rune/mcp-rune/prompts'
+import { jsonApiConvention } from '@mcp-rune/mcp-rune/prompts'
 
 export class FlatRestConvention extends BaseConvention {
   get name() {
@@ -376,8 +376,8 @@ export const flatRestConvention = new FlatRestConvention()
 ```
 
 ```js file=src/conventions/flat-rest-convention.js
-import { BaseConvention } from '@mcp-rune/mcp-rune'
-import { jsonApiConvention } from '@mcp-rune/mcp-rune/api-conventions'
+import { BaseConvention } from '@mcp-rune/mcp-rune/prompts'
+import { jsonApiConvention } from '@mcp-rune/mcp-rune/prompts'
 
 export class FlatRestConvention extends BaseConvention {
   get name() {

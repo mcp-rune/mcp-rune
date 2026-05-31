@@ -4,6 +4,76 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.59.0] - 2026-05-31
+
+> Closes #168. Exhaustive audit of all 31 author-facing guides (~17K lines) against the v0.58.1 source. Three classes of drift surfaced: (1) public-barrel under-exports — 15+ symbols guides imported as if public were missing from documented subpaths; (2) a removed feature (`DiagramTemplate` / `generate_diagram`) still documented across ~190 lines of `domain-knowledge-guide.md`; (3) a builder-function attribute API (`string()`, `integer()`, `text()`) documented in `docs/README.md` and `extension-recipes.md` that doesn't exist in source. This release grows the barrels to match what the docs already promise, removes the dead feature documentation, and converts the builder-style attribute snippets to the object-literal pattern that every `examples/` model actually uses.
+
+### Added
+
+- **`AppDefinition`** re-exported from `@mcp-rune/mcp-rune/apps` (`src/apps.ts`). The shape `tool-flow-extension-guide.md` and `custom-app-guide.md` already imported, now actually exposed.
+- **`AttributeDefinition`, `KindDescriptor`, `KindOpts`, `getKind`, `KIND_REGISTRY`, `registerKind`** re-exported from `@mcp-rune/mcp-rune/core` (`src/core.ts`). The kind-taxonomy entry points that `attribute-kinds-guide.md` documents.
+- **`ModelConfig`, `ModelsRegistry`, `ToolResult`, `ToolSuccessResponse`, `ToolErrorResponse`, `ToolResponseContent`** re-exported from `@mcp-rune/mcp-rune/tools` (`src/tools.ts`). Tool-authoring types that `authoring-extensions-guide.md`, `extension-recipes.md`, `api-extensions.md`, and `data-layer-guide.md` already imported.
+- **Convention types** (`AssociationConfig`, `BelongsToAssociation`, `FieldDefinition`, `HasManyAssociation`, `NormalizedListResponse`, `ErrorResponse`, `CompletionConfig`, `PaginationInfo`) re-exported from `@mcp-rune/mcp-rune/prompts` (`src/prompts.ts`). Required by `api-convention-guide.md` and `api-config-guide.md`.
+- **`SummaryStrategy`, `SummaryInput`, `SummaryOutput`** re-exported from `@mcp-rune/mcp-rune/api-extensions` (`src/api-extensions.ts`). Semantically correct location — `SummaryStrategy`s are registered via `ApiExtension.registerSummaryStrategy()`. Three guides updated to match.
+- **`./apps/formatters`** package.json subpath → `dist/mcp/apps/shared/formatters.js`. The DOM-only formatter registry (`renderCellValue`, `registerFormatter`, `getFormatter`, `helpers`, `Formatter`, `FormatHelpers`, `FormatRenderer`, `FormatOpts`) used inside MCP-Apps iframes. Replaces the awkward `../../../node_modules/@mcp-rune/mcp-rune/dist/mcp/apps/shared/formatters.js` vendor path that `custom-app-guide.md` was using.
+- **`./model-service`** package.json subpath → `dist/mcp/services/index.js`. Surfaces `ModelService`, `EndpointResolver`, `MissingRequiredFieldsError`, `ModelReadOnlyError`, `UnknownModelError`, and the compound-id helpers (`buildCompoundId`, `buildCollectionPath`, `parseId`) through a stable name. Replaces `@mcp-rune/mcp-rune/lib/mcp/services/index.js` (the `./lib/*` catch-all) that `service-layer-guide.md` and `data-layer-guide.md` had been routed through.
+- **`get_workflow_step` tool section** in `docs/guides/domain-knowledge-guide.md`. The fourth domain tool, shipped at least since v0.x but previously undocumented. Includes input table, stateless-progression note, and `_meta.contextHints` reference.
+
+### Removed
+
+- **All `DiagramTemplate` / `DiagramTemplateRegistry` / `generate_diagram` documentation** from `docs/guides/domain-knowledge-guide.md` (~190 lines): the `DiagramTemplate — Visual Explanations` section, the `generate_diagram` tool entry under "How Domain Tools Consume the Registry", "Step 5: Define diagrams (optional)" in the step-by-step, and every passing reference (architecture tree, data flow, decision table, registry assembly examples, semantic-search topK table). The feature was removed from source at some prior point but the docs were never updated. `src/mcp/domain/diagrams.ts` does not exist; `src/mcp/tools/domain/` has four tool files, none of them `generate-diagram-tool.ts`. Guide drops from 1713 → 1526 lines.
+- **`string()` / `integer()` / `text()` attribute-builder references** from `docs/README.md` (the canonical TS/JS pairing exemplar) and `docs/guides/extension-recipes.md` (three snippets). These functions were never exported from any source module. Rewritten to the object-literal pattern (`{ type: 'string', required: true }`) that matches `examples/bookshelf/models/book.ts`.
+
+### Changed (non-breaking)
+
+- **`docs/guides/api-convention-guide.md`** — every `import { BaseConvention } from '@mcp-rune/mcp-rune'` (root barrel, which doesn't export it) switched to `from '@mcp-rune/mcp-rune/prompts'`. Two imports from the nonexistent `@mcp-rune/mcp-rune/api-conventions` subpath (not declared in `package.json#exports`) likewise switched to `/prompts`. Affects lines 38–46, 78, 131–136, 248, 344, 345, 379, 380.
+- **`docs/guides/attribute-kinds-guide.md`** — `registerFormatter`, `getFormatter`, `helpers` imports moved from `/apps` (server barrel — was broken) to the new `/apps/formatters` subpath (DOM renderers).
+- **`docs/guides/custom-app-guide.md`** — `renderCellValue` import moved to `/apps/formatters`. Deep `../../../node_modules/.../dist/mcp/apps/shared/formatters.js` vendor paths (lines 303–307, 325–329) replaced with the same clean `/apps/formatters` subpath.
+- **`docs/guides/api-config-guide.md`** — `buildCompoundId`, `buildCollectionPath`, `parseId` imports moved from `/services` (wrong barrel) to the new `/model-service` subpath.
+- **`docs/guides/service-layer-guide.md`** — every `@mcp-rune/mcp-rune/lib/mcp/services/index.js` import replaced with `@mcp-rune/mcp-rune/model-service`. Now uses a stable name instead of the `./lib/*` catch-all escape hatch.
+- **`docs/guides/data-layer-guide.md`** — `ModelsRegistry` import split out of the `/core` destructure into `/tools` (its actual home). `EndpointResolver` import moved to `/model-service`. One inline-prose path reference also updated.
+- **`docs/guides/api-extensions.md`** and **`docs/guides/summary-strategies.md`** and **`docs/guides/extension-recipes.md`** — `SummaryStrategy`/`SummaryInput`/`SummaryOutput` imports moved from `@mcp-rune/mcp-rune/extensions` (wrong barrel; conflates HTTP/ToolFlow extensions with ApiExtension territory) to `@mcp-rune/mcp-rune/api-extensions` (semantically correct — these strategies are registered via `ApiExtension.registerSummaryStrategy()`).
+- **`docs/guides/analysis-memories-guide.md`** — `import { initVectorStorage } from '@mcp-rune/mcp-rune/services'` (broken; the `services` barrel namespaces under `vectorStorage`) rewritten to `import { vectorStorage } from '@mcp-rune/mcp-rune/services'; vectorStorage.initVectorStorage(...)`. Aligns with the `logger.info()` / `vectorStorage.foo()` pattern other guides already use.
+- **`docs/guides/extension-recipes.md`** — `BaseConvention` import switched from invalid `/api-conventions` subpath to `/prompts`.
+
+### Migration
+
+No source-side migration required. Existing deployer code that imported the symbols listed under "Added" was already failing to resolve (the imports were aspirational); after this release those imports work.
+
+Two import-path renames affect anyone who copy-pasted from the affected guides:
+
+```ts file=src/migrations.ts
+// BEFORE — DOM formatters from the server barrel (broken)
+import { registerFormatter, renderCellValue } from '@mcp-rune/mcp-rune/apps'
+
+// AFTER — dedicated subpath for DOM renderers
+import { registerFormatter, renderCellValue } from '@mcp-rune/mcp-rune/apps/formatters'
+
+// BEFORE — model-service via the /lib/* catch-all
+import { ModelService, EndpointResolver } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
+
+// AFTER — stable subpath
+import { ModelService, EndpointResolver } from '@mcp-rune/mcp-rune/model-service'
+```
+
+```js file=src/migrations.js
+// BEFORE
+import { registerFormatter, renderCellValue } from '@mcp-rune/mcp-rune/apps'
+
+// AFTER
+import { registerFormatter, renderCellValue } from '@mcp-rune/mcp-rune/apps/formatters'
+
+// BEFORE
+import { ModelService, EndpointResolver } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
+
+// AFTER
+import { ModelService, EndpointResolver } from '@mcp-rune/mcp-rune/model-service'
+```
+
+The `/lib/*` catch-all subpath remains, so the old `/lib/mcp/services/index.js` form is not broken — just no longer the recommended path.
+
+[0.59.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.58.1...v0.59.0
+
 ## [0.58.1] - 2026-05-31
 
 > Closes #166. Closes the bookshelf example's data-tool loop with the framework's shipped `InMemoryDataLayer`. Before this change, `examples/bookshelf/config.ts` set `tool.dataLayer = undefined`, so every advertised CRUD tool silently no-op'd — newcomers cloning the repo couldn't exercise the projection layer end-to-end. The fix is wiring, not framework code: `src/` is untouched.

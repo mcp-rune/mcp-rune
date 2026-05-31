@@ -28,16 +28,17 @@ This page is that map. Each recipe is organized by deployer intent, not by exten
 Use the built-in `customActionsExtension`. Declare per-model verbs in the model's `extensions` bag; the framework exposes them as a single `model_action` MCP tool plus generated handlers on `ModelService`.
 
 ```ts file=src/models/post.ts
-import { BaseModel, string, text } from '@mcp-rune/mcp-rune'
+import { BaseModel } from '@mcp-rune/mcp-rune'
+import type { AttributeDefinition } from '@mcp-rune/mcp-rune/core'
 import { customActionsConfig } from '@mcp-rune/mcp-rune/api-extensions/custom-actions'
 
 export class Post extends BaseModel {
-  static api = { endpoint: 'posts' }
-  static attributes = {
-    title: string().required(),
-    body: text()
+  static override api = { endpoint: 'posts' }
+  static override attributes: Record<string, AttributeDefinition> = {
+    title: { type: 'string', required: true },
+    body: { type: 'text' }
   }
-  static extensions = {
+  static override extensions = {
     'custom-actions': customActionsConfig({
       publish: { method: 'POST', path: ':id/publish' },
       archive: { method: 'POST', path: ':id/archive' }
@@ -47,14 +48,14 @@ export class Post extends BaseModel {
 ```
 
 ```js file=src/models/post.js
-import { BaseModel, string, text } from '@mcp-rune/mcp-rune'
+import { BaseModel } from '@mcp-rune/mcp-rune'
 import { customActionsConfig } from '@mcp-rune/mcp-rune/api-extensions/custom-actions'
 
 export class Post extends BaseModel {
   static api = { endpoint: 'posts' }
   static attributes = {
-    title: string().required(),
-    body: text()
+    title: { type: 'string', required: true },
+    body: { type: 'text' }
   }
   static extensions = {
     'custom-actions': customActionsConfig({
@@ -298,7 +299,7 @@ To write a similar approval flow against a different review surface (Slack, an i
 
 ```ts file=src/extensions/sales-narrative-strategy.ts
 import type { ApiExtension } from '@mcp-rune/mcp-rune/api-extensions'
-import type { SummaryStrategy } from '@mcp-rune/mcp-rune/extensions'
+import type { SummaryStrategy } from '@mcp-rune/mcp-rune/api-extensions'
 
 const salesNarrativeStrategy: SummaryStrategy = {
   name: 'sales-narrative',
@@ -348,7 +349,7 @@ Once registered, callers select your strategy via `analysis_ingest(summary_strat
 If your API doesn't follow JSON:API — different envelope shape, different association resolution, different error format — implement `BaseConvention` and attach it per-model. No extension is needed; this is a plain model-config field.
 
 ```ts file=src/conventions/hal-convention.ts
-import type { BaseConvention } from '@mcp-rune/mcp-rune/api-conventions'
+import type { BaseConvention } from '@mcp-rune/mcp-rune/prompts'
 
 export const halConvention: BaseConvention = {
   parseRecords(response, model) {
@@ -382,20 +383,23 @@ export const halConvention = {
 ```
 
 ```ts file=src/models/legacy-record.ts
-import { BaseModel, string } from '@mcp-rune/mcp-rune'
+import { BaseModel } from '@mcp-rune/mcp-rune'
+import type { AttributeDefinition } from '@mcp-rune/mcp-rune/core'
 import { halConvention } from '../conventions/hal-convention.js'
 
 export class LegacyRecord extends BaseModel {
-  static api = {
+  static override api = {
     endpoint: 'records',
     convention: halConvention
   }
-  static attributes = { title: string().required() }
+  static override attributes: Record<string, AttributeDefinition> = {
+    title: { type: 'string', required: true }
+  }
 }
 ```
 
 ```js file=src/models/legacy-record.js
-import { BaseModel, string } from '@mcp-rune/mcp-rune'
+import { BaseModel } from '@mcp-rune/mcp-rune'
 import { halConvention } from '../conventions/hal-convention.js'
 
 export class LegacyRecord extends BaseModel {
@@ -403,7 +407,7 @@ export class LegacyRecord extends BaseModel {
     endpoint: 'records',
     convention: halConvention
   }
-  static attributes = { title: string().required() }
+  static attributes = { title: { type: 'string', required: true } }
 }
 ```
 

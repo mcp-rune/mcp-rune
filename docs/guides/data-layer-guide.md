@@ -65,7 +65,7 @@ Every method returns `Promise<Record<string, unknown>>`. Adapters are responsibl
 
 ## The Default Adapter
 
-`ModelService` (`@mcp-rune/mcp-rune/lib/mcp/services`) implements `DataLayer` by composing:
+`ModelService` (`@mcp-rune/mcp-rune/model-service`) implements `DataLayer` by composing:
 
 - `ApiClient` for HTTP transport
 - `EndpointResolver` for URL composition (per-action override → collection override → parent path → namespace → base)
@@ -235,8 +235,9 @@ The stub is deliberately convention-free — it does not implement HAL `_link` d
 An adapter is any class or object that satisfies the `DataLayer` interface. Minimal example wrapping a fetch-based REST client:
 
 ```ts file=src/adapters/fetch-data-layer.ts
-import type { DataLayer, ModelsRegistry } from '@mcp-rune/mcp-rune/core'
-import { EndpointResolver } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
+import type { DataLayer } from '@mcp-rune/mcp-rune/core'
+import type { ModelsRegistry } from '@mcp-rune/mcp-rune/tools'
+import { EndpointResolver } from '@mcp-rune/mcp-rune/model-service'
 
 export class FetchDataLayer implements DataLayer {
   readonly models: ModelsRegistry
@@ -263,7 +264,7 @@ export class FetchDataLayer implements DataLayer {
 ```
 
 ```js file=src/adapters/fetch-data-layer.js
-import { EndpointResolver } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
+import { EndpointResolver } from '@mcp-rune/mcp-rune/model-service'
 
 export class FetchDataLayer {
   endpointResolver = new EndpointResolver()
