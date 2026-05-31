@@ -1,6 +1,6 @@
 import { createServer } from '@mcp-rune/mcp-rune/server'
 import { DATA_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
-import { STRATEGY_TOOL_CLASSES } from '@mcp-rune/mcp-rune/prompts'
+import { BasePromptRegistry, STRATEGY_TOOL_CLASSES } from '@mcp-rune/mcp-rune/prompts'
 import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
 import { Book } from './models/book.js'
 import { BookPrompt } from './prompts/book-prompt.js'
@@ -8,15 +8,12 @@ import { BookPrompt } from './prompts/book-prompt.js'
 // Model and prompt registries
 const MODEL_CLASSES = { book: Book }
 
-const promptRegistry = {
-  getDefinitions() {
-    return [{ name: 'book', description: Book.description, required: true }]
-  },
-  getPrompt(name: string) {
-    if (name === 'book') return new BookPrompt()
-    return null
-  }
-}
+const promptRegistry = new BasePromptRegistry()
+promptRegistry.register('book', BookPrompt, {
+  description: Book.description,
+  required: true,
+  model: 'book'
+})
 
 // Tool registry — registers CRUD + strategy tools
 const toolRegistry = {

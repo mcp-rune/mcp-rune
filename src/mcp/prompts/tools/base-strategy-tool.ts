@@ -46,11 +46,7 @@ export class BaseStrategyTool extends BaseTool {
     if (!this.promptRegistry?.getPromptClassByModel) {
       throw new Error('Prompt registry not available')
     }
-    return (
-      this.promptRegistry as Record<string, unknown> & {
-        getPromptClassByModel: (m: string) => PromptClassLike | null
-      }
-    ).getPromptClassByModel(model)
+    return this.promptRegistry.getPromptClassByModel(model) as PromptClassLike | null
   }
 
   /** Get prompt name by model name */

@@ -13,13 +13,14 @@
 
 import * as logger from '#src/services/logger.js'
 
-const LOG_SERVICE = 'prompt-cache'
+import type {
+  PromptClass,
+  PromptDefinition,
+  PromptRegistry,
+  PromptResult
+} from './prompt-registry.js'
 
-/** Prompt content returned by getPrompt */
-interface PromptResult {
-  description: string
-  messages: unknown[]
-}
+const LOG_SERVICE = 'prompt-cache'
 
 /** Cache entry */
 interface CacheEntry {
@@ -36,6 +37,7 @@ interface CacheStatistics {
   hitRate: string
   size: number
   maxSize: number
+  [key: string]: unknown
 }
 
 /** Cache options */
@@ -44,38 +46,40 @@ interface CacheOptions {
   maxSize?: number
 }
 
-/** Form schema result */
-interface FormSchemaResult {
-  [key: string]: unknown
-}
-
-/** Minimal registry interface that PromptCache wraps */
-interface PromptRegistryLike {
-  getPrompt(name: string, args?: Record<string, unknown>): PromptResult
-  getDefinitions(): unknown[]
-  getAllPromptNames(): string[]
-  getPromptClass(name: string): unknown
-  getPromptClassByModel(model: string): unknown
-  getRequiredPrompts(): unknown[]
-  getPromptRequiredModels(): string[]
-  getPromptMap(): Record<string, unknown>
-  getToolDocDescriptionList(): string
-  getRequiredPromptRestrictions(): string
-  getBulkRecommendedPrompts(): unknown[]
-  getBulkRecommendations(): string
-  getPromptNameByModel(model: string): string | null
-  getFormSchema(promptName: string): FormSchemaResult
-}
+/**
+ * Registry shape PromptCache wraps — the canonical `PromptRegistry` plus the
+ * optional delegation methods made required, because the cache delegates them
+ * unconditionally. A registry passed to `createPromptCache` must implement
+ * every method listed here.
+ */
+type PromptRegistryForCache = PromptRegistry &
+  Required<
+    Pick<
+      PromptRegistry,
+      | 'getAllPromptNames'
+      | 'getPromptClass'
+      | 'getPromptClassByModel'
+      | 'getRequiredPrompts'
+      | 'getPromptRequiredModels'
+      | 'getPromptMap'
+      | 'getToolDocDescriptionList'
+      | 'getRequiredPromptRestrictions'
+      | 'getBulkRecommendedPrompts'
+      | 'getBulkRecommendations'
+      | 'getPromptNameByModel'
+      | 'getFormSchema'
+    >
+  >
 
 /** Prompt Cache - wraps PromptRegistry with content caching */
-export class PromptCache {
-  registry: PromptRegistryLike
+export class PromptCache implements PromptRegistry {
+  registry: PromptRegistryForCache
   ttl: number
   maxSize: number
   cache: Map<string, CacheEntry>
   stats: { hits: number; misses: number; evictions: number }
 
-  constructor(registry: PromptRegistryLike, options: CacheOptions = {}) {
+  constructor(registry: PromptRegistryForCache, options: CacheOptions = {}) {
     this.registry = registry
     this.ttl = options.ttl ?? 5 * 60 * 1000 // 5 minutes
     this.maxSize = options.maxSize ?? 100
@@ -193,7 +197,7 @@ export class PromptCache {
   // DELEGATION METHODS - pass through to wrapped registry
   // ============================================================================
 
-  getDefinitions(): unknown[] {
+  getDefinitions(): PromptDefinition[] {
     return this.registry.getDefinitions()
   }
 
@@ -201,11 +205,11 @@ export class PromptCache {
     return this.registry.getAllPromptNames()
   }
 
-  getPromptClass(name: string): unknown {
+  getPromptClass(name: string): PromptClass | null {
     return this.registry.getPromptClass(name)
   }
 
-  getPromptClassByModel(model: string): unknown {
+  getPromptClassByModel(model: string): PromptClass | null {
     return this.registry.getPromptClassByModel(model)
   }
 
@@ -225,7 +229,7 @@ export class PromptCache {
     return this.registry.getToolDocDescriptionList()
   }
 
-  getRequiredPromptRestrictions(): string {
+  getRequiredPromptRestrictions(): string | null {
     return this.registry.getRequiredPromptRestrictions()
   }
 
@@ -233,7 +237,7 @@ export class PromptCache {
     return this.registry.getBulkRecommendedPrompts()
   }
 
-  getBulkRecommendations(): string {
+  getBulkRecommendations(): string | null {
     return this.registry.getBulkRecommendations()
   }
 
@@ -241,14 +245,14 @@ export class PromptCache {
     return this.registry.getPromptNameByModel(model)
   }
 
-  getFormSchema(promptName: string): FormSchemaResult {
+  getFormSchema(promptName: string): Record<string, unknown> {
     return this.registry.getFormSchema(promptName)
   }
 }
 
 /** Factory function to create a PromptCache */
 export function createPromptCache(
-  registry: PromptRegistryLike,
+  registry: PromptRegistryForCache,
   options: CacheOptions = {}
 ): PromptCache {
   return new PromptCache(registry, options)
