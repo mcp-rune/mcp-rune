@@ -68,25 +68,29 @@ Routes, middleware, and auth. Below the MCP protocol.
 
 ## Picking the Right Seam
 
-Common scenarios mapped to the surfaces that solve them:
+For first-contact "I want to do X — which seam?" questions, start at the **[Extension Recipes Cookbook](./extension-recipes.md)**. It's organized by deployer intent, ships paired TS+JS examples for each entry, and links back to the deeper guides for full reference.
 
-| What you want                                                      | Pick                                                                                                                                           |
-| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| "Add an ISBN attribute kind"                                       | [Attribute Kinds](./attribute-kinds-guide.md) — declare `'string:isbn'` in `AppRegistry.formatters`.                                           |
-| "Render `boolean` as a toggle instead of a checkbox"               | [Attribute Kinds](./attribute-kinds-guide.md) — DOM-only `registerFormatter` override.                                                         |
-| "My API isn't JSON:API"                                            | [Custom API Convention](./api-convention-guide.md).                                                                                            |
-| "My API takes filters as Rails Ransack `q[field_eq]`"              | [Custom Search Adapter](./search-adapter-guide.md).                                                                                            |
-| "I need request signing / mTLS / per-tenant routing on every call" | [Custom API Client](./api-client-guide.md).                                                                                                    |
-| "Stub the API for integration tests"                               | [DataLayer](./data-layer-guide.md) — use `createInMemoryDataLayer`, or [Custom API Client](./api-client-guide.md) — stub at the HTTP boundary. |
-| "Add a `publish` / `archive` non-CRUD action to a model"           | [API Extensions](./api-extensions.md) — register `customActionsExtension`.                                                                     |
-| "Change what `analysis_ingest` writes as the page summary"         | [Summary Strategies](./summary-strategies.md) — pick a built-in or register a custom strategy via `ApiExtension`.                              |
-| "Approve every write through Slack before it hits the API"         | [Tool Flow Extension](./tool-flow-extension-guide.md) — collect → review → submit pattern.                                                     |
-| "Add a `/health/detailed` HTTP endpoint"                           | [Extensions (HttpExtension)](./extensions.md).                                                                                                 |
-| "Show a monthly calendar widget for bookings"                      | [Custom MCP App](./custom-app-guide.md).                                                                                                       |
-| "Customize the layout of the generic create form"                  | [Model Form Customization](./model-form-customization-guide.md) — no extension needed, just `static fieldsets`.                                |
-| "Add a multi-section guided prompt for a complex model"            | [Stateful Strategies](./stateful-strategies-guide.md).                                                                                         |
-| "Wire OAuth2 for remote MCP clients"                               | [OAuth 2.0 Discovery Flow](./oauth2-discovery-flow.md).                                                                                        |
-| "Generate prompt docs from model attributes"                       | [Prompt Derivation Framework](./prompt-derivation-framework-guide.md).                                                                         |
+The quick map below is the same table cross-referenced by the cookbook — read it as the index, the cookbook as the prose:
+
+| What you want                                                      | Pick                                                                                                                                                  |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Add an ISBN attribute kind"                                       | [Attribute Kinds](./attribute-kinds-guide.md) — declare `'string:isbn'` in `AppRegistry.formatters`.                                                  |
+| "Render `boolean` as a toggle instead of a checkbox"               | [Attribute Kinds](./attribute-kinds-guide.md) — DOM-only `registerFormatter` override.                                                                |
+| "My API isn't JSON:API"                                            | [Custom API Convention](./api-convention-guide.md) · [recipe](./extension-recipes.md#swap-the-response-parsing-convention-for-one-model).             |
+| "My API takes filters as Rails Ransack `q[field_eq]`"              | [Custom Search Adapter](./search-adapter-guide.md).                                                                                                   |
+| "I need request signing / mTLS / per-tenant routing on every call" | [Custom API Client](./api-client-guide.md).                                                                                                           |
+| "Stub the API for integration tests"                               | [DataLayer](./data-layer-guide.md) · [recipe](./extension-recipes.md#stub-the-api-for-integration-tests).                                             |
+| "Add a `publish` / `archive` non-CRUD action to a model"           | [API Extensions](./api-extensions.md) · [recipe](./extension-recipes.md#add-a-non-crud-verb-to-a-model-publish-archive).                              |
+| "Add a custom MCP tool unrelated to a model"                       | [Tool Creation](./tool-creation-guide.md) · [recipe](./extension-recipes.md#add-a-custom-mcp-tool-unrelated-to-a-model).                              |
+| "Change what `analysis_ingest` writes as the page summary"         | [Summary Strategies](./summary-strategies.md) · [recipe](./extension-recipes.md#add-a-new-way-to-summarize-a-page-of-records-for-analysis_ingest).    |
+| "Approve every write through Slack before it hits the API"         | [Tool Flow Extension](./tool-flow-extension-guide.md) · [recipe](./extension-recipes.md#stage-a-write-for-human-review-before-submitting-to-the-api). |
+| "Add a `/health/detailed` HTTP endpoint"                           | [Extensions (HttpExtension)](./extensions.md) · [recipe](./extension-recipes.md#add-an-http-route-inside-the-same-process).                           |
+| "Ship a Stripe-style integration that touches multiple surfaces"   | [recipe](./extension-recipes.md#add-a-feature-that-touches-more-than-one-surface-stripe-style-integration).                                           |
+| "Show a monthly calendar widget for bookings"                      | [Custom MCP App](./custom-app-guide.md).                                                                                                              |
+| "Customize the layout of the generic create form"                  | [Model Form Customization](./model-form-customization-guide.md) — no extension needed, just `static fieldsets`.                                       |
+| "Add a multi-section guided prompt for a complex model"            | [Stateful Strategies](./stateful-strategies-guide.md).                                                                                                |
+| "Wire OAuth2 for remote MCP clients"                               | [OAuth 2.0 Discovery Flow](./oauth2-discovery-flow.md).                                                                                               |
+| "Generate prompt docs from model attributes"                       | [Prompt Derivation Framework](./prompt-derivation-framework-guide.md).                                                                                |
 
 If your scenario isn't here and you can't pick from the table above, default to: change the **model**, not the **framework**. The model layer is where 80% of customization lives.
 

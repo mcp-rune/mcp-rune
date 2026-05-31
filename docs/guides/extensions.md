@@ -10,6 +10,8 @@ mcp-rune supports **opt-in HTTP extensions** that add routes and route-scoped mi
 
 This guide covers the `HttpExtension` API. There is currently no separate `McpExtension` for protocol-level concerns; that interface will be added if and when a real consumer needs it.
 
+> **Looking for a worked example?** The [Extension Recipes Cookbook](./extension-recipes.md#add-an-http-route-inside-the-same-process) has a copy-pasteable `whoami` extension and the `HttpServer` wire-up in both TS and JS.
+
 ## What an HttpExtension is
 
 An `HttpExtension` is an object with a `register(ctx)` function. The framework calls `register()` once during `HttpServer` construction, hands it a pre-created Express `Router` and a narrowed context object, and mounts the resulting router at the server's path prefix.

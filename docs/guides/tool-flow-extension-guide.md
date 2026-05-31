@@ -16,6 +16,8 @@ The framework ships one — [`centerOfControlExtension`](../../src/extensions/ce
 
 This guide walks through the interface, the Center-of-Control implementation, and a new "Slack-approval" extension as a fresh worked example.
 
+> **Looking for the minimal "collect → review → submit" recipe?** The [Extension Recipes Cookbook](./extension-recipes.md#stage-a-write-for-human-review-before-submitting-to-the-api) has a copy-pasteable example that just enables `centerOfControlExtension` on `createServer`.
+
 ## Table of Contents
 
 - [The Interface](#the-interface)

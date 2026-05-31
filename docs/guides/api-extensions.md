@@ -10,6 +10,8 @@ mcp-rune supports **opt-in API extensions** that contribute MCP tools and `Model
 
 This guide is the **conceptual reference**: what an `ApiExtension` is, what the framework guarantees, what the registration and reading contracts look like, and why the design choices are what they are. For a **step-by-step walkthrough of authoring your own extension**, see [Authoring Extensions Guide](./authoring-extensions-guide.md).
 
+> **Looking for a copy-pasteable starting point?** The [Extension Recipes Cookbook](./extension-recipes.md) has worked examples for the common API-extension patterns — [adding a `publish` verb](./extension-recipes.md#add-a-non-crud-verb-to-a-model-publish-archive), [registering a custom tool](./extension-recipes.md#add-a-custom-mcp-tool-unrelated-to-a-model), and [contributing a summary strategy](./extension-recipes.md#add-a-new-way-to-summarize-a-page-of-records-for-analysis_ingest).
+
 It is the model-layer parallel of [`HttpExtension`](./extensions.md) and follows the same authoring contract.
 
 ## Architecture overview
