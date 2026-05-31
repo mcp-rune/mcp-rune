@@ -43,8 +43,13 @@ interface ToolFlowExtensionContext {
   registerTool(app: AppDefinition): void
   getApp(toolName: string): AppDefinition | undefined
   setFormSubmitMode(mode: 'direct' | 'collect'): void
-  provideContext(key: string, value: unknown): void
+  provideContext<T>(key: ContextKey<T>, value: T): void
   logger: typeof logger
+}
+
+interface ContextKey<T> {
+  readonly name: string
+  // phantom T — never assigned at runtime; carried for type-checking
 }
 ```
 
@@ -69,7 +74,7 @@ interface ToolFlowExtensionContext {
  * @property {(app: AppDefinition) => void} registerTool
  * @property {(toolName: string) => AppDefinition | undefined} getApp
  * @property {(mode: 'direct' | 'collect') => void} setFormSubmitMode
- * @property {(key: string, value: unknown) => void} provideContext
+ * @property {(key: { name: string }, value: unknown) => void} provideContext
  * @property {typeof logger} logger
  */
 ```
@@ -168,32 +173,45 @@ Use `'collect'` to insert a human-in-the-loop review interstitial. Use `'direct'
 
 ### `provideContext(key, value)`
 
-Inject a value into the shared context passed to **every app tool handler** in this server. Use it to thread extension-owned state (stores, clients, queues) into handlers without coupling them to the extension:
+Inject a typed value into the shared context passed to **every app tool handler** in this server. The `key` is a `ContextKey<T>` produced by `defineContextKey<T>(name)`; the value's type must match the key's declared type. Use this to thread extension-owned state (stores, clients, queues) into handlers without coupling them to the extension:
 
 ```ts file=src/store.ts
+import { defineContextKey } from '@mcp-rune/mcp-rune/extensions'
+
+// Define and export the key at the producer site so consumers can import it.
+export const APPROVAL_STORE_KEY = defineContextKey<MyApprovalStore>('approvalStore')
+
+// Inside the extension's register(ctx):
 const store = new MyApprovalStore()
-ctx.provideContext('approvalStore', store)
+ctx.provideContext(APPROVAL_STORE_KEY, store)
 
 // Later, inside any app tool's handleToolCall:
 async handleToolCall(input, context) {
-  const store = context.approvalStore as MyApprovalStore
+  const store = context[APPROVAL_STORE_KEY.name] as MyApprovalStore
   await store.enqueue(input)
 }
 ```
 
 ```js file=src/store.js
+import { defineContextKey } from '@mcp-rune/mcp-rune/extensions'
+
+// Define and export the key at the producer site so consumers can import it.
+export const APPROVAL_STORE_KEY = defineContextKey('approvalStore')
+
+// Inside the extension's register(ctx):
 const store = new MyApprovalStore()
-ctx.provideContext('approvalStore', store)
+ctx.provideContext(APPROVAL_STORE_KEY, store)
+
 // Later, inside any app tool's handleToolCall:
-async
-handleToolCall(input, context)
-{
-  const store = context.approvalStore
+async handleToolCall(input, context) {
+  const store = context[APPROVAL_STORE_KEY.name]
   await store.enqueue(input)
 }
 ```
 
-This is how `centerOfControlExtension` exposes its `FormDataStore` to the `get_form_data` tool without the tool importing the extension directly.
+This is how `centerOfControlExtension` exposes its `FormDataStore` to the `get_form_data` tool without the tool importing the extension directly — see `FORM_DATA_STORE_KEY` in `src/extensions/center-of-control.ts`.
+
+Context key names must be **globally unique** across all registered tool-flow extensions. If two extensions provide keys with the same `name`, registration throws at boot with both contributor names and the offending key in the error — never silent overwrites. This mirrors the collision rules already enforced for tool names and `ModelService` mixin methods.
 
 ### `logger`
 
@@ -207,7 +225,9 @@ The framework's built-in extension — short enough to fit in 30 lines and a per
 // src/extensions/center-of-control.ts
 import { FormDataStore } from '#src/mcp/apps/form-data-store.js'
 import { createFormDataTools } from '#src/mcp/apps/form-data-tools.js'
-import type { ToolFlowExtension } from '#src/mcp/extensions/tool-flow.js'
+import { defineContextKey, type ToolFlowExtension } from '#src/mcp/extensions/tool-flow.js'
+
+export const FORM_DATA_STORE_KEY = defineContextKey<FormDataStore>('formDataStore')
 
 export const centerOfControlExtension: ToolFlowExtension = {
   requires: ['apps'],
@@ -222,7 +242,7 @@ export const centerOfControlExtension: ToolFlowExtension = {
 
     // 2. Spin up a per-server FormDataStore and expose it to other tools.
     const store = new FormDataStore()
-    ctx.provideContext('formDataStore', store)
+    ctx.provideContext(FORM_DATA_STORE_KEY, store)
 
     // 3. Register the collect_form_data + get_form_data tools, sharing the
     //    same resourceUri/getHtml as the create-form app.
@@ -241,6 +261,8 @@ export const centerOfControlExtension: ToolFlowExtension = {
 // src/extensions/center-of-control.ts
 import { FormDataStore } from '#src/mcp/apps/form-data-store.js'
 import { createFormDataTools } from '#src/mcp/apps/form-data-tools.js'
+import { defineContextKey } from '#src/mcp/extensions/tool-flow.js'
+export const FORM_DATA_STORE_KEY = defineContextKey('formDataStore')
 export const centerOfControlExtension = {
   requires: ['apps'],
   register(ctx) {
@@ -252,7 +274,7 @@ export const centerOfControlExtension = {
     ctx.setFormSubmitMode('collect')
     // 2. Spin up a per-server FormDataStore and expose it to other tools.
     const store = new FormDataStore()
-    ctx.provideContext('formDataStore', store)
+    ctx.provideContext(FORM_DATA_STORE_KEY, store)
     // 3. Register the collect_form_data + get_form_data tools, sharing the
     //    same resourceUri/getHtml as the create-form app.
     const modelNames = extractModelNames(formApp.toolInputSchema)
@@ -297,7 +319,7 @@ A custom extension that posts every create/update to a Slack channel and waits f
 ```ts file=src/extensions/slack-approval-extension.ts
 // your-server/extensions/slack-approval.ts
 import { z } from 'zod'
-import type { ToolFlowExtension } from '@mcp-rune/mcp-rune/extensions'
+import { defineContextKey, type ToolFlowExtension } from '@mcp-rune/mcp-rune/extensions'
 import type { AppDefinition } from '@mcp-rune/mcp-rune/apps'
 import { SlackClient } from './slack-client.js'
 import { ApprovalStore } from './approval-store.js'
@@ -307,6 +329,8 @@ interface SlackApprovalConfig {
   slackToken: string
   approveEmoji?: string
 }
+
+export const APPROVAL_STORE_KEY = defineContextKey<ApprovalStore>('approvalStore')
 
 export function slackApprovalExtension(config: SlackApprovalConfig): ToolFlowExtension {
   return {
@@ -323,7 +347,7 @@ export function slackApprovalExtension(config: SlackApprovalConfig): ToolFlowExt
         channel: config.channel,
         approveEmoji: config.approveEmoji ?? '✅'
       })
-      ctx.provideContext('approvalStore', store)
+      ctx.provideContext(APPROVAL_STORE_KEY, store)
 
       const submitTool: AppDefinition = {
         name: 'request_approval',
@@ -372,8 +396,10 @@ export function slackApprovalExtension(config: SlackApprovalConfig): ToolFlowExt
 ```js file=src/extensions/slack-approval-extension.js
 // your-server/extensions/slack-approval.ts
 import { z } from 'zod'
+import { defineContextKey } from '@mcp-rune/mcp-rune/extensions'
 import { SlackClient } from './slack-client.js'
 import { ApprovalStore } from './approval-store.js'
+export const APPROVAL_STORE_KEY = defineContextKey('approvalStore')
 export function slackApprovalExtension(config) {
   return {
     requires: ['apps'],
@@ -387,7 +413,7 @@ export function slackApprovalExtension(config) {
         channel: config.channel,
         approveEmoji: config.approveEmoji ?? '✅'
       })
-      ctx.provideContext('approvalStore', store)
+      ctx.provideContext(APPROVAL_STORE_KEY, store)
       const submitTool = {
         name: 'request_approval',
         description: 'Stage a model write and post it to Slack for approval.',
@@ -476,7 +502,7 @@ Tool-flow extensions register **before** app tools register on the underlying `M
 
 Practically: don't mix Center-of-Control with another extension that also flips submit mode. Compose them carefully or pick one.
 
-`provideContext` is additive — two extensions can both contribute keys without conflict, as long as the keys differ.
+`provideContext` is additive — two extensions can both contribute keys without conflict, as long as the keys differ. If two extensions provide keys with the same `name`, registration throws at boot with both contributor names in the error message (no silent overwrites). See the §`provideContext(key, value)` section above for the typed-key pattern that makes collisions impossible to ignore.
 
 ## Testing
 
@@ -500,8 +526,8 @@ describe('slackApprovalExtension', () => {
         toolInputSchema: {}
       }),
       setFormSubmitMode: vi.fn(),
-      provideContext: (k: string, v: unknown) => {
-        context[k] = v
+      provideContext: (k: { name: string }, v: unknown) => {
+        context[k.name] = v
       },
       logger: { info: vi.fn(), debug: vi.fn(), error: vi.fn(), warn: vi.fn() }
     }
@@ -534,7 +560,7 @@ describe('slackApprovalExtension', () => {
       }),
       setFormSubmitMode: vi.fn(),
       provideContext: (k, v) => {
-        context[k] = v
+        context[k.name] = v
       },
       logger: { info: vi.fn(), debug: vi.fn(), error: vi.fn(), warn: vi.fn() }
     }

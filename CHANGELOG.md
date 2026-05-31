@@ -4,6 +4,55 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.58.0] - 2026-05-31 (BREAKING)
+
+> Closes #157. Last of four "Frankenstein-seed" cleanups from the extensibility ADR. Replaces the untyped `provideContext(key: string, value: unknown)` with a typed-key API: `defineContextKey<T>(name)` produces a `ContextKey<T>`, and `provideContext<T>(key, value)` enforces that the value's type matches the key's declared type. Adds fail-fast collision detection across all tool-flow extensions, completing the symmetry with tool names (#152), summary strategies (v0.53), mixin methods (#155), and prompt names (#154).
+
+### Added
+
+- **`defineContextKey<T>(name: string): ContextKey<T>`** — typed-key factory exported from `@mcp-rune/mcp-rune/extensions`. Producers declare keys once (`export const FORM_DATA_STORE_KEY = defineContextKey<FormDataStore>('formDataStore')`) so consumer modules can import the typed handle instead of redeclaring string literals.
+- **`ContextKey<T>` interface** with a phantom `__type?: T` field that's never assigned at runtime but lets TypeScript enforce value/key type alignment at `provideContext` callsites.
+- **Boot-time context-key collision detection** in `applyToolFlowExtensions` (`src/mcp/server-factory.ts`). Two extensions providing keys with the same `name` throw at registration with both contributor names and the offending key in the error message. Tracks owners via a `Map<string, string>` parallel to `_toolOwners` and `_mixinMethodOwners`.
+- **`FORM_DATA_STORE_KEY`** exported from `@mcp-rune/mcp-rune/extensions/center-of-control` — the canonical typed key for the per-server `FormDataStore` threaded by `centerOfControlExtension`. Deployers building tools that read the staged form payload import this key.
+- **6 new unit tests** in `__tests__/lib/mcp/extensions/tool-flow.spec.ts` covering: `defineContextKey` preserves the name; typed values flow through to the per-handler context; same-name collision across two extensions fails fast with both keys in the error; messages name both contributors and the offending key; single-extension double-provide also fails.
+
+### Changed (BREAKING)
+
+- **`ToolFlowExtensionContext.provideContext` signature** changes from `(key: string, value: unknown) => void` to `<T>(key: ContextKey<T>, value: T) => void`. Any extension passing a raw string to `provideContext` now gets a type error.
+- **`centerOfControlExtension`** migrated from `ctx.provideContext('formDataStore', store)` to `ctx.provideContext(FORM_DATA_STORE_KEY, store)`. The runtime context property name is unchanged (`'formDataStore'`), so consumers that read `context.formDataStore` still work — only the producer side moves to the typed key.
+
+### Changed (non-breaking)
+
+- **`docs/guides/tool-flow-extension-guide.md`** — the `provideContext` interface signatures, both worked examples (Center-of-Control + Slack Approval), and the test mocks all migrate to the typed-key pattern. Adds the collision rule to the §"Ordering and Composition" section.
+- **Test mock** in `__tests__/lib/extensions/center-of-control.spec.ts` updated to dereference `key.name` instead of `key` directly.
+
+### Migration
+
+Any extension calling `provideContext` with a raw string must define a key first:
+
+```ts file=src/extensions/my-extension.ts
+import { defineContextKey } from '@mcp-rune/mcp-rune/extensions'
+
+// Top-level so consumers can import the typed handle
+export const MY_STATE_KEY = defineContextKey<MyState>('myState')
+
+// Inside register(ctx):
+ctx.provideContext(MY_STATE_KEY, state)
+```
+
+```js file=src/extensions/my-extension.js
+import { defineContextKey } from '@mcp-rune/mcp-rune/extensions'
+
+export const MY_STATE_KEY = defineContextKey('myState')
+
+// Inside register(ctx):
+ctx.provideContext(MY_STATE_KEY, state)
+```
+
+The runtime context bag is unchanged — `context[MY_STATE_KEY.name]` (i.e. `context.myState`) is the same property handlers always read. Consumers can keep reading `context.myState` directly or migrate to `context[MY_STATE_KEY.name]` for symbol-style indirection. No consumer-side migration is required by this release.
+
+[0.58.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.57.0...v0.58.0
+
 ## [0.57.0] - 2026-05-31 (BREAKING)
 
 > Closes #156. Third of four "Frankenstein-seed" cleanups from the extensibility ADR. Promotes the per-tool `requiresAuth` override from an undocumented one-off "exception" to a first-class declarable field, and re-routes consumers through a `getRequiresAuth()` helper so the category-default fallback is centralized.

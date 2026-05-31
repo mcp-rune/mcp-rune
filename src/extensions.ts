@@ -3,12 +3,14 @@
 // (e.g. `./extensions/cimd`, `./extensions/center-of-control`).
 // See docs/guides/extensions.md.
 export type {
+  ContextKey,
   FormSubmitMode,
   ToolFlowExtension,
   ToolFlowExtensionCapability,
   ToolFlowExtensionContext,
   ToolFlowExtensionMap
 } from './mcp/extensions/tool-flow.js'
+export { defineContextKey } from './mcp/extensions/tool-flow.js'
 export type {
   HttpExtension,
   HttpExtensionCapability,
