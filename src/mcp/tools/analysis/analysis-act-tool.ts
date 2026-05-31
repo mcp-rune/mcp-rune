@@ -54,9 +54,7 @@ export class AnalysisActTool extends SaveModelBaseTool {
     return TOOL_CATEGORIES.ANALYSIS
   }
 
-  static override get requiresAuth(): boolean {
-    return true
-  }
+  static override requiresAuth = true
 
   override get name(): string {
     return 'analysis_act'

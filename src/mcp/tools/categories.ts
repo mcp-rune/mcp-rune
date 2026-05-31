@@ -33,7 +33,9 @@ export const TOOL_CATEGORIES = {
   AUTOCOMPLETE: 'autocomplete',
 
   /** Analysis tools - qualitative data analysis sessions
-   * Requires vector storage configuration, no API auth required (except analysis_ingest which overrides requiresAuth)
+   * Requires vector storage configuration; auth defaults to false. Tools in this
+   * category that need API access (e.g. `analysis_ingest`, `analysis_act`) opt
+   * in via `static override requiresAuth = true` — see `BaseTool.requiresAuth`.
    * Examples: analysis_ingest, analysis_store, analysis_query, analysis_clear
    */
   ANALYSIS: 'analysis',

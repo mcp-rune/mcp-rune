@@ -147,6 +147,36 @@ export class MyTool extends ServerBaseTool {
 
 Default category is `DATA` (requires authentication).
 
+### Overriding `requiresAuth` per tool
+
+Most tools inherit the auth requirement from their category. When a tool needs to depart from the category default — for example, an `ANALYSIS` tool that fetches records from the upstream API and therefore needs auth despite the category being vector-storage-gated — declare a per-tool override as a static field:
+
+```ts file=src/tools/analysis-ingest-tool.ts
+import { BaseTool, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
+
+export class AnalysisIngestTool extends BaseTool {
+  static override get category() {
+    return TOOL_CATEGORIES.ANALYSIS
+  }
+  // ANALYSIS defaults to no-auth; this tool fetches from the API, so opts in.
+  static override requiresAuth = true
+}
+```
+
+```js file=src/tools/analysis-ingest-tool.js
+import { BaseTool, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
+
+export class AnalysisIngestTool extends BaseTool {
+  static get category() {
+    return TOOL_CATEGORIES.ANALYSIS
+  }
+  // ANALYSIS defaults to no-auth; this tool fetches from the API, so opts in.
+  static requiresAuth = true
+}
+```
+
+`ToolRegistry` resolves the effective auth requirement through `ToolCls.getRequiresAuth()`, which returns the per-tool field if set or falls back to `getCategoryConfig(category).requiresAuth` otherwise. Always call `getRequiresAuth()` rather than reading `requiresAuth` directly — unset tools have `requiresAuth === undefined` and only the helper applies the category default.
+
 ## Multi-product disambiguation (deployer recipe)
 
 When multiple MCP servers are connected to the same AI agent, tool names may overlap and the LLM needs a hint about which product a tool belongs to. mcp-rune does not bake an opinionated disambiguation paragraph into core; instead, deployers add it themselves by overriding `getUsageRules()` in their server-specific base tool class.

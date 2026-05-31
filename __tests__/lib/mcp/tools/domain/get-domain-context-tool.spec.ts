@@ -59,7 +59,7 @@ describe('GetDomainContextTool', () => {
   it('should have correct name and category', () => {
     expect(tool.name).toBe('get_domain_context')
     expect(GetDomainContextTool.category).toBe(TOOL_CATEGORIES.DOMAIN)
-    expect(GetDomainContextTool.requiresAuth).toBe(false)
+    expect(GetDomainContextTool.getRequiresAuth()).toBe(false)
   })
 
   it('should return overview when no params provided', async () => {

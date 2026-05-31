@@ -101,7 +101,7 @@ describe('GetWorkflowStepTool', () => {
   it('should have correct name and category', () => {
     expect(tool.name).toBe('get_workflow_step')
     expect(GetWorkflowStepTool.category).toBe(TOOL_CATEGORIES.DOMAIN)
-    expect(GetWorkflowStepTool.requiresAuth).toBe(false)
+    expect(GetWorkflowStepTool.getRequiresAuth()).toBe(false)
   })
 
   // ─── Regular Steps ──────────────────────────────────────────────────────

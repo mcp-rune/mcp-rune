@@ -53,7 +53,7 @@ describe('lib/mcp/tools/analysis/analysis-act-tool', () => {
       const tool = new AnalysisActTool({})
       expect(tool.name).toBe('analysis_act')
       expect(AnalysisActTool.category).toBe(TOOL_CATEGORIES.ANALYSIS)
-      expect(AnalysisActTool.requiresAuth).toBe(true)
+      expect(AnalysisActTool.getRequiresAuth()).toBe(true)
       expect(tool.annotations).toMatchObject({
         readOnlyHint: false,
         destructiveHint: true,

@@ -16,7 +16,7 @@ describe('lib/mcp/prompts/tools/base-strategy-tool', () => {
     })
 
     it('should not require auth (strategy tools are public)', () => {
-      expect(BaseStrategyTool.requiresAuth).toBe(false)
+      expect(BaseStrategyTool.getRequiresAuth()).toBe(false)
     })
   })
 

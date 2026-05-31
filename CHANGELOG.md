@@ -4,6 +4,63 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.57.0] - 2026-05-31 (BREAKING)
+
+> Closes #156. Third of four "Frankenstein-seed" cleanups from the extensibility ADR. Promotes the per-tool `requiresAuth` override from an undocumented one-off "exception" to a first-class declarable field, and re-routes consumers through a `getRequiresAuth()` helper so the category-default fallback is centralized.
+
+### Investigation note
+
+The issue body assumed per-tool override didn't exist. It does — two in-repo tools (`AnalysisIngestTool`, `AnalysisActTool`) already used `static override get requiresAuth() { return true }` to depart from the `ANALYSIS` category default. The real Frankenstein-seed was ergonomic and discoverability: the verbose getter syntax, the undocumented pattern, and the categories.ts comment framing the override as an "exception" rather than the documented mechanism. This release closes those three gaps without speculative new abstractions.
+
+### Changed (BREAKING)
+
+- **`BaseTool.requiresAuth` is now a declarable static field** (`static requiresAuth?: boolean`), not a static getter. Subclasses override with one-line field syntax: `static override requiresAuth = true`. When unset, callers fall through to the category default via `getRequiresAuth()`.
+- **New `BaseTool.getRequiresAuth(): boolean` static helper** that resolves `this.requiresAuth ?? getCategoryConfig(this.category).requiresAuth`. This is the canonical read path for the effective auth requirement.
+- **`ToolRegistry` reads `ToolCls.getRequiresAuth()` instead of `ToolCls.requiresAuth`** (`src/mcp/tools/tool-registry.ts:373` consumer site). The interface `ToolClass` (`tool-registry.ts:89-94`) drops the required `readonly requiresAuth: boolean` and adds the required `getRequiresAuth(): boolean` method.
+- **In-repo overrides migrated to field syntax.** `src/mcp/tools/analysis/analysis-ingest-tool.ts` and `src/mcp/tools/analysis/analysis-act-tool.ts` both now declare `static override requiresAuth = true` instead of the previous getter form.
+
+### Changed (non-breaking)
+
+- **`src/mcp/tools/categories.ts:36`** — the comment that framed `analysis_ingest` as an "exception" now points to the documented per-tool override pattern. The mechanism is first-class, not a workaround.
+- **`docs/guides/tool-creation-guide.md`** — new "Overriding `requiresAuth` per tool" subsection under §"Tool Categories" with paired TS+JS examples and a note on why consumers must call `getRequiresAuth()` rather than read the field directly.
+- **3 new unit tests** in `__tests__/lib/mcp/tools/base-tool.spec.ts` pinning the override contract: field-set overrides the category default in both directions (true/false), unset falls back to the category default.
+
+### Migration
+
+Any deployer or in-repo tool using the static-getter form must migrate to the field form:
+
+```ts file=src/tools/my-analysis-tool.ts
+// BEFORE
+class MyAnalysisTool extends BaseTool {
+  static override get requiresAuth(): boolean {
+    return true
+  }
+}
+
+// AFTER
+class MyAnalysisTool extends BaseTool {
+  static override requiresAuth = true
+}
+```
+
+```js file=src/tools/my-analysis-tool.js
+// BEFORE
+class MyAnalysisTool extends BaseTool {
+  static get requiresAuth() {
+    return true
+  }
+}
+
+// AFTER
+class MyAnalysisTool extends BaseTool {
+  static requiresAuth = true
+}
+```
+
+Any code reading `Tool.requiresAuth` directly must switch to `Tool.getRequiresAuth()`. Tools that don't set the field will return `undefined` for the direct read; only the helper applies the category default. The framework's own `ToolRegistry` already calls the helper; this affects only test code and any deployer code that introspected tools for diagnostics.
+
+[0.57.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.56.0...v0.57.0
+
 ## [0.56.0] - 2026-05-31
 
 > Closes #155. Second of four "Frankenstein-seed" cleanups from the extensibility ADR. Closes a documentation-implementation gap: `docs/guides/api-extensions.md` and `src/mcp/api-extensions/types.ts` already promised that "Mixin method names must be globally unique across all registered extensions; collisions throw at boot." The code did not enforce it — `Object.assign(service, mixin(service))` silently overwrote. Now it throws fast with both contributor keys in the error message, mirroring the rules already enforced for tool names (`api-extensions.md:224`) and summary-strategy names (`api-extensions.md:303`).

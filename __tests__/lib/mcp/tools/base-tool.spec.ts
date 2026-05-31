@@ -82,7 +82,7 @@ describe('lib/mcp/tools/base-tool', () => {
     })
 
     it('should require auth by default', () => {
-      expect(BaseTool.requiresAuth).toBe(true)
+      expect(BaseTool.getRequiresAuth()).toBe(true)
     })
 
     it('should allow custom categories', () => {
@@ -92,7 +92,41 @@ describe('lib/mcp/tools/base-tool', () => {
         }
       }
       expect(StrategyTool.category).toBe(TOOL_CATEGORIES.STRATEGY)
-      expect(StrategyTool.requiresAuth).toBe(false)
+      expect(StrategyTool.getRequiresAuth()).toBe(false)
+    })
+
+    it('should let a subclass override requiresAuth via field syntax', () => {
+      class AnalysisWithAuth extends BaseTool {
+        static override get category() {
+          return TOOL_CATEGORIES.ANALYSIS
+        }
+        static override requiresAuth = true
+      }
+      // ANALYSIS category defaults to no-auth; the per-tool field wins.
+      expect(AnalysisWithAuth.requiresAuth).toBe(true)
+      expect(AnalysisWithAuth.getRequiresAuth()).toBe(true)
+    })
+
+    it('should let a subclass override requiresAuth to false against an auth-required category', () => {
+      class DataNoAuth extends BaseTool {
+        static override get category() {
+          return TOOL_CATEGORIES.DATA
+        }
+        static override requiresAuth = false
+      }
+      // DATA category defaults to auth; the per-tool field still wins when explicitly false.
+      expect(DataNoAuth.requiresAuth).toBe(false)
+      expect(DataNoAuth.getRequiresAuth()).toBe(false)
+    })
+
+    it('should fall back to the category default when requiresAuth is unset', () => {
+      class PlainAnalysis extends BaseTool {
+        static override get category() {
+          return TOOL_CATEGORIES.ANALYSIS
+        }
+      }
+      expect(PlainAnalysis.requiresAuth).toBeUndefined()
+      expect(PlainAnalysis.getRequiresAuth()).toBe(false)
     })
   })
 
