@@ -1,6 +1,10 @@
 # Bookshelf Example
 
-A minimal mcp-rune server with one model (Book) showing the full framework surface: tools, prompts, validation, and documentation — all generated from a single model definition.
+A minimal mcp-rune server with one model (Book) showing the full framework
+surface: tools, prompts, validation, interactive apps, and documentation —
+all generated from a single model definition. Backed by an **in-memory
+DataLayer adapter**, so every tool works out of the box with zero external
+infrastructure.
 
 ## Quick Start
 
@@ -25,36 +29,37 @@ Or configure Claude Desktop (`claude_desktop_config.json`):
 
 ## What You Get
 
-From a **30-line model definition**, the framework registers these tools automatically:
+From a **30-line model definition**, the framework registers nine tools that
+all work immediately — no API, no database, no auth setup:
 
-### Tools that work immediately (no API needed)
+| Tool                 | What it does                                         |
+| -------------------- | ---------------------------------------------------- |
+| `list_models`        | Discover available models and their schemas          |
+| `get_prompt_guide`   | Step-by-step creation guide with field documentation |
+| `validate_form`      | Validate collected fields before submitting          |
+| `get_form_summary`   | Human-readable + technical summary of form state     |
+| `find_records`       | Find by ID or list records                           |
+| `create_model`       | Create a book record                                 |
+| `update_model`       | Update book attributes                               |
+| `delete_model`       | Delete a book                                        |
+| `bulk_action_models` | Batch create/update/delete                           |
 
-| Tool                | What it does                                         |
-| ------------------- | ---------------------------------------------------- |
-| `list_models`       | Discover available models and their schemas          |
-| `get_prompt_guide`  | Step-by-step creation guide with field documentation |
-| `validate_form`     | Validate collected fields before submitting          |
-| `get_form_summary`  | Human-readable + technical summary of form state     |
-| `get_filters_guide` | Filter documentation for search                      |
+CRUD operations are served by `InMemoryDataLayer` — the same adapter the
+framework's own tests use. Three seed books (`Clean Code`, `The Pragmatic
+Programmer`, `Design Patterns`) are pre-loaded so `find_records` returns
+something interesting on first run. State is per-process and resets when
+you restart the server.
 
-### Tools that need an API backend
-
-| Tool                 | What it does               |
-| -------------------- | -------------------------- |
-| `create_model`       | Create a book record       |
-| `find_model`         | Find by ID or list records |
-| `update_model`       | Update book attributes     |
-| `delete_model`       | Delete a book              |
-| `search_records`     | Search with filters        |
-| `bulk_action_models` | Batch create/update/delete |
-
-The strategy tools are the most interesting part — they showcase what mcp-rune does that other frameworks don't: **guided form filling with validation feedback, no API calls needed**.
+The strategy tools are the most interesting part — they showcase what
+mcp-rune does that other frameworks don't: **guided form filling with
+validation feedback, derived directly from the model schema**.
 
 ---
 
 ## Example Conversations
 
-Below are real interactions showing what the LLM sees and does when connected to this server.
+Below are real interactions showing what the LLM sees and does when connected
+to this server.
 
 ### 1. Discovery — "What can I work with?"
 
@@ -68,25 +73,25 @@ The LLM's first step is usually to discover the available models.
 [
   {
     "name": "book",
-    "endpoint": "/books",
+    "endpoint": "books",
     "description": "A book in the library",
     "attributes": ["title", "author", "status", "rating", "notes"],
     "required_attributes": ["title", "author"],
     "read_only": false,
-    "enum_fields": {
-      "status": ["unread", "reading", "completed"]
-    }
+    "enum_fields": ["status"]
   }
 ]
 ```
 
-The LLM now knows: there's one model called "book" with 5 fields, 2 required, and a status enum.
+The LLM now knows: there's one model called "book" with 5 fields, 2 required,
+and a status enum.
 
 ---
 
 ### 2. Getting the Creation Guide
 
-Before creating a record, the LLM fetches the prompt guide to understand the form structure.
+Before creating a record, the LLM fetches the prompt guide to understand the
+form structure.
 
 **LLM calls:** `get_prompt_guide({ guide_name: "book" })`
 
@@ -169,13 +174,15 @@ notes: "..." // optional
 })
 ```
 
-The LLM reads this guide and follows the recommended workflow: collect fields from the user, validate, summarize, then create.
+The LLM reads this guide and follows the recommended workflow: collect fields
+from the user, validate, summarize, then create.
 
 ---
 
 ### 3. Validation — "Is this ready to submit?"
 
-After collecting fields from the user, the LLM validates before calling the API.
+After collecting fields from the user, the LLM validates before calling the
+underlying tool.
 
 **LLM calls:** `validate_form({ model: "book", fields: { title: "Clean Code" } })`
 
@@ -184,13 +191,16 @@ After collecting fields from the user, the LLM validates before calling the API.
 ```json
 {
   "valid": false,
-  "errors": ["Field 'author' is required but missing"],
-  "warnings": [],
-  "ready_to_submit": false
+  "ready_to_submit": false,
+  "errors": [{ "field": "author", "message": "Author name is required" }],
+  "warnings": ["Using default for status: unread"],
+  "computed": { "status": "unread" },
+  "fields": { "status": "unread", "title": "Clean Code" }
 }
 ```
 
-The LLM tells the user: _"I still need the author name before I can create the book."_
+The LLM tells the user: _"I still need the author name before I can create
+the book."_
 
 After the user provides it:
 
@@ -201,9 +211,10 @@ After the user provides it:
 ```json
 {
   "valid": true,
+  "ready_to_submit": true,
   "errors": [],
   "warnings": [],
-  "ready_to_submit": true
+  "fields": { "status": "unread", "title": "Clean Code", "author": "Robert C. Martin", "rating": 5 }
 }
 ```
 
@@ -211,25 +222,10 @@ After the user provides it:
 
 ### 4. Summary — "Here's what I'm about to create"
 
-Before calling the API, the LLM presents a summary for user confirmation.
+Before calling the data tool, the LLM presents a summary for user
+confirmation.
 
 **LLM calls:** `get_form_summary({ model: "book", fields: { title: "Clean Code", author: "Robert C. Martin", rating: 5 } })`
-
-**Server responds:**
-
-```json
-{
-  "human": "Creating a book: 'Clean Code' by Robert C. Martin, rated 5/5, status: unread (default)",
-  "technical": {
-    "model": "book",
-    "attributes": {
-      "title": "Clean Code",
-      "author": "Robert C. Martin",
-      "rating": 5
-    }
-  }
-}
-```
 
 The LLM presents the human-readable summary:
 
@@ -244,9 +240,7 @@ The LLM presents the human-readable summary:
 
 ---
 
-### 5. Creation (requires API backend)
-
-If an API backend is connected:
+### 5. Creation
 
 **LLM calls:** `create_model({ model: "book", attributes: { title: "Clean Code", author: "Robert C. Martin", rating: 5 } })`
 
@@ -256,16 +250,12 @@ If an API backend is connected:
 {
   "status": "created",
   "model": "book",
-  "id": "42",
-  "data": {
-    "id": 42,
-    "title": "Clean Code",
-    "author": "Robert C. Martin",
-    "status": "unread",
-    "rating": 5
-  }
+  "id": 4
 }
 ```
+
+The record now lives in the in-memory store alongside the three seed books
+(IDs 1–3). `find_records({ model: "book", id: "4" })` returns it back.
 
 ---
 
@@ -317,22 +307,26 @@ LLM:  [calls bulk_action_models({
          ]
        })]
 
-      Done! Created both books:
-      - Clean Code (ID: 42)
-      - The Pragmatic Programmer (ID: 43)
+      Done! Created both books.
 ```
 
 ---
 
 ## How the LLM Decides Which Tools to Call
 
-The MCP protocol exposes tool names, descriptions, and input schemas to the LLM. The LLM picks tools based on:
+The MCP protocol exposes tool names, descriptions, and input schemas to the
+LLM. The LLM picks tools based on:
 
-1. **Tool descriptions** — each tool has a description like "Create a new record for a model" that the LLM matches against user intent
-2. **Prompt guide** — the `get_prompt_guide` response explicitly tells the LLM the recommended workflow (validate → summarize → create)
-3. **Validation feedback** — `validate_form` errors guide the LLM to collect missing fields before retrying
+1. **Tool descriptions** — each tool has a description like "Create a new
+   record for a model" that the LLM matches against user intent
+2. **Prompt guide** — the `get_prompt_guide` response explicitly tells the
+   LLM the recommended workflow (validate → summarize → create)
+3. **Validation feedback** — `validate_form` errors guide the LLM to collect
+   missing fields before retrying
 
-The framework's tool descriptions include model-specific context (server name, model names, required fields) so the LLM can make informed decisions without extra round-trips.
+The framework's tool descriptions include model-specific context (server
+name, model names, required fields) so the LLM can make informed decisions
+without extra round-trips.
 
 ## Tool Response Format
 
@@ -363,33 +357,34 @@ bookshelf/
 │   └── book.ts             Model definition (attributes, types, validation)
 ├── prompts/
 │   └── book-prompt.ts      Prompt with hybrid strategy and field groups
-├── config.ts               Server wiring (tool + prompt registries)
+├── config.ts               Server wiring (ToolRegistry + in-memory DataLayer)
 ├── server.ts               StdioServer entry point
 └── tsconfig.json
 ```
 
-## Connecting to a Real API
+## Swapping in a Real Backend
 
-The strategy tools (guide, validate, summary) work immediately. To enable CRUD tools, inject an API client in `config.ts`:
+The example uses `createInMemoryDataLayer({ fixtures })` to back every CRUD
+tool with an in-process Map. The seam between `DataLayer` and `ApiClient` is
+opaque to tools, prompts, and apps — swapping to HTTP is a one-line factory
+change.
 
-```typescript
-import axios from 'axios'
+To wire to a real API:
 
-function createApiClient(token: string): ApiClient {
-  const http = axios.create({
-    baseURL: 'https://your-api.example.com',
-    headers: { Authorization: `Bearer ${token}` }
-  })
-  return {
-    get: (url, params) => http.get(url, { params }).then((r) => r.data),
-    post: (url, data) => http.post(url, data).then((r) => r.data),
-    patch: (url, data) => http.patch(url, data).then((r) => r.data),
-    delete: (url) => http.delete(url).then((r) => r.data)
-  }
-}
-```
+1. Remove the `dataLayer` argument from `new ToolRegistry({ ... })` in
+   `config.ts`. The default factory wraps `ModelService` + `ApiClient`.
+2. Replace the stub `createApiClient` with a real one that builds an
+   authenticated HTTP client from the bearer token. See
+   [`docs/guides/api-client-guide.md`](../../docs/guides/api-client-guide.md).
+3. Make sure your backend serves the model under the configured endpoint
+   (`books`) and matches the convention (JSON:API by default; HAL also
+   supported). See
+   [`docs/guides/api-convention-guide.md`](../../docs/guides/api-convention-guide.md).
 
-mcp-rune doesn't care what API you talk to. It formats payloads according to the configured convention (JSON:API by default, HAL also supported) and normalizes responses automatically.
+For the full adapter-swap pattern (in-memory stub, third-party library
+wrapper, custom implementation), see
+[`docs/guides/data-layer-guide.md`](../../docs/guides/data-layer-guide.md)
+("Swapping the Adapter").
 
 ## MCP Apps (interactive UI)
 
@@ -423,9 +418,11 @@ const appRegistry = createDefaultAppRegistry({
 
 ## Next Steps
 
-- Add more models (Author, Category) — still 8 tools, polymorphic
+- Add more models (Author, Category) — same nine tools, polymorphic
+- Enable search (`search_records`, `get_filters_guide`) by registering the
+  `search` ApiExtension — see
+  [`docs/guides/search-adapter-guide.md`](../../docs/guides/search-adapter-guide.md)
 - Add OAuth for remote access (`HttpServer` + `OAuthService`)
 - Customize the apps' theming or register custom attribute kinds via
   `themeOverrides` / `formatters` on `createDefaultAppRegistry`
-- Add domain workflows for multi-step operations
 - See the [guides](../../docs/guides/) for deep dives on each feature

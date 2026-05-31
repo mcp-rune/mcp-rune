@@ -1,11 +1,13 @@
-import { createServer } from '@mcp-rune/mcp-rune/server'
-import { DATA_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
-import { BasePromptRegistry, STRATEGY_TOOL_CLASSES } from '@mcp-rune/mcp-rune/prompts'
+import { createInMemoryDataLayer } from '@mcp-rune/mcp-rune/core'
 import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
+import { BasePromptRegistry, STRATEGY_TOOL_CLASSES } from '@mcp-rune/mcp-rune/prompts'
+import { createServer } from '@mcp-rune/mcp-rune/server'
+import { DATA_TOOL_CLASSES, ToolRegistry } from '@mcp-rune/mcp-rune/tools'
+import type { ApiClient } from '@mcp-rune/mcp-rune/core'
+
 import { Book } from './models/book.js'
 import { BookPrompt } from './prompts/book-prompt.js'
 
-// Model and prompt registries
 const MODEL_CLASSES = { book: Book }
 
 const promptRegistry = new BasePromptRegistry()
@@ -15,55 +17,58 @@ promptRegistry.register('book', BookPrompt, {
   model: 'book'
 })
 
-// Tool registry — registers CRUD + strategy tools
-const toolRegistry = {
-  serverContext: {
-    name: 'Bookshelf',
-    namespace: 'bookshelf'
+// In-memory DataLayer with a few seed books so list/find/search return
+// something interesting on first run. To wire a real backend, replace
+// `createInMemoryDataLayer` with the default ModelService + ApiClient
+// path — see docs/guides/data-layer-guide.md ("Swapping the Adapter").
+const BOOK_FIXTURES = {
+  '1': {
+    id: '1',
+    title: 'Clean Code',
+    author: 'Robert C. Martin',
+    status: 'completed',
+    rating: 5
   },
-
-  registerTools(mcpServer: unknown) {
-    const deps = {
-      logger: console,
-      models: MODEL_CLASSES,
-      promptRegistry,
-      serverContext: this.serverContext
-    }
-
-    // Register data tools (require auth — work when API backend is available)
-    for (const [, ToolClass] of Object.entries(DATA_TOOL_CLASSES)) {
-      const tool = new ToolClass(deps)
-      ;(mcpServer as { tool: Function }).tool(
-        tool.name,
-        tool.baseDescription,
-        tool.inputSchema,
-        tool.annotations,
-        async (args: Record<string, unknown>) => {
-          // Inject a DataLayer adapter here. The default `ModelService`
-          // adapter wraps an `ApiClient`; alternatives (in-memory stub,
-          // third-party library) implement the same `DataLayer` interface.
-          // Production servers should configure this on `ToolRegistry`
-          // via the `dataLayer` factory option — this raw registration
-          // path is shown for illustration only.
-          tool.dataLayer = undefined
-          return tool.execute(args)
-        }
-      )
-    }
-
-    // Register strategy tools (no auth needed — work immediately)
-    for (const [, ToolClass] of Object.entries(STRATEGY_TOOL_CLASSES)) {
-      const tool = new ToolClass(deps)
-      ;(mcpServer as { tool: Function }).tool(
-        tool.name,
-        tool.baseDescription,
-        tool.inputSchema,
-        tool.annotations,
-        async (args: Record<string, unknown>) => tool.execute(args)
-      )
-    }
+  '2': {
+    id: '2',
+    title: 'The Pragmatic Programmer',
+    author: 'Andrew Hunt and David Thomas',
+    status: 'reading'
+  },
+  '3': {
+    id: '3',
+    title: 'Design Patterns',
+    author: 'Erich Gamma et al.',
+    status: 'unread'
   }
 }
+
+// idGenerator starts after the seed fixtures so newly-created books don't
+// overwrite the pre-seeded ones (default generator starts at 1).
+let nextBookId = Object.keys(BOOK_FIXTURES).length
+const dataLayer = createInMemoryDataLayer({
+  fixtures: { book: BOOK_FIXTURES },
+  idGenerator: () => String(++nextBookId)
+})
+
+// The in-memory adapter never touches an ApiClient, but ToolRegistry still
+// requires a factory for auth-gated tools. The Proxy surfaces a clear error
+// if anything accidentally tries to make an HTTP call.
+const stubApiClient = new Proxy({} as ApiClient, {
+  get() {
+    throw new Error('In-memory DataLayer is active; HTTP ApiClient should not be invoked.')
+  }
+})
+
+const toolRegistry = new ToolRegistry({
+  toolClasses: { ...DATA_TOOL_CLASSES, ...STRATEGY_TOOL_CLASSES },
+  models: MODEL_CLASSES,
+  serverContext: { name: 'Bookshelf' },
+  namespace: 'bookshelf',
+  promptRegistry,
+  createApiClient: () => stubApiClient,
+  dataLayer
+})
 
 // MCP Apps — interactive UI widgets (list, detail, form, multi-select, search,
 // autocomplete-picker). One call wires all six.
@@ -85,7 +90,6 @@ const appRegistry = createDefaultAppRegistry({
   //   }
 })
 
-/** Create MCP server instance for this bookshelf server */
 export const mcpConfig = {
   name: 'bookshelf-mcp',
 
