@@ -584,7 +584,7 @@ Three lines of wiring across three config maps is acceptable. A fourth abstracti
 
 **Why no `defineExtension({...})` wrapper:** sugar that collapses the three surfaces into one object would have to stay in sync with three underlying types, hide the layer model from deployers when something breaks, and encourage cross-cutting extensions that should be split. The current decision (documented in the extensibility ADR) is to solve cross-cutting authoring with this convention and revisit sugar only if real usage shows >50% of LOC is wiring boilerplate.
 
-→ Full reference: the co-location convention is also covered in [Authoring Extensions](./authoring-extensions-guide.md).
+→ Full reference with the file/naming convention, a worked end-to-end audit-integration example, and the cross-reference-via-`ContextKey` pattern: [Authoring Extensions — Co-locating a multi-surface extension](./authoring-extensions-guide.md#co-locating-a-multi-surface-extension).
 
 ---
 
