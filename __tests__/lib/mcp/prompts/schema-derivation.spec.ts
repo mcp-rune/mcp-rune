@@ -340,12 +340,11 @@ describe('lib/mcp/prompts/schema-derivation - Memoization', () => {
       expect(Object.keys(result)).toEqual(['name', 'email'])
     })
 
-    it('should map unknown type to string', () => {
+    it('should throw UnknownKindError for an unregistered type (strict mode)', () => {
       const modelConfig = {
         attributes: { data: { type: 'custom_thing' } }
       }
-      const result = deriveFieldDefinitions(modelConfig)
-      expect(result.data.type).toBe('string')
+      expect(() => deriveFieldDefinitions(modelConfig)).toThrow(/Unknown kind/)
     })
 
     it('should include format and completion config', () => {
@@ -440,8 +439,11 @@ describe('lib/mcp/prompts/schema-derivation - Memoization', () => {
       expect(promptTypeFor({ type: 'rating', description: '' })).toBe('integer')
     })
 
-    it('unknown kind falls back to string', () => {
-      expect(promptTypeFor({ type: 'wat', description: '' })).toBe('string')
+    it('unknown kind throws UnknownKindError (strict mode)', () => {
+      // validateRegistries() catches unknown kinds at server boot; reaching
+      // schema-derivation with an unregistered kind means the boot validator
+      // was bypassed. Fail loudly instead of silently falling back to string.
+      expect(() => promptTypeFor({ type: 'wat', description: '' })).toThrow(/Unknown kind/)
     })
   })
 })

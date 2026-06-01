@@ -25,9 +25,27 @@ export {
   truncateString
 } from './core/helpers.js'
 export type { KindDescriptor, KindOpts } from './core/kind-metadata.js'
-export { getKind, KIND_REGISTRY, registerKind } from './core/kind-metadata.js'
+export { getKind, KIND_REGISTRY, registerKind, UnknownKindError } from './core/kind-metadata.js'
 export { readPackageInfo } from './core/package-info.js'
+export type {
+  Issue,
+  IssueLevel,
+  IssueScope,
+  RegistriesInput,
+  ValidationReport
+} from './core/schema-validation.js'
+export {
+  formatReport,
+  SchemaValidationError,
+  validateAssociation,
+  validateAttributeDefinition,
+  validateFormClass,
+  validateModelClass,
+  validatePromptClass,
+  validateRegistries
+} from './core/schema-validation.js'
 export { StartupTracker } from './core/startup-tracker.js'
+export { closestMatch, levenshtein } from './core/suggestions.js'
 export {
   validateEnum,
   validateModel,
