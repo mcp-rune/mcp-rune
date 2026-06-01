@@ -398,17 +398,22 @@ function collectValidFieldNames(ModelClass: ModelClassLike): Set<string> {
     names.add(`${assocName}_id`)
     names.add(`${assocName}_link`)
   }
-  // hasMany convention (mirrors form-schema.ts `buildField`): the assoc
-  // name is the plural rel (`tags`), and the form field is the singular
-  // `_ids` form (`tag_ids`). We accept both forms plus the bare rel name.
-  for (const assocName of Object.keys(ModelClass.associations?.hasMany ?? {})) {
-    names.add(assocName) // rel name (e.g. `tags`)
-    names.add(`${assocName}_ids`) // pluralised _ids (e.g. `tags_ids`)
+  // hasMany conventions accepted:
+  //   - the rel name itself (`repositories`)
+  //   - `<rel>_ids` / `<rel>_links` (naive pluralisation, e.g. `tags_ids`)
+  //   - `<target_model>_ids` / `<target_model>_links` (Rails-style proper
+  //     singular, e.g. `repository_ids` for hasMany.repositories with
+  //     target_model: 'repository')
+  // The last form is what real Rails apps emit; we accept it without
+  // shipping a pluralization library by reading `target_model` directly.
+  for (const [assocName, assoc] of Object.entries(ModelClass.associations?.hasMany ?? {})) {
+    names.add(assocName)
+    names.add(`${assocName}_ids`)
     names.add(`${assocName}_links`)
-    if (assocName.endsWith('s')) {
-      const singular = assocName.slice(0, -1)
-      names.add(`${singular}_ids`) // singular _ids (e.g. `tag_ids`)
-      names.add(`${singular}_links`)
+    const target = assoc.target_model
+    if (target) {
+      names.add(`${target}_ids`)
+      names.add(`${target}_links`)
     }
   }
   return names
