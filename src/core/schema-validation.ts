@@ -224,12 +224,14 @@ export function validateAttributeDefinition(
     }
   }
 
-  // Rule 4: format probe. Warn when the format-specific lookup fails even
-  // though the bare kind resolves — the user asked for a specific format
-  // renderer but none is registered, so the bare-kind renderer will be used.
-  // We don't import `getKind` (it throws in strict mode); we replicate its
-  // narrowing lookup here.
-  if (attr.format) {
+  // Rule 4: format probe. Warn when the format LOOKS like a type narrowing
+  // (single bare identifier — e.g. "url", "isbn", "iso8601") but doesn't
+  // resolve to a registered renderer. Free-form prose like "ISO 8601" or
+  // "Hex color (#RRGGBB)" — anything with a space or punctuation — is
+  // treated as documentation and skipped. That keeps the doctor's signal
+  // sharp; type narrowings that the user clearly intended to register are
+  // surfaced, while descriptive notes don't generate noise.
+  if (attr.format && /^[a-z0-9_-]+$/i.test(attr.format)) {
     const k = attr.type.toLowerCase()
     const f = attr.format.toLowerCase()
     const formatResolves = KIND_REGISTRY.has(`${k}:${f}`) || KIND_REGISTRY.has(f)
@@ -240,7 +242,7 @@ export function validateAttributeDefinition(
         model: modelName,
         attribute: attrName,
         message: `attribute "${attrName}" has format "${attr.format}" that does not resolve to a registered renderer`,
-        hint: `Tried kind:format ("${k}:${f}") and bare format ("${f}"). The form will fall back to the bare-kind renderer ("${k}").`
+        hint: `Tried kind:format ("${k}:${f}") and bare format ("${f}"). The form will fall back to the bare-kind renderer ("${k}"). If "${attr.format}" is just documentation, prose with a space (e.g. "${attr.format} format") is silently accepted.`
       })
     }
   }

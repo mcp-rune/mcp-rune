@@ -140,6 +140,24 @@ describe('lib/core/schema-validation: validateAttributeDefinition', () => {
     expect(issues[0]!.level).toBe('warning')
   })
 
+  it('does NOT warn on free-form prose formats (anything with a space or punctuation)', () => {
+    // `format: "ISO 8601"` / `"Hex color (#RRGGBB)"` are descriptive
+    // documentation, not type narrowings. Suppressing them keeps the
+    // validator's signal sharp.
+    expect(
+      validateAttributeDefinition('Book', 'created_at', {
+        type: 'datetime',
+        format: 'ISO 8601'
+      })
+    ).toEqual([])
+    expect(
+      validateAttributeDefinition('Tag', 'color', {
+        type: 'string',
+        format: 'Hex color (#RRGGBB)'
+      })
+    ).toEqual([])
+  })
+
   it('accepts a known kind:format narrowing', () => {
     const issues = validateAttributeDefinition('Book', 'cover_url', {
       type: 'string',
