@@ -198,7 +198,11 @@ function renderField(field) {
   switch (field.type) {
     case 'text':
     case 'url':
+    case 'email':
     case 'date':
+    case 'datetime-local':
+    case 'time':
+    case 'color':
       container.appendChild(createInput(field))
       break
     case 'number':
@@ -235,9 +239,21 @@ function renderField(field) {
 
 // ─── Field Renderers ─────────────────────────────────────────────────────────
 
+// HTML5 input `type` values we honor directly. Anything outside this set
+// falls back to `text` so we never end up with `type="undefined"`.
+const NATIVE_INPUT_TYPES = new Set([
+  'text',
+  'url',
+  'email',
+  'date',
+  'datetime-local',
+  'time',
+  'color'
+])
+
 function createInput(field) {
   const input = document.createElement('input')
-  input.type = field.type === 'url' ? 'url' : 'text'
+  input.type = NATIVE_INPUT_TYPES.has(field.type) ? field.type : 'text'
   input.id = field.name
   input.name = field.name
   if (field.placeholder) input.placeholder = field.placeholder
