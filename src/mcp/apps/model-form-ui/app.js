@@ -68,7 +68,7 @@ initApp(app)
 // ─── Form Rendering ─────────────────────────────────────────────────────────
 
 /** Field types that render with inline option labels and need stacked layout */
-const STACKED_TYPES = new Set(['checkbox_group', 'multiselect', 'checkbox', 'chips'])
+const STACKED_TYPES = new Set(['checkbox_group', 'multiselect', 'checkbox'])
 
 /**
  * Tiny CSS attribute-selector escape. Field names are model attribute
@@ -198,7 +198,11 @@ function renderField(field) {
   switch (field.type) {
     case 'text':
     case 'url':
+    case 'email':
     case 'date':
+    case 'datetime-local':
+    case 'time':
+    case 'color':
       container.appendChild(createInput(field))
       break
     case 'number':
@@ -213,9 +217,6 @@ function renderField(field) {
           ? createSearchableSelect(field)
           : createSelect(field)
       )
-      break
-    case 'chips':
-      container.appendChild(createChipsControl(field))
       break
     case 'multiselect':
       container.appendChild(createMultiselect(field))
@@ -238,9 +239,21 @@ function renderField(field) {
 
 // ─── Field Renderers ─────────────────────────────────────────────────────────
 
+// HTML5 input `type` values we honor directly. Anything outside this set
+// falls back to `text` so we never end up with `type="undefined"`.
+const NATIVE_INPUT_TYPES = new Set([
+  'text',
+  'url',
+  'email',
+  'date',
+  'datetime-local',
+  'time',
+  'color'
+])
+
 function createInput(field) {
   const input = document.createElement('input')
-  input.type = field.type === 'url' ? 'url' : 'text'
+  input.type = NATIVE_INPUT_TYPES.has(field.type) ? field.type : 'text'
   input.id = field.name
   input.name = field.name
   if (field.placeholder) input.placeholder = field.placeholder
@@ -361,61 +374,6 @@ function createSearchableSelect(field) {
   wrapper.appendChild(hidden)
   wrapper.appendChild(search)
   wrapper.appendChild(dropdown)
-  return wrapper
-}
-
-/**
- * Render a chip / segmented control for small enum fields.
- *
- * Each option is a button. Selecting a chip writes its value to a hidden
- * input named after the field so `collectFormData` can read it like any
- * other control. Clicking the active chip clears the selection (unless
- * the field is required).
- *
- * @param {Object} field - Field definition with `options: [{ value, label }]`
- * @returns {HTMLElement}
- */
-function createChipsControl(field) {
-  const wrapper = document.createElement('div')
-  wrapper.className = 'chips'
-  wrapper.dataset.field = field.name
-
-  const hidden = document.createElement('input')
-  hidden.type = 'hidden'
-  hidden.id = field.name
-  hidden.name = field.name
-  if (field.default !== undefined) hidden.value = String(field.default)
-  wrapper.appendChild(hidden)
-
-  for (const opt of field.options || []) {
-    const chip = document.createElement('button')
-    chip.type = 'button'
-    chip.className = 'chips__option'
-    chip.dataset.value = opt.value
-    chip.textContent = opt.label
-    if (field.default !== undefined && String(opt.value) === String(field.default)) {
-      chip.classList.add('is-active')
-    }
-    chip.addEventListener('click', () => {
-      const alreadyActive = chip.classList.contains('is-active')
-      for (const sibling of wrapper.querySelectorAll('.chips__option')) {
-        sibling.classList.remove('is-active')
-      }
-      if (alreadyActive && !field.required) {
-        hidden.value = ''
-      } else {
-        chip.classList.add('is-active')
-        hidden.value = String(opt.value)
-      }
-      // Re-evaluate the submit gate every time a chip toggles.
-      updateSubmitGate()
-      // Fire a change event so any setupConditionalVisibility listener
-      // bound to this field name reacts to the new value.
-      hidden.dispatchEvent(new Event('change', { bubbles: true }))
-    })
-    wrapper.appendChild(chip)
-  }
-
   return wrapper
 }
 
@@ -684,18 +642,6 @@ function prefillForm(values) {
     }
 
     const field = fieldByName.get(key)
-
-    // Chips control: light up the matching option, write to hidden input.
-    if (field?.type === 'chips') {
-      const wrapper = form.querySelector(`.chips[data-field="${cssEscape(key)}"]`)
-      if (!wrapper) continue
-      const hidden = wrapper.querySelector(`input[name="${cssEscape(key)}"]`)
-      if (hidden) hidden.value = String(val)
-      for (const chip of wrapper.querySelectorAll('.chips__option')) {
-        chip.classList.toggle('is-active', String(chip.dataset.value) === String(val))
-      }
-      continue
-    }
 
     // Handle regular inputs and selects, routing API value through the
     // bidirectional formatter so kinds like `datetime` / `date` / `time`
