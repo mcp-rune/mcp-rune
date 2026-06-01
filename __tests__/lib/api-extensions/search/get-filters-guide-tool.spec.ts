@@ -95,8 +95,8 @@ describe('GetFiltersGuideTool', () => {
     await expect(() => tool.execute({ model: 'unknown' })).rejects.toThrow('Unknown model')
   })
 
-  it('should have strategy category (no auth required)', () => {
-    expect(GetFiltersGuideTool.category).toBe('strategy')
+  it('does not require auth (discovery tool, reads model metadata)', () => {
+    expect(GetFiltersGuideTool.requiresAuth).toBe(false)
   })
 
   it('should fall back to name when label is missing', async () => {

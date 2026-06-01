@@ -2,7 +2,6 @@ import { RuleSet } from '../../../../../src/mcp/domain/business-rules.js'
 import { DomainKnowledge } from '../../../../../src/mcp/domain/knowledge.js'
 import { DomainRegistry } from '../../../../../src/mcp/domain/registry.js'
 import { WorkflowDefinition, WorkflowRegistry } from '../../../../../src/mcp/domain/workflows.js'
-import { TOOL_CATEGORIES } from '../../../../../src/mcp/tools/categories.js'
 import { SuggestWorkflowTool } from '../../../../../src/mcp/tools/domain/suggest-workflow-tool.js'
 
 function createTestRegistry() {
@@ -53,10 +52,10 @@ describe('SuggestWorkflowTool', () => {
     tool = new SuggestWorkflowTool({ domainRegistry: createTestRegistry() })
   })
 
-  it('should have correct name and category', () => {
+  it('is a domain-registry-gated, no-auth tool', () => {
     expect(tool.name).toBe('suggest_workflow')
-    expect(SuggestWorkflowTool.category).toBe(TOOL_CATEGORIES.DOMAIN)
-    expect(SuggestWorkflowTool.getRequiresAuth()).toBe(false)
+    expect(SuggestWorkflowTool.requiresDomainRegistry).toBe(true)
+    expect(SuggestWorkflowTool.requiresAuth).toBe(false)
   })
 
   it('should list all workflows when no params', async () => {

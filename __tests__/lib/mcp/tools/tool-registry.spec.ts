@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { ToolHandlerExtra, ToolResult } from '../../../../src/mcp/tools/base-tool.js'
 import { BaseTool } from '../../../../src/mcp/tools/base-tool.js'
-import { TOOL_CATEGORIES } from '../../../../src/mcp/tools/categories.js'
 import type { ToolInterceptor } from '../../../../src/mcp/tools/tool-pipeline.js'
 import { ToolRegistry } from '../../../../src/mcp/tools/tool-registry.js'
 
@@ -26,9 +25,7 @@ import * as tracing from '../../../../src/services/tracing.js'
 // ============================================================================
 
 class NoAuthTool extends BaseTool {
-  static override get category() {
-    return TOOL_CATEGORIES.STRATEGY
-  }
+  static override requiresAuth = false
   get name() {
     return 'no_auth_tool'
   }
@@ -44,9 +41,8 @@ class NoAuthTool extends BaseTool {
 }
 
 class AuthTool extends BaseTool {
-  static override get category() {
-    return TOOL_CATEGORIES.DATA
-  }
+  // requiresAuth = true is the BaseTool default; declared here for clarity.
+  static override requiresAuth = true
   get name() {
     return 'auth_tool'
   }
@@ -63,9 +59,8 @@ class AuthTool extends BaseTool {
 }
 
 class DomainTool extends BaseTool {
-  static override get category() {
-    return TOOL_CATEGORIES.DOMAIN
-  }
+  static override requiresAuth = false
+  static override requiresDomainRegistry = true
   get name() {
     return 'domain_tool'
   }
@@ -81,9 +76,8 @@ class DomainTool extends BaseTool {
 }
 
 class AnalysisTool extends BaseTool {
-  static override get category() {
-    return TOOL_CATEGORIES.ANALYSIS
-  }
+  static override requiresAuth = false
+  static override requiresVectorStorage = true
   get name() {
     return 'analysis_tool'
   }
@@ -99,9 +93,7 @@ class AnalysisTool extends BaseTool {
 }
 
 class FailingTool extends BaseTool {
-  static override get category() {
-    return TOOL_CATEGORIES.STRATEGY
-  }
+  static override requiresAuth = false
   get name() {
     return 'failing_tool'
   }
@@ -210,9 +202,7 @@ describe('lib/mcp/tools/tool-registry', () => {
     it('should skip tools that throw during schema validation', () => {
       // Create a tool whose inputSchema getter throws
       class BadSchemaTool extends BaseTool {
-        static override get category() {
-          return TOOL_CATEGORIES.STRATEGY
-        }
+        static override requiresAuth = false
         get name() {
           return 'bad_schema_tool'
         }
@@ -380,19 +370,16 @@ describe('lib/mcp/tools/tool-registry', () => {
     })
   })
 
-  describe('feature gates', () => {
-    it('should skip tools in gated categories when gate is false', () => {
+  describe('capability gating', () => {
+    it('skips tools that require unavailable services', () => {
       const registry = new ToolRegistry({
         toolClasses: {
           no_auth_tool: NoAuthTool as any,
           domain_tool: DomainTool as any,
           analysis_tool: AnalysisTool as any
         },
-        models: {},
-        gates: {
-          [TOOL_CATEGORIES.DOMAIN]: false,
-          [TOOL_CATEGORIES.ANALYSIS]: false
-        }
+        models: {}
+        // No domainRegistry, no vectorStorageEnabled → both gated tools are dropped.
       })
 
       registry.registerTools(mockMcpServer as any, {
@@ -404,16 +391,14 @@ describe('lib/mcp/tools/tool-registry', () => {
       expect(mockMcpServer.registeredTools.has('analysis_tool')).toBe(false)
     })
 
-    it('should include tools in gated categories when gate is true', () => {
+    it('registers domain tools when a domain registry is configured', () => {
       const registry = new ToolRegistry({
         toolClasses: {
           no_auth_tool: NoAuthTool as any,
           domain_tool: DomainTool as any
         },
         models: {},
-        gates: {
-          [TOOL_CATEGORIES.DOMAIN]: true
-        }
+        domainRegistry: {}
       })
 
       registry.registerTools(mockMcpServer as any, {
@@ -424,11 +409,28 @@ describe('lib/mcp/tools/tool-registry', () => {
       expect(mockMcpServer.registeredTools.has('domain_tool')).toBe(true)
     })
 
-    it('should include tools with no gate defined', () => {
+    it('registers analysis tools when vector storage is enabled', () => {
+      const registry = new ToolRegistry({
+        toolClasses: {
+          no_auth_tool: NoAuthTool as any,
+          analysis_tool: AnalysisTool as any
+        },
+        models: {},
+        vectorStorageEnabled: true
+      })
+
+      registry.registerTools(mockMcpServer as any, {
+        getAccessToken: async () => null
+      })
+
+      expect(mockMcpServer.registeredTools.has('no_auth_tool')).toBe(true)
+      expect(mockMcpServer.registeredTools.has('analysis_tool')).toBe(true)
+    })
+
+    it('registers tools with no service requirements unconditionally', () => {
       const registry = new ToolRegistry({
         toolClasses: { no_auth_tool: NoAuthTool as any },
-        models: {},
-        gates: {} // no gates for STRATEGY category
+        models: {}
       })
 
       registry.registerTools(mockMcpServer as any, {
@@ -543,9 +545,7 @@ describe('lib/mcp/tools/tool-registry', () => {
       let capturedExtra: ToolHandlerExtra | undefined
 
       class ExtraCaptureTool extends BaseTool {
-        static override get category() {
-          return TOOL_CATEGORIES.STRATEGY
-        }
+        static override requiresAuth = false
         get name() {
           return 'extra_capture'
         }
@@ -617,9 +617,7 @@ describe('lib/mcp/tools/tool-registry', () => {
 
     it('should pass serverContext to tool instances', () => {
       class ServerAwareTool extends BaseTool {
-        static override get category() {
-          return TOOL_CATEGORIES.STRATEGY
-        }
+        static override requiresAuth = false
         get name() {
           return 'server_aware_tool'
         }

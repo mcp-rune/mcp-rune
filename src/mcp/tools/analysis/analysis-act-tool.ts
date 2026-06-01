@@ -8,8 +8,6 @@ import {
 } from '#src/services/vector-storage.js'
 
 import type { ModelConfig, ToolAnnotations, ToolResult } from '../base-tool.js'
-import type { ToolCategory } from '../categories.js'
-import { TOOL_CATEGORIES } from '../categories.js'
 import { SaveModelBaseTool } from '../save-model-base-tool.js'
 
 /** Max records per internal batch. Higher than bulk_action_models (25) because
@@ -45,16 +43,13 @@ interface HttpError extends Error {
  * batches with a concurrency cap. Only an aggregate summary is returned to
  * context — per-record results are logged, never echoed to the LLM.
  *
- * Uses ANALYSIS category (vector-storage-gated) but inherits write helpers
- * (buildRequestPayload) from SaveModelBaseTool; requiresAuth is forced true
- * because the tool calls the upstream API.
+ * Vector-storage-gated but inherits write helpers (buildRequestPayload)
+ * from SaveModelBaseTool. `requiresAuth` stays true (the default from
+ * SaveModelBaseTool → BaseTool) because the tool calls the upstream API,
+ * even though its sibling analysis tools are no-auth.
  */
 export class AnalysisActTool extends SaveModelBaseTool {
-  static override get category(): ToolCategory {
-    return TOOL_CATEGORIES.ANALYSIS
-  }
-
-  static override requiresAuth = true
+  static override requiresVectorStorage = true
 
   override get name(): string {
     return 'analysis_act'

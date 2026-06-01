@@ -17,7 +17,6 @@ import {
   AnalysisActTool,
   MAX_ACT_BATCH_SIZE
 } from '../../../../../src/mcp/tools/analysis/analysis-act-tool.js'
-import { TOOL_CATEGORIES } from '../../../../../src/mcp/tools/categories.js'
 
 describe('lib/mcp/tools/analysis/analysis-act-tool', () => {
   const mockModels = {
@@ -49,11 +48,11 @@ describe('lib/mcp/tools/analysis/analysis-act-tool', () => {
   })
 
   describe('metadata', () => {
-    it('exposes name, category, requiresAuth, and destructive annotation', () => {
+    it('exposes name, capability flags, and destructive annotation', () => {
       const tool = new AnalysisActTool({})
       expect(tool.name).toBe('analysis_act')
-      expect(AnalysisActTool.category).toBe(TOOL_CATEGORIES.ANALYSIS)
-      expect(AnalysisActTool.getRequiresAuth()).toBe(true)
+      expect(AnalysisActTool.requiresVectorStorage).toBe(true)
+      expect(AnalysisActTool.requiresAuth).toBe(true)
       expect(tool.annotations).toMatchObject({
         readOnlyHint: false,
         destructiveHint: true,

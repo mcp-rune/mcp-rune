@@ -2,7 +2,6 @@ import { BusinessRule, RuleSet } from '../../../../../src/mcp/domain/business-ru
 import { DomainConcept, DomainKnowledge } from '../../../../../src/mcp/domain/knowledge.js'
 import { DomainRegistry } from '../../../../../src/mcp/domain/registry.js'
 import { WorkflowDefinition, WorkflowRegistry } from '../../../../../src/mcp/domain/workflows.js'
-import { TOOL_CATEGORIES } from '../../../../../src/mcp/tools/categories.js'
 import { GetDomainContextTool } from '../../../../../src/mcp/tools/domain/get-domain-context-tool.js'
 
 function createTestRegistry() {
@@ -56,10 +55,10 @@ describe('GetDomainContextTool', () => {
     tool = new GetDomainContextTool({ domainRegistry: createTestRegistry() })
   })
 
-  it('should have correct name and category', () => {
+  it('is a domain-registry-gated, no-auth tool', () => {
     expect(tool.name).toBe('get_domain_context')
-    expect(GetDomainContextTool.category).toBe(TOOL_CATEGORIES.DOMAIN)
-    expect(GetDomainContextTool.getRequiresAuth()).toBe(false)
+    expect(GetDomainContextTool.requiresDomainRegistry).toBe(true)
+    expect(GetDomainContextTool.requiresAuth).toBe(false)
   })
 
   it('should return overview when no params provided', async () => {

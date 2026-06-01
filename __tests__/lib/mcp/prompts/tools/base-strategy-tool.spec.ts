@@ -1,6 +1,5 @@
 import { BaseStrategyTool } from '../../../../../src/mcp/prompts/tools/base-strategy-tool.js'
 import { BaseTool } from '../../../../../src/mcp/tools/base-tool.js'
-import { TOOL_CATEGORIES } from '../../../../../src/mcp/tools/categories.js'
 
 describe('lib/mcp/prompts/tools/base-strategy-tool', () => {
   describe('inheritance', () => {
@@ -10,13 +9,13 @@ describe('lib/mcp/prompts/tools/base-strategy-tool', () => {
     })
   })
 
-  describe('category', () => {
-    it('should have STRATEGY category', () => {
-      expect(BaseStrategyTool.category).toBe(TOOL_CATEGORIES.STRATEGY)
+  describe('capability flags', () => {
+    it('does not require auth (strategy tools are public)', () => {
+      expect(BaseStrategyTool.requiresAuth).toBe(false)
     })
 
-    it('should not require auth (strategy tools are public)', () => {
-      expect(BaseStrategyTool.getRequiresAuth()).toBe(false)
+    it('declares a prompt-registry requirement', () => {
+      expect(BaseStrategyTool.requiresPromptRegistry).toBe(true)
     })
   })
 

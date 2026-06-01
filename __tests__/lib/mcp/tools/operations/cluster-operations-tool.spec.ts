@@ -4,7 +4,6 @@ vi.mock('#src/services/vector-storage.js', () => ({
 
 import { getOperationClusters } from '#src/services/vector-storage.js'
 
-import { TOOL_CATEGORIES } from '../../../../../src/mcp/tools/categories.js'
 import { ClusterOperationsTool } from '../../../../../src/mcp/tools/operations/cluster-operations-tool.js'
 
 describe('ClusterOperationsTool', () => {
@@ -19,8 +18,9 @@ describe('ClusterOperationsTool', () => {
     expect(tool.name).toBe('cluster_operations')
   })
 
-  it('should have OPERATIONS category', () => {
-    expect(ClusterOperationsTool.category).toBe(TOOL_CATEGORIES.OPERATIONS)
+  it('is a vector-storage-gated, no-auth tool', () => {
+    expect(ClusterOperationsTool.requiresVectorStorage).toBe(true)
+    expect(ClusterOperationsTool.requiresAuth).toBe(false)
   })
 
   it('should have no required parameters', () => {

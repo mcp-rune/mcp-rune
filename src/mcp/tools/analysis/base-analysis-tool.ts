@@ -1,14 +1,19 @@
+import type { ToolAnnotations } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
-import type { ToolCategory } from '../categories.js'
-import { TOOL_CATEGORIES } from '../categories.js'
 
 /**
- * Base class for analysis tools
- *
- * Sets category to ANALYSIS (no auth required, needs vector storage).
+ * Base class for analysis tools (qualitative analysis sessions backed by
+ * vector storage). No upstream API auth by default — subclasses that
+ * fetch from the API (e.g. `AnalysisIngestTool`, `AnalysisActTool`) opt
+ * back in with `static override requiresAuth = true`.
  */
 export class BaseAnalysisTool extends BaseTool {
-  static override get category(): ToolCategory {
-    return TOOL_CATEGORIES.ANALYSIS
+  static override requiresAuth = false
+  static override requiresVectorStorage = true
+  static override defaultAnnotations: ToolAnnotations = {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false
   }
 }

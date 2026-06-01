@@ -4,7 +4,6 @@ vi.mock('#src/services/vector-storage.js', () => ({
 
 import { detectOperationGaps } from '#src/services/vector-storage.js'
 
-import { TOOL_CATEGORIES } from '../../../../../src/mcp/tools/categories.js'
 import { DetectOperationGapsTool } from '../../../../../src/mcp/tools/operations/detect-operation-gaps-tool.js'
 
 describe('DetectOperationGapsTool', () => {
@@ -19,8 +18,9 @@ describe('DetectOperationGapsTool', () => {
     expect(tool.name).toBe('detect_operation_gaps')
   })
 
-  it('should have OPERATIONS category', () => {
-    expect(DetectOperationGapsTool.category).toBe(TOOL_CATEGORIES.OPERATIONS)
+  it('is a vector-storage-gated, no-auth tool', () => {
+    expect(DetectOperationGapsTool.requiresVectorStorage).toBe(true)
+    expect(DetectOperationGapsTool.requiresAuth).toBe(false)
   })
 
   it('should require record_id, model_name, and expected_steps', () => {

@@ -2,7 +2,6 @@ import { RuleSet } from '../../../../../src/mcp/domain/business-rules.js'
 import { DomainKnowledge } from '../../../../../src/mcp/domain/knowledge.js'
 import { DomainRegistry } from '../../../../../src/mcp/domain/registry.js'
 import { WorkflowDefinition, WorkflowRegistry } from '../../../../../src/mcp/domain/workflows.js'
-import { TOOL_CATEGORIES } from '../../../../../src/mcp/tools/categories.js'
 import { GetWorkflowStepTool } from '../../../../../src/mcp/tools/domain/get-workflow-step-tool.js'
 
 function createTestRegistry() {
@@ -98,10 +97,10 @@ describe('GetWorkflowStepTool', () => {
     })
   })
 
-  it('should have correct name and category', () => {
+  it('is a domain-registry-gated, no-auth tool', () => {
     expect(tool.name).toBe('get_workflow_step')
-    expect(GetWorkflowStepTool.category).toBe(TOOL_CATEGORIES.DOMAIN)
-    expect(GetWorkflowStepTool.getRequiresAuth()).toBe(false)
+    expect(GetWorkflowStepTool.requiresDomainRegistry).toBe(true)
+    expect(GetWorkflowStepTool.requiresAuth).toBe(false)
   })
 
   // ─── Regular Steps ──────────────────────────────────────────────────────
