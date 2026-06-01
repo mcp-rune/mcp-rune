@@ -10,8 +10,6 @@ import { storeOperation } from '#src/services/vector-storage.js'
 import type { AssociationConfig, BaseConvention } from '../api-conventions/base-convention.js'
 import { defaultConvention } from '../api-conventions/index.js'
 import type { PromptRegistry } from '../prompts/prompt-registry.js'
-import type { ToolCategory } from './categories.js'
-import { getCategoryConfig, TOOL_CATEGORIES } from './categories.js'
 
 export type { PromptRegistry } from '../prompts/prompt-registry.js'
 
@@ -156,7 +154,8 @@ interface HttpError extends Error {
 /**
  * Base class for MCP tool implementations
  *
- * All tools extend this class (directly or via server-specific base) and provide:
+ * All tools extend this class (directly or via a family base — `BaseStrategyTool`,
+ * `BaseAnalysisTool`, `BaseOperationsTool`, `BaseDomainTool`) and provide:
  * - name: Tool name
  * - baseDescription: Base tool description (description getter adds sections)
  * - inputSchema: Zod raw shape for tool parameters (e.g., { model: z.string() })
@@ -166,46 +165,53 @@ interface HttpError extends Error {
  * - Override getUsageRules() to add server-specific behavioral rules (e.g. multi-product disambiguation)
  * - Add server-specific helpers
  *
- * Tool categories determine auth requirements:
- * - STRATEGY: No auth required (works with prompt strategies)
- * - CRUD: Auth required (API operations)
- * - AUTOCOMPLETE: Auth required (field suggestions)
- * - CUSTOM: Default auth required (server-specific)
+ * Static metadata fields drive registry behavior. `BaseTool` itself defaults
+ * to the (former DATA) "needs API auth, no special services" profile —
+ * extending it directly is correct for any CRUD-style tool. Family bases
+ * override the defaults declaratively (e.g. `BaseStrategyTool` sets
+ * `requiresAuth = false`).
  */
 export class BaseTool {
   /**
-   * Tool category - determines auth requirements and registry behavior.
-   * Override in subclasses to specify category.
+   * Whether this tool needs an authenticated `dataLayer`. When true, the
+   * registry resolves the session's access token, constructs a `dataLayer`,
+   * and passes it into the tool constructor. When false, the tool is
+   * instantiated without a `dataLayer`; calling `requireDataLayer()` would
+   * throw. Default: `true` (safe default — opting in is the dangerous case).
    */
-  static get category(): ToolCategory {
-    return TOOL_CATEGORIES.DATA // Default to requiring auth
-  }
+  static requiresAuth: boolean = true
 
   /**
-   * Per-tool authentication policy. Override in subclasses to depart from the
-   * category default — e.g. an ANALYSIS tool that fetches from the upstream
-   * API still needs auth despite the category being vector-storage-gated:
-   *
-   *   class AnalysisIngestTool extends BaseAnalysisTool {
-   *     static override requiresAuth = true
-   *   }
-   *
-   * When undefined, `getRequiresAuth()` falls back to the category default
-   * from `getCategoryConfig(this.category).requiresAuth`. Declaring the
-   * override as a field rather than a getter keeps the override path
-   * one-line and declarative.
+   * Whether this tool requires vector storage (pgvector) to be configured.
+   * Tools with `requiresVectorStorage = true` are skipped at registration
+   * time when the integrator reports vector storage is not available.
    */
-  static requiresAuth?: boolean
+  static requiresVectorStorage: boolean = false
 
   /**
-   * Resolves the effective auth requirement for this tool class. Reads the
-   * per-tool `requiresAuth` field if set; otherwise falls back to the
-   * category default. Consumers (notably `ToolRegistry`) should call this
-   * rather than reading `requiresAuth` directly so unset tools resolve
-   * correctly.
+   * Whether this tool requires a domain registry to be configured. Implicit
+   * for `BaseDomainTool` subclasses; integrators don't need to set a
+   * separate gate.
    */
-  static getRequiresAuth(): boolean {
-    return this.requiresAuth ?? getCategoryConfig(this.category).requiresAuth
+  static requiresDomainRegistry: boolean = false
+
+  /**
+   * Whether this tool requires a prompt registry to be configured. Implicit
+   * for `BaseStrategyTool` subclasses.
+   */
+  static requiresPromptRegistry: boolean = false
+
+  /**
+   * MCP tool annotation defaults for this tool family. Subclasses override
+   * to reflect the family's read-only / destructive character. The instance
+   * `annotations` getter reads this static field; tools that need
+   * per-instance shaping can still override the getter.
+   */
+  static defaultAnnotations: ToolAnnotations = {
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: false,
+    openWorldHint: true
   }
 
   dataLayer: DataLayer | undefined
@@ -244,10 +250,9 @@ export class BaseTool {
     throw new Error('Tool must implement inputSchema getter')
   }
 
-  /** MCP tool annotations (override in subclasses to customize) */
+  /** MCP tool annotations (override in subclasses to customize per-instance) */
   get annotations(): ToolAnnotations {
-    const config = getCategoryConfig((this.constructor as typeof BaseTool).category)
-    return { ...config.defaultAnnotations }
+    return { ...(this.constructor as typeof BaseTool).defaultAnnotations }
   }
 
   /** Execute tool logic (override in subclasses) */

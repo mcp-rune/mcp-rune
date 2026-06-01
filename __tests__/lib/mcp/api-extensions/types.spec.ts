@@ -11,7 +11,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ApiExtension, ApiExtensionContext } from '../../../../src/mcp/api-extensions/types.js'
 import type { ToolResult } from '../../../../src/mcp/tools/base-tool.js'
 import { BaseTool } from '../../../../src/mcp/tools/base-tool.js'
-import { TOOL_CATEGORIES } from '../../../../src/mcp/tools/categories.js'
 import { ToolRegistry } from '../../../../src/mcp/tools/tool-registry.js'
 
 vi.mock('#src/services/logger.js', () => ({
@@ -32,9 +31,7 @@ vi.mock('#src/services/vector-storage.js', () => ({
 // --- Test doubles ---
 
 class CoreTool extends BaseTool {
-  static override get category() {
-    return TOOL_CATEGORIES.STRATEGY
-  }
+  static override requiresAuth = false
   get name() {
     return 'core_tool'
   }
@@ -50,9 +47,7 @@ class CoreTool extends BaseTool {
 }
 
 class ContributedTool extends BaseTool {
-  static override get category() {
-    return TOOL_CATEGORIES.STRATEGY
-  }
+  static override requiresAuth = false
   get name() {
     return 'contributed_tool'
   }
@@ -68,9 +63,8 @@ class ContributedTool extends BaseTool {
 }
 
 class AuthTool extends BaseTool {
-  static override get category() {
-    return TOOL_CATEGORIES.DATA
-  }
+  // requiresAuth = true is the BaseTool default; declared here for clarity.
+  static override requiresAuth = true
   get name() {
     return 'auth_tool'
   }

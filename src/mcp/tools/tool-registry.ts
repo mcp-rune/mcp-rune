@@ -16,7 +16,7 @@
  *   createApiClient: (token) => createApiClient(token, { apiUrl }),
  * })
  *
- * // Complex setup with interceptors and feature gates:
+ * // Complex setup with interceptors and capability gating:
  * const toolRegistry = new ToolRegistry({
  *   toolClasses: { ...DATA_TOOL_CLASSES, ...DOMAIN_TOOL_CLASSES, custom_tool: MyTool },
  *   models: MODEL_CLASSES,
@@ -24,12 +24,15 @@
  *   promptRegistry,
  *   domainRegistry,
  *   createApiClient: (token) => createApiClient(token, { apiUrl }),
- *   gates: {
- *     [TOOL_CATEGORIES.DOMAIN]: !!domainRegistry,
- *     [TOOL_CATEGORIES.ANALYSIS]: vectorStorage.isEnabled(),
- *   },
+ *   vectorStorageEnabled: vectorStorage.isEnabled(),
  *   interceptors: [myAuditInterceptor],
  * })
+ *
+ * // Tools whose static `requires*` flag is true are filtered out when the
+ * // corresponding registry dependency is absent — `requiresDomainRegistry`
+ * // when `domainRegistry` is unset, `requiresPromptRegistry` when
+ * // `promptRegistry` is unset, and `requiresVectorStorage` when
+ * // `vectorStorageEnabled` is false.
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
@@ -87,17 +90,22 @@ const SENTINEL_MODEL_SERVICE: ModelService = (() => {
 // ============================================================================
 
 /**
- * A tool class constructor. Static metadata:
- * - `category` (required) — drives the auth and annotation defaults.
- * - `requiresAuth` (optional) — per-tool override of the category's auth
- *    default. Resolved via `getRequiresAuth()` rather than read directly so
- *    unset tools fall back to the category.
+ * A tool class constructor. Static metadata fields drive registry behavior:
+ * - `requiresAuth` — whether to inject an authenticated `dataLayer` (default true on `BaseTool`).
+ * - `requiresVectorStorage` — skip registration when vector storage is unavailable.
+ * - `requiresDomainRegistry` — skip registration when no `domainRegistry` was passed.
+ * - `requiresPromptRegistry` — skip registration when no `promptRegistry` was passed.
+ *
+ * All are declared on `BaseTool` with safe defaults; family bases
+ * (`BaseStrategyTool`, `BaseAnalysisTool`, `BaseOperationsTool`,
+ * `BaseDomainTool`) override declaratively.
  */
 export interface ToolClass {
   new (deps: ToolDependencies): BaseTool
-  readonly category: string
-  readonly requiresAuth?: boolean
-  getRequiresAuth(): boolean
+  readonly requiresAuth: boolean
+  readonly requiresVectorStorage: boolean
+  readonly requiresDomainRegistry: boolean
+  readonly requiresPromptRegistry: boolean
 }
 
 /** Map of tool names to tool class constructors */
@@ -152,16 +160,14 @@ export interface ToolRegistryConfig {
   namespace?: string
 
   /**
-   * Feature gates: category → boolean.
-   * Tools in a gated category are skipped when the gate is false.
+   * Whether vector storage (pgvector) is available. Tools with
+   * `static requiresVectorStorage = true` are skipped when false.
    *
-   * @example
-   * gates: {
-   *   [TOOL_CATEGORIES.ANALYSIS]: vectorStorage.isEnabled(),
-   *   [TOOL_CATEGORIES.DOMAIN]: !!domainRegistry,
-   * }
+   * `requiresDomainRegistry` and `requiresPromptRegistry` are gated
+   * implicitly by the presence of `domainRegistry` and `promptRegistry`
+   * config options — no separate flag needed.
    */
-  gates?: Record<string, boolean>
+  vectorStorageEnabled?: boolean
 
   /**
    * Custom interceptors applied to every tool handler.
@@ -203,7 +209,7 @@ export class ToolRegistry {
   private _createApiClient: ApiClientFactory | undefined
   private _dataLayerFactory: DataLayerFactory
   private _namespace: string | undefined
-  private _gates: Record<string, boolean>
+  private _vectorStorageEnabled: boolean
   private _interceptors: ToolInterceptor[]
   private _enabledTools: Set<string> | null = null
   private _modelServiceMixins: ModelServiceMixin[] = []
@@ -221,7 +227,7 @@ export class ToolRegistry {
     this._domainRegistry = config.domainRegistry
     this._createApiClient = config.createApiClient
     this._namespace = config.namespace
-    this._gates = config.gates ?? {}
+    this._vectorStorageEnabled = config.vectorStorageEnabled ?? false
     this._interceptors = config.interceptors ?? []
     this.serverContext = (config.serverContext as Record<string, unknown>) ?? {}
 
@@ -377,7 +383,7 @@ export class ToolRegistry {
         args: Record<string, unknown>,
         extra?: ToolHandlerExtra
       ): Promise<ToolResult> => {
-        const instance = ToolCls.getRequiresAuth()
+        const instance = ToolCls.requiresAuth
           ? await this._createAuthenticatedInstance(ToolCls, getAccessToken)
           : this._createInstance(ToolCls)
 
@@ -409,13 +415,18 @@ export class ToolRegistry {
     }
   }
 
-  /** Get enabled tool names (all tools, filtered by feature gates) */
+  /**
+   * Get enabled tool names. Tools are filtered out when one of their
+   * static `requires*` flags is true but the corresponding registry
+   * dependency is not configured.
+   */
   private _getEnabledTools(): Set<string> {
     if (!this._enabledTools) {
       const tools = Object.keys(this._toolClasses).filter((name) => {
         const ToolCls = this._toolClasses[name]!
-        const category = ToolCls.category
-        if (category in this._gates) return this._gates[category]
+        if (ToolCls.requiresVectorStorage && !this._vectorStorageEnabled) return false
+        if (ToolCls.requiresDomainRegistry && !this._domainRegistry) return false
+        if (ToolCls.requiresPromptRegistry && !this._promptRegistry) return false
         return true
       })
       this._enabledTools = new Set(tools)

@@ -1,4 +1,4 @@
-// mcp-rune/tools — base classes, categories, data, domain, analysis, operations, pipeline, registry
+// mcp-rune/tools — base classes, data, domain, analysis, operations, pipeline, registry
 export {
   ANALYSIS_TOOL_CLASSES,
   AnalysisActTool,
@@ -19,12 +19,14 @@ export type {
   ToolSuccessResponse
 } from './mcp/tools/base-tool.js'
 export { BaseTool } from './mcp/tools/base-tool.js'
-export {
-  CATEGORY_CONFIG,
-  categoryRequiresAuth,
-  getCategoryConfig,
-  TOOL_CATEGORIES
-} from './mcp/tools/categories.js'
+/**
+ * Canonical tool-family base classes. Extend one of these (or `BaseTool`
+ * directly for CRUD-style auth) and the registry handles the rest.
+ *
+ * `BaseStrategyTool` is also re-exported from `@mcp-rune/mcp-rune/prompts`
+ * for backward import-path compatibility.
+ */
+export { BaseStrategyTool } from './mcp/prompts/tools/base-strategy-tool.js'
 export {
   BulkActionModelsTool,
   CreateModelTool,

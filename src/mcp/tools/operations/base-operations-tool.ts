@@ -1,14 +1,17 @@
+import type { ToolAnnotations } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
-import type { ToolCategory } from '../categories.js'
-import { TOOL_CATEGORIES } from '../categories.js'
 
 /**
- * Base class for operations tools
- *
- * Sets category to OPERATIONS (no auth required, needs vector storage).
+ * Base class for operations tools (retrospective analysis of past CRUD
+ * operations). Reads from vector storage, no upstream API auth.
  */
 export class BaseOperationsTool extends BaseTool {
-  static override get category(): ToolCategory {
-    return TOOL_CATEGORIES.OPERATIONS
+  static override requiresAuth = false
+  static override requiresVectorStorage = true
+  static override defaultAnnotations: ToolAnnotations = {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false
   }
 }

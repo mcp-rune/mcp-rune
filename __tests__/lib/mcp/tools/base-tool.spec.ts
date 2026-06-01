@@ -1,5 +1,4 @@
 import { BaseTool } from '../../../../src/mcp/tools/base-tool.js'
-import { TOOL_CATEGORIES } from '../../../../src/mcp/tools/categories.js'
 
 vi.mock('../../../../src/services/vector-storage.js', () => ({
   storeOperation: vi.fn().mockResolvedValue(null)
@@ -76,62 +75,53 @@ describe('lib/mcp/tools/base-tool', () => {
     })
   })
 
-  describe('category and authentication', () => {
-    it('should default to DATA category', () => {
-      expect(BaseTool.category).toBe(TOOL_CATEGORIES.DATA)
+  describe('capability defaults and authentication', () => {
+    it('requires auth by default (safe default)', () => {
+      expect(BaseTool.requiresAuth).toBe(true)
     })
 
-    it('should require auth by default', () => {
-      expect(BaseTool.getRequiresAuth()).toBe(true)
+    it('does not require any external services by default', () => {
+      expect(BaseTool.requiresVectorStorage).toBe(false)
+      expect(BaseTool.requiresDomainRegistry).toBe(false)
+      expect(BaseTool.requiresPromptRegistry).toBe(false)
     })
 
-    it('should allow custom categories', () => {
-      class StrategyTool extends BaseTool {
-        static get category() {
-          return TOOL_CATEGORIES.STRATEGY
-        }
-      }
-      expect(StrategyTool.category).toBe(TOOL_CATEGORIES.STRATEGY)
-      expect(StrategyTool.getRequiresAuth()).toBe(false)
-    })
-
-    it('should let a subclass override requiresAuth via field syntax', () => {
-      class AnalysisWithAuth extends BaseTool {
-        static override get category() {
-          return TOOL_CATEGORIES.ANALYSIS
-        }
-        static override requiresAuth = true
-      }
-      // ANALYSIS category defaults to no-auth; the per-tool field wins.
-      expect(AnalysisWithAuth.requiresAuth).toBe(true)
-      expect(AnalysisWithAuth.getRequiresAuth()).toBe(true)
-    })
-
-    it('should let a subclass override requiresAuth to false against an auth-required category', () => {
-      class DataNoAuth extends BaseTool {
-        static override get category() {
-          return TOOL_CATEGORIES.DATA
-        }
+    it('lets a subclass opt out of auth via static field', () => {
+      class NoAuthTool extends BaseTool {
         static override requiresAuth = false
       }
-      // DATA category defaults to auth; the per-tool field still wins when explicitly false.
-      expect(DataNoAuth.requiresAuth).toBe(false)
-      expect(DataNoAuth.getRequiresAuth()).toBe(false)
+      expect(NoAuthTool.requiresAuth).toBe(false)
     })
 
-    it('should fall back to the category default when requiresAuth is unset', () => {
-      class PlainAnalysis extends BaseTool {
-        static override get category() {
-          return TOOL_CATEGORIES.ANALYSIS
-        }
+    it('lets a subclass opt back into auth after a no-auth base class', () => {
+      class FamilyBase extends BaseTool {
+        static override requiresAuth = false
       }
-      expect(PlainAnalysis.requiresAuth).toBeUndefined()
-      expect(PlainAnalysis.getRequiresAuth()).toBe(false)
+      class ApiVariant extends FamilyBase {
+        static override requiresAuth = true
+      }
+      expect(FamilyBase.requiresAuth).toBe(false)
+      expect(ApiVariant.requiresAuth).toBe(true)
+    })
+
+    it('lets a subclass declare service requirements', () => {
+      class VectorTool extends BaseTool {
+        static override requiresVectorStorage = true
+      }
+      class DomainTool extends BaseTool {
+        static override requiresDomainRegistry = true
+      }
+      class PromptTool extends BaseTool {
+        static override requiresPromptRegistry = true
+      }
+      expect(VectorTool.requiresVectorStorage).toBe(true)
+      expect(DomainTool.requiresDomainRegistry).toBe(true)
+      expect(PromptTool.requiresPromptRegistry).toBe(true)
     })
   })
 
   describe('annotations', () => {
-    it('should return DATA category defaults for base tool', () => {
+    it('returns the base defaults (CRUD-style: destructive, openWorld)', () => {
       const tool = new BaseTool()
       const annotations = tool.annotations
       expect(annotations).toEqual({
@@ -142,13 +132,16 @@ describe('lib/mcp/tools/base-tool', () => {
       })
     })
 
-    it('should return category-specific defaults for subclasses', () => {
-      class StrategyTool extends BaseTool {
-        static get category() {
-          return TOOL_CATEGORIES.STRATEGY
+    it('reads defaultAnnotations from the subclass static field', () => {
+      class ReadOnlyFamily extends BaseTool {
+        static override defaultAnnotations = {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false
         }
       }
-      const tool = new StrategyTool()
+      const tool = new ReadOnlyFamily()
       expect(tool.annotations).toEqual({
         readOnlyHint: true,
         destructiveHint: false,

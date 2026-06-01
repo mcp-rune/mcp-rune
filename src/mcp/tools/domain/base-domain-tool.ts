@@ -1,7 +1,5 @@
-import type { ToolSuccessResponse } from '../base-tool.js'
+import type { ToolAnnotations, ToolSuccessResponse } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
-import type { ToolCategory } from '../categories.js'
-import { TOOL_CATEGORIES } from '../categories.js'
 
 /**
  * Presentation footer appended to all domain tool responses.
@@ -14,13 +12,17 @@ export const PRESENTATION_FOOTER = `
 **Presentation:** When explaining these concepts to users, use the field's label or description rather than its raw attribute name. For example, say "transmission trigger" instead of \`reference_tx_nth\`, "start offset" instead of \`start_offset_value\`, "publish date" instead of \`put_up\`, "end date" instead of \`take_down\`. Use the API attribute name only when showing code examples or API calls.`
 
 /**
- * Base class for domain intelligence tools
- *
- * Sets category to DOMAIN (no auth required, needs domain registry).
+ * Base class for domain intelligence tools (knowledge, rules, workflows).
+ * Reads from a configured domain registry, no upstream API auth.
  */
 export class BaseDomainTool extends BaseTool {
-  static override get category(): ToolCategory {
-    return TOOL_CATEGORIES.DOMAIN
+  static override requiresAuth = false
+  static override requiresDomainRegistry = true
+  static override defaultAnnotations: ToolAnnotations = {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false
   }
 
   /** Require domain registry to be configured */

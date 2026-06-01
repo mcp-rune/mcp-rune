@@ -30,7 +30,6 @@ import {
 import { AnalysisClearTool } from '../../../../../src/mcp/tools/analysis/analysis-clear-tool.js'
 import { AnalysisQueryTool } from '../../../../../src/mcp/tools/analysis/analysis-query-tool.js'
 import { AnalysisStoreTool } from '../../../../../src/mcp/tools/analysis/analysis-store-tool.js'
-import { TOOL_CATEGORIES } from '../../../../../src/mcp/tools/categories.js'
 
 describe('Analysis Memory Tools', () => {
   beforeEach(() => {
@@ -42,8 +41,8 @@ describe('Analysis Memory Tools', () => {
 
     it('should have correct metadata', () => {
       expect(tool.name).toBe('analysis_store')
-      expect(AnalysisStoreTool.category).toBe(TOOL_CATEGORIES.ANALYSIS)
-      expect(AnalysisStoreTool.getRequiresAuth()).toBe(false)
+      expect(AnalysisStoreTool.requiresVectorStorage).toBe(true)
+      expect(AnalysisStoreTool.requiresAuth).toBe(false)
     })
 
     it('should store a single finding via findings array', async () => {
@@ -157,7 +156,8 @@ describe('Analysis Memory Tools', () => {
 
     it('should have correct metadata', () => {
       expect(tool.name).toBe('analysis_query')
-      expect(AnalysisQueryTool.category).toBe(TOOL_CATEGORIES.ANALYSIS)
+      expect(AnalysisQueryTool.requiresVectorStorage).toBe(true)
+      expect(AnalysisQueryTool.requiresAuth).toBe(false)
     })
 
     describe('semantic mode', () => {
@@ -574,7 +574,8 @@ describe('Analysis Memory Tools', () => {
 
     it('should have correct metadata', () => {
       expect(tool.name).toBe('analysis_clear')
-      expect(AnalysisClearTool.category).toBe(TOOL_CATEGORIES.ANALYSIS)
+      expect(AnalysisClearTool.requiresVectorStorage).toBe(true)
+      expect(AnalysisClearTool.requiresAuth).toBe(false)
     })
 
     it('should cascade-clear both analysis memories and ingested records', async () => {

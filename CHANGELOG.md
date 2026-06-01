@@ -4,6 +4,84 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.60.0] - 2026-06-01
+
+> Breaking. Replaces the `category` enum + `CATEGORY_CONFIG` indirection on tool classes with direct static fields on `BaseTool`. The previous two-axis model (a `category` string AND an optional `requiresAuth` field, with `getRequiresAuth()` reconciling between them) gave consumers two ways to declare the same thing — and when those two ways drifted, tools that should have required auth instead executed without an authenticated `dataLayer`. After this release every tool family's defaults — auth, runtime dependency gating, MCP annotations — live as plain static fields on the family's base class. One coordinate system. Forgetting an opt-out fails loudly (auth required by default) instead of silently bypassing the registry.
+
+### Removed
+
+- **`TOOL_CATEGORIES`, `CATEGORY_CONFIG`, `getCategoryConfig`, `categoryRequiresAuth`** removed from `@mcp-rune/mcp-rune` and `@mcp-rune/mcp-rune/tools`. The `categories.ts` file is gone.
+- **`BaseTool.category`** static getter removed. There is no longer a category enum to assign.
+- **`BaseTool.getRequiresAuth()`** static method removed. `BaseTool.requiresAuth` is now a defined boolean (default `true`); consumers read it directly.
+- **`ToolRegistryConfig.gates`** removed. Replaced by `ToolRegistryConfig.vectorStorageEnabled` (domain-registry and prompt-registry gating is implicit in the existing `domainRegistry` and `promptRegistry` config options).
+
+### Added
+
+- **`BaseTool.requiresAuth: boolean`** — initialized to `true`. Forgetting to declare it (the previous failure mode) now means a tool requires auth — the safe direction.
+- **`BaseTool.requiresVectorStorage: boolean`** — initialized to `false`. Set to `true` on `BaseAnalysisTool` and `BaseOperationsTool`.
+- **`BaseTool.requiresDomainRegistry: boolean`** — initialized to `false`. Set to `true` on `BaseDomainTool`.
+- **`BaseTool.requiresPromptRegistry: boolean`** — initialized to `false`. Set to `true` on `BaseStrategyTool`.
+- **`BaseTool.defaultAnnotations: ToolAnnotations`** — replaces the previous category-driven annotations lookup. Each family base overrides with its own defaults; instances can still override the `annotations` getter for per-instance shaping.
+- **`BaseStrategyTool`** re-exported from `@mcp-rune/mcp-rune/tools` alongside `BaseAnalysisTool`, `BaseOperationsTool`, `BaseDomainTool`, and `BaseTool`. The five canonical tool-family base classes are now discoverable from a single import path.
+
+### Changed
+
+- **`BaseTool` defaults** match the former DATA category: `requiresAuth = true`, destructive/openWorld annotations. Extending `BaseTool` directly is the correct choice for CRUD-style tools — no overrides needed.
+- **`BaseStrategyTool`, `BaseAnalysisTool`, `BaseOperationsTool`, `BaseDomainTool`** now declare their family defaults via static fields (replacing `static get category()`). Each file is self-describing; no central enum to read.
+- **`AnalysisIngestTool.requiresAuth = true`** override is unchanged (it still opts back into auth against the no-auth `BaseAnalysisTool` parent). `AnalysisActTool` now declares `requiresVectorStorage = true` directly; its previous `requiresAuth = true` override is dropped because it inherits `true` from `BaseTool` via `SaveModelBaseTool`.
+- **`GetFiltersGuideTool`** now declares `static requiresAuth = false` directly (it was previously categorized as STRATEGY purely for its no-auth side-effect).
+- **`SearchRecordsTool`** drops its STRATEGY category override. It now correctly inherits `requiresAuth = true` from `BaseTool` — matching its actual `requireDataLayer()` runtime dependency. This fixes the latent bug where consumers with a manual registry (e.g. engineer-mcp) injected no `dataLayer` for this tool because the old `static requiresAuth?` field defaulted to `undefined`, which is falsy.
+
+### Migration
+
+For every server consuming mcp-rune:
+
+```ts
+// BEFORE
+import { TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
+new ToolRegistry({
+  toolClasses,
+  models,
+  gates: {
+    [TOOL_CATEGORIES.ANALYSIS]: vectorStorage.isEnabled(),
+    [TOOL_CATEGORIES.DOMAIN]: !!domainRegistry
+  }
+})
+
+// AFTER
+new ToolRegistry({
+  toolClasses,
+  models,
+  vectorStorageEnabled: vectorStorage.isEnabled()
+  // domainRegistry is already a config option — no separate flag needed
+})
+```
+
+For every custom tool that declared a category:
+
+```ts
+// BEFORE — public/no-auth strategy-style tool
+import { TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
+class MyDiscoveryTool extends BaseTool {
+  static override get category() {
+    return TOOL_CATEGORIES.STRATEGY
+  }
+  // ...
+}
+
+// AFTER — extend BaseStrategyTool, or set requiresAuth = false on BaseTool
+class MyDiscoveryTool extends BaseStrategyTool {
+  /* ... */
+}
+//   — or, for tools that don't need prompt-registry plumbing —
+class MyDiscoveryTool extends BaseTool {
+  static override requiresAuth = false
+  // ...
+}
+```
+
+For any consumer reading `Tool.category`, `Tool.getRequiresAuth()`, or `getCategoryConfig(...)`: read the new static fields directly. They are guaranteed defined on every `BaseTool` subclass.
+
 ## [0.59.0] - 2026-05-31
 
 > Closes #168. Exhaustive audit of all 31 author-facing guides (~17K lines) against the v0.58.1 source. Three classes of drift surfaced: (1) public-barrel under-exports — 15+ symbols guides imported as if public were missing from documented subpaths; (2) a removed feature (`DiagramTemplate` / `generate_diagram`) still documented across ~190 lines of `domain-knowledge-guide.md`; (3) a builder-function attribute API (`string()`, `integer()`, `text()`) documented in `docs/README.md` and `extension-recipes.md` that doesn't exist in source. This release grows the barrels to match what the docs already promise, removes the dead feature documentation, and converts the builder-style attribute snippets to the object-literal pattern that every `examples/` model actually uses.

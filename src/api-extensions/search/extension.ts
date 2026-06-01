@@ -19,8 +19,6 @@ import { pickFields } from '#src/core/helpers.js'
 import type { ApiExtension } from '#src/mcp/api-extensions/types.js'
 import type { ModelConfig, ToolAnnotations, ToolResult } from '#src/mcp/tools/base-tool.js'
 import { BaseTool } from '#src/mcp/tools/base-tool.js'
-import type { ToolCategory } from '#src/mcp/tools/categories.js'
-import { TOOL_CATEGORIES } from '#src/mcp/tools/categories.js'
 import type { FilterSchema } from '#src/mcp/tools/validators.js'
 import { normalizeFilterValues, validateFilterValues } from '#src/mcp/tools/validators.js'
 
@@ -49,9 +47,8 @@ interface FilterConfig {
  * to learn how to construct filter arguments.
  */
 export class GetFiltersGuideTool extends BaseTool {
-  static override get category(): ToolCategory {
-    return TOOL_CATEGORIES.STRATEGY
-  }
+  /** Discovery-only: reads model metadata, no API call needed. */
+  static override requiresAuth = false
 
   override get name(): string {
     return 'get_filters_guide'

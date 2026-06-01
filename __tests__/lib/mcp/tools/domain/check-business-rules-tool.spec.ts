@@ -2,7 +2,6 @@ import { BusinessRule, RuleSet } from '../../../../../src/mcp/domain/business-ru
 import { DomainKnowledge } from '../../../../../src/mcp/domain/knowledge.js'
 import { DomainRegistry } from '../../../../../src/mcp/domain/registry.js'
 import { WorkflowRegistry } from '../../../../../src/mcp/domain/workflows.js'
-import { TOOL_CATEGORIES } from '../../../../../src/mcp/tools/categories.js'
 import { CheckBusinessRulesTool } from '../../../../../src/mcp/tools/domain/check-business-rules-tool.js'
 
 function createTestRegistry() {
@@ -42,10 +41,10 @@ describe('CheckBusinessRulesTool', () => {
     tool = new CheckBusinessRulesTool({ domainRegistry: createTestRegistry() })
   })
 
-  it('should have correct name and category', () => {
+  it('is a domain-registry-gated, no-auth tool', () => {
     expect(tool.name).toBe('check_business_rules')
-    expect(CheckBusinessRulesTool.category).toBe(TOOL_CATEGORIES.DOMAIN)
-    expect(CheckBusinessRulesTool.getRequiresAuth()).toBe(false)
+    expect(CheckBusinessRulesTool.requiresDomainRegistry).toBe(true)
+    expect(CheckBusinessRulesTool.requiresAuth).toBe(false)
   })
 
   it('should pass when all rules pass', async () => {

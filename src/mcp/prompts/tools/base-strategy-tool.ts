@@ -9,10 +9,8 @@
  * Examples: get_prompt_guide, validate_form, get_form_summary, get_form_progress
  */
 
-import type { ToolResult } from '#src/mcp/tools/base-tool.js'
+import type { ToolAnnotations, ToolResult } from '#src/mcp/tools/base-tool.js'
 import { BaseTool } from '#src/mcp/tools/base-tool.js'
-import type { ToolCategory } from '#src/mcp/tools/categories.js'
-import { TOOL_CATEGORIES } from '#src/mcp/tools/categories.js'
 
 import type { PromptClassLike, StrategyType } from '../base-prompt.js'
 import type { BaseStrategy } from '../strategies/base-strategy.js'
@@ -30,9 +28,13 @@ interface OperationCheckResult {
 }
 
 export class BaseStrategyTool extends BaseTool {
-  /** Strategy tools don't require authentication */
-  static override get category(): ToolCategory {
-    return TOOL_CATEGORIES.STRATEGY
+  static override requiresAuth = false
+  static override requiresPromptRegistry = true
+  static override defaultAnnotations: ToolAnnotations = {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false
   }
 
   /** Get strategy for a prompt class */
