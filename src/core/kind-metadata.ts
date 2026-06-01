@@ -75,11 +75,35 @@ export function registerKind(
  *   1. `kind:format` narrowing (e.g. `string:isbn`)
  *   2. `format` as a top-level kind (e.g. `format: 'url'` on a string attr)
  *   3. `kind` itself
- *   4. `string` passthrough
  *
  * Step 2 is what makes JSON-schema-style `format: 'email'` or `format: 'url'`
  * work without requiring deployers to register every narrowing explicitly.
+ *
+ * If nothing resolves, `getKind` throws `UnknownKindError`. Servers should
+ * call `validateRegistries({ models, forms, prompts })` from
+ * `#src/core/schema-validation.js` at boot — that catches every model-driven
+ * call site first. The throw exists to make any code path that bypasses the
+ * boot validator (custom apps, tests with hand-built attribute configs) fail
+ * loudly instead of degrading to a silent text input.
  */
+export class UnknownKindError extends Error {
+  readonly kind: string | undefined
+  readonly format: string | undefined
+  constructor(kind: string | undefined, format: string | undefined) {
+    const registered = Array.from(KIND_REGISTRY.keys())
+      .filter((k) => !k.includes(':'))
+      .join(', ')
+    super(
+      `Unknown kind: kind=${JSON.stringify(kind)} format=${JSON.stringify(
+        format
+      )}. Registered kinds: ${registered}.`
+    )
+    this.name = 'UnknownKindError'
+    this.kind = kind
+    this.format = format
+  }
+}
+
 export function getKind(kind: string | undefined, format?: string): KindDescriptor {
   const k = kind?.toLowerCase()
   const f = format?.toLowerCase()
@@ -95,7 +119,7 @@ export function getKind(kind: string | undefined, format?: string): KindDescript
     const base = KIND_REGISTRY.get(k)
     if (base) return base
   }
-  return KIND_REGISTRY.get('string')!
+  throw new UnknownKindError(kind, format)
 }
 
 const pad2 = (n: number): string => String(n).padStart(2, '0')

@@ -231,6 +231,15 @@ function renderField(field) {
       // Skip file fields in the generic form (base64 uploads not supported in MCP Apps)
       break
     default:
+      // Surface the silent fallback so future drift between the server-side
+      // schema generator and this switch is visible in devtools. validateRegistries
+      // catches every model-driven case at boot; this warning fires only when
+      // the server emits a field.type the client doesn't recognise — i.e. when
+      // someone added a new kind in kind-metadata.ts but forgot to wire it here.
+      console.warn(
+        `[mcp-rune] Unknown field.type "${field.type}" for field "${field.name}". ` +
+          `Rendering as <input type="text">. Add a case to renderField() in model-form-ui/app.js.`
+      )
       container.appendChild(createInput(field))
   }
 

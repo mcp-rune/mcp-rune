@@ -1,18 +1,20 @@
 import { describe, expect, it } from 'vitest'
 
-import { getKind, KIND_REGISTRY, registerKind } from '../../../src/core/kind-metadata.js'
+import {
+  getKind,
+  KIND_REGISTRY,
+  registerKind,
+  UnknownKindError
+} from '../../../src/core/kind-metadata.js'
 
 describe('lib/core/kind-metadata', () => {
   describe('getKind', () => {
-    it('returns the string passthrough when kind is unknown', () => {
-      const kind = getKind('nonexistent')
-      expect(kind.htmlInputType).toBe('text')
-      expect(kind.promptType).toBe('string')
+    it('throws UnknownKindError when kind is unknown', () => {
+      expect(() => getKind('nonexistent')).toThrow(UnknownKindError)
     })
 
-    it('returns the string passthrough when kind is undefined', () => {
-      const kind = getKind(undefined)
-      expect(kind.promptType).toBe('string')
+    it('throws UnknownKindError when kind is undefined and no format resolves', () => {
+      expect(() => getKind(undefined)).toThrow(UnknownKindError)
     })
 
     it('lowercases kind argument (fixes URL/url casing bug)', () => {

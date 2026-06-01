@@ -75,8 +75,11 @@ describe('lib/mcp/apps/shared/formatters', () => {
       expect(getFormatter('base64').format('aGVsbG8=').textContent).toBe('(binary)')
     })
 
-    it('unknown kind falls back to the string renderer', () => {
-      expect(getFormatter('totally-made-up').format('hi').textContent).toBe('hi')
+    it('throws UnknownKindError for an unregistered kind (strict mode)', () => {
+      // getFormatter delegates to getKind, which throws on unknown kinds in
+      // strict mode. validateRegistries() catches every model-driven case at
+      // server boot; this throw exists for any direct call with a bogus kind.
+      expect(() => getFormatter('totally-made-up').format('hi')).toThrow(/Unknown kind/)
     })
   })
 

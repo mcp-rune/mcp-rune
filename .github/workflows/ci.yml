@@ -45,11 +45,16 @@ jobs:
       - name: Format check
         run: npm run format:check
 
+      - name: Build
+        # `build:full` chains `build:all-apps` (6 Vite bundles) + `tsc` +
+        # `copy:app-html` to produce the complete publishable artifact.
+        # Tests need it: `bundle-coverage.spec.ts` reads
+        # `dist/mcp/apps/dist/model-form.html` to assert every server-emitted
+        # field.type has a matching `case "X"` arm in the bundled client.
+        run: npm run build:full
+
       - name: Test
         run: npm test
-
-      - name: Build
-        run: npm run build
 
   publish:
     needs: ci

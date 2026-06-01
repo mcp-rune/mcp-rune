@@ -330,10 +330,12 @@ export class BasePrompt {
           .filter((f) => formState[f] !== undefined && formState[f] !== '')
           .map((f) => {
             const def = this.fieldDefinitions[f]
-            const rendered = getKind(def?.type, def?.format).describe(formState[f], {
-              format: def?.format,
-              enumValues: def?.enumValues
-            })
+            const rendered = def?.type
+              ? getKind(def.type, def.format).describe(formState[f], {
+                  format: def.format,
+                  enumValues: def.enumValues
+                })
+              : String(formState[f])
             return `  - ${def?.description || f}: ${rendered}`
           })
 
@@ -348,10 +350,12 @@ export class BasePrompt {
           .filter((f) => formState[f] !== undefined && formState[f] !== '')
           .map((f) => {
             const def = this.fieldDefinitions[f]
-            const rendered = getKind(def?.type, def?.format).describe(formState[f], {
-              format: def?.format,
-              enumValues: def?.enumValues
-            })
+            const rendered = def?.type
+              ? getKind(def.type, def.format).describe(formState[f], {
+                  format: def.format,
+                  enumValues: def.enumValues
+                })
+              : String(formState[f])
             return `  - ${def?.description || f}: ${rendered}`
           })
 

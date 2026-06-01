@@ -241,10 +241,12 @@ export class HybridStrategy extends BaseStrategy {
           .filter((f) => fields[f] !== undefined && fields[f] !== '')
           .map((f) => {
             const def = fieldDefs[f]
-            const rendered = getKind(def?.type, def?.format).describe(fields[f], {
-              format: def?.format,
-              enumValues: def?.enumValues
-            })
+            const rendered = def?.type
+              ? getKind(def.type, def.format).describe(fields[f], {
+                  format: def.format,
+                  enumValues: def.enumValues
+                })
+              : String(fields[f])
             return `  - ${def?.description || f}: ${rendered}`
           })
 
@@ -258,10 +260,12 @@ export class HybridStrategy extends BaseStrategy {
       for (const [name, value] of Object.entries(fields)) {
         if (value !== undefined && value !== '') {
           const def = fieldDefs[name]
-          const rendered = getKind(def?.type, def?.format).describe(value, {
-            format: def?.format,
-            enumValues: def?.enumValues
-          })
+          const rendered = def?.type
+            ? getKind(def.type, def.format).describe(value, {
+                format: def.format,
+                enumValues: def.enumValues
+              })
+            : String(value)
           lines.push(`- ${def?.description || name}: ${rendered}`)
         }
       }

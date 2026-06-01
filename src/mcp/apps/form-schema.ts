@@ -322,8 +322,18 @@ function buildField(
       field.association = { endpoint: pluralize(assoc.target_model), labelField: 'name' }
     }
   } else if (attr.type === 'enum' || (attr.enumValues && attr.type !== 'array')) {
+    if (!Array.isArray(attr.enumValues) || attr.enumValues.length === 0) {
+      // Belt-and-braces: validateRegistries() should have caught this at
+      // boot. Anything reaching here bypassed the boot validator (custom
+      // app, test with hand-built schema). Fail loudly with the model and
+      // attribute name so the source is obvious.
+      throw new Error(
+        `form-schema: ${ModelClass.singularName}.${name} has type "enum" but no enumValues. ` +
+          `Call validateRegistries() at server boot to catch this earlier.`
+      )
+    }
     field.type = 'select'
-    field.options = attr.enumValues!.map((v) => ({ value: v, label: humanize(v) }))
+    field.options = attr.enumValues.map((v) => ({ value: v, label: humanize(v) }))
     if (attr.default !== undefined) field.default = attr.default
   } else {
     field.type = getKind(attr.type, attr.format).htmlInputType
