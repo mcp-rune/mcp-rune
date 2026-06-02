@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [0.63.0] - 2026-06-02
 
-> Breaking. The `model-form/` folder is split into two per-tool app folders — `new-model-app/` and `edit-model-app/` — mirroring the rest of the catalog where every tool has its own folder named after it. The shared client-side form code is extracted to `src/mcp/apps/shared/model-form/` and consumed by both. Each tool now owns its own bundle (`new-model-app.html`, `edit-model-app.html`) and its own MCP resource URI. The public `@mcp-rune/mcp-rune/apps` exports (`createNewModelApp`, `createEditModelApp`) are unchanged. This reverses the 0.62.0 note that "`model-form.html` is still shared by `new_model_app` and `edit_model_app`": as of 0.63.0 they each have their own bundle.
+> Breaking. Two big shifts ship together. **(1)** The `model-form/` folder is split into per-tool app folders (`new-model-app/`, `edit-model-app/`) so every tool owns its own bundle and resource URI; shared client-side form code moves to `src/mcp/apps/shared/model-form/`. **(2)** The framework's "generic Claude Code" look is replaced with the **default app theme** — a tokenized light/dark system that mirrors the mcp-rune brand site (Geist + Geist Mono, purple `#7c5cff` accent, squared mono badges, hairline borders, `mr-*` class prefix). All seven existing apps are re-skinned and a new **`workflow_panel_app`** ships for grouped workflow launchers. CSS tokens are renamed (`--color-accent` → `--acc`, `--surface` stays, `--border` → `--line-2`, etc.) and HTML/CSS class names move to the `mr-*` prefix — both are breaking for deployers consuming `themeOverrides` or reaching into rendered HTML.
 
 ### Changed
 
@@ -28,8 +28,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **`__tests__/lib/mcp/apps/edit-model-app.spec.ts`** — covers the previously-untested `createEditModelApp`: tool shape, URI distinctness from `new_model_app`, no mode gate, `record_id` flow, `mode: 'update'` response, and submit-mode echo.
 - **`bundle-coverage.spec.ts`** now parametrizes over both `new-model-app.html` and `edit-model-app.html` so each bundle is independently verified against the server's `field.type` emit set.
+- **`createWorkflowPanelApp({ workflows, namespace })`** — new public factory at `@mcp-rune/mcp-rune/apps` (`src/mcp/apps/workflow-panel-app/`). Returns a `[panelApp, dataApp]` pair: the panel tool is LLM-visible (`workflow_panel_app`), the data tool is app-only (`workflow_panel_app_data`) and serves the full JSON list to the iframe at connect time. Cards launch via the deployer's `suggest_workflow` server tool. Categories are derived client-side from each workflow's `tags`.
+- **Default app theme** (`shared/base.css` rewritten end-to-end) — tokenized light + dark palette, shared `mr-*` primitives (`mr-btn`, `mr-badge` + `neutral`/`live`/`wip`/`acc` variants, `mr-check` + `indet`, `mr-table`, `mr-pager`, `mr-selbar`, `mr-statusbar`, `mr-empty`, `mr-titlebar`/`mr-title`/`mr-selcount`/`mr-subtitle`).
+- **Per-app stylesheets** rewritten using `mr-*` selectors: list/search use `mr-table` + `mr-pager`; new/edit forms use `mr-form/mr-field/mr-flabel/mr-fhint/mr-input/mr-textarea/mr-select` + accent-tinted multiselect pills; pick/multi-pick use `mr-search` (with leading magnifier SVG) + `mr-results/mr-result` (avatar + name + meta rows); show uses `mr-detail` family; workflow-panel uses `mr-wf-group/mr-wf-card/mr-wf-tags`.
+- **Geist + Geist Mono** loaded per-app via Google Fonts `<link>` (cannot be inlined by Vite singlefile; system stack remains the offline fallback).
 
 ### Migration
+
+> The "design re-skin" changes below are independent of the `model-form` split. Either may bite a consumer alone.
+
+For consumers using `themeOverrides.cssVariables`:
+
+```ts
+// BEFORE — old token names from the orange/system-font theme
+themeOverrides: { cssVariables: { '--color-accent': '#0a84ff' } }
+
+// AFTER — new token names from the default app theme
+themeOverrides: { cssVariables: { '--acc': '#0a84ff', '--acc-2': '#0a84ff' } }
+```
+
+The complete rename: `--color-accent` → `--acc` (+ `--acc-2`, `--acc-tint`, `--acc-line`); `--color-text-primary/-info` → `--ink`/`--ink-2`/`--ink-3`/`--ink-4`; `--color-background-primary` → `--app-bg`; `--border` → `--line-2`; `--input-bg` is gone (use `--app-bg`); `--color-success`/`--color-error` → `--mint`/`--rose`. See `src/mcp/apps/shared/base.css` for the full token list.
+
+For consumers reaching into rendered HTML class names: the `mr-*` prefix is now in force across every shipped app. Examples: `.btn-primary` → `.mr-btn.acc`, `.filter-chip` → `.mr-badge.neutral`, `.status-badge` → `.mr-badge`, `.empty-state` → `.mr-empty`, `.detail-card` → `.mr-detail`, `.field` → `.mr-field`. There are no shims; deployer-side selectors targeting the old names must be updated.
+
+For consumers adopting `createWorkflowPanelApp`: see [docs/guides/mcp-apps-guide.md](docs/guides/mcp-apps-guide.md) and the `WorkflowPanelEntry` type re-exported from `@mcp-rune/mcp-rune/apps`.
+
+### Migration (model-form split)
 
 For consumers using the public `@mcp-rune/mcp-rune/apps` entry point: no source changes required. Existing calls to `createNewModelApp(...)` and `createEditModelApp(...)` continue to work.
 
