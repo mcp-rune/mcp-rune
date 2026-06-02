@@ -1,9 +1,9 @@
-import { FormDataStore } from '../../../../src/mcp/apps/form-data-store.js'
-import { createFormDataTools } from '../../../../src/mcp/apps/form-data-tools.js'
+import { FormDataStore } from '../../../../src/mcp/apps/lib/form-data-store.js'
+import { createFormDataTools } from '../../../../src/mcp/apps/lib/form-data-tools.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 
-const resourceUri = 'ui://test/model-form'
+const resourceUri = 'ui://test/new-model-app'
 const modelNames = ['activity', 'book', 'deal']
 const getHtml = () => '<html></html>'
 

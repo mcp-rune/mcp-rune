@@ -73,13 +73,13 @@ export function createTableSelection({ app, statusBar, selectToolName, getState 
       if (allResultsSelected) allResultsSelected = false
     }
     const row = document.querySelector(`tbody tr[data-id="${id}"]`)
-    if (row) row.classList.toggle('selected', checked)
+    if (row) row.classList.toggle('sel', checked)
     updateBar()
     updateCheckbox()
   }
 
   function toggleAll(checked) {
-    const checkboxes = document.querySelectorAll('tbody .col-checkbox input[type="checkbox"]')
+    const checkboxes = document.querySelectorAll('tbody td.check input[type="checkbox"]')
     for (const cb of checkboxes) {
       const id = cb.dataset.id
       cb.checked = checked
@@ -89,7 +89,7 @@ export function createTableSelection({ app, statusBar, selectToolName, getState 
         selectedIds.delete(id)
       }
       const row = cb.closest('tr')
-      if (row) row.classList.toggle('selected', checked)
+      if (row) row.classList.toggle('sel', checked)
     }
 
     if (!checked) allResultsSelected = false
@@ -135,7 +135,7 @@ export function createTableSelection({ app, statusBar, selectToolName, getState 
   function updateCheckbox() {
     const selectAll = document.getElementById('select-all')
     if (!selectAll) return
-    const total = document.querySelectorAll('tbody .col-checkbox input[type="checkbox"]').length
+    const total = document.querySelectorAll('tbody td.check input[type="checkbox"]').length
     if (total === 0) return
     selectAll.checked = selectedIds.size === total
     selectAll.indeterminate = selectedIds.size > 0 && selectedIds.size < total

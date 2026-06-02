@@ -4,6 +4,130 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.63.0] - 2026-06-02
+
+> Breaking. Two big shifts ship together. **(1)** The `model-form/` folder is split into per-tool app folders (`new-model-app/`, `edit-model-app/`) so every tool owns its own bundle and resource URI; shared client-side form code moves to `src/mcp/apps/shared/model-form/`. **(2)** The framework's "generic Claude Code" look is replaced with the **default app theme** — a tokenized light/dark system that mirrors the mcp-rune brand site (Geist + Geist Mono, purple `#7c5cff` accent, squared mono badges, hairline borders, `mr-*` class prefix). All seven existing apps are re-skinned and a new **`workflow_panel_app`** ships for grouped workflow launchers. CSS tokens are renamed (`--color-accent` → `--acc`, `--surface` stays, `--border` → `--line-2`, etc.) and HTML/CSS class names move to the `mr-*` prefix — both are breaking for deployers consuming `themeOverrides` or reaching into rendered HTML.
+
+### Changed
+
+- **App folders split** — `src/mcp/apps/model-form/` is removed; each form factory + UI lives in its own folder:
+
+  | Before                             | After                                                                |
+  | ---------------------------------- | -------------------------------------------------------------------- |
+  | `src/mcp/apps/model-form/index.ts` | `src/mcp/apps/new-model-app/index.ts` + `edit-model-app/index.ts`    |
+  | `src/mcp/apps/model-form/ui/`      | `src/mcp/apps/new-model-app/ui/` + `edit-model-app/ui/` (thin shims) |
+
+- **Shared client-side code** — the bulk of the old `model-form/ui/app.js` moves to `src/mcp/apps/shared/model-form/main.js`, exported as `initModelFormApp()`. Each per-app `ui/app.js` is a two-line shim that imports and invokes it. `styles.css` moves to `shared/model-form/styles.css`.
+- **Shared server-side helpers** — `resolveAssociationOptions`, `buildDefaultsFromModel`, and `filterEmpty` extracted to `src/mcp/apps/lib/form-app-helpers.ts` so both factories consume the same implementation.
+- **Resource URIs** — `new_model_app` is now `ui://{namespace}/new-model-app` (was `…/model-form`); `edit_model_app` is `ui://{namespace}/edit-model-app` (was `…/model-form`). Both `centerOfControlExtension` and any consumer holding hard-coded URIs in client config must update. CoC keeps binding `collect_form_data` to `new_model_app`'s URI + getHtml; since both form bundles wrap the same shared module, the review interstitial renders identically.
+- **Vite build pipeline** — `model-form` build target replaced with `new-model-app` (cleans `dist/` first) and `edit-model-app` (runs with `SKIP_CLEAN=1` alongside the other apps). `package.json` scripts `build:apps:new-model-app` / `build:apps:edit-model-app` replace `build:apps:model-form`.
+- **Internal imports** updated across `src/apps.ts` (public barrel), `src/mcp/apps/lib/create-default-registry.ts`, and the test suite to reference the new paths.
+- **Documentation guides** — `mcp-apps-guide.md`, `mcp-apps-architecture.md`, `model-form-customization-guide.md`, `attribute-kinds-guide.md`, and `api-convention-guide.md` updated to reference the new structure. Stale doc comments in `lib/form-data-tools.ts` and `shared/formatters.ts` updated.
+
+### Added
+
+- **`__tests__/lib/mcp/apps/edit-model-app.spec.ts`** — covers the previously-untested `createEditModelApp`: tool shape, URI distinctness from `new_model_app`, no mode gate, `record_id` flow, `mode: 'update'` response, and submit-mode echo.
+- **`bundle-coverage.spec.ts`** now parametrizes over both `new-model-app.html` and `edit-model-app.html` so each bundle is independently verified against the server's `field.type` emit set.
+- **`createWorkflowPanelApp({ workflows, namespace })`** — new public factory at `@mcp-rune/mcp-rune/apps` (`src/mcp/apps/workflow-panel-app/`). Returns a `[panelApp, dataApp]` pair: the panel tool is LLM-visible (`workflow_panel_app`), the data tool is app-only (`workflow_panel_app_data`) and serves the full JSON list to the iframe at connect time. Cards launch via the deployer's `suggest_workflow` server tool. Categories are derived client-side from each workflow's `tags`.
+- **Default app theme** (`shared/base.css` rewritten end-to-end) — tokenized light + dark palette, shared `mr-*` primitives (`mr-btn`, `mr-badge` + `neutral`/`live`/`wip`/`acc` variants, `mr-check` + `indet`, `mr-table`, `mr-pager`, `mr-selbar`, `mr-statusbar`, `mr-empty`, `mr-titlebar`/`mr-title`/`mr-selcount`/`mr-subtitle`).
+- **Per-app stylesheets** rewritten using `mr-*` selectors: list/search use `mr-table` + `mr-pager`; new/edit forms use `mr-form/mr-field/mr-flabel/mr-fhint/mr-input/mr-textarea/mr-select` + accent-tinted multiselect pills; pick/multi-pick use `mr-search` (with leading magnifier SVG) + `mr-results/mr-result` (avatar + name + meta rows); show uses `mr-detail` family; workflow-panel uses `mr-wf-group/mr-wf-card/mr-wf-tags`.
+- **Geist + Geist Mono** loaded per-app via Google Fonts `<link>` (cannot be inlined by Vite singlefile; system stack remains the offline fallback).
+
+### Migration
+
+> The "design re-skin" changes below are independent of the `model-form` split. Either may bite a consumer alone.
+
+For consumers using `themeOverrides.cssVariables`:
+
+```ts
+// BEFORE — old token names from the orange/system-font theme
+themeOverrides: { cssVariables: { '--color-accent': '#0a84ff' } }
+
+// AFTER — new token names from the default app theme
+themeOverrides: { cssVariables: { '--acc': '#0a84ff', '--acc-2': '#0a84ff' } }
+```
+
+The complete rename: `--color-accent` → `--acc` (+ `--acc-2`, `--acc-tint`, `--acc-line`); `--color-text-primary/-info` → `--ink`/`--ink-2`/`--ink-3`/`--ink-4`; `--color-background-primary` → `--app-bg`; `--border` → `--line-2`; `--input-bg` is gone (use `--app-bg`); `--color-success`/`--color-error` → `--mint`/`--rose`. See `src/mcp/apps/shared/base.css` for the full token list.
+
+For consumers reaching into rendered HTML class names: the `mr-*` prefix is now in force across every shipped app. Examples: `.btn-primary` → `.mr-btn.acc`, `.filter-chip` → `.mr-badge.neutral`, `.status-badge` → `.mr-badge`, `.empty-state` → `.mr-empty`, `.detail-card` → `.mr-detail`, `.field` → `.mr-field`. There are no shims; deployer-side selectors targeting the old names must be updated.
+
+For consumers adopting `createWorkflowPanelApp`: see [docs/guides/mcp-apps-guide.md](docs/guides/mcp-apps-guide.md) and the `WorkflowPanelEntry` type re-exported from `@mcp-rune/mcp-rune/apps`.
+
+### Migration (model-form split)
+
+For consumers using the public `@mcp-rune/mcp-rune/apps` entry point: no source changes required. Existing calls to `createNewModelApp(...)` and `createEditModelApp(...)` continue to work.
+
+For consumers with hard-coded resource URIs in client config:
+
+```ts
+// BEFORE
+const newModelFormUri = 'ui://my-app/model-form'
+const editModelFormUri = 'ui://my-app/model-form'
+
+// AFTER
+const newModelFormUri = 'ui://my-app/new-model-app'
+const editModelFormUri = 'ui://my-app/edit-model-app'
+```
+
+For consumers reaching into deep subpaths:
+
+```ts
+// BEFORE
+import {
+  createNewModelApp,
+  createEditModelApp
+} from '@mcp-rune/mcp-rune/lib/mcp/apps/model-form/index.js'
+
+// AFTER
+import { createNewModelApp } from '@mcp-rune/mcp-rune/lib/mcp/apps/new-model-app/index.js'
+import { createEditModelApp } from '@mcp-rune/mcp-rune/lib/mcp/apps/edit-model-app/index.js'
+```
+
+Per pre-1.0 policy, no aliases or shims.
+
+## [0.62.0] - 2026-06-02
+
+> Internal restructure. Each MCP app's server-side factory and its UI iframe source are now co-located under a single directory, and shared helper modules consumed across app factories live under `src/mcp/apps/lib/`. The public barrel at `@mcp-rune/mcp-rune/apps` is unchanged — same export names, same shapes. Consumers using only the documented `./apps` entry point are unaffected. Consumers reaching into deep subpaths (e.g. `@mcp-rune/mcp-rune/lib/mcp/apps/registry.js`) must update those paths to the new layout. Per pre-1.0 policy there are no aliases or deprecation paths.
+
+### Changed
+
+- **App directories co-located** — each app's factory (`index.ts`) and UI source (`ui/`) now live in one folder:
+
+  | Before                                           | After                                |
+  | ------------------------------------------------ | ------------------------------------ |
+  | `src/mcp/apps/model-form.ts` + `model-form-ui/`  | `src/mcp/apps/model-form/`           |
+  | `src/mcp/apps/list-model-app.ts` + `…-ui/`       | `src/mcp/apps/list-model-app/`       |
+  | `src/mcp/apps/show-model-app.ts` + `…-ui/`       | `src/mcp/apps/show-model-app/`       |
+  | `src/mcp/apps/search-model-app.ts` + `…-ui/`     | `src/mcp/apps/search-model-app/`     |
+  | `src/mcp/apps/pick-model-app.ts` + `…-ui/`       | `src/mcp/apps/pick-model-app/`       |
+  | `src/mcp/apps/multi-pick-model-app.ts` + `…-ui/` | `src/mcp/apps/multi-pick-model-app/` |
+
+  Each app directory now contains an `index.ts` (factory + `handleToolCall`) and a `ui/` subdirectory (`index.html`, `app.js`, `styles.css`).
+
+- **Shared helpers moved to `lib/`** — modules used across multiple app factories (registry, schema generators, stores, formatters, helpers, types) moved from `src/mcp/apps/*.ts` to `src/mcp/apps/lib/*.ts`:
+
+  `base-form.ts`, `create-default-registry.ts`, `detail-schema.ts`, `display-adapter.ts`, `form-associations.ts`, `form-data-store.ts`, `form-data-tools.ts`, `form-schema.ts`, `format-summary.ts`, `helpers.ts`, `list-schema.ts`, `registry.ts`, `selection-store.ts`, `selection-tools.ts`, `types.ts`.
+
+- **Vite build pipeline** updated — `BUILD_TARGET` config `root` paths now point at `<app>/ui/` instead of `<app>-ui/`. App `HTML_PATH` constants resolve `..` upward to the shared `dist/` directory.
+- **ESLint browser-globals scope** updated from `**/apps/*-ui/**/*.js` to `**/apps/*/ui/**/*.js`.
+- **Internal imports** updated across `src/apps.ts` (the public barrel), `src/extensions/center-of-control.ts`, `src/mcp/extensions/tool-flow.ts`, `src/mcp/server-factory.ts`, and all app factories to reference the new `lib/` and per-app `index.ts` paths. Test specs and documentation guides updated to match.
+
+### Migration
+
+For consumers using the public `@mcp-rune/mcp-rune/apps` entry point: no changes required.
+
+For consumers using deep subpaths via `@mcp-rune/mcp-rune/lib/*`:
+
+```ts
+// BEFORE
+import { AppRegistry } from '@mcp-rune/mcp-rune/lib/mcp/apps/registry.js'
+import { createShowModelApp } from '@mcp-rune/mcp-rune/lib/mcp/apps/show-model-app.js'
+
+// AFTER
+import { AppRegistry } from '@mcp-rune/mcp-rune/lib/mcp/apps/lib/registry.js'
+import { createShowModelApp } from '@mcp-rune/mcp-rune/lib/mcp/apps/show-model-app/index.js'
+```
+
 ## [0.61.0] - 2026-06-02
 
 > Breaking. Every MCP app tool is renamed to the uniform shape `<ui-verb>_model_app`. The previous catalog mixed three suffixes (`_form`, `_app`, `_picker`), three nouns (`model` / `records` / none), and overloaded mutation verbs (`create_*`, `update_*`) on UI tools. After this release every app tool name is `<ui-verb>_model_app`: a UI-intent verb (`new` / `edit` / `show` / `list` / `search` / `pick` / `multi_pick`) on the singular `model` noun with the `_app` suffix. Mutation verbs (`create_*`, `update_*`, `delete_*`) are reserved for data tools that actually mutate. Per pre-1.0 policy there are no aliases or deprecation paths — consumers must update.
@@ -211,6 +335,8 @@ import { ModelService, EndpointResolver } from '@mcp-rune/mcp-rune/model-service
 
 The `/lib/*` catch-all subpath remains, so the old `/lib/mcp/services/index.js` form is not broken — just no longer the recommended path.
 
+[0.63.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.62.0...v0.63.0
+[0.62.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.61.0...v0.62.0
 [0.61.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.60.1...v0.61.0
 [0.59.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.58.1...v0.59.0
 

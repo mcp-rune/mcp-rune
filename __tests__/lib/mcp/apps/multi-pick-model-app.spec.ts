@@ -1,4 +1,4 @@
-import { createMultiPickModelApp } from '../../../../src/mcp/apps/multi-pick-model-app.js'
+import { createMultiPickModelApp } from '../../../../src/mcp/apps/multi-pick-model-app/index.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 

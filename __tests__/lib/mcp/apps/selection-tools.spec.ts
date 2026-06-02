@@ -1,5 +1,5 @@
-import { SelectionStore } from '../../../../src/mcp/apps/selection-store.js'
-import { createSelectionTools } from '../../../../src/mcp/apps/selection-tools.js'
+import { SelectionStore } from '../../../../src/mcp/apps/lib/selection-store.js'
+import { createSelectionTools } from '../../../../src/mcp/apps/lib/selection-tools.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 

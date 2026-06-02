@@ -1,0 +1,114 @@
+/*
+ * show-model-app — detail card view.
+ *
+ * Read-only label/value pairs grouped into a single bordered card. No design
+ * template in the hand-off; styled with the same tokens for consistency.
+ */
+
+/* ── detail card ─────────────────────────────────────────────── */
+.mr-detail {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.mr-detail-row {
+  display: grid;
+  grid-template-columns: 168px 1fr;
+  background: var(--app-bg);
+  border-bottom: 1px solid var(--line);
+}
+.mr-detail-row:nth-child(even) {
+  background: var(--surface);
+}
+.mr-detail-row:last-child {
+  border-bottom: 0;
+}
+.mr-detail-row.wide {
+  grid-template-columns: 1fr;
+}
+
+.mr-detail-label {
+  padding: 13px 16px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.01em;
+  color: var(--acc-2);
+  display: flex;
+  align-items: flex-start;
+}
+
+.mr-detail-value {
+  padding: 13px 16px;
+  word-break: break-word;
+  color: var(--ink);
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+.mr-detail-row.wide .mr-detail-label {
+  padding-bottom: 4px;
+}
+.mr-detail-row.wide .mr-detail-value {
+  padding-top: 4px;
+  white-space: pre-wrap;
+  color: var(--ink-2);
+}
+
+/* ── link in a value cell ────────────────────────────────────── */
+.mr-detail-link {
+  color: var(--acc-2);
+  text-decoration: none;
+}
+.mr-detail-link:hover {
+  text-decoration: underline;
+  color: var(--acc);
+}
+
+/* ── rating (star line) ─────────────────────────────────────── */
+.mr-rating {
+  color: var(--amber);
+  letter-spacing: 2px;
+  font-size: 1.1em;
+}
+
+/* ── empty / capped / error meta lines ──────────────────────── */
+.mr-empty-val {
+  color: var(--ink-4);
+  font-style: normal;
+}
+
+.mr-cap {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-4);
+  margin-bottom: 12px;
+}
+
+.mr-recordhd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-top: 18px;
+  margin-bottom: 8px;
+}
+.mr-recordhd:first-child {
+  margin-top: 0;
+}
+
+.mr-errline {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--rose);
+  margin: 8px 0;
+}
+
+/* Spacing between multi-record cards */
+.mr-detail + .mr-detail,
+.mr-detail + .mr-recordhd {
+  margin-top: 16px;
+}

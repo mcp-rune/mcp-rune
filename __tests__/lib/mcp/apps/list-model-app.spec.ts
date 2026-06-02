@@ -1,4 +1,4 @@
-import { createListModelApp } from '../../../../src/mcp/apps/list-model-app.js'
+import { createListModelApp } from '../../../../src/mcp/apps/list-model-app/index.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 

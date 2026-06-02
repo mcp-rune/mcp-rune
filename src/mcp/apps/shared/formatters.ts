@@ -5,7 +5,8 @@
  * `src/core/kind-metadata.ts` (server- and browser-importable). This module
  * adds the only piece that requires the DOM: `format(value, opts) -> Node`,
  * consumed by list-model-app, show-model-app, and search-model-app through
- * `renderCellValue`, and by model-form-ui via `getFormatter`.
+ * `renderCellValue`, and by the form apps' iframes (new-model-app /
+ * edit-model-app, via `shared/model-form/main.js`) through `getFormatter`.
  *
  * Deployers extend display rendering through the declarative
  * `FormatterDescriptor` channel on `AppRegistry`, which both server and iframe
@@ -42,18 +43,18 @@ export const helpers: FormatHelpers = {
   empty() {
     const span = document.createElement('span')
     span.textContent = '—'
-    span.style.color = 'var(--color-text-info)'
+    span.style.color = 'var(--ink-4)'
     return span
   },
   badge(label, { icon, className } = {}) {
     const span = document.createElement('span')
-    span.className = `status-badge${className ? ' ' + className : ''}`
+    span.className = `mr-badge${className ? ' ' + className : ''}`
     span.textContent = icon ? `${icon} ${label}` : label
     return span
   },
   link(href, label) {
     const a = document.createElement('a')
-    a.className = 'detail-link'
+    a.className = 'mr-detail-link'
     a.href = href
     a.target = '_blank'
     a.rel = 'noopener noreferrer'
@@ -63,15 +64,15 @@ export const helpers: FormatHelpers = {
   tagList(items, { humanizeItems = true } = {}) {
     if (!items?.length) {
       const span = document.createElement('span')
-      span.className = 'empty-value'
+      span.className = 'mr-empty-val'
       span.textContent = 'None'
       return span
     }
     const container = document.createElement('span')
-    container.className = 'tag-list'
+    container.className = 'mr-badge-row'
     for (const item of items) {
       const tag = document.createElement('span')
-      tag.className = 'tag'
+      tag.className = 'mr-badge'
       tag.textContent = humanizeItems ? humanize(String(item)) : String(item)
       container.appendChild(tag)
     }
@@ -79,7 +80,7 @@ export const helpers: FormatHelpers = {
   },
   rating(value, max = 5) {
     const span = document.createElement('span')
-    span.className = 'rating'
+    span.className = 'mr-rating'
     const n = Math.max(0, Math.min(max, Number(value) || 0))
     span.textContent = '★'.repeat(n) + '☆'.repeat(max - n)
     return span
@@ -213,17 +214,17 @@ registerFormatter('json', {
 registerFormatter('color', {
   format: (v) => {
     const span = document.createElement('span')
-    span.className = 'color-swatch'
+    span.className = 'mr-swatch'
     span.style.display = 'inline-flex'
     span.style.alignItems = 'center'
-    span.style.gap = 'var(--spacing-xs)'
+    span.style.gap = '6px'
     const swatch = document.createElement('span')
     swatch.style.display = 'inline-block'
     swatch.style.width = '0.9em'
     swatch.style.height = '0.9em'
     swatch.style.borderRadius = '3px'
     swatch.style.background = String(v)
-    swatch.style.border = '1px solid var(--border)'
+    swatch.style.border = '1px solid var(--line-2)'
     span.appendChild(swatch)
     span.appendChild(document.createTextNode(String(v)))
     return span

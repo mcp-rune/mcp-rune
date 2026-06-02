@@ -404,30 +404,48 @@ That's it. The generic form app handles the rest — fieldsets, validation, subm
 ## File Structure
 
 ```
-lib/mcp/apps/
-├── form-schema.js              # generateFormSchema() — pure function
-├── list-schema.js              # generateListSchema() — list/table schema
-├── detail-schema.js            # generateDetailSchema() — record detail schema
-├── selection-store.js          # SelectionStore — session-scoped selection Map
-└── selection-tools.js          # createSelectionTools() — per-app selection tools
-
-src/engineer/apps/
-├── index.js                    # AppRegistry + createAppRegistry
-├── model-form.js               # Generic create/update form factory
-├── list-model-app.js                # Generic list/table view factory
-├── show-model-app.js            # Record detail view factory
-├── search-model-app.js              # Search view with filters + selection
-├── pick-model-app.js      # Type-ahead search picker
-├── multi-pick-model-app.js             # Multi-select picker
-├── model-form-ui/              # Generic form client-side app
-├── list-model-app-ui/               # List view client-side app
-├── show-model-app-ui/           # Record detail client-side app
-├── search-model-app-ui/             # Search view client-side app
-├── pick-model-app-ui/     # Autocomplete picker client-side app
-├── multi-pick-model-app-ui/            # Multi-select picker client-side app
+src/mcp/apps/
+├── new-model-app/              # Create-record form
+│   ├── index.ts                # Factory + handleToolCall (server)
+│   └── ui/                     # Thin shim → shared/model-form/main.js
+│       ├── index.html
+│       └── app.js
+├── edit-model-app/             # Edit-record form (mirrors new-model-app)
+│   ├── index.ts
+│   └── ui/
+├── list-model-app/             # Generic list/table view
+│   ├── index.ts
+│   └── ui/
+├── show-model-app/             # Record detail view
+│   ├── index.ts
+│   └── ui/
+├── search-model-app/           # Search view with filters + selection
+│   ├── index.ts
+│   └── ui/
+├── pick-model-app/             # Type-ahead search picker
+│   ├── index.ts
+│   └── ui/
+├── multi-pick-model-app/       # Multi-select picker
+│   ├── index.ts
+│   └── ui/
+├── lib/                        # Shared server-side helpers
+│   ├── form-schema.ts          # generateFormSchema() — pure function
+│   ├── list-schema.ts          # generateListSchema() — list/table schema
+│   ├── detail-schema.ts        # generateDetailSchema() — record detail schema
+│   ├── form-app-helpers.ts     # Shared helpers for new/edit form factories
+│   ├── selection-store.ts      # SelectionStore — session-scoped Map
+│   ├── selection-tools.ts      # createSelectionTools() — per-app selection
+│   ├── registry.ts             # AppRegistry + createAppRegistry
+│   └── …                       # types, helpers, formatters, etc.
+├── shared/                     # Shared client-side JS/CSS for ui/ folders
+│   ├── base.css, app-init.js, helpers.js, formatters.{js,runtime.js}, …
+│   └── model-form/             # Shared form UI consumed by new + edit
+│       ├── main.js             # initModelFormApp() — bulk of form code
+│       └── styles.css
 ├── vite.config.js              # Build config (multi-target single-file HTML)
 └── dist/                       # Built outputs (one HTML per app)
-    ├── model-form.html
+    ├── new-model-app.html
+    ├── edit-model-app.html
     ├── list-model-app.html
     ├── show-model-app.html
     ├── search-model-app.html
@@ -437,7 +455,7 @@ src/engineer/apps/
 
 ## Key Components
 
-### `generateFormSchema(ModelClass, PromptClass)` — `lib/mcp/apps/form-schema.js`
+### `generateFormSchema(ModelClass, PromptClass)` — `src/mcp/apps/lib/form-schema.ts`
 
 Pure function that generates a form schema from model attributes and prompt configuration. No API calls, no side effects.
 
@@ -446,17 +464,19 @@ Pure function that generates a form schema from model attributes and prompt conf
 
 Maps model attribute types to form field types, resolves association metadata, preserves validation rules and defaults.
 
-### `createModelFormApp(options)` — `src/engineer/apps/model-form.js`
+### `createNewModelApp(options)` / `createEditModelApp(options)` — `src/mcp/apps/{new,edit}-model-app/index.ts`
 
-Factory function that creates an MCP App definition for a model. Accepts an `operation` parameter (`'create'` or `'update'`) to determine the form mode. Returns an object with:
+Two factory functions, one per tool, that produce MCP App definitions:
 
-- `resourceUri` — MCP resource URI for the HTML
-- `toolName` — MCP tool name (e.g., `create_book_form` or `update_book_form`)
-- `handleToolCall(args, { apiClient })` — Generates schema + fetches association options
-- `getHtml()` — Returns built single-file HTML (shared across create/update)
+- `resourceUri` — MCP resource URI for the HTML (`ui://{ns}/new-model-app` / `…/edit-model-app`)
+- `toolName` — MCP tool name (`new_model_app` / `edit_model_app`)
+- `handleToolCall(args, { dataLayer })` — Generates schema + fetches association options
+- `getHtml()` — Returns the built single-file HTML for that app
 
-**Create mode**: builds defaults from `PromptClass.getDefaultFormState()`, merges pre-fill args.
-**Update mode**: fetches existing record from API via `record_id`, uses record data as defaults.
+**`new_model_app`**: builds defaults from `PromptClass.getDefaultFormState()`, merges pre-fill args, resolves a parent-context banner when nested.
+**`edit_model_app`**: fetches the existing record from the API via `record_id`, uses record data as defaults.
+
+Both bundles wrap the same `src/mcp/apps/shared/model-form/main.js` client module, so they render identical UI. The runtime mode (`'create'` / `'update'`) is set from the server's tool result, not from the bundle.
 
 ### `AppRegistry` — `src/engineer/apps/index.js`
 
@@ -467,9 +487,9 @@ Registry that manages app registrations. Key methods:
 
 For apps with `needsAuth: true`, the registry creates an authenticated API client from the session's access token and passes it to `handleToolCall`.
 
-### Client-side App — `src/engineer/apps/model-form-ui/app.js`
+### Client-side App — `src/mcp/apps/shared/model-form/main.js`
 
-Generic form renderer that:
+Generic form renderer (called by both `new-model-app/ui/app.js` and `edit-model-app/ui/app.js`) that:
 
 1. Receives schema via `ontoolresult`
 2. Dynamically creates fieldsets and fields based on schema
@@ -492,7 +512,7 @@ npm run build:diagrams:apps
 
 The build inlines all CSS and JavaScript into a single `dist/index.html` file, which is read by the server at module load time and served via the MCP resources protocol.
 
-**Important:** After modifying any file in `model-form-ui/`, you must rebuild before the changes take effect.
+**Important:** After modifying any file in `shared/model-form/` (or in a per-app `ui/` folder), you must rebuild before the changes take effect.
 
 ## Theming
 
@@ -872,7 +892,7 @@ Client renders 3-column table (no horizontal scroll)
 
 ### Column Resolution Order
 
-`applyColumnSelection()` (`lib/mcp/apps/list-schema.js`) resolves columns in this order:
+`applyColumnSelection()` (`src/mcp/apps/lib/list-schema.ts`) resolves columns in this order:
 
 1. **Explicit columns** — LLM passes `columns: ['title', 'status']` → show only those
 2. **Model defaults** — LLM omits `columns`, model has `static defaultColumns` → use those
@@ -900,7 +920,7 @@ Without `defaultColumns`, all inferred columns are shown (which may cause horizo
 
 ### Infrastructure
 
-All column selection logic lives in `lib/mcp/apps/list-schema.js`:
+All column selection logic lives in `src/mcp/apps/lib/list-schema.ts`:
 
 | Function                                            | Purpose                                                  |
 | --------------------------------------------------- | -------------------------------------------------------- |
@@ -984,8 +1004,8 @@ Returns stored selection → LLM uses for follow-up operations
 
 | File                                        | Purpose                                                                          |
 | ------------------------------------------- | -------------------------------------------------------------------------------- |
-| `lib/mcp/apps/selection-store.js`           | `SelectionStore` class — session-scoped Map                                      |
-| `lib/mcp/apps/selection-tools.js`           | `createSelectionTools()` factory — creates per-app select + shared get_selection |
+| `src/mcp/apps/lib/selection-store.ts`       | `SelectionStore` class — session-scoped Map                                      |
+| `src/mcp/apps/lib/selection-tools.ts`       | `createSelectionTools()` factory — creates per-app select + shared get_selection |
 | `src/engineer/apps/search-model-app.js`     | Uses `createSelectionTools()` for search view                                    |
 | `src/engineer/apps/pick-model-app.js`       | Uses `createSelectionTools()` for autocomplete                                   |
 | `src/engineer/apps/multi-pick-model-app.js` | Uses `createSelectionTools()` for multi-pick-model-app                           |

@@ -24,7 +24,7 @@
 
 import type * as logger from '#src/services/logger.js'
 
-import type { AppDefinition } from '../apps/registry.js'
+import type { AppDefinition } from '../apps/lib/registry.js'
 
 /**
  * Capabilities a tool-flow extension can require from the host. Validated at

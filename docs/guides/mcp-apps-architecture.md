@@ -14,10 +14,10 @@ Unlike traditional web apps, MCP Apps have no server of their own. They are **si
 
 Every MCP App is composed of two MCP primitives:
 
-| Primitive    | Purpose                           | Example                    |
-| ------------ | --------------------------------- | -------------------------- |
-| **Tool**     | LLM calls this to launch/interact | `new_model_app`            |
-| **Resource** | Client fetches HTML from this URI | `ui://engineer/model-form` |
+| Primitive    | Purpose                           | Example                       |
+| ------------ | --------------------------------- | ----------------------------- |
+| **Tool**     | LLM calls this to launch/interact | `new_model_app`               |
+| **Resource** | Client fetches HTML from this URI | `ui://engineer/new-model-app` |
 
 The tool declares its UI resource via `_meta.ui.resourceUri`. When the LLM calls the tool, the MCP client:
 
@@ -57,8 +57,8 @@ The tool declares its UI resource via `_meta.ui.resourceUri`. When the LLM calls
 │    └── registerResources(mcpServer)                   │
 │                                                       │
 │  App Definitions (tool + resource pairs):             │
-│    ├── new_model_app    → ui://engineer/model-form     │
-│    ├── edit_model_app   → ui://engineer/model-form     │
+│    ├── new_model_app    → ui://engineer/new-model-app  │
+│    ├── edit_model_app   → ui://engineer/edit-model-app │
 │    ├── list_model_app   → ui://engineer/list-model-app │
 │    ├── show_model_app   → ui://engineer/show-model-app │
 │    └── search_model_app → ui://engineer/search-model-app│
@@ -102,13 +102,13 @@ The `App` class from `@modelcontextprotocol/ext-apps` provides the communication
 
 | App              | Tool Name          | Resource URI                     | Auth | Purpose                                  |
 | ---------------- | ------------------ | -------------------------------- | ---- | ---------------------------------------- |
-| New Model App    | `new_model_app`    | `ui://engineer/model-form`       | Yes  | Interactive form to create records       |
-| Edit Model App   | `edit_model_app`   | `ui://engineer/model-form`       | Yes  | Interactive form to edit records         |
+| New Model App    | `new_model_app`    | `ui://engineer/new-model-app`    | Yes  | Interactive form to create records       |
+| Edit Model App   | `edit_model_app`   | `ui://engineer/edit-model-app`   | Yes  | Interactive form to edit records         |
 | List Model App   | `list_model_app`   | `ui://engineer/list-model-app`   | Yes  | Paginated table with text search         |
 | Show Model App   | `show_model_app`   | `ui://engineer/show-model-app`   | Yes  | Read-only detail cards                   |
 | Search Model App | `search_model_app` | `ui://engineer/search-model-app` | Yes  | Filtered search with active filter chips |
 
-Note: `new_model_app` and `edit_model_app` share the same HTML resource (`model-form.html`) — the mode is determined by the tool result data.
+Note: `new_model_app` and `edit_model_app` each build their own bundle, but both wrap the same shared client module at `src/mcp/apps/shared/model-form/main.js` — the rendered DOM is identical, and the mode (`'create'` vs `'update'`) is set from the server's tool result.
 
 ### App Data Flows
 
@@ -332,7 +332,7 @@ The `getAccessToken` function comes from the OAuth2 session — it returns the c
 
 ### Resource Deduplication
 
-Multiple tools can share the same HTML resource. For example, `new_model_app` and `edit_model_app` both use `ui://engineer/model-form`. The registry deduplicates by tracking registered URIs:
+Multiple tools can share the same HTML resource. While `new_model_app` and `edit_model_app` now each own their own URI, deployer-authored apps can still register two tools against one bundle. The registry deduplicates by tracking registered URIs:
 
 ```js file=src/registered.js
 registerResources(mcpServer) {
@@ -576,24 +576,26 @@ Apps are built with Vite and `vite-plugin-singlefile`, which inlines all CSS and
 ### Build Configuration
 
 ```js file=src/configs.js
-// src/engineer/apps/vite.config.js
+// src/mcp/apps/vite.config.js
 const configs = {
-  'model-form': { root: 'model-form-ui', outFile: 'model-form.html' },
-  'list-model-app': { root: 'list-model-app-ui', outFile: 'list-model-app.html' },
-  'show-model-app': { root: 'show-model-app-ui', outFile: 'show-model-app.html' },
-  'search-model-app': { root: 'search-model-app-ui', outFile: 'search-model-app.html' },
-  'create-book': { root: 'create-book-ui', outFile: 'create-book.html' }
+  'new-model-app': { root: 'new-model-app/ui', outFile: 'new-model-app.html' },
+  'edit-model-app': { root: 'edit-model-app/ui', outFile: 'edit-model-app.html' },
+  'list-model-app': { root: 'list-model-app/ui', outFile: 'list-model-app.html' },
+  'show-model-app': { root: 'show-model-app/ui', outFile: 'show-model-app.html' },
+  'search-model-app': { root: 'search-model-app/ui', outFile: 'search-model-app.html' },
+  'create-book': { root: 'create-book/ui', outFile: 'create-book.html' }
 }
 ```
 
 ```ts file=src/configs.ts
-// src/engineer/apps/vite.config.js
+// src/mcp/apps/vite.config.js
 const configs = {
-  'model-form': { root: 'model-form-ui', outFile: 'model-form.html' },
-  'list-model-app': { root: 'list-model-app-ui', outFile: 'list-model-app.html' },
-  'show-model-app': { root: 'show-model-app-ui', outFile: 'show-model-app.html' },
-  'search-model-app': { root: 'search-model-app-ui', outFile: 'search-model-app.html' },
-  'create-book': { root: 'create-book-ui', outFile: 'create-book.html' }
+  'new-model-app': { root: 'new-model-app/ui', outFile: 'new-model-app.html' },
+  'edit-model-app': { root: 'edit-model-app/ui', outFile: 'edit-model-app.html' },
+  'list-model-app': { root: 'list-model-app/ui', outFile: 'list-model-app.html' },
+  'show-model-app': { root: 'show-model-app/ui', outFile: 'show-model-app.html' },
+  'search-model-app': { root: 'search-model-app/ui', outFile: 'search-model-app.html' },
+  'create-book': { root: 'create-book/ui', outFile: 'create-book.html' }
 }
 ```
 
@@ -606,7 +608,8 @@ npm run build:engineer:apps
 This runs sequentially for each target:
 
 ```
-BUILD_TARGET=model-form vite build
+BUILD_TARGET=new-model-app vite build
+BUILD_TARGET=edit-model-app vite build
 BUILD_TARGET=list-model-app vite build
 BUILD_TARGET=show-model-app vite build
 BUILD_TARGET=search-model-app vite build
@@ -646,51 +649,54 @@ function getHtml() {
 ## 8. File Structure
 
 ```
-lib/mcp/apps/                          # Schema generators (shared across servers)
-├── form-schema.js                     # generateFormSchema() — pure function
-├── list-schema.js                     # generateListSchema() — pure function
-└── detail-schema.js                   # generateDetailSchema() — pure function
-
-src/engineer/apps/                     # Engineer server apps
-├── index.js                           # AppRegistry + createAppRegistry()
+src/mcp/apps/
+├── lib/                               # Shared server-side helpers
+│   ├── form-schema.ts                 # generateFormSchema() — pure function
+│   ├── list-schema.ts                 # generateListSchema() — pure function
+│   ├── detail-schema.ts               # generateDetailSchema() — pure function
+│   ├── form-app-helpers.ts            # Shared form-app server helpers
+│   ├── registry.ts                    # AppRegistry + createAppRegistry()
+│   └── …                              # types, formatters, stores, etc.
 │
-├── model-form.js                      # Create/Update form factory
-├── model-form-ui/                     # Form client-side
-│   ├── index.html
-│   ├── app.js                         # Dynamic form renderer
-│   └── styles.css
+├── new-model-app/                     # New-record form
+│   ├── index.ts                       # Server factory
+│   └── ui/                            # Iframe entry
+│       ├── index.html
+│       ├── app.js                     # Thin shim → shared/model-form/main.js
+│       └── (no per-app CSS — shared)
 │
-├── list-model-app.js                       # Browse records factory
-├── list-model-app-ui/                      # List client-side
-│   ├── index.html
-│   ├── app.js                         # Table renderer with search/pagination
-│   └── styles.css
+├── edit-model-app/                    # Edit-record form
+│   ├── index.ts
+│   └── ui/                            # Thin shim → shared/model-form/main.js
 │
-├── show-model-app.js                   # Record detail factory
-├── show-model-app-ui/                  # Detail client-side
-│   ├── index.html
-│   ├── app.js                         # Sectioned detail card renderer
-│   └── styles.css
+├── list-model-app/                    # Browse records
+│   ├── index.ts
+│   └── ui/
 │
-├── search-model-app.js                     # Search results factory
-├── search-model-app-ui/                    # Search client-side
-│   ├── index.html
-│   ├── app.js                         # Filter chips + table + pagination
-│   └── styles.css
+├── show-model-app/                    # Record detail
+│   ├── index.ts
+│   └── ui/
 │
-├── create-book.js                     # Custom app example
-├── create-book-ui/                    # Custom app client-side
-│   ├── index.html
-│   ├── app.js
-│   └── styles.css
+├── search-model-app/                  # Search results
+│   ├── index.ts
+│   └── ui/
+│
+├── shared/                            # Cross-app iframe code
+│   ├── app-init.js
+│   ├── base.css
+│   ├── helpers.js
+│   ├── formatters.js / .runtime.js
+│   └── model-form/                    # Shared form UI consumed by new + edit
+│       ├── main.js                    # initModelFormApp() — bulk of form code
+│       └── styles.css
 │
 ├── vite.config.js                     # Multi-target build config
 └── dist/                              # Built single-file HTML (git-tracked)
-    ├── model-form.html
+    ├── new-model-app.html
+    ├── edit-model-app.html
     ├── list-model-app.html
     ├── show-model-app.html
-    ├── search-model-app.html
-    └── create-book.html
+    └── search-model-app.html
 ```
 
 ---

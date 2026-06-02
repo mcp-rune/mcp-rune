@@ -1,4 +1,4 @@
-import { generateFormSchema } from '../../../../src/mcp/apps/form-schema.js'
+import { generateFormSchema } from '../../../../src/mcp/apps/lib/form-schema.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 

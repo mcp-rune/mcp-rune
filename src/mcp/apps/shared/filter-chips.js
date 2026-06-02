@@ -33,10 +33,10 @@ export function renderFilterChips(container, filters, definitions, { append = fa
     const displayValue = formatFilterValue(value, def)
 
     const chip = document.createElement('span')
-    chip.className = 'filter-chip'
+    chip.className = 'mr-badge neutral'
     chip.innerHTML =
-      `<span class="chip-label">${escapeHtml(label)}:</span>` +
-      `<span class="chip-value">${escapeHtml(displayValue)}</span>`
+      `<span class="k">${escapeHtml(label)}:</span> ` +
+      `<span class="v">${escapeHtml(displayValue)}</span>`
 
     container.appendChild(chip)
   }

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Records</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap"
+    />
+    <link rel="stylesheet" href="../../shared/base.css" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="mr-titlebar">
+      <h1 class="mr-title" id="list-title">Loading…</h1>
+      <span id="selection-info" class="mr-selcount" style="display: none">
+        <span class="dash">—</span><span id="selection-count">0 selected</span>
+        <span id="select-all-banner" class="mr-selall" style="display: none">
+          <span class="dash">—</span>
+          <a href="#" id="btn-select-all-results"
+            >Select all <span id="total-results-count"></span> results</a
+          >
+        </span>
+      </span>
+      <span style="flex: 1"></span>
+      <button type="button" class="mr-btn acc" id="btn-send-selection" style="visibility: hidden">
+        Send selection <span class="arr">→</span>
+      </button>
+    </div>
+
+    <div class="mr-badge-row" id="filter-chips" style="display: none"></div>
+    <p class="mr-subtitle" id="available-filters" style="display: none"></p>
+
+    <div id="table-container">
+      <div class="mr-empty" id="empty-state">Loading…</div>
+    </div>
+
+    <div class="mr-pager" id="pagination" style="display: none">
+      <button type="button" class="mr-pgbtn" id="btn-prev" disabled>
+        <span class="a">←</span> Previous
+      </button>
+      <span class="page" id="page-info">Page <b>1</b></span>
+      <button type="button" class="mr-pgbtn" id="btn-next">Next <span class="a">→</span></button>
+    </div>
+
+    <div id="status-bar" class="mr-statusbar"></div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

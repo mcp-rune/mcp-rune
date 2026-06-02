@@ -1,4 +1,4 @@
-import { DisplayAdapter } from '../../../../src/mcp/apps/display-adapter.js'
+import { DisplayAdapter } from '../../../../src/mcp/apps/lib/display-adapter.js'
 
 describe('lib/mcp/apps/display-adapter', () => {
   const adapter = new DisplayAdapter()

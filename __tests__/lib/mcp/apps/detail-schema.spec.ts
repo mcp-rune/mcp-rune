@@ -1,4 +1,4 @@
-import { generateDetailSchema } from '../../../../src/mcp/apps/detail-schema.js'
+import { generateDetailSchema } from '../../../../src/mcp/apps/lib/detail-schema.js'
 
 describe('lib/mcp/apps/detail-schema', () => {
   function makeModel(overrides = {}) {

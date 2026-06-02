@@ -101,18 +101,19 @@ Take `show-model-app`:
 
 ```
 src/mcp/apps/
-├── show-model-app.ts         ← server-side AppDefinition factory + handleToolCall
-├── show-model-app-ui/        ← iframe source (HTML + app.js + styles)
-│   ├── app.js
-│   ├── index.html
-│   └── styles.css
+├── show-model-app/
+│   ├── index.ts              ← server-side AppDefinition factory + handleToolCall
+│   └── ui/                   ← iframe source (HTML + app.js + styles)
+│       ├── app.js
+│       ├── index.html
+│       └── styles.css
 └── dist/
     └── show-model-app.html   ← single-file iframe bundle (Vite output)
 ```
 
-The server file (`show-model-app.ts`):
+The server file (`show-model-app/index.ts`):
 
-```ts file=src/mcp/apps/show-model-app.ts
+```ts file=src/mcp/apps/show-model-app/index.ts
 export function createShowModelApp(opts: { models: ModelsRegistry }): AppDefinition {
   return {
     name: 'record_detail',
@@ -135,7 +136,7 @@ export function createShowModelApp(opts: { models: ModelsRegistry }): AppDefinit
 }
 ```
 
-```js file=src/mcp/apps/show-model-app.js
+```js file=src/mcp/apps/show-model-app/index.js
 export function createShowModelApp(opts) {
   return {
     name: 'record_detail',
@@ -261,7 +262,7 @@ The shape stays the same whether you author the HTML by hand or generate it. The
 
 ## Vite-Bundled Custom App
 
-For end-to-end references, mcp-rune's own `src/mcp/apps/*-ui/app.js` files and the upstream [`basic-server-vanillajs`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/basic-server-vanillajs) example both follow the pattern below.
+For end-to-end references, mcp-rune's own `src/mcp/apps/*/ui/app.js` files and the upstream [`basic-server-vanillajs`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/basic-server-vanillajs) example both follow the pattern below.
 
 If your app is interactive enough to want JS modules, CSS imports, and bundled dependencies, follow the framework pattern:
 

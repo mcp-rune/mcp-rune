@@ -4,33 +4,41 @@ import path from 'node:path'
 
 const isDevelopment = process.env.NODE_ENV === 'development'
 
-// Build target: 'model-form' (default) or any generic app
-const target = process.env.BUILD_TARGET || 'model-form'
+// Build target: 'new-model-app' (default) or any generic app
+const target = process.env.BUILD_TARGET || 'new-model-app'
 
 const configs = {
-  'model-form': {
-    root: 'model-form-ui',
-    outFile: 'model-form.html'
+  'new-model-app': {
+    root: 'new-model-app/ui',
+    outFile: 'new-model-app.html'
+  },
+  'edit-model-app': {
+    root: 'edit-model-app/ui',
+    outFile: 'edit-model-app.html'
   },
   'list-model-app': {
-    root: 'list-model-app-ui',
+    root: 'list-model-app/ui',
     outFile: 'list-model-app.html'
   },
   'show-model-app': {
-    root: 'show-model-app-ui',
+    root: 'show-model-app/ui',
     outFile: 'show-model-app.html'
   },
   'search-model-app': {
-    root: 'search-model-app-ui',
+    root: 'search-model-app/ui',
     outFile: 'search-model-app.html'
   },
   'pick-model-app': {
-    root: 'pick-model-app-ui',
+    root: 'pick-model-app/ui',
     outFile: 'pick-model-app.html'
   },
   'multi-pick-model-app': {
-    root: 'multi-pick-model-app-ui',
+    root: 'multi-pick-model-app/ui',
     outFile: 'multi-pick-model-app.html'
+  },
+  'workflow-panel-app': {
+    root: 'workflow-panel-app/ui',
+    outFile: 'workflow-panel-app.html'
   }
 }
 
@@ -61,6 +69,6 @@ export default defineConfig({
     cssMinify: !isDevelopment,
     minify: !isDevelopment,
     outDir: path.resolve(import.meta.dirname, 'dist'),
-    emptyOutDir: process.env.SKIP_CLEAN !== '1' && target === 'model-form'
+    emptyOutDir: process.env.SKIP_CLEAN !== '1' && target === 'new-model-app'
   }
 })

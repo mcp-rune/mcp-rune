@@ -1,4 +1,4 @@
-import { createSearchModelApp } from '../../../../src/mcp/apps/search-model-app.js'
+import { createSearchModelApp } from '../../../../src/mcp/apps/search-model-app/index.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 

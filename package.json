@@ -1,6 +1,6 @@
 {
   "name": "@mcp-rune/mcp-rune",
-  "version": "0.61.0",
+  "version": "0.63.0",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "restricted"
@@ -103,13 +103,15 @@
     "build:full": "npm run build:all-apps && npm run build && npm run copy:app-html",
     "build:check": "tsc --noEmit",
     "build:apps": "vite build -c src/mcp/apps/vite.config.js",
-    "build:apps:model-form": "BUILD_TARGET=model-form vite build -c src/mcp/apps/vite.config.js",
+    "build:apps:new-model-app": "BUILD_TARGET=new-model-app vite build -c src/mcp/apps/vite.config.js",
+    "build:apps:edit-model-app": "SKIP_CLEAN=1 BUILD_TARGET=edit-model-app vite build -c src/mcp/apps/vite.config.js",
     "build:apps:list-model-app": "SKIP_CLEAN=1 BUILD_TARGET=list-model-app vite build -c src/mcp/apps/vite.config.js",
     "build:apps:show-model-app": "SKIP_CLEAN=1 BUILD_TARGET=show-model-app vite build -c src/mcp/apps/vite.config.js",
     "build:apps:search-model-app": "SKIP_CLEAN=1 BUILD_TARGET=search-model-app vite build -c src/mcp/apps/vite.config.js",
     "build:apps:pick-model-app": "SKIP_CLEAN=1 BUILD_TARGET=pick-model-app vite build -c src/mcp/apps/vite.config.js",
     "build:apps:multi-pick-model-app": "SKIP_CLEAN=1 BUILD_TARGET=multi-pick-model-app vite build -c src/mcp/apps/vite.config.js",
-    "build:all-apps": "npm run build:apps:model-form && run-p build:apps:list-model-app build:apps:show-model-app build:apps:search-model-app build:apps:pick-model-app build:apps:multi-pick-model-app",
+    "build:apps:workflow-panel-app": "SKIP_CLEAN=1 BUILD_TARGET=workflow-panel-app vite build -c src/mcp/apps/vite.config.js",
+    "build:all-apps": "npm run build:apps:new-model-app && run-p build:apps:edit-model-app build:apps:list-model-app build:apps:show-model-app build:apps:search-model-app build:apps:pick-model-app build:apps:multi-pick-model-app build:apps:workflow-panel-app",
     "copy:app-html": "mkdir -p dist/mcp/apps/dist && cp src/mcp/apps/dist/*.html dist/mcp/apps/dist/",
     "test": "vitest run",
     "test:watch": "vitest",

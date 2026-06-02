@@ -18,8 +18,8 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
-import type { AppDefinition } from '#src/mcp/apps/registry.js'
-import { SelectionStore } from '#src/mcp/apps/selection-store.js'
+import type { AppDefinition } from '#src/mcp/apps/lib/registry.js'
+import { SelectionStore } from '#src/mcp/apps/lib/selection-store.js'
 import type {
   ContextKey,
   ToolFlowExtension,
