@@ -2,9 +2,10 @@
  * Shared selection logic for MCP Apps.
  *
  * Centralizes the "store selection on server + show status feedback" pattern
- * used by all selection-enabled apps (list-model-app, search-model-app, pick-model-app,
- * multi-pick-model-app). Also provides a table-selection factory that encapsulates the
- * full selection state management for paginated table apps (list-model-app, search-model-app).
+ * used by all selection-enabled apps (find-model-app, pick-model-app,
+ * multi-pick-model-app, view-selection-app). Also provides a table-selection
+ * factory that encapsulates the full selection state management for paginated
+ * table apps (find-model-app, view-selection-app).
  */
 
 import { humanize, pluralize } from './helpers.js'
@@ -22,11 +23,16 @@ import { showStatus } from './app-init.js'
  * @param {Object} app - MCP App instance
  * @param {HTMLElement} statusBar - Status bar element
  * @param {string} selectToolName - Server-side select tool name
- * @param {Object} args - Selection args (model, mode, ids/filters, total)
+ * @param {Object} args - Selection args (model, mode, ids/filters, total, strategy)
  */
 export async function storeSelection(app, statusBar, selectToolName, args) {
   try {
-    await app.callServerTool({ name: selectToolName, arguments: args })
+    const result = await app.callServerTool({ name: selectToolName, arguments: args })
+    if (result?.isError) {
+      const errText = result.content?.find((c) => c.type === 'text')?.text || 'Unknown error'
+      showStatus(statusBar, errText, 'error')
+      return
+    }
   } catch (err) {
     showStatus(statusBar, 'Failed to save selection: ' + err.message, 'error')
     return
@@ -35,7 +41,8 @@ export async function storeSelection(app, statusBar, selectToolName, args) {
   const total = args.total
   const modelLabel = args.model ? humanize(args.model) : 'record'
   const pluralLabel = total !== 1 ? pluralize(modelLabel) : modelLabel
-  showStatus(statusBar, `${total} ${pluralLabel} selected`, 'success')
+  const verb = args.strategy === 'add' ? 'added to selection' : 'selected'
+  showStatus(statusBar, `${total} ${pluralLabel} ${verb}`, 'success')
 }
 
 // ─── Table Selection Factory ─────────────────────────────────────────────────
@@ -99,22 +106,24 @@ export function createTableSelection({ app, statusBar, selectToolName, getState 
   function updateBar() {
     const { currentRecords, currentPagination } = getState()
     const info = document.getElementById('selection-info')
-    const sendBtn = document.getElementById('btn-send-selection')
+    const sendGroup = document.getElementById('send-selection-group')
+    const addBtn = document.getElementById('btn-send-add')
     const banner = document.getElementById('select-all-banner')
     const totalCount = document.getElementById('total-results-count')
 
-    if (selectedIds.size > 0) {
+    if (selectedIds.size > 0 || allResultsSelected) {
       info.style.display = 'inline'
-      sendBtn.style.visibility = 'visible'
+      if (sendGroup) sendGroup.style.visibility = 'visible'
 
       if (allResultsSelected) {
         const total = currentPagination?.total || selectedIds.size
         document.getElementById('selection-count').textContent = `All ${total} selected`
         banner.style.display = 'none'
+        if (addBtn) addBtn.style.display = 'none'
       } else {
         document.getElementById('selection-count').textContent = `${selectedIds.size} selected`
+        if (addBtn) addBtn.style.display = ''
 
-        // Show escalation banner when all page rows selected and more results exist
         const allOnPageSelected =
           selectedIds.size === currentRecords.length && currentRecords.length > 0
         const moreResultsExist = currentPagination?.total > currentRecords.length
@@ -127,7 +136,7 @@ export function createTableSelection({ app, statusBar, selectToolName, getState 
       }
     } else {
       info.style.display = 'none'
-      sendBtn.style.visibility = 'hidden'
+      if (sendGroup) sendGroup.style.visibility = 'hidden'
       banner.style.display = 'none'
     }
   }
@@ -146,11 +155,19 @@ export function createTableSelection({ app, statusBar, selectToolName, getState 
     updateBar()
   }
 
-  async function send() {
+  /**
+   * Submit the current selection to the server.
+   *
+   * @param {'replace' | 'add'} [strategy='replace'] — how to combine with the
+   *   stored selection for this model. 'add' is rejected by the server when
+   *   either side is filter-mode; callers should hide the "Add" button under
+   *   those conditions to keep the UX honest.
+   */
+  async function send(strategy = 'replace') {
     if (selectedIds.size === 0 && !allResultsSelected) return
 
     const { modelName, activeFilters, currentPagination } = getState()
-    const args = { model: modelName }
+    const args = { model: modelName, strategy }
     if (allResultsSelected) {
       args.mode = 'filter'
       args.filters = { ...activeFilters }

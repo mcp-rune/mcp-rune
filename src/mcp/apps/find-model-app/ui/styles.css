@@ -1,0 +1,106 @@
+/*
+ * find-model-app — app-specific overrides.
+ *
+ * base.css supplies tokens, reset, .mr-titlebar/.mr-title/.mr-selcount/.mr-btn,
+ * .mr-badge, .mr-check, .mr-table, .mr-pager, .mr-selbar, .mr-statusbar, and
+ * .mr-empty. This file carries layout tweaks specific to find-model-app:
+ * the filter popover, two-button Send group, and Filters button badge.
+ */
+
+.mr-titlebar #send-selection-group {
+  margin-left: 8px;
+}
+
+#btn-filters {
+  position: relative;
+}
+
+#btn-filters .mr-badge {
+  margin-left: 6px;
+}
+
+.mr-badge-row {
+  margin-top: 6px;
+  margin-bottom: 0;
+}
+
+.mr-popover {
+  margin: 10px 0;
+  padding: 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-md, 6px);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mr-popover-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mr-popover-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.mr-popover-row select,
+.mr-popover-row input {
+  padding: 4px 6px;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.mr-popover-row .field-type {
+  min-width: 140px;
+}
+
+.mr-popover-row .field-value {
+  flex: 1;
+}
+
+.mr-popover-row .field-range {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.mr-popover-row .field-range input {
+  flex: 1;
+  min-width: 0;
+}
+
+.mr-popover-row .btn-remove {
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.mr-popover-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.mr-btn.ghost {
+  background: transparent;
+  border: 1px solid var(--line-2);
+  color: var(--ink);
+}
+
+.mr-table tbody tr.sel {
+  background: var(--acc-tint);
+}
+.mr-table tbody tr.sel:hover {
+  background: var(--acc-tint);
+}

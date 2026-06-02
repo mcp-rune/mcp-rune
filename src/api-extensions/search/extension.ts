@@ -182,7 +182,7 @@ export class SearchRecordsTool extends BaseTool {
     const scope = this.serverContext.name ? ` in the ${this.serverContext.name} API` : ''
     return `Use this when you need raw JSON for records${scope} matching text/filter criteria to process programmatically. Returns paginated results.
 
-For an interactive MCP App where the user can browse, filter, and select records visually, use search_model_app instead.
+For an interactive MCP App where the user can browse, filter, and select records visually, use find_model_app instead.
 For large-scale analysis across many pages, use analysis_ingest.
 
 Call get_filters_guide first to learn available filters for the target model.`

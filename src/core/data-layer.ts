@@ -92,6 +92,28 @@ export interface DataLayer {
     options?: ModelRequestOptions
   ): Promise<NormalizedListResponse>
 
+  /**
+   * Search records by optional text `query` and/or structured `filters`,
+   * returning the same normalized envelope as `listNormalized`. The single
+   * projection-facing entry point for "find me records" — adapters decide
+   * internally whether to delegate to a search endpoint, fall back to list,
+   * or route nested-only models through an alternate path.
+   *
+   * Apps that previously composed `SearchService` directly use this method
+   * so the projection layer never imports a concrete search adapter.
+   *
+   * Default-adapter behavior: if no search backend is wired, an adapter may
+   * ignore `query` and delegate to `listNormalized`. The `NormalizedListResponse`
+   * shape is the contract; routing details are an adapter concern.
+   */
+  searchNormalized(
+    model: string,
+    query?: string,
+    filters?: Record<string, unknown>,
+    pagination?: PaginationParams,
+    options?: ModelRequestOptions
+  ): Promise<NormalizedListResponse>
+
   /** Partial update of an existing record. Compound IDs supported. */
   update(
     model: string,

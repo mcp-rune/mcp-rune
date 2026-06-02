@@ -138,7 +138,7 @@ describe('lib/mcp/server-factory', () => {
       const mockAppRegistry = {
         registerTools: vi.fn(),
         registerResources: vi.fn(),
-        getToolNames: vi.fn(() => ['search_model_app', 'list_model_app'])
+        getToolNames: vi.fn(() => ['find_model_app'])
       }
 
       createServer({

@@ -20,7 +20,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { z } from 'zod'
 
 import type { SearchAdapter, SearchGroup } from '#src/api-extensions/search/index.js'
-import { createSearchService } from '#src/api-extensions/search/index.js'
+import { createSearchService, SearchEnabledDataLayer } from '#src/api-extensions/search/index.js'
 import type { DataLayer, DataLayerFactory } from '#src/core/data-layer.js'
 import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
 import { ModelService } from '#src/mcp/services/model-service.js'
@@ -298,20 +298,26 @@ export class AppRegistry {
               formSubmitMode: this._formSubmitMode
             }
 
-            // Build the authenticated DataLayer + search client for apps that need it
+            // Build the authenticated DataLayer + search client for apps that need it.
+            // The DataLayer exposed to handlers is wrapped in SearchEnabledDataLayer
+            // so app code can route text + filter search through `searchNormalized`
+            // instead of reaching for `searchClient` (which would leak the search
+            // extension into the projection layer). `context.searchClient` is kept
+            // for pre-existing apps that still compose `SearchService` directly.
             if (app.needsAuth && getAccessToken && this._apiUrl && this._createApiClient) {
               const token = await getAccessToken()
               const apiClient = this._createApiClient(token, { apiUrl: this._apiUrl })
-              const dataLayer = this._dataLayerFactory({
+              const baseDataLayer = this._dataLayerFactory({
                 apiClient,
                 models: this._models,
                 logger
               })
-              context.dataLayer = dataLayer
-              context.searchClient = createSearchService(dataLayer, {
+              const searchClient = createSearchService(baseDataLayer, {
                 searchGroups: this._searchGroups,
                 defaultAdapter: this._defaultAdapter
               })
+              context.dataLayer = new SearchEnabledDataLayer(baseDataLayer, searchClient)
+              context.searchClient = searchClient
             }
 
             if (selectionStore) {

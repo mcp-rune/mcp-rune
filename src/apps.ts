@@ -1,5 +1,6 @@
 // mcp-rune/apps — registry, factories, schema generators
 export { createEditModelApp } from './mcp/apps/edit-model-app/index.js'
+export { createFindModelApp } from './mcp/apps/find-model-app/index.js'
 export { BaseForm } from './mcp/apps/lib/base-form.js'
 export type {
   DefaultAppName,
@@ -15,12 +16,11 @@ export type { AppDefinition, FormatterDescriptor, ThemeOverrides } from './mcp/a
 export { AppRegistry } from './mcp/apps/lib/registry.js'
 export { SelectionStore } from './mcp/apps/lib/selection-store.js'
 export { createSelectionTools } from './mcp/apps/lib/selection-tools.js'
-export { createListModelApp } from './mcp/apps/list-model-app/index.js'
 export { createMultiPickModelApp } from './mcp/apps/multi-pick-model-app/index.js'
 export { createNewModelApp } from './mcp/apps/new-model-app/index.js'
 export { createPickModelApp } from './mcp/apps/pick-model-app/index.js'
-export { createSearchModelApp } from './mcp/apps/search-model-app/index.js'
 export { createShowModelApp } from './mcp/apps/show-model-app/index.js'
+export { createViewSelectionApp } from './mcp/apps/view-selection-app/index.js'
 export type {
   WorkflowPanelEntry,
   WorkflowPanelOptions

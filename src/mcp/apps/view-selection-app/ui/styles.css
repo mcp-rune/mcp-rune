@@ -1,0 +1,74 @@
+/*
+ * view-selection-app — app-specific overrides.
+ *
+ * base.css supplies tokens, reset, title bar, badges, table primitives,
+ * and statusbar. This sheet only adds:
+ *   - the row-remove × button styling
+ *   - .mr-summary-card for the no-model overview view
+ */
+
+.mr-titlebar .mr-btn {
+  margin-left: 8px;
+}
+
+.mr-btn.ghost {
+  background: transparent;
+  border: 1px solid var(--line-2);
+  color: var(--ink);
+}
+
+.mr-table tbody tr.removing {
+  opacity: 0.4;
+}
+
+.mr-table td.remove {
+  width: 36px;
+  text-align: right;
+}
+
+.mr-table .btn-remove {
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.mr-summary-card {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-md, 6px);
+  background: var(--surface);
+}
+
+.mr-summary-card h2 {
+  margin: 0 0 8px;
+  font-size: 1em;
+  font-weight: 600;
+}
+
+.mr-summary-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mr-summary-list li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.mr-summary-list .model {
+  font-weight: 600;
+}
+
+.mr-summary-list .meta {
+  color: var(--muted, #888);
+  font-size: 0.9em;
+}

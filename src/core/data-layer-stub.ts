@@ -163,6 +163,21 @@ export class InMemoryDataLayer implements DataLayer {
     }
   }
 
+  /**
+   * The in-memory stub has no text-search backend; `query` is ignored and
+   * the call delegates to `listNormalized`. Tests that need to exercise
+   * search-routing logic should wrap this adapter in `SearchEnabledDataLayer`.
+   */
+  async searchNormalized(
+    model: string,
+    _query?: string,
+    filters?: Record<string, unknown>,
+    pagination?: PaginationParams,
+    options?: ModelRequestOptions
+  ): Promise<NormalizedListResponse> {
+    return this.listNormalized(model, filters, pagination, options)
+  }
+
   async update(
     model: string,
     recordId: string,

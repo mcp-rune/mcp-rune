@@ -1,10 +1,9 @@
 /**
  * One-call assembly of every MCP App the framework ships.
  *
- * Each of the seven factories (pick-model-app, list-model-app,
- * new-model-app, edit-model-app, multi-pick-model-app, show-model-app,
- * search-model-app) was previously instantiated by hand at integration
- * time. `createDefaultAppRegistry`
+ * Each factory (pick-model-app, find-model-app, new-model-app,
+ * edit-model-app, multi-pick-model-app, show-model-app) was previously
+ * instantiated by hand at integration time. `createDefaultAppRegistry`
  * collapses that boilerplate into a single call while keeping every
  * `AppRegistry` option (theme, formatters, search adapter, DataLayer
  * factory, …) addressable. Use `exclude` to opt individual apps out.
@@ -14,22 +13,22 @@ import type { SearchAdapter, SearchGroup } from '#src/api-extensions/search/inde
 import type { DataLayerFactory } from '#src/core/data-layer.js'
 
 import { createEditModelApp } from '../edit-model-app/index.js'
-import { createListModelApp } from '../list-model-app/index.js'
+import { createFindModelApp } from '../find-model-app/index.js'
 import { createMultiPickModelApp } from '../multi-pick-model-app/index.js'
 import { createNewModelApp } from '../new-model-app/index.js'
 import { createPickModelApp } from '../pick-model-app/index.js'
-import { createSearchModelApp } from '../search-model-app/index.js'
 import { createShowModelApp } from '../show-model-app/index.js'
+import { createViewSelectionApp } from '../view-selection-app/index.js'
 import type { AppDefinition, FormatterDescriptor, ThemeOverrides } from './registry.js'
 import { AppRegistry } from './registry.js'
 import type { ApiClient, AppModelClass } from './types.js'
 
 export type DefaultAppName =
   | 'pick-model-app'
-  | 'list-model-app'
+  | 'find-model-app'
   | 'multi-pick-model-app'
   | 'show-model-app'
-  | 'search-model-app'
+  | 'view-selection-app'
   | 'new-model-app'
   | 'edit-model-app'
 
@@ -104,7 +103,7 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
   // helper wires it onto the registry only; deployers who need the picker's
   // group mode should compose the picker factory by hand.
   add('pick-model-app', createPickModelApp({ modelClasses, namespace }))
-  add('list-model-app', createListModelApp({ modelClasses, namespace }))
+  add('find-model-app', createFindModelApp({ modelClasses, namespace }))
   add('multi-pick-model-app', createMultiPickModelApp({ modelClasses, namespace }))
   add(
     'show-model-app',
@@ -114,7 +113,7 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
       namespace
     })
   )
-  add('search-model-app', createSearchModelApp({ modelClasses, namespace }))
+  add('view-selection-app', createViewSelectionApp({ modelClasses, namespace }))
   add(
     'new-model-app',
     createNewModelApp({

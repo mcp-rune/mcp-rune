@@ -16,17 +16,13 @@ const configs = {
     root: 'edit-model-app/ui',
     outFile: 'edit-model-app.html'
   },
-  'list-model-app': {
-    root: 'list-model-app/ui',
-    outFile: 'list-model-app.html'
+  'find-model-app': {
+    root: 'find-model-app/ui',
+    outFile: 'find-model-app.html'
   },
   'show-model-app': {
     root: 'show-model-app/ui',
     outFile: 'show-model-app.html'
-  },
-  'search-model-app': {
-    root: 'search-model-app/ui',
-    outFile: 'search-model-app.html'
   },
   'pick-model-app': {
     root: 'pick-model-app/ui',
@@ -35,6 +31,10 @@ const configs = {
   'multi-pick-model-app': {
     root: 'multi-pick-model-app/ui',
     outFile: 'multi-pick-model-app.html'
+  },
+  'view-selection-app': {
+    root: 'view-selection-app/ui',
+    outFile: 'view-selection-app.html'
   },
   'workflow-panel-app': {
     root: 'workflow-panel-app/ui',

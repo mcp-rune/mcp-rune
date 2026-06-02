@@ -221,6 +221,23 @@ export class ModelService implements DataLayer {
     })
   }
 
+  /**
+   * Plain `ModelService` cannot resolve a model's search-endpoint routing
+   * on its own — text search lives in the `search` ApiExtension. This
+   * default falls back to `listNormalized`, ignoring `query`. Integrators
+   * that want text search wrap this adapter in `SearchEnabledDataLayer`
+   * (see `src/api-extensions/search`).
+   */
+  async searchNormalized(
+    model: string,
+    _query?: string,
+    filters?: Record<string, unknown>,
+    pagination?: PaginationParams,
+    options?: ModelRequestOptions
+  ): Promise<NormalizedListResponse> {
+    return this.listNormalized(model, filters, pagination, options)
+  }
+
   /** Update a record (partial attributes). Supports compound IDs. */
   async update(
     model: string,
