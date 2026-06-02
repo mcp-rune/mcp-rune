@@ -1,4 +1,4 @@
-import { createMultiSelectApp } from '../../../../src/mcp/apps/multi-select.js'
+import { createMultiPickModelApp } from '../../../../src/mcp/apps/multi-pick-model-app.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 
@@ -21,8 +21,8 @@ class FakeModel {
 const modelClasses = { fake: FakeModel }
 const namespace = 'test'
 
-describe('multi_select_picker', () => {
-  const tools = createMultiSelectApp({ modelClasses, namespace })
+describe('multi_pick_model_app', () => {
+  const tools = createMultiPickModelApp({ modelClasses, namespace })
   const multiSelectTool = tools[0]
 
   it('description warns against use for existing selections', () => {

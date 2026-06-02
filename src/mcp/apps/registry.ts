@@ -250,8 +250,8 @@ export class AppRegistry {
   }
 
   /**
-   * Current form submit mode threaded into `create_model_form` /
-   * `update_model_form` responses. Defaults to `'direct'`; flip to
+   * Current form submit mode threaded into `new_model_app` /
+   * `edit_model_app` responses. Defaults to `'direct'`; flip to
    * `'collect'` via a `ToolFlowExtension` (e.g. `centerOfControlExtension`).
    */
   getFormSubmitMode(): FormSubmitMode {

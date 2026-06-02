@@ -36,7 +36,7 @@ import type { AppDefinition } from '../apps/registry.js'
  */
 export type ToolFlowExtensionCapability = 'apps'
 
-/** Form submission mode advertised in `create_model_form` / `update_model_form` responses. */
+/** Form submission mode advertised in `new_model_app` / `edit_model_app` responses. */
 export type FormSubmitMode = 'direct' | 'collect'
 
 /**
@@ -82,14 +82,14 @@ export interface ToolFlowExtensionContext {
   /**
    * Look up an already-registered app by tool name. Useful when an extension
    * needs to derive metadata from a built-in app (e.g. cloning the
-   * `create_model_form` app's `resourceUri` and `getHtml`).
+   * `new_model_app` app's `resourceUri` and `getHtml`).
    *
    * Returns `undefined` if no app with that tool name is registered.
    */
   getApp(toolName: string): AppDefinition | undefined
   /**
-   * Override the form submit mode threaded into every `create_model_form`
-   * and `update_model_form` response. Default: `'direct'`.
+   * Override the form submit mode threaded into every `new_model_app`
+   * and `edit_model_app` response. Default: `'direct'`.
    */
   setFormSubmitMode(mode: FormSubmitMode): void
   /**

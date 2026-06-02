@@ -12,25 +12,25 @@ const configs = {
     root: 'model-form-ui',
     outFile: 'model-form.html'
   },
-  'list-view': {
-    root: 'list-view-ui',
-    outFile: 'list-view.html'
+  'list-model-app': {
+    root: 'list-model-app-ui',
+    outFile: 'list-model-app.html'
   },
-  'record-detail': {
-    root: 'record-detail-ui',
-    outFile: 'record-detail.html'
+  'show-model-app': {
+    root: 'show-model-app-ui',
+    outFile: 'show-model-app.html'
   },
-  'search-view': {
-    root: 'search-view-ui',
-    outFile: 'search-view.html'
+  'search-model-app': {
+    root: 'search-model-app-ui',
+    outFile: 'search-model-app.html'
   },
-  'autocomplete-picker': {
-    root: 'autocomplete-picker-ui',
-    outFile: 'autocomplete-picker.html'
+  'pick-model-app': {
+    root: 'pick-model-app-ui',
+    outFile: 'pick-model-app.html'
   },
-  'multi-select': {
-    root: 'multi-select-ui',
-    outFile: 'multi-select.html'
+  'multi-pick-model-app': {
+    root: 'multi-pick-model-app-ui',
+    outFile: 'multi-pick-model-app.html'
   }
 }
 

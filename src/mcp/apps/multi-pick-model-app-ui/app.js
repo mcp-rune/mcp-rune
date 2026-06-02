@@ -1,5 +1,5 @@
 /**
- * Multi-Select Picker MCP App — Client-side
+ * Multi-Pick Records MCP App — Client-side
  *
  * All records loaded upfront, instant client-side text filter, checkable list.
  */
@@ -17,7 +17,7 @@ const selectedIds = new Map() // id → { display, ...fields }
 
 // ─── MCP App Connection ─────────────────────────────────────────────────────
 
-const app = new App({ name: 'Multi-Select Picker', version: '1.0.0' })
+const app = new App({ name: 'Multi-Pick Records', version: '1.0.0' })
 
 app.ontoolresult = (result) => {
   try {

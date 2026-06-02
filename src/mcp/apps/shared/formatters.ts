@@ -4,7 +4,7 @@
  * Kind taxonomy + parse/serialize/toInput/fromInput/describe/validate live in
  * `src/core/kind-metadata.ts` (server- and browser-importable). This module
  * adds the only piece that requires the DOM: `format(value, opts) -> Node`,
- * consumed by list-view, record-detail, and search-view through
+ * consumed by list-model-app, show-model-app, and search-model-app through
  * `renderCellValue`, and by model-form-ui via `getFormatter`.
  *
  * Deployers extend display rendering through the declarative

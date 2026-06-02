@@ -16,7 +16,7 @@
  *   { title_name: "Breaking Bad", platform_name: "Netflix", ... }
  *
  * Lives in `core` because it is consumed across feature boundaries: by MCP
- * apps (`list-view`, `search-view`) and by the `search` ApiExtension's
+ * apps (`list-model-app`, `search-model-app`) and by the `search` ApiExtension's
  * `search_records` tool. Decoupled from any specific model-shape import.
  */
 

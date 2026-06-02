@@ -142,7 +142,7 @@ This is why aggregate/filter/sample queries are cheap and deterministic SQL, whi
 **Don't use it for:**
 
 - Single-record lookups or known-id reads — use `find_records`.
-- Result sets that fit in one page and that you actually want returned to context — use `search_records` or `list_records_app`.
+- Result sets that fit in one page and that you actually want returned to context — use `search_records` or `list_model_app`.
 - Transactional CRUD — use `create_model` / `update_model` / `delete_model`.
 
 The dividing line: if you need the raw data **in context**, use the data tools. If you need to _reason_ about a dataset that's too big for context, use the analysis tools.

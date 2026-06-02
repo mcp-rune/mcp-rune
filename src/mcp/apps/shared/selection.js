@@ -2,9 +2,9 @@
  * Shared selection logic for MCP Apps.
  *
  * Centralizes the "store selection on server + show status feedback" pattern
- * used by all selection-enabled apps (list-view, search-view, autocomplete-picker,
- * multi-select). Also provides a table-selection factory that encapsulates the
- * full selection state management for paginated table apps (list-view, search-view).
+ * used by all selection-enabled apps (list-model-app, search-model-app, pick-model-app,
+ * multi-pick-model-app). Also provides a table-selection factory that encapsulates the
+ * full selection state management for paginated table apps (list-model-app, search-model-app).
  */
 
 import { humanize, pluralize } from './helpers.js'

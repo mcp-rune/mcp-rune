@@ -34,9 +34,9 @@ import type {
 function makeFormApp() {
   return {
     resourceUri: 'ui://test/model-form',
-    toolName: 'create_model_form',
+    toolName: 'new_model_app',
     needsAuth: true,
-    name: 'Create Model Form',
+    name: 'New Record',
     description: 'Form',
     toolDescription: 'Open form',
     toolInputSchema: {
@@ -79,8 +79,8 @@ describe('lib/mcp/apps/registry — tool-flow surface', () => {
     const registry = new AppRegistry()
     const app = makeFormApp()
     registry.registerApp(app)
-    expect(registry.getApp('create_model_form')).toBe(app)
-    expect(registry.getToolNames()).toContain('create_model_form')
+    expect(registry.getApp('new_model_app')).toBe(app)
+    expect(registry.getToolNames()).toContain('new_model_app')
   })
 
   it('rejects registerApp when toolName is missing', () => {
@@ -111,7 +111,7 @@ describe('lib/extensions/center-of-control', () => {
     expect(extraContext.formDataStore).toBeDefined()
   })
 
-  it('clones the create_model_form app resourceUri + getHtml onto collect_form_data', async () => {
+  it('clones the new_model_app app resourceUri + getHtml onto collect_form_data', async () => {
     const formApp = makeFormApp()
     const registry = new AppRegistry([formApp])
     const { ctx } = buildContext(registry)
@@ -123,16 +123,14 @@ describe('lib/extensions/center-of-control', () => {
     expect(collectTool.getHtml?.()).toBe(formApp.getHtml())
   })
 
-  it('throws when create_model_form is not registered', () => {
+  it('throws when new_model_app is not registered', () => {
     const registry = new AppRegistry()
     const { ctx } = buildContext(registry)
 
-    expect(() => centerOfControlExtension.register(ctx)).toThrow(
-      /create_model_form.*app is required/
-    )
+    expect(() => centerOfControlExtension.register(ctx)).toThrow(/new_model_app.*app is required/)
   })
 
-  it('preserves the model enum from create_model_form on collect_form_data', async () => {
+  it('preserves the model enum from new_model_app on collect_form_data', async () => {
     const registry = new AppRegistry([makeFormApp()])
     const { ctx } = buildContext(registry)
 

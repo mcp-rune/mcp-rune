@@ -25,7 +25,7 @@ export class FindRecordsTool extends BaseTool {
     const scope = this.serverContext.name ? ` in the ${this.serverContext.name} API` : ''
     return `Use this when you need raw JSON for one or a few records${scope} to act on programmatically (e.g., before update or delete). Returns full record fields.
 
-For an interactive MCP App where the user can view record details visually, use find_records_app instead.
+For an interactive MCP App where the user can view record details visually, use show_model_app instead.
 For large-scale analysis across many pages, use analysis_ingest.
 
 Capabilities:

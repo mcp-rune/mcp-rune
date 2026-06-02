@@ -6,9 +6,9 @@ extension:
 
 # Writing a Custom MCP App
 
-mcp-rune ships six **MCP Apps** — interactive iframe widgets the LLM can summon: `list-view`, `record-detail`, `search-view`, `model-form`, `multi-select-picker`, `autocomplete-picker`. They share infrastructure: the kind taxonomy from [`kind-metadata`](./attribute-kinds-guide.md), the formatter registry from `apps/shared/formatters.ts`, the form-schema generator, the selection store, theming.
+mcp-rune ships seven **MCP App tools** — interactive iframe widgets the LLM can summon: `new_model_app`, `edit_model_app`, `show_model_app`, `list_model_app`, `search_model_app`, `multi_pick_model_app`, `pick_model_app`. They share infrastructure: the kind taxonomy from [`kind-metadata`](./attribute-kinds-guide.md), the formatter registry from `apps/shared/formatters.ts`, the form-schema generator, the selection store, theming.
 
-You write a **custom app** when the six don't fit. Examples:
+You write a **custom app** when the seven don't fit. Examples:
 
 - A read-only dashboard that aggregates several models into a single view.
 - A bulk-edit grid with cell-level validation.
@@ -93,33 +93,33 @@ Every field is optional except `name` and `description`. What you populate deter
 | **Tool-backed**     | `toolName`, `toolInputSchema`, `handleToolCall` | A tool the LLM calls (with no iframe), e.g. `get_field_suggestions`.                                                                      |
 | **Resource + tool** | All of the above                                | The standard interactive widget pattern — LLM calls the tool with arguments, server returns metadata pointing the iframe to the resource. |
 
-The shipped apps are almost all category three. `record-detail`, for instance: the LLM calls `find_records_app(model, ids)`, the handler fetches records and returns a `ToolResult` with `_meta` referencing the `mcp://app/record-detail` resource; the host loads the HTML, the iframe receives the data via postMessage and renders.
+The shipped apps are almost all category three. `show-model-app`, for instance: the LLM calls `show_model_app(model, ids)`, the handler fetches records and returns a `ToolResult` with `_meta` referencing the `mcp://app/show-model-app` resource; the host loads the HTML, the iframe receives the data via postMessage and renders.
 
 ## Anatomy of a Framework App
 
-Take `record-detail`:
+Take `show-model-app`:
 
 ```
 src/mcp/apps/
-├── record-detail.ts         ← server-side AppDefinition factory + handleToolCall
-├── record-detail-ui/        ← iframe source (HTML + app.js + styles)
+├── show-model-app.ts         ← server-side AppDefinition factory + handleToolCall
+├── show-model-app-ui/        ← iframe source (HTML + app.js + styles)
 │   ├── app.js
 │   ├── index.html
 │   └── styles.css
 └── dist/
-    └── record-detail.html   ← single-file iframe bundle (Vite output)
+    └── show-model-app.html   ← single-file iframe bundle (Vite output)
 ```
 
-The server file (`record-detail.ts`):
+The server file (`show-model-app.ts`):
 
-```ts file=src/mcp/apps/record-detail.ts
-export function createRecordDetailApp(opts: { models: ModelsRegistry }): AppDefinition {
+```ts file=src/mcp/apps/show-model-app.ts
+export function createShowModelApp(opts: { models: ModelsRegistry }): AppDefinition {
   return {
     name: 'record_detail',
     description: 'Renders a read-only detail card for one or more records',
-    resourceUri: 'mcp://app/record-detail',
-    toolName: 'find_records_app',
-    toolDescription: 'Open the record-detail viewer with the given IDs.',
+    resourceUri: 'mcp://app/show-model-app',
+    toolName: 'show_model_app',
+    toolDescription: 'Open the show-model-app viewer with the given IDs.',
     toolInputSchema: { model: z.enum(modelNames), ids: z.array(z.string()).optional() },
     annotations: { readOnlyHint: true },
     getHtml: () => loadHtml(),
@@ -135,14 +135,14 @@ export function createRecordDetailApp(opts: { models: ModelsRegistry }): AppDefi
 }
 ```
 
-```js file=src/mcp/apps/record-detail.js
-export function createRecordDetailApp(opts) {
+```js file=src/mcp/apps/show-model-app.js
+export function createShowModelApp(opts) {
   return {
     name: 'record_detail',
     description: 'Renders a read-only detail card for one or more records',
-    resourceUri: 'mcp://app/record-detail',
-    toolName: 'find_records_app',
-    toolDescription: 'Open the record-detail viewer with the given IDs.',
+    resourceUri: 'mcp://app/show-model-app',
+    toolName: 'show_model_app',
+    toolDescription: 'Open the show-model-app viewer with the given IDs.',
     toolInputSchema: { model: z.enum(modelNames), ids: z.array(z.string()).optional() },
     annotations: { readOnlyHint: true },
     getHtml: () => loadHtml(),
@@ -160,7 +160,7 @@ export function createRecordDetailApp(opts) {
 
 The handler fetches data, formats a summary the LLM sees, and ships `_meta` containing the records and schema the iframe will consume.
 
-The iframe (`record-detail-ui/app.js`) reads the records out of the host message, walks the schema, calls `renderCellValue(value, field)` from `apps/shared/formatters.ts` for each field, and appends nodes to the DOM. Kind-aware rendering, theming, and selection state are inherited automatically.
+The iframe (`show-model-app-ui/app.js`) reads the records out of the host message, walks the schema, calls `renderCellValue(value, field)` from `apps/shared/formatters.ts` for each field, and appends nodes to the DOM. Kind-aware rendering, theming, and selection state are inherited automatically.
 
 ## Single-File Custom App
 
@@ -200,11 +200,14 @@ const HTML = `<!DOCTYPE html>
   <h1>Bookings</h1>
   <div id="grid"></div>
   <script type="module">
-    import { openWindow } from 'https://esm.sh/@modelcontextprotocol/ext-apps@1.7.1'
-    const host = await openWindow()
-    const payload = host.toolOutput?._meta?.['mcp-rune/payload']
-    document.getElementById('grid').textContent =
-      'Month: ' + payload.month + ' — ' + payload.records.length + ' bookings'
+    import { App } from 'https://esm.sh/@modelcontextprotocol/ext-apps@1.7.1'
+    const app = new App({ name: 'Bookings', version: '1.0.0' })
+    app.ontoolresult = (result) => {
+      const payload = result._meta?.['mcp-rune/payload']
+      document.getElementById('grid').textContent =
+        'Month: ' + payload.month + ' — ' + payload.records.length + ' bookings'
+    }
+    await app.connect()
   </script>
 </body></html>`
 ```
@@ -240,20 +243,25 @@ const HTML = `<!DOCTYPE html>
   <h1>Bookings</h1>
   <div id="grid"></div>
   <script type="module">
-    import { openWindow } from 'https://esm.sh/@modelcontextprotocol/ext-apps@1.7.1'
-    const host = await openWindow()
-    const payload = host.toolOutput?._meta?.['mcp-rune/payload']
-    document.getElementById('grid').textContent =
-      'Month: ' + payload.month + ' — ' + payload.records.length + ' bookings'
+    import { App } from 'https://esm.sh/@modelcontextprotocol/ext-apps@1.7.1'
+    const app = new App({ name: 'Bookings', version: '1.0.0' })
+    app.ontoolresult = (result) => {
+      const payload = result._meta?.['mcp-rune/payload']
+      document.getElementById('grid').textContent =
+        'Month: ' + payload.month + ' — ' + payload.records.length + ' bookings'
+    }
+    await app.connect()
   </script>
 </body></html>`
 ```
 
 No build step. The string is the iframe HTML; mcp-rune injects theming + formatters via `injectIntoHead` before serving it. Good enough for read-only views, dashboards, and printable artifacts.
 
-The shape stays the same whether you author the HTML by hand or generate it. The `_meta` envelope is your communication channel from server to iframe — anything you put in `'mcp-rune/payload'` (or your own key) is readable inside the iframe via the SDK's `host.toolOutput`.
+The shape stays the same whether you author the HTML by hand or generate it. The `_meta` envelope is your communication channel from server to iframe — anything you put in `'mcp-rune/payload'` (or your own key) reaches the iframe via the `ontoolresult` handler on the `App` instance (`result._meta`).
 
 ## Vite-Bundled Custom App
+
+For end-to-end references, mcp-rune's own `src/mcp/apps/*-ui/app.js` files and the upstream [`basic-server-vanillajs`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/basic-server-vanillajs) example both follow the pattern below.
 
 If your app is interactive enough to want JS modules, CSS imports, and bundled dependencies, follow the framework pattern:
 
@@ -300,38 +308,48 @@ The whole point of having a shared kind registry is so custom apps don't reinven
 
 ```js file=src/payload.js
 // your-server/apps/booking-calendar-ui/app.js
+import { App } from '@modelcontextprotocol/ext-apps'
 import { renderCellValue, getFormatter, helpers } from '@mcp-rune/mcp-rune/apps/formatters'
 
-const payload = host.toolOutput?._meta?.['mcp-rune/payload']
+const app = new App({ name: 'Booking Calendar', version: '1.0.0' })
 const tbody = document.querySelector('tbody')
 
-for (const booking of payload.records) {
-  const tr = document.createElement('tr')
-  for (const col of payload.schema.columns) {
-    const td = document.createElement('td')
-    td.appendChild(renderCellValue(booking[col.name], col))
-    tr.appendChild(td)
+app.ontoolresult = (result) => {
+  const payload = result._meta?.['mcp-rune/payload']
+  for (const booking of payload.records) {
+    const tr = document.createElement('tr')
+    for (const col of payload.schema.columns) {
+      const td = document.createElement('td')
+      td.appendChild(renderCellValue(booking[col.name], col))
+      tr.appendChild(td)
+    }
+    tbody.appendChild(tr)
   }
-  tbody.appendChild(tr)
 }
+await app.connect()
 ```
 
 ```ts file=src/payload.ts
 // your-server/apps/booking-calendar-ui/app.js
+import { App } from '@modelcontextprotocol/ext-apps'
 import { renderCellValue, getFormatter, helpers } from '@mcp-rune/mcp-rune/apps/formatters'
 
-const payload = host.toolOutput?._meta?.['mcp-rune/payload']
-const tbody = document.querySelector('tbody')
+const app = new App({ name: 'Booking Calendar', version: '1.0.0' })
+const tbody = document.querySelector('tbody')!
 
-for (const booking of payload.records) {
-  const tr = document.createElement('tr')
-  for (const col of payload.schema.columns) {
-    const td = document.createElement('td')
-    td.appendChild(renderCellValue(booking[col.name], col))
-    tr.appendChild(td)
+app.ontoolresult = (result) => {
+  const payload = result._meta?.['mcp-rune/payload']
+  for (const booking of payload.records) {
+    const tr = document.createElement('tr')
+    for (const col of payload.schema.columns) {
+      const td = document.createElement('td')
+      td.appendChild(renderCellValue(booking[col.name], col))
+      tr.appendChild(td)
+    }
+    tbody.appendChild(tr)
   }
-  tbody.appendChild(tr)
 }
+await app.connect()
 ```
 
 That single `renderCellValue` call picks up:

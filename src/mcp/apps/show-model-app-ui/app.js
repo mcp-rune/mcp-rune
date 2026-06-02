@@ -1,5 +1,5 @@
 /**
- * Record Detail MCP App — Client-side
+ * Show Record MCP App — Client-side
  *
  * Renders read-only detail cards for one or more records from a schema
  * received via the MCP Apps protocol.
@@ -13,7 +13,7 @@ import '../shared/formatters.runtime.js'
 
 // ─── MCP App Connection ─────────────────────────────────────────────────────
 
-const app = new App({ name: 'Record Detail', version: '1.0.0' })
+const app = new App({ name: 'Show Record', version: '1.0.0' })
 
 app.ontoolresult = (result) => {
   try {

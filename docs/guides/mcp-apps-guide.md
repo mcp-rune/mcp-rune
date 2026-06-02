@@ -414,25 +414,25 @@ lib/mcp/apps/
 src/engineer/apps/
 ├── index.js                    # AppRegistry + createAppRegistry
 ├── model-form.js               # Generic create/update form factory
-├── list-view.js                # Generic list/table view factory
-├── record-detail.js            # Record detail view factory
-├── search-view.js              # Search view with filters + selection
-├── autocomplete-picker.js      # Type-ahead search picker
-├── multi-select.js             # Multi-select picker
+├── list-model-app.js                # Generic list/table view factory
+├── show-model-app.js            # Record detail view factory
+├── search-model-app.js              # Search view with filters + selection
+├── pick-model-app.js      # Type-ahead search picker
+├── multi-pick-model-app.js             # Multi-select picker
 ├── model-form-ui/              # Generic form client-side app
-├── list-view-ui/               # List view client-side app
-├── record-detail-ui/           # Record detail client-side app
-├── search-view-ui/             # Search view client-side app
-├── autocomplete-picker-ui/     # Autocomplete picker client-side app
-├── multi-select-ui/            # Multi-select picker client-side app
+├── list-model-app-ui/               # List view client-side app
+├── show-model-app-ui/           # Record detail client-side app
+├── search-model-app-ui/             # Search view client-side app
+├── pick-model-app-ui/     # Autocomplete picker client-side app
+├── multi-pick-model-app-ui/            # Multi-select picker client-side app
 ├── vite.config.js              # Build config (multi-target single-file HTML)
 └── dist/                       # Built outputs (one HTML per app)
     ├── model-form.html
-    ├── list-view.html
-    ├── record-detail.html
-    ├── search-view.html
-    ├── autocomplete-picker.html
-    └── multi-select.html
+    ├── list-model-app.html
+    ├── show-model-app.html
+    ├── search-model-app.html
+    ├── pick-model-app.html
+    └── multi-pick-model-app.html
 ```
 
 ## Key Components
@@ -855,7 +855,7 @@ return new AppRegistry(apps, { apiUrl })
 
 ## Column Selection (List View & Search View)
 
-Table apps (list-view, search-view) support **LLM-driven column selection** — the tool description lists all available columns per model, and the LLM chooses which columns are relevant to display based on the user's request. This prevents horizontal scroll when models have many attributes.
+Table apps (list-model-app, search-model-app) support **LLM-driven column selection** — the tool description lists all available columns per model, and the LLM chooses which columns are relevant to display based on the user's request. This prevents horizontal scroll when models have many attributes.
 
 ### How It Works
 
@@ -913,7 +913,7 @@ All column selection logic lives in `lib/mcp/apps/list-schema.js`:
 
 ## Selection Store & Selection Tools
 
-MCP Apps that display record lists (search view, autocomplete picker, multi-select) support **server-side selection** — users check records in the UI, the selection is stored on the MCP server, and the LLM can retrieve it for follow-up operations.
+MCP Apps that display record lists (search view, autocomplete picker, multi-pick-model-app) support **server-side selection** — users check records in the UI, the selection is stored on the MCP server, and the LLM can retrieve it for follow-up operations.
 
 ### Architecture
 
@@ -982,13 +982,13 @@ Returns stored selection → LLM uses for follow-up operations
 
 ### Key Files
 
-| File                                       | Purpose                                                                          |
-| ------------------------------------------ | -------------------------------------------------------------------------------- |
-| `lib/mcp/apps/selection-store.js`          | `SelectionStore` class — session-scoped Map                                      |
-| `lib/mcp/apps/selection-tools.js`          | `createSelectionTools()` factory — creates per-app select + shared get_selection |
-| `src/engineer/apps/search-view.js`         | Uses `createSelectionTools()` for search view                                    |
-| `src/engineer/apps/autocomplete-picker.js` | Uses `createSelectionTools()` for autocomplete                                   |
-| `src/engineer/apps/multi-select.js`        | Uses `createSelectionTools()` for multi-select                                   |
+| File                                        | Purpose                                                                          |
+| ------------------------------------------- | -------------------------------------------------------------------------------- |
+| `lib/mcp/apps/selection-store.js`           | `SelectionStore` class — session-scoped Map                                      |
+| `lib/mcp/apps/selection-tools.js`           | `createSelectionTools()` factory — creates per-app select + shared get_selection |
+| `src/engineer/apps/search-model-app.js`     | Uses `createSelectionTools()` for search view                                    |
+| `src/engineer/apps/pick-model-app.js`       | Uses `createSelectionTools()` for autocomplete                                   |
+| `src/engineer/apps/multi-pick-model-app.js` | Uses `createSelectionTools()` for multi-pick-model-app                           |
 
 ### Tool Visibility
 

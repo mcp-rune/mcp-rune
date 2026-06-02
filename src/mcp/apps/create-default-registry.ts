@@ -1,9 +1,10 @@
 /**
  * One-call assembly of every MCP App the framework ships.
  *
- * Each of the six factories (autocomplete-picker, list-view, model-form
- * create+update, multi-select, record-detail, search-view) was previously
- * instantiated by hand at integration time. `createDefaultAppRegistry`
+ * Each of the seven factories (pick-model-app, list-model-app,
+ * new-model-app, edit-model-app, multi-pick-model-app, show-model-app,
+ * search-model-app) was previously instantiated by hand at integration
+ * time. `createDefaultAppRegistry`
  * collapses that boilerplate into a single call while keeping every
  * `AppRegistry` option (theme, formatters, search adapter, DataLayer
  * factory, …) addressable. Use `exclude` to opt individual apps out.
@@ -12,24 +13,24 @@
 import type { SearchAdapter, SearchGroup } from '#src/api-extensions/search/index.js'
 import type { DataLayerFactory } from '#src/core/data-layer.js'
 
-import { createAutocompletePickerApp } from './autocomplete-picker.js'
-import { createListViewApp } from './list-view.js'
-import { createCreateFormApp, createUpdateFormApp } from './model-form.js'
-import { createMultiSelectApp } from './multi-select.js'
-import { createRecordDetailApp } from './record-detail.js'
+import { createListModelApp } from './list-model-app.js'
+import { createEditModelApp, createNewModelApp } from './model-form.js'
+import { createMultiPickModelApp } from './multi-pick-model-app.js'
+import { createPickModelApp } from './pick-model-app.js'
 import type { AppDefinition, FormatterDescriptor, ThemeOverrides } from './registry.js'
 import { AppRegistry } from './registry.js'
-import { createSearchViewApp } from './search-view.js'
+import { createSearchModelApp } from './search-model-app.js'
+import { createShowModelApp } from './show-model-app.js'
 import type { ApiClient, AppModelClass } from './types.js'
 
 export type DefaultAppName =
-  | 'autocomplete-picker'
-  | 'list-view'
-  | 'multi-select'
-  | 'record-detail'
-  | 'search-view'
-  | 'create-form'
-  | 'update-form'
+  | 'pick-model-app'
+  | 'list-model-app'
+  | 'multi-pick-model-app'
+  | 'show-model-app'
+  | 'search-model-app'
+  | 'new-model-app'
+  | 'edit-model-app'
 
 export interface DefaultAppRegistryOptions {
   modelClasses: Record<string, AppModelClass>
@@ -98,24 +99,24 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
   const effectiveFormClasses = formClasses ?? (modelClasses as unknown as Record<string, unknown>)
 
   // `searchGroups` here describes the AppRegistry-level SearchService routing,
-  // a different shape from the autocomplete-picker's group config. The default
+  // a different shape from the pick-model-app's group config. The default
   // helper wires it onto the registry only; deployers who need the picker's
   // group mode should compose the picker factory by hand.
-  add('autocomplete-picker', createAutocompletePickerApp({ modelClasses, namespace }))
-  add('list-view', createListViewApp({ modelClasses, namespace }))
-  add('multi-select', createMultiSelectApp({ modelClasses, namespace }))
+  add('pick-model-app', createPickModelApp({ modelClasses, namespace }))
+  add('list-model-app', createListModelApp({ modelClasses, namespace }))
+  add('multi-pick-model-app', createMultiPickModelApp({ modelClasses, namespace }))
   add(
-    'record-detail',
-    createRecordDetailApp({
+    'show-model-app',
+    createShowModelApp({
       modelClasses,
       ...(promptClasses && { promptClasses }),
       namespace
     })
   )
-  add('search-view', createSearchViewApp({ modelClasses, namespace }))
+  add('search-model-app', createSearchModelApp({ modelClasses, namespace }))
   add(
-    'create-form',
-    createCreateFormApp({
+    'new-model-app',
+    createNewModelApp({
       modelClasses,
       formClasses: effectiveFormClasses as never,
       ...(promptClasses && { promptClasses: promptClasses as never }),
@@ -123,8 +124,8 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
     })
   )
   add(
-    'update-form',
-    createUpdateFormApp({
+    'edit-model-app',
+    createEditModelApp({
       modelClasses,
       formClasses: effectiveFormClasses as never,
       ...(promptClasses && { promptClasses: promptClasses as never }),

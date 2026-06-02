@@ -16,7 +16,7 @@ Every MCP App is composed of two MCP primitives:
 
 | Primitive    | Purpose                           | Example                    |
 | ------------ | --------------------------------- | -------------------------- |
-| **Tool**     | LLM calls this to launch/interact | `create_model_form`        |
+| **Tool**     | LLM calls this to launch/interact | `new_model_app`            |
 | **Resource** | Client fetches HTML from this URI | `ui://engineer/model-form` |
 
 The tool declares its UI resource via `_meta.ui.resourceUri`. When the LLM calls the tool, the MCP client:
@@ -45,7 +45,7 @@ The tool declares its UI resource via `_meta.ui.resourceUri`. When the LLM calls
 │  │  Outbound tool calls:                          │   │
 │  │    → callServerTool('validate_form', {...})    │   │
 │  │    → callServerTool('create_model', {...})     │   │
-│  │    → callServerTool('list_records_app', {...})   │   │
+│  │    → callServerTool('list_model_app', {...})   │   │
 │  └────────────────────────────────────────────────┘   │
 │                                                       │
 └───────────────────────────────────────────────────────┘
@@ -57,11 +57,11 @@ The tool declares its UI resource via `_meta.ui.resourceUri`. When the LLM calls
 │    └── registerResources(mcpServer)                   │
 │                                                       │
 │  App Definitions (tool + resource pairs):             │
-│    ├── create_model_form  → ui://engineer/model-form  │
-│    ├── update_model_form  → ui://engineer/model-form  │
-│    ├── list_records_app     → ui://engineer/list-records-view│
-│    ├── view_record        → ui://engineer/record-detail│
-│    └── search_records_app→ ui://engineer/search-view  │
+│    ├── new_model_app    → ui://engineer/model-form     │
+│    ├── edit_model_app   → ui://engineer/model-form     │
+│    ├── list_model_app   → ui://engineer/list-model-app │
+│    ├── show_model_app   → ui://engineer/show-model-app │
+│    └── search_model_app → ui://engineer/search-model-app│
 │                                                       │
 │  Schema Generators (pure functions, no API calls):    │
 │    ├── generateFormSchema(Model, Prompt)              │
@@ -100,15 +100,15 @@ The `App` class from `@modelcontextprotocol/ext-apps` provides the communication
 
 ### App Catalog
 
-| App            | Tool Name            | Resource URI                      | Auth | Purpose                                   |
-| -------------- | -------------------- | --------------------------------- | ---- | ----------------------------------------- |
-| Create Form    | `create_model_form`  | `ui://engineer/model-form`        | Yes  | Interactive form to create records        |
-| Update Form    | `update_model_form`  | `ui://engineer/model-form`        | Yes  | Interactive form to edit records          |
-| Browse Records | `list_records_app`   | `ui://engineer/list-records-view` | Yes  | Paginated table with text search          |
-| Record Detail  | `view_record`        | `ui://engineer/record-detail`     | Yes  | Read-only detail card for a single record |
-| Search Results | `search_records_app` | `ui://engineer/search-view`       | Yes  | Filtered search with active filter chips  |
+| App              | Tool Name          | Resource URI                     | Auth | Purpose                                  |
+| ---------------- | ------------------ | -------------------------------- | ---- | ---------------------------------------- |
+| New Model App    | `new_model_app`    | `ui://engineer/model-form`       | Yes  | Interactive form to create records       |
+| Edit Model App   | `edit_model_app`   | `ui://engineer/model-form`       | Yes  | Interactive form to edit records         |
+| List Model App   | `list_model_app`   | `ui://engineer/list-model-app`   | Yes  | Paginated table with text search         |
+| Show Model App   | `show_model_app`   | `ui://engineer/show-model-app`   | Yes  | Read-only detail cards                   |
+| Search Model App | `search_model_app` | `ui://engineer/search-model-app` | Yes  | Filtered search with active filter chips |
 
-Note: Create Form and Update Form share the same HTML resource (`model-form.html`) — the mode is determined by the tool result data.
+Note: `new_model_app` and `edit_model_app` share the same HTML resource (`model-form.html`) — the mode is determined by the tool result data.
 
 ### App Data Flows
 
@@ -117,7 +117,7 @@ Note: Create Form and Update Form share the same HTML resource (`model-form.html
 ```
 User: "Create a book"
   ↓
-LLM calls create_model_form({ model: 'book' })
+LLM calls new_model_app({ model: 'book' })
   ↓
 Server:
   1. generateFormSchema(Book, BookPrompt) → { fieldsets, fields }
@@ -134,7 +134,7 @@ App renders dynamic form → User fills → callServerTool('create_model')
 ```
 User: "Edit book abc-123"
   ↓
-LLM calls update_model_form({ model: 'book', record_id: 'abc-123' })
+LLM calls edit_model_app({ model: 'book', record_id: 'abc-123' })
   ↓
 Server:
   1. generateFormSchema(Book, BookPrompt) → { fieldsets, fields }
@@ -151,7 +151,7 @@ App renders pre-filled form → User edits → callServerTool('update_model')
 ```
 User: "Show me all books"
   ↓
-LLM calls list_records_app({ model: 'book' })
+LLM calls list_model_app({ model: 'book' })
   ↓
 Server:
   1. generateListSchema(Book) → { columns, searchFields }
@@ -159,35 +159,35 @@ Server:
   ↓
 Returns: { schema, records, pagination }
   ↓
-App renders table → Row click → callServerTool('update_model_form')
-                  → Search → callServerTool('list_records_app', { search })
-                  → Paginate → callServerTool('list_records_app', { page })
+App renders table → Row click → callServerTool('edit_model_app')
+                  → Search → callServerTool('list_model_app', { search })
+                  → Paginate → callServerTool('list_model_app', { page })
 ```
 
-#### Record Detail
+#### Show Model App
 
 ```
 User: "Show book abc-123"
   ↓
-LLM calls view_record({ model: 'book', id: 'abc-123' })
+LLM calls show_model_app({ model: 'book', ids: ['abc-123'] })
   ↓
 Server:
   1. generateDetailSchema(Book, BookPrompt?) → { fields, fieldsets? }
   2. apiClient.get('books/abc-123') → record
   ↓
-Returns: { schema, record }
+Returns: { schema, records }
   ↓
 App renders read-only detail card with sections, badges, stars
 ```
 
-#### Search Results
+#### Search Model App
 
 ```
 User: "Find active titles by licensor X"
   ↓
 LLM calls get_filters_guide({ model: 'title' }) → learns filters
 LLM calls search_records({ model: 'title', filters: { status: 'active', licensor_id: 'X' } })
-LLM calls search_records_app({ model: 'title', filters: { status: 'active', licensor_id: 'X' } })
+LLM calls search_model_app({ model: 'title', filters: { status: 'active', licensor_id: 'X' } })
   ↓
 Server:
   1. generateListSchema(Title) → { columns }
@@ -211,11 +211,11 @@ Schema generators are **pure functions** — no API calls, no side effects. They
 
 ### Schema Generators
 
-| Generator                | Input                     | Output                                    | Used By                     |
-| ------------------------ | ------------------------- | ----------------------------------------- | --------------------------- |
-| `generateFormSchema()`   | ModelClass + PromptClass  | `{ model, title, fieldsets, fields }`     | Create/Update Form          |
-| `generateListSchema()`   | ModelClass                | `{ model, title, columns, searchFields }` | Browse Records, Search View |
-| `generateDetailSchema()` | ModelClass + PromptClass? | `{ model, title, fields, fieldsets? }`    | Record Detail               |
+| Generator                | Input                     | Output                                    | Used By                          |
+| ------------------------ | ------------------------- | ----------------------------------------- | -------------------------------- |
+| `generateFormSchema()`   | ModelClass + PromptClass  | `{ model, title, fieldsets, fields }`     | New/Edit Model App               |
+| `generateListSchema()`   | ModelClass                | `{ model, title, columns, searchFields }` | List Model App, Search Model App |
+| `generateDetailSchema()` | ModelClass + PromptClass? | `{ model, title, fields, fieldsets? }`    | Show Model App                   |
 
 ### Single Source of Truth
 
@@ -332,7 +332,7 @@ The `getAccessToken` function comes from the OAuth2 session — it returns the c
 
 ### Resource Deduplication
 
-Multiple tools can share the same HTML resource. For example, `create_model_form` and `update_model_form` both use `ui://engineer/model-form`. The registry deduplicates by tracking registered URIs:
+Multiple tools can share the same HTML resource. For example, `new_model_app` and `edit_model_app` both use `ui://engineer/model-form`. The registry deduplicates by tracking registered URIs:
 
 ```js file=src/registered.js
 registerResources(mcpServer) {
@@ -476,12 +476,12 @@ if (ctx?.theme) applyDocumentTheme(ctx.theme)
 
 Each app maintains minimal client-side state:
 
-| App            | State Variables                                                                                  |
-| -------------- | ------------------------------------------------------------------------------------------------ |
-| Model Form     | `formSchema`, `currentMode`, `recordId`                                                          |
-| Browse Records | `listSchema`, `currentRecords`, `currentPage`, `modelName`                                       |
-| Record Detail  | `detailSchema`, `record`                                                                         |
-| Search View    | `listSchema`, `currentRecords`, `currentPage`, `modelName`, `activeFilters`, `filterDefinitions` |
+| App              | State Variables                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------ |
+| New/Edit Model   | `formSchema`, `currentMode`, `recordId`                                                          |
+| List Model App   | `listSchema`, `currentRecords`, `currentPage`, `modelName`                                       |
+| Show Model App   | `detailSchema`, `record`                                                                         |
+| Search Model App | `listSchema`, `currentRecords`, `currentPage`, `modelName`, `activeFilters`, `filterDefinitions` |
 
 ### Dynamic Rendering
 
@@ -525,12 +525,12 @@ Fields are grouped into `<fieldset>` elements based on `field.group` matching `s
 
 ### Pagination Pattern
 
-Table-based apps (list_records_app, search_records_app) paginate by calling their own tool:
+Table-based apps (list_model_app, search_model_app) paginate by calling their own tool:
 
 ```js file=src/fetch-page.js
 async function fetchPage(page) {
   await app.callServerTool({
-    name: 'list_records_app', // or 'search_records_app'
+    name: 'list_model_app', // or 'search_model_app'
     arguments: { model: modelName, page, ...extraArgs }
   })
   // ontoolresult fires → re-renders table
@@ -540,7 +540,7 @@ async function fetchPage(page) {
 ```ts file=src/fetch-page.ts
 async function fetchPage(page) {
   await app.callServerTool({
-    name: 'list_records_app', // or 'search_records_app'
+    name: 'list_model_app', // or 'search_model_app'
     arguments: { model: modelName, page, ...extraArgs }
   })
   // ontoolresult fires → re-renders table
@@ -579,9 +579,9 @@ Apps are built with Vite and `vite-plugin-singlefile`, which inlines all CSS and
 // src/engineer/apps/vite.config.js
 const configs = {
   'model-form': { root: 'model-form-ui', outFile: 'model-form.html' },
-  'list-view': { root: 'list-view-ui', outFile: 'list-view.html' },
-  'record-detail': { root: 'record-detail-ui', outFile: 'record-detail.html' },
-  'search-view': { root: 'search-view-ui', outFile: 'search-view.html' },
+  'list-model-app': { root: 'list-model-app-ui', outFile: 'list-model-app.html' },
+  'show-model-app': { root: 'show-model-app-ui', outFile: 'show-model-app.html' },
+  'search-model-app': { root: 'search-model-app-ui', outFile: 'search-model-app.html' },
   'create-book': { root: 'create-book-ui', outFile: 'create-book.html' }
 }
 ```
@@ -590,9 +590,9 @@ const configs = {
 // src/engineer/apps/vite.config.js
 const configs = {
   'model-form': { root: 'model-form-ui', outFile: 'model-form.html' },
-  'list-view': { root: 'list-view-ui', outFile: 'list-view.html' },
-  'record-detail': { root: 'record-detail-ui', outFile: 'record-detail.html' },
-  'search-view': { root: 'search-view-ui', outFile: 'search-view.html' },
+  'list-model-app': { root: 'list-model-app-ui', outFile: 'list-model-app.html' },
+  'show-model-app': { root: 'show-model-app-ui', outFile: 'show-model-app.html' },
+  'search-model-app': { root: 'search-model-app-ui', outFile: 'search-model-app.html' },
   'create-book': { root: 'create-book-ui', outFile: 'create-book.html' }
 }
 ```
@@ -607,9 +607,9 @@ This runs sequentially for each target:
 
 ```
 BUILD_TARGET=model-form vite build
-BUILD_TARGET=list-view vite build
-BUILD_TARGET=record-detail vite build
-BUILD_TARGET=search-view vite build
+BUILD_TARGET=list-model-app vite build
+BUILD_TARGET=show-model-app vite build
+BUILD_TARGET=search-model-app vite build
 BUILD_TARGET=create-book vite build
 ```
 
@@ -660,20 +660,20 @@ src/engineer/apps/                     # Engineer server apps
 │   ├── app.js                         # Dynamic form renderer
 │   └── styles.css
 │
-├── list-view.js                       # Browse records factory
-├── list-view-ui/                      # List client-side
+├── list-model-app.js                       # Browse records factory
+├── list-model-app-ui/                      # List client-side
 │   ├── index.html
 │   ├── app.js                         # Table renderer with search/pagination
 │   └── styles.css
 │
-├── record-detail.js                   # Record detail factory
-├── record-detail-ui/                  # Detail client-side
+├── show-model-app.js                   # Record detail factory
+├── show-model-app-ui/                  # Detail client-side
 │   ├── index.html
 │   ├── app.js                         # Sectioned detail card renderer
 │   └── styles.css
 │
-├── search-view.js                     # Search results factory
-├── search-view-ui/                    # Search client-side
+├── search-model-app.js                     # Search results factory
+├── search-model-app-ui/                    # Search client-side
 │   ├── index.html
 │   ├── app.js                         # Filter chips + table + pagination
 │   └── styles.css
@@ -687,9 +687,9 @@ src/engineer/apps/                     # Engineer server apps
 ├── vite.config.js                     # Multi-target build config
 └── dist/                              # Built single-file HTML (git-tracked)
     ├── model-form.html
-    ├── list-view.html
-    ├── record-detail.html
-    ├── search-view.html
+    ├── list-model-app.html
+    ├── show-model-app.html
+    ├── search-model-app.html
     └── create-book.html
 ```
 
@@ -702,7 +702,7 @@ Every app (generic or custom) is a plain object with these properties:
 | Property          | Type       | Required | Description                                   |
 | ----------------- | ---------- | -------- | --------------------------------------------- |
 | `resourceUri`     | `string`   | Yes      | MCP resource URI (e.g., `ui://engineer/...`)  |
-| `toolName`        | `string`   | Yes      | MCP tool name (e.g., `create_model_form`)     |
+| `toolName`        | `string`   | Yes      | MCP tool name (e.g., `new_model_app`)         |
 | `needsAuth`       | `boolean`  | Yes      | Whether handleToolCall receives apiClient     |
 | `name`            | `string`   | Yes      | Human-readable app name                       |
 | `description`     | `string`   | Yes      | App description for resource listing          |
@@ -762,9 +762,9 @@ The search view app works alongside the search tool system:
 
 3. LLM calls search_records({ model, filters })   [crud category, auth required]
    → Returns JSON results for LLM processing
-   → Usage rule hints: "call search_records_app to display visually"
+   → Usage rule hints: "call search_model_app to display visually"
 
-4. LLM calls search_records_app({ model, filters })  [app tool, auth required]
+4. LLM calls search_model_app({ model, filters })  [app tool, auth required]
    → Renders visual table with filter chips in the host
 ```
 
@@ -776,7 +776,7 @@ The search view app works alongside the search tool system:
 
 ### Search View vs Browse Records
 
-| Aspect        | `list_records_app`                              | `search_records_app`                                                                |
+| Aspect        | `list_model_app`                                | `search_model_app`                                                                  |
 | ------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------- |
 | Data source   | GET `{endpoint}`                                | POST `{endpoint}/search`                                                            |
 | Input         | `model`, `search?`, `page?`                     | `model`, `filters`, `page?`                                                         |
@@ -924,7 +924,7 @@ Association options (locations, tags) are fetched when the form opens, not at sc
 
 ### Separate Search App
 
-Search results use a dedicated app (`search_records_app`) rather than overloading `list_records_app`. The split is structural — models that declare filters in their `extensions['search']` slice are **only** available in `search_records_app`, models without filters are only in `list_records_app`. This eliminates routing ambiguity at the schema level.
+Search results use a dedicated app (`search_model_app`) rather than overloading `list_model_app`. The split is structural — models that declare filters in their `extensions['search']` slice are **only** available in `search_model_app`, models without filters are only in `list_model_app`. This eliminates routing ambiguity at the schema level.
 
 ### Conditional Registration
 
@@ -932,13 +932,13 @@ The search view app is only registered when models with declared search filters 
 
 ```js file=examples/mcp-apps-architecture-13.js
 if (Object.keys(SEARCH_VIEW_MODELS).length > 0) {
-  apps.push(createSearchViewApp({ modelClasses: SEARCH_VIEW_MODELS }))
+  apps.push(createSearchModelApp({ modelClasses: SEARCH_VIEW_MODELS }))
 }
 ```
 
 ```ts file=examples/mcp-apps-architecture-13.ts
 if (Object.keys(SEARCH_VIEW_MODELS).length > 0) {
-  apps.push(createSearchViewApp({ modelClasses: SEARCH_VIEW_MODELS }))
+  apps.push(createSearchModelApp({ modelClasses: SEARCH_VIEW_MODELS }))
 }
 ```
 
@@ -1056,8 +1056,8 @@ app.ontoolresult = async () => {
 
 ### Apps by Strategy
 
-| Strategy      | App                  | LLM Context                                 |
-| ------------- | -------------------- | ------------------------------------------- |
-| A (two-block) | `list_records_app`   | JSON + record count + selection hint        |
-| A (two-block) | `search_records_app` | JSON + record count + filter summary        |
-| B (app-fetch) | `workflow_panel`     | Summary only (N workflows, click to launch) |
+| Strategy      | App                | LLM Context                                 |
+| ------------- | ------------------ | ------------------------------------------- |
+| A (two-block) | `list_model_app`   | JSON + record count + selection hint        |
+| A (two-block) | `search_model_app` | JSON + record count + filter summary        |
+| B (app-fetch) | `workflow_panel`   | Summary only (N workflows, click to launch) |

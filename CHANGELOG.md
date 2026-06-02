@@ -4,6 +4,67 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.61.0] - 2026-06-02
+
+> Breaking. Every MCP app tool is renamed to the uniform shape `<ui-verb>_model_app`. The previous catalog mixed three suffixes (`_form`, `_app`, `_picker`), three nouns (`model` / `records` / none), and overloaded mutation verbs (`create_*`, `update_*`) on UI tools. After this release every app tool name is `<ui-verb>_model_app`: a UI-intent verb (`new` / `edit` / `show` / `list` / `search` / `pick` / `multi_pick`) on the singular `model` noun with the `_app` suffix. Mutation verbs (`create_*`, `update_*`, `delete_*`) are reserved for data tools that actually mutate. Per pre-1.0 policy there are no aliases or deprecation paths — consumers must update.
+
+### Changed
+
+- **MCP app tool names** renamed:
+
+  | Before                | After                  |
+  | --------------------- | ---------------------- |
+  | `create_model_form`   | `new_model_app`        |
+  | `update_model_form`   | `edit_model_app`       |
+  | `find_records_app`    | `show_model_app`       |
+  | `list_records_app`    | `list_model_app`       |
+  | `search_records_app`  | `search_model_app`     |
+  | `autocomplete_picker` | `pick_model_app`       |
+  | `multi_select_picker` | `multi_pick_model_app` |
+
+- **Factory functions** renamed to match: `createCreateFormApp` → `createNewModelApp`, `createUpdateFormApp` → `createEditModelApp`, `createRecordDetailApp` → `createShowModelApp`, `createListViewApp` → `createListModelApp`, `createSearchViewApp` → `createSearchModelApp`, `createAutocompletePickerApp` → `createPickModelApp`, `createMultiSelectApp` → `createMultiPickModelApp`.
+- **`DefaultAppName` registry keys** renamed: `'create-form'`/`'update-form'`/`'record-detail'`/`'list-view'`/`'search-view'`/`'autocomplete-picker'`/`'multi-select'` → `'new-model-app'`/`'edit-model-app'`/`'show-model-app'`/`'list-model-app'`/`'search-model-app'`/`'pick-model-app'`/`'multi-pick-model-app'`. Consumers passing `exclude: [...]` to `createDefaultAppRegistry` must use the new keys.
+- **Source files** renamed (history preserved via `git mv`): `src/mcp/apps/record-detail.ts` → `show-model-app.ts`, `list-view.ts` → `list-model-app.ts`, `search-view.ts` → `search-model-app.ts`, `autocomplete-picker.ts` → `pick-model-app.ts`, `multi-select.ts` → `multi-pick-model-app.ts`. UI source directories renamed correspondingly (`record-detail-ui/` → `show-model-app-ui/`, etc.). Test specs renamed to match.
+- **Vite build pipeline** aligned: BUILD_TARGET keys, root dirs, and HTML output names updated. `package.json` npm scripts renamed (`build:apps:record-detail` → `build:apps:show-model-app`, etc.). `HTML_PATH` constants in each app source point at the new dist filenames.
+- **Resource URIs** updated where they encoded the old tool name: `ui://…/find-records-app` → `…/show-model-app`, `…/list-records-app` → `…/list-model-app`, `…/search-records-app` → `…/search-model-app`, `…/autocomplete-picker` → `…/pick-model-app`, `…/multi-select` → `…/multi-pick-model-app`. The `model-form.html` resource is still shared by `new_model_app` and `edit_model_app`.
+- **Display names** updated to match: 'Create Model Form' → 'New Record', 'Edit Model Form' → 'Edit Record', 'Record Detail' → 'Show Record', 'Search Results' → 'Search Records', 'Autocomplete Picker' → 'Pick Record', 'Multi-Select Picker' → 'Multi-Pick Records'.
+- **Documentation guides** (`README.md`, `docs/guides/mcp-apps-architecture.md`, `custom-app-guide.md`, `mcp-apps-guide.md`, and others) updated to reference the new names, file paths, and resource URIs.
+- **Project `AGENTS.md`** now documents the `<ui-verb>_model_app` convention in a dedicated section. Generic design principles previously in this file were extracted out of the project repo.
+
+### Migration
+
+For every server consuming mcp-rune:
+
+```ts
+// BEFORE
+const registry = createDefaultAppRegistry({
+  modelClasses,
+  namespace: 'engineer',
+  exclude: ['multi-select', 'autocomplete-picker', 'create-form']
+})
+
+// AFTER
+const registry = createDefaultAppRegistry({
+  modelClasses,
+  namespace: 'engineer',
+  exclude: ['multi-pick-model-app', 'pick-model-app', 'new-model-app']
+})
+```
+
+If you import the factories directly (instead of via `createDefaultAppRegistry`):
+
+```ts
+// BEFORE
+import { createRecordDetailApp } from '@mcp-rune/mcp-rune/apps'
+
+// AFTER
+import { createShowModelApp } from '@mcp-rune/mcp-rune/apps'
+```
+
+If you reference app tool names in MCP profile manifests (e.g. `engineer-mcp`'s `tools` / `toolsExclude` arrays), rewrite them per the table above. Calls from the LLM to the renamed tools will fail until profiles are updated.
+
+The pickers' verbs (`pick` / `multi_pick`) replace the previous `_picker` suffix; the autocomplete behaviour and the multi-select behaviour are unchanged.
+
 ## [0.60.0] - 2026-06-01
 
 > Breaking. Replaces the `category` enum + `CATEGORY_CONFIG` indirection on tool classes with direct static fields on `BaseTool`. The previous two-axis model (a `category` string AND an optional `requiresAuth` field, with `getRequiresAuth()` reconciling between them) gave consumers two ways to declare the same thing — and when those two ways drifted, tools that should have required auth instead executed without an authenticated `dataLayer`. After this release every tool family's defaults — auth, runtime dependency gating, MCP annotations — live as plain static fields on the family's base class. One coordinate system. Forgetting an opt-out fails loudly (auth required by default) instead of silently bypassing the registry.
@@ -150,6 +211,7 @@ import { ModelService, EndpointResolver } from '@mcp-rune/mcp-rune/model-service
 
 The `/lib/*` catch-all subpath remains, so the old `/lib/mcp/services/index.js` form is not broken — just no longer the recommended path.
 
+[0.61.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.60.1...v0.61.0
 [0.59.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.58.1...v0.59.0
 
 ## [0.58.1] - 2026-05-31

@@ -73,7 +73,7 @@ Example:
     2. **Guided** - I'll walk you through each section step-by-step and ask for your input
     3. **Quick** - I'll infer what I can from context and ask only for essentials"
 
-If the user chooses **Interactive Form**, call \`create_model_form(model: "<model_name>", mode: "form")\` instead of this tool.
+If the user chooses **Interactive Form**, call \`new_model_app(model: "<model_name>", mode: "form")\` instead of this tool.
 If the user chooses **Guided** or **Quick**, call this tool with the chosen mode parameter.
 
 For all other models, offer only Guided and Quick options.`

@@ -1,6 +1,6 @@
 import { vi } from 'vitest'
 
-import { createCreateFormApp } from '../../../../src/mcp/apps/model-form.js'
+import { createNewModelApp } from '../../../../src/mcp/apps/model-form.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 
@@ -40,7 +40,7 @@ const formClasses = { book: MockFormClass }
 const promptClasses = { book: MockPrompt }
 
 function createApp() {
-  return createCreateFormApp({ modelClasses, formClasses, promptClasses, namespace: 'test' })
+  return createNewModelApp({ modelClasses, formClasses, promptClasses, namespace: 'test' })
 }
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
@@ -162,7 +162,7 @@ describe('lib/mcp/apps/model-form', () => {
     const SubdomainFormClass = { fields: ['name'] }
 
     function nestedApp() {
-      return createCreateFormApp({
+      return createNewModelApp({
         modelClasses: { subdomain: SubdomainModel, domain: DomainModel },
         formClasses: { subdomain: SubdomainFormClass },
         promptClasses: {},

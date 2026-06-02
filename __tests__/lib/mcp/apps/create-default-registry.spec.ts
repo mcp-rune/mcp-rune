@@ -59,7 +59,7 @@ class FakeModel {
     rating: { type: 'integer' }
   }
   static defaultColumns: string[] | undefined = undefined
-  // The search-view / autocomplete-picker / multi-select factories filter
+  // The search-model-app / pick-model-app / multi-pick-model-app factories filter
   // by the model's `extensions.search` config (see api-extensions/search
   // capabilities), so declare both `query` and `lookup` to keep every app
   // eligible.
@@ -93,17 +93,17 @@ describe('createDefaultAppRegistry', () => {
     const names = registry.getToolNames()
     // All seven framework app tools register…
     for (const expected of [
-      'autocomplete_picker',
-      'create_model_form',
-      'find_records_app',
-      'list_records_app',
-      'multi_select_picker',
-      'search_records_app',
-      'update_model_form'
+      'pick_model_app',
+      'new_model_app',
+      'show_model_app',
+      'list_model_app',
+      'multi_pick_model_app',
+      'search_model_app',
+      'edit_model_app'
     ]) {
       expect(names).toContain(expected)
     }
-    // …and `createListViewApp` also threads its selection tools through.
+    // …and `createListModelApp` also threads its selection tools through.
     expect(names).toContain('get_selection')
   })
 
@@ -111,14 +111,14 @@ describe('createDefaultAppRegistry', () => {
     const registry = createDefaultAppRegistry({
       modelClasses: { book: FakeModel as never },
       namespace: 'test-default',
-      exclude: ['multi-select', 'create-form']
+      exclude: ['multi-pick-model-app', 'new-model-app']
     })
 
     const names = registry.getToolNames()
-    expect(names).not.toContain('multi_select_picker')
-    expect(names).not.toContain('create_model_form')
-    expect(names).toContain('list_records_app')
-    expect(names).toContain('update_model_form')
+    expect(names).not.toContain('multi_pick_model_app')
+    expect(names).not.toContain('new_model_app')
+    expect(names).toContain('list_model_app')
+    expect(names).toContain('edit_model_app')
   })
 
   it('threads themeOverrides and formatters into AppRegistry so injectIntoHead emits them', () => {

@@ -14,7 +14,7 @@ import {
   renderWorkflowOverview
 } from '../../../../../src/mcp/tools/domain/workflow-renderer.js'
 
-const APP_TOOL_NAMES = ['search_records_app', 'list_records_app', 'find_records_app']
+const APP_TOOL_NAMES = ['search_model_app', 'list_model_app', 'show_model_app']
 
 function createWorkflow(overrides = {}) {
   return new WorkflowDefinition({
@@ -53,9 +53,9 @@ describe('workflow-renderer', () => {
     it('should list app tool names for data tools', () => {
       const step = { tool: 'search_records' }
       const result = renderToolGuidance(step, { appToolNames: APP_TOOL_NAMES })
-      expect(result).toContain('search_records_app')
-      expect(result).toContain('list_records_app')
-      expect(result).toContain('find_records_app')
+      expect(result).toContain('search_model_app')
+      expect(result).toContain('list_model_app')
+      expect(result).toContain('show_model_app')
       expect(result).toContain('visual/interactive tool')
     })
 
@@ -63,11 +63,11 @@ describe('workflow-renderer', () => {
       const step = { tool: 'bulk_action_models' }
       const result = renderToolGuidance(step, { appToolNames: APP_TOOL_NAMES })
       expect(result).toContain('Do NOT substitute with any other tool')
-      expect(result).not.toContain('search_records_app')
+      expect(result).not.toContain('search_model_app')
     })
 
     it('should return empty for app tools', () => {
-      const step = { tool: 'search_records_app' }
+      const step = { tool: 'search_model_app' }
       const result = renderToolGuidance(step, { appToolNames: APP_TOOL_NAMES })
       expect(result).toBe('')
     })
@@ -115,7 +115,7 @@ describe('workflow-renderer', () => {
       }
       const result = renderStepDetail(step, { appToolNames: APP_TOOL_NAMES })
       expect(result).toContain('**Tool:** `find_records`')
-      expect(result).toContain('search_records_app')
+      expect(result).toContain('search_model_app')
     })
 
     it('should render exhaustive guidance', () => {

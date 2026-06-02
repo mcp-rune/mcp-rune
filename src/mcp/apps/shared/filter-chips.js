@@ -1,5 +1,5 @@
 /**
- * Shared filter chip rendering for search-view and list-view apps.
+ * Shared filter chip rendering for search-model-app and list-model-app apps.
  *
  * Renders active filter chips and available filter hints from filter definitions.
  */

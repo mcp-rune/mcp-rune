@@ -75,7 +75,7 @@ registered nine tools — all working immediately, no backend needed:
   `bulk_action_models`
 
 Plus six interactive MCP apps (list view, record detail, create/update
-forms, multi-select picker, search view, autocomplete picker) wired via
+forms, multi-pick-model-app picker, search view, autocomplete picker) wired via
 `createDefaultAppRegistry`. The bookshelf example's full source is ~150
 lines total. See
 [`examples/bookshelf/`](https://github.com/mcp-rune/mcp-rune/tree/main/examples/bookshelf)

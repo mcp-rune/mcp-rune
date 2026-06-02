@@ -370,16 +370,17 @@ export class ActivitySearchAdapter extends SearchAdapter {
 
 ### Interactive MCP Apps
 
-Six schema-driven app types render interactive UI in the MCP host (Claude Desktop, VS Code, Cursor) via [`@modelcontextprotocol/ext-apps`](https://github.com/anthropics/anthropic-cookbook/tree/main/misc/model-context-protocol-apps):
+Seven schema-driven app tools render interactive UI in the MCP host (Claude Desktop, VS Code, Cursor) via [`@modelcontextprotocol/ext-apps`](https://github.com/anthropics/anthropic-cookbook/tree/main/misc/model-context-protocol-apps):
 
-| App                     | Description                             |
-| ----------------------- | --------------------------------------- |
-| **Model Form**          | Create/update forms from model schema   |
-| **List View**           | Paginated browse with filters           |
-| **Record Detail**       | View/edit a single record               |
-| **Search View**         | Multi-model full-text search            |
-| **Autocomplete Picker** | Type-ahead for `belongsTo` associations |
-| **Multi-Select**        | Checkbox picker for `hasMany` relations |
+| Tool                       | Description                                       |
+| -------------------------- | ------------------------------------------------- |
+| **`new_model_app`**        | Form to input a new record (calls `create_model`) |
+| **`edit_model_app`**       | Form to edit a record (calls `update_model`)      |
+| **`list_model_app`**       | Paginated browse with filters                     |
+| **`show_model_app`**       | Read-only detail cards                            |
+| **`search_model_app`**     | Multi-model full-text search                      |
+| **`pick_model_app`**       | Type-ahead for `belongsTo` associations           |
+| **`multi_pick_model_app`** | Checkbox picker for `hasMany` relations           |
 
 Generated from the same `attributesConfig` that drives the tools and prompts. Adding a new model form = one registry entry, zero new HTML. This turns your MCP server from a tool collection into a full application with UI.
 
@@ -851,7 +852,7 @@ import type {
 } from '@mcp-rune/mcp-rune/tools'
 import { ModelService, EndpointResolver } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
 import { BasePrompt, PromptContentGenerator, derivePromptSchema } from '@mcp-rune/mcp-rune/prompts'
-import { AppRegistry, createCreateFormApp } from '@mcp-rune/mcp-rune/apps'
+import { AppRegistry, createNewModelApp } from '@mcp-rune/mcp-rune/apps'
 import { SearchService, SearchAdapter } from '@mcp-rune/mcp-rune/search'
 import { DomainRegistry, WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
 import { OAuthService } from '@mcp-rune/mcp-rune/oauth2'
@@ -875,7 +876,7 @@ import {
 import { wrapToolHandler, loggingInterceptor, errorInterceptor } from '@mcp-rune/mcp-rune/tools'
 import { ModelService, EndpointResolver } from '@mcp-rune/mcp-rune/lib/mcp/services/index.js'
 import { BasePrompt, PromptContentGenerator, derivePromptSchema } from '@mcp-rune/mcp-rune/prompts'
-import { AppRegistry, createCreateFormApp } from '@mcp-rune/mcp-rune/apps'
+import { AppRegistry, createNewModelApp } from '@mcp-rune/mcp-rune/apps'
 import { SearchService, SearchAdapter } from '@mcp-rune/mcp-rune/search'
 import { DomainRegistry, WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
 import { OAuthService } from '@mcp-rune/mcp-rune/oauth2'

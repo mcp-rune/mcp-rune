@@ -1,11 +1,11 @@
 {
   "name": "@mcp-rune/mcp-rune",
-  "version": "0.60.1",
+  "version": "0.61.0",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "restricted"
   },
-  "description": "Batteries-included MCP framework. Define models, get CRUD tools, prompt strategies, interactive apps, OAuth, and docs — the Rails of MCP servers.",
+  "description": "Model-driven framework for building Model Context Protocol servers.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -104,12 +104,12 @@
     "build:check": "tsc --noEmit",
     "build:apps": "vite build -c src/mcp/apps/vite.config.js",
     "build:apps:model-form": "BUILD_TARGET=model-form vite build -c src/mcp/apps/vite.config.js",
-    "build:apps:list-view": "SKIP_CLEAN=1 BUILD_TARGET=list-view vite build -c src/mcp/apps/vite.config.js",
-    "build:apps:record-detail": "SKIP_CLEAN=1 BUILD_TARGET=record-detail vite build -c src/mcp/apps/vite.config.js",
-    "build:apps:search-view": "SKIP_CLEAN=1 BUILD_TARGET=search-view vite build -c src/mcp/apps/vite.config.js",
-    "build:apps:autocomplete-picker": "SKIP_CLEAN=1 BUILD_TARGET=autocomplete-picker vite build -c src/mcp/apps/vite.config.js",
-    "build:apps:multi-select": "SKIP_CLEAN=1 BUILD_TARGET=multi-select vite build -c src/mcp/apps/vite.config.js",
-    "build:all-apps": "npm run build:apps:model-form && run-p build:apps:list-view build:apps:record-detail build:apps:search-view build:apps:autocomplete-picker build:apps:multi-select",
+    "build:apps:list-model-app": "SKIP_CLEAN=1 BUILD_TARGET=list-model-app vite build -c src/mcp/apps/vite.config.js",
+    "build:apps:show-model-app": "SKIP_CLEAN=1 BUILD_TARGET=show-model-app vite build -c src/mcp/apps/vite.config.js",
+    "build:apps:search-model-app": "SKIP_CLEAN=1 BUILD_TARGET=search-model-app vite build -c src/mcp/apps/vite.config.js",
+    "build:apps:pick-model-app": "SKIP_CLEAN=1 BUILD_TARGET=pick-model-app vite build -c src/mcp/apps/vite.config.js",
+    "build:apps:multi-pick-model-app": "SKIP_CLEAN=1 BUILD_TARGET=multi-pick-model-app vite build -c src/mcp/apps/vite.config.js",
+    "build:all-apps": "npm run build:apps:model-form && run-p build:apps:list-model-app build:apps:show-model-app build:apps:search-model-app build:apps:pick-model-app build:apps:multi-pick-model-app",
     "copy:app-html": "mkdir -p dist/mcp/apps/dist && cp src/mcp/apps/dist/*.html dist/mcp/apps/dist/",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -131,28 +131,19 @@
   "keywords": [
     "mcp",
     "model-context-protocol",
-    "framework",
-    "data",
-    "oauth2",
-    "tools",
-    "prompts",
-    "apps",
-    "llm",
-    "ai",
-    "claude",
     "mcp-server",
-    "model-driven",
-    "typescript"
+    "framework",
+    "ai"
   ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mcp-rune/mcp-rune.git"
   },
-  "homepage": "https://github.com/mcp-rune/mcp-rune#readme",
+  "homepage": "https://mcp-rune.dev",
   "bugs": {
     "url": "https://github.com/mcp-rune/mcp-rune/issues"
   },
-  "author": "David Saenz",
+  "author": "David Saenz <david@mcp-rune.dev>",
   "license": "MIT",
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",

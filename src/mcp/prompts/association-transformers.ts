@@ -136,7 +136,7 @@ export function getTransformersForFields(
  * Generate prompt instruction text for a single transformer.
  *
  * Produces context-aware instructions based on transformer type and
- * whether app tools (autocomplete_picker, multi_select_picker) are available.
+ * whether app tools (pick_model_app, multi_pick_model_app) are available.
  */
 export function generateTransformerInstructions(
   transformer: TransformerEntry,
@@ -175,7 +175,7 @@ function _generateAutocompleteInstructions(
 
 Open the picker so the user can search and select content visually:
 \`\`\`
-autocomplete_picker(${pickerArg})
+pick_model_app(${pickerArg})
 \`\`\`
 
 After the user selects content, retrieve the selection:
@@ -262,9 +262,9 @@ function _generateMultiSelectInstructions(
   let text = ''
 
   if (appsEnabled) {
-    text += `Use the multi-select picker to choose ${label.toLowerCase()}:
+    text += `Use the multi-pick-model-app picker to choose ${label.toLowerCase()}:
 \`\`\`
-multi_select_picker(model: "${model}")
+multi_pick_model_app(model: "${model}")
 \`\`\``
   } else {
     text += `Search for each ${model} individually:

@@ -1,13 +1,13 @@
 /**
- * Record Detail MCP App
+ * Show Record MCP App
  *
  * Creates an MCP App that renders read-only detail cards for one or more model records.
  * The schema is generated from model attributes, records are fetched from the API in parallel.
  *
  * Supports three call patterns:
- *   find_records_app(model, ids: ['1','2','3'])  -- explicit IDs
- *   find_records_app(model)                      -- reads IDs from selection store
- *   find_records_app(model, ids: ['1'])          -- single record
+ *   show_model_app(model, ids: ['1','2','3'])  -- explicit IDs
+ *   show_model_app(model)                      -- reads IDs from selection store
+ *   show_model_app(model, ids: ['1'])          -- single record
  *
  * Build: npm run build:engineer:apps
  */
@@ -27,7 +27,7 @@ import type { SelectionStore } from './selection-store.js'
 import type { AppModelClass, DetailFieldDefinition, ToolResult } from './types.js'
 
 const DIST_DIR = path.resolve(import.meta.dirname, 'dist')
-const HTML_PATH = path.join(DIST_DIR, 'record-detail.html')
+const HTML_PATH = path.join(DIST_DIR, 'show-model-app.html')
 const MAX_RECORDS = 20
 
 let _cachedHtml: string | null = null
@@ -113,7 +113,7 @@ interface RecordDetailOptions {
 }
 
 /** Create the record detail MCP App. */
-export function createRecordDetailApp({
+export function createShowModelApp({
   modelClasses,
   promptClasses,
   namespace
@@ -121,10 +121,10 @@ export function createRecordDetailApp({
   const modelNames = Object.keys(modelClasses) as [string, ...string[]]
 
   return {
-    resourceUri: `ui://${namespace}/find-records-app`,
-    toolName: 'find_records_app',
+    resourceUri: `ui://${namespace}/show-model-app`,
+    toolName: 'show_model_app',
     needsAuth: true,
-    name: 'Record Detail',
+    name: 'Show Record',
     description: 'Read-only detail cards for viewing one or more records',
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
 
@@ -239,7 +239,7 @@ export function createRecordDetailApp({
           return typeof id === 'string' || typeof id === 'number' ? id : '?'
         })
       const summary = formatAppSummary({
-        toolName: 'find_records_app',
+        toolName: 'show_model_app',
         count: successIds.length,
         ids: successIds,
         totalRecords: ids.length,

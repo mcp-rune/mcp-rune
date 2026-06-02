@@ -1,5 +1,5 @@
 /**
- * Autocomplete Picker MCP App — Client-side
+ * Pick Record MCP App — Client-side
  *
  * Type-ahead search with debounced server calls and checkable result list.
  * Supports single-model search and cross-model group search.
@@ -28,7 +28,7 @@ let currentContext = null // tracks model or group to detect context changes
 
 // ─── MCP App Connection ─────────────────────────────────────────────────────
 
-const app = new App({ name: 'Autocomplete Picker', version: '1.0.0' })
+const app = new App({ name: 'Pick Record', version: '1.0.0' })
 
 app.ontoolresult = (result) => {
   try {
@@ -264,7 +264,7 @@ async function doSearch(query) {
 
   try {
     const result = await app.callServerTool({
-      name: 'autocomplete_picker',
+      name: 'pick_model_app',
       arguments: args
     })
 

@@ -3,7 +3,7 @@ import { createSelectionTools } from '../../../../src/mcp/apps/selection-tools.j
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 
-const resourceUri = 'app://search-view'
+const resourceUri = 'app://search-model-app'
 const modelNames = ['activity', 'contact', 'deal']
 const getHtml = () => '<html></html>'
 

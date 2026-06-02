@@ -1,7 +1,7 @@
 /**
  * Generic Model Form MCP Apps
  *
- * Creates two MCP App tools -- `create_model_form` and `update_model_form` --
+ * Creates two MCP App tools -- `new_model_app` and `edit_model_app` --
  * that accept a `model` parameter, analogous to `create_model`/`update_model`.
  *
  * The form schema is generated from the FormClass (fields + fieldsets) and
@@ -79,8 +79,8 @@ interface AppDefinition {
   getHtml: () => string
 }
 
-/** Create the create_model_form MCP App. */
-export function createCreateFormApp({
+/** Create the new_model_app MCP App. */
+export function createNewModelApp({
   modelClasses,
   formClasses,
   promptClasses = {},
@@ -94,9 +94,9 @@ export function createCreateFormApp({
 
   return {
     resourceUri: `ui://${namespace}/model-form`,
-    toolName: 'create_model_form',
+    toolName: 'new_model_app',
     needsAuth: true,
-    name: 'Create Model Form',
+    name: 'New Record',
     description: 'Interactive form for creating a new record',
 
     toolDescription:
@@ -252,8 +252,8 @@ export function createCreateFormApp({
   }
 }
 
-/** Create the update_model_form MCP App. */
-export function createUpdateFormApp({
+/** Create the edit_model_app MCP App. */
+export function createEditModelApp({
   modelClasses,
   formClasses,
   promptClasses = {},
@@ -267,9 +267,9 @@ export function createUpdateFormApp({
 
   return {
     resourceUri: `ui://${namespace}/model-form`,
-    toolName: 'update_model_form',
+    toolName: 'edit_model_app',
     needsAuth: true,
-    name: 'Edit Model Form',
+    name: 'Edit Record',
     description: 'Interactive form for editing an existing record',
 
     toolDescription:
