@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
-    <title>Edit Record</title>
+    <title>Workflow Panel</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -12,22 +12,17 @@
       href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap"
     />
     <link rel="stylesheet" href="../../shared/base.css" />
-    <link rel="stylesheet" href="../../shared/model-form/styles.css" />
+    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <div class="mr-titlebar">
-      <h1 class="mr-title" id="form-title">Edit Record</h1>
+      <h1 class="mr-title" id="title">Workflow Panel</h1>
+      <span id="wf-count" class="mr-selcount"></span>
     </div>
-    <p class="mr-subtitle" id="form-subtitle">Update the details below</p>
+    <p class="mr-subtitle"><span class="k">launch //</span> browse and run available workflows</p>
 
-    <form class="mr-form" id="model-form" onsubmit="return false">
-      <!-- Fields rendered dynamically by shared/model-form/main.js -->
-    </form>
-
-    <div class="mr-actions" id="form-actions" style="display: none">
-      <button type="button" class="mr-btn acc" id="btn-done">
-        Done <span class="arr">→</span>
-      </button>
+    <div class="mr-wf" id="wf-panel">
+      <div class="mr-empty">Loading workflows…</div>
     </div>
 
     <div id="status-bar" class="mr-statusbar"></div>

@@ -49,20 +49,20 @@ function renderRecords(schema, records, cappedMessage) {
 
   if (cappedMessage) {
     const cap = document.createElement('p')
-    cap.className = 'capped-message'
+    cap.className = 'mr-cap'
     cap.textContent = cappedMessage
     container.appendChild(cap)
   }
 
   if (records.length === 0) {
-    container.innerHTML = '<p class="empty-state">No records found</p>'
+    container.innerHTML = '<div class="mr-empty">No records found</div>'
     return
   }
 
   for (const entry of records) {
     if (entry.error) {
       const line = document.createElement('p')
-      line.className = 'error-line'
+      line.className = 'mr-errline'
       line.textContent = `Record #${entry.id}: ${entry.error}`
       container.appendChild(line)
       continue
@@ -73,7 +73,7 @@ function renderRecords(schema, records, cappedMessage) {
     // Per-card heading for multi-record views
     if (isMulti) {
       const heading = document.createElement('div')
-      heading.className = 'record-heading'
+      heading.className = 'mr-recordhd'
       heading.textContent = getRecordTitle(schema, entry.data)
       container.appendChild(heading)
     }
@@ -81,8 +81,8 @@ function renderRecords(schema, records, cappedMessage) {
     const card = buildCard(schema.fields, entry.data)
 
     if (card.children.length === 0) {
-      const empty = document.createElement('p')
-      empty.className = 'empty-state'
+      const empty = document.createElement('div')
+      empty.className = 'mr-empty'
       empty.textContent = 'No data available'
       container.appendChild(empty)
       continue
@@ -111,7 +111,7 @@ function getRecordTitle(schema, record) {
 
 function buildCard(fields, record) {
   const card = document.createElement('div')
-  card.className = 'detail-card'
+  card.className = 'mr-detail'
 
   for (const field of fields) {
     const value = record[field.name]
@@ -121,14 +121,14 @@ function buildCard(fields, record) {
     const isWide = field.type === 'text'
 
     const row = document.createElement('div')
-    row.className = 'detail-row' + (isWide ? ' wide' : '')
+    row.className = 'mr-detail-row' + (isWide ? ' wide' : '')
 
     const label = document.createElement('div')
-    label.className = 'detail-label'
+    label.className = 'mr-detail-label'
     label.textContent = field.label
 
     const valueEl = document.createElement('div')
-    valueEl.className = 'detail-value'
+    valueEl.className = 'mr-detail-value'
     valueEl.appendChild(renderCellValue(value, field))
 
     row.appendChild(label)

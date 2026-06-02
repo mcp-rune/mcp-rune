@@ -63,7 +63,7 @@ export interface DefaultAppRegistryOptions {
  *   const appRegistry = createDefaultAppRegistry({
  *     modelClasses: MODEL_CLASSES,
  *     namespace: 'bookshelf',
- *     themeOverrides: { cssVariables: { '--color-accent': '#0a84ff' } }
+ *     themeOverrides: { cssVariables: { '--acc': '#0a84ff', '--acc-2': '#0a84ff' } }
  *   })
  */
 export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRegistry {

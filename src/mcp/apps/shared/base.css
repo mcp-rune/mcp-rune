@@ -1,37 +1,112 @@
-:root {
-  color-scheme: light dark;
+/*
+ * mcp-rune — DEFAULT APP THEME
+ *
+ * One tokenized system, two themes. Shipped as the default stylesheet for
+ * every generated app (list, form, picker, panel, …).
+ *
+ *  - Light is the default — apps embed in light host surfaces.
+ *  - Dark mirrors the mcp-rune brand site exactly.
+ *  - A host can flip the theme by setting [data-theme] on the document root,
+ *    or it follows `prefers-color-scheme` automatically.
+ *
+ * Geist + Geist Mono are loaded per-app via a <link> to Google Fonts — they
+ * cannot be inlined by Vite singlefile, so the bundle still depends on the
+ * network for the font itself; system fallbacks keep layout intact offline.
+ */
 
-  --color-text-primary: light-dark(#2c2c2c, #d4d4d4);
-  --color-text-inverse: light-dark(#f5f2ed, #1c1c1e);
-  --color-text-info: light-dark(#7a7a7a, #8a8a8a);
-  --color-background-primary: light-dark(#f5f2ed, #1c1c1e);
-  --color-background-inverse: light-dark(#d4d4d4, #2c2c2c);
-  --color-ring-primary: light-dark(#c4704b, #c4704b);
-  --border-radius-md: 6px;
-  --border-width-regular: 1px;
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --font-weight-normal: 400;
-  --font-weight-bold: 700;
-  --font-text-md-size: 0.9rem;
-  --font-text-md-line-height: 1.5;
-  --spacing-unit: var(--font-text-md-size);
-  --spacing-xs: calc(var(--spacing-unit) * 0.25);
-  --spacing-sm: calc(var(--spacing-unit) * 0.5);
-  --spacing-md: var(--spacing-unit);
-  --spacing-lg: calc(var(--spacing-unit) * 1.5);
+:root,
+[data-theme='light'] {
+  --host-bg: #f1f1f4;
+  --app-bg: #ffffff;
+  --surface: #fafafb;
+  --surface-2: #f4f4f7;
+  --line: #e9e9ef;
+  --line-2: #dcdce4;
+  --line-3: #c6c6d2;
+  --ink: #16161c;
+  --ink-2: #43434e;
+  --ink-3: #6c6c7a;
+  --ink-4: #9a9aa8;
+  --acc: #6b4fe6;
+  --acc-2: #5b3fd6;
+  --acc-tint: rgba(124, 92, 255, 0.09);
+  --acc-line: rgba(124, 92, 255, 0.3);
+  --mint: #0d8a6a;
+  --mint-tint: rgba(13, 138, 106, 0.1);
+  --mint-line: rgba(13, 138, 106, 0.3);
+  --amber: #9a6a06;
+  --amber-tint: rgba(154, 106, 6, 0.1);
+  --amber-line: rgba(154, 106, 6, 0.3);
+  --rose: #c0392b;
+  --rose-tint: rgba(192, 57, 43, 0.1);
+  --rose-line: rgba(192, 57, 43, 0.3);
+  --shadow: 0 1px 2px rgba(16, 16, 28, 0.04), 0 8px 30px rgba(16, 16, 28, 0.07);
 
-  --color-accent: #c4704b;
-  --color-accent-hover: #d4845f;
-  --color-accent-soft: rgba(196, 112, 75, 0.12);
-  --color-text-on-accent: #ffffff;
-  --header-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='4' y='3' width='4' height='18' rx='1.5' fill='white'/%3E%3Crect x='4' y='3' width='15' height='3.5' rx='1.5' fill='white'/%3E%3Crect x='4' y='10.25' width='12' height='3.5' rx='1.5' fill='white'/%3E%3Crect x='4' y='17.5' width='15' height='3.5' rx='1.5' fill='white'/%3E%3C/svg%3E");
-  --color-success: light-dark(#3a7d44, #5cb85c);
-  --color-error: light-dark(#c0392b, #e74c3c);
-  --surface: light-dark(#eae6df, #2a2a2c);
-  --border: light-dark(#d1ccc4, #3a3a3c);
-  --input-bg: light-dark(#faf8f5, #2a2a2c);
-  --row-hover: light-dark(rgba(196, 112, 75, 0.07), rgba(196, 112, 75, 0.1));
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 11px;
+  --radius-pill: 999px;
+
+  --font-sans: Geist, Inter, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --host-bg: #07070a;
+    --app-bg: #0e0e14;
+    --surface: #15151c;
+    --surface-2: #1a1a22;
+    --line: #1e1e26;
+    --line-2: #2a2a34;
+    --line-3: #3a3a46;
+    --ink: #f4f4f7;
+    --ink-2: #cdcdd6;
+    --ink-3: #9090a0;
+    --ink-4: #6a6a78;
+    --acc: #7c5cff;
+    --acc-2: #a78bfa;
+    --acc-tint: rgba(124, 92, 255, 0.14);
+    --acc-line: rgba(124, 92, 255, 0.38);
+    --mint: #7ee2c1;
+    --mint-tint: rgba(126, 226, 193, 0.1);
+    --mint-line: rgba(126, 226, 193, 0.32);
+    --amber: #f0c674;
+    --amber-tint: rgba(240, 198, 116, 0.1);
+    --amber-line: rgba(240, 198, 116, 0.32);
+    --rose: #e74c3c;
+    --rose-tint: rgba(231, 76, 60, 0.12);
+    --rose-line: rgba(231, 76, 60, 0.36);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 40px rgba(0, 0, 0, 0.5);
+  }
+}
+
+[data-theme='dark'] {
+  --host-bg: #07070a;
+  --app-bg: #0e0e14;
+  --surface: #15151c;
+  --surface-2: #1a1a22;
+  --line: #1e1e26;
+  --line-2: #2a2a34;
+  --line-3: #3a3a46;
+  --ink: #f4f4f7;
+  --ink-2: #cdcdd6;
+  --ink-3: #9090a0;
+  --ink-4: #6a6a78;
+  --acc: #7c5cff;
+  --acc-2: #a78bfa;
+  --acc-tint: rgba(124, 92, 255, 0.14);
+  --acc-line: rgba(124, 92, 255, 0.38);
+  --mint: #7ee2c1;
+  --mint-tint: rgba(126, 226, 193, 0.1);
+  --mint-line: rgba(126, 226, 193, 0.32);
+  --amber: #f0c674;
+  --amber-tint: rgba(240, 198, 116, 0.1);
+  --amber-line: rgba(240, 198, 116, 0.32);
+  --rose: #e74c3c;
+  --rose-tint: rgba(231, 76, 60, 0.12);
+  --rose-line: rgba(231, 76, 60, 0.36);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 40px rgba(0, 0, 0, 0.5);
 }
 
 * {
@@ -42,114 +117,450 @@
 
 html,
 body {
+  background: var(--app-bg);
+  color: var(--ink);
   font-family: var(--font-sans);
-  font-size: var(--font-text-md-size);
-  font-weight: var(--font-weight-normal);
-  line-height: var(--font-text-md-line-height);
-  color: var(--color-text-primary);
-  background: var(--color-background-primary);
-  padding: 16px 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: -0.006em;
+  font-feature-settings:
+    'ss01' on,
+    'cv11' on;
+  -webkit-font-smoothing: antialiased;
 }
 
-.header {
+body {
+  padding: 22px 22px 24px;
+}
+
+/* ── titles ──────────────────────────────────────────────────── */
+.mr-titlebar {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
   margin-bottom: 12px;
 }
-h1 {
-  font-size: 1.4em;
-  margin-bottom: 4px;
+
+.mr-title {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 25px;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  color: var(--ink);
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
 }
-h1::before {
+
+/*
+ * Optional header-icon glyph, controlled by the `--header-icon` CSS variable
+ * (set per-deployment via AppRegistry's `headerIcon` option or
+ * `themeOverrides.cssVariables['--header-icon']`). When unset, no glyph
+ * renders — the title is plain text.
+ */
+.mr-title::before {
   content: '';
   display: inline-block;
-  width: 1.1em;
-  height: 1.1em;
-  margin-right: 0.35em;
-  vertical-align: -0.15em;
-  background-color: var(--color-accent);
-  -webkit-mask-image: var(--header-icon);
-  mask-image: var(--header-icon);
+  width: 23px;
+  height: 23px;
+  border-radius: 6px;
+  background-color: var(--acc);
+  -webkit-mask-image: var(--header-icon, none);
+  mask-image: var(--header-icon, none);
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
-}
-.subtitle {
-  color: var(--color-text-info);
-  font-size: 0.9em;
+  flex-shrink: 0;
+  transform: translateY(1px);
 }
 
-/* Buttons */
-button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: var(--border-radius-md);
-  font-size: 0.9em;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.btn-primary {
-  background: var(--color-accent);
-  color: var(--color-text-on-accent);
-}
-.btn-primary:hover {
-  background: var(--color-accent-hover);
-}
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: var(--surface);
-  color: var(--color-text-primary);
-  border: 1px solid var(--border);
-}
-.btn-secondary:hover {
-  background: var(--border);
-}
-.btn-secondary:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* Status bar */
-.status-bar {
-  margin-top: 12px;
-  padding: 8px 12px;
-  border-radius: var(--border-radius-md);
-  font-size: 0.85em;
+.mr-title:not([data-with-icon])::before {
   display: none;
 }
-.status-bar.error {
-  display: block;
-  background: rgba(192, 57, 43, 0.15);
-  color: var(--color-error);
-  border: 1px solid var(--color-error);
+
+.mr-selcount {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--acc-2);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
-.status-bar.success {
-  display: block;
-  background: rgba(58, 125, 68, 0.15);
-  color: var(--color-success);
-  border: 1px solid var(--color-success);
-}
-.status-bar.info {
-  display: block;
-  background: rgba(196, 112, 75, 0.1);
-  color: var(--color-text-info);
-  border: 1px solid var(--border);
+.mr-selcount .dash {
+  color: var(--ink-4);
+  margin-right: 8px;
 }
 
-/* Empty state */
-.empty-state {
+.mr-subtitle {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink-3);
+  letter-spacing: 0.005em;
+  line-height: 1.55;
+  margin: 10px 0;
+}
+.mr-subtitle .k {
+  color: var(--ink-4);
+}
+.mr-subtitle b {
+  color: var(--acc-2);
+  font-weight: 500;
+}
+
+/* ── buttons ─────────────────────────────────────────────────── */
+.mr-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line-2);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    transform 0.08s;
+}
+.mr-btn:hover {
+  border-color: var(--line-3);
+  background: var(--surface-2);
+}
+.mr-btn:active {
+  transform: translateY(1px);
+}
+.mr-btn .arr {
+  font-family: var(--font-mono);
+}
+.mr-btn.acc {
+  background: var(--acc);
+  border-color: var(--acc);
+  color: #fff;
+}
+.mr-btn.acc:hover {
+  filter: brightness(1.07);
+  background: var(--acc);
+}
+.mr-btn.ghost {
+  background: transparent;
+  border-color: var(--line-2);
+  color: var(--ink-2);
+}
+.mr-btn.ghost:hover {
+  color: var(--ink);
+  border-color: var(--line-3);
+}
+.mr-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ── badges (squared, mono) ──────────────────────────────────── */
+.mr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid var(--line-2);
+  background: var(--surface);
+  color: var(--ink-3);
+  line-height: 1;
+  white-space: nowrap;
+}
+.mr-badge .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 3px;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.mr-badge.neutral {
+  color: var(--ink-3);
+  border-color: var(--line-2);
+  background: var(--surface);
+}
+.mr-badge.live {
+  color: var(--mint);
+  border-color: var(--mint-line);
+  background: var(--mint-tint);
+}
+.mr-badge.wip {
+  color: var(--amber);
+  border-color: var(--amber-line);
+  background: var(--amber-tint);
+}
+.mr-badge.acc {
+  color: var(--acc-2);
+  border-color: var(--acc-line);
+  background: var(--acc-tint);
+}
+
+/* Inline row of badges (filter chips, tag lists). */
+.mr-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+/* ── checkbox ────────────────────────────────────────────────── */
+.mr-check {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid var(--line-3);
+  border-radius: var(--radius-sm);
+  background: var(--app-bg);
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+  vertical-align: middle;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+  flex-shrink: 0;
+}
+.mr-check:hover {
+  border-color: var(--acc);
+}
+.mr-check:checked,
+.mr-check.indet {
+  background: var(--acc);
+  border-color: var(--acc);
+}
+.mr-check:checked::after {
+  content: '';
+  width: 9px;
+  height: 5px;
+  border: 2px solid #fff;
+  border-top: 0;
+  border-right: 0;
+  transform: rotate(-45deg) translateY(-1px);
+}
+.mr-check.indet::after {
+  content: '';
+  width: 9px;
+  height: 2px;
+  background: #fff;
+  border-radius: 1px;
+}
+
+input[type='checkbox']:not(.mr-check) {
+  accent-color: var(--acc);
+}
+
+/* ── status bar ──────────────────────────────────────────────── */
+.mr-statusbar {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.005em;
+  display: none;
+  border: 1px solid transparent;
+}
+.mr-statusbar.error {
+  display: block;
+  color: var(--rose);
+  border-color: var(--rose-line);
+  background: var(--rose-tint);
+}
+.mr-statusbar.success {
+  display: block;
+  color: var(--mint);
+  border-color: var(--mint-line);
+  background: var(--mint-tint);
+}
+.mr-statusbar.info {
+  display: block;
+  color: var(--ink-3);
+  border-color: var(--line-2);
+  background: var(--surface);
+}
+
+/* ── empty state ─────────────────────────────────────────────── */
+.mr-empty {
   text-align: center;
-  color: var(--color-text-info);
-  padding: 32px 16px;
-  font-size: 0.95em;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--ink-3);
+  padding: 34px 0;
 }
 
-/* Checkbox accent */
-input[type='checkbox'] {
-  accent-color: var(--color-accent);
+/* ── shared table (list + search) ────────────────────────────── */
+.mr-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 18px;
+}
+.mr-table thead th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 500;
+  padding: 0 14px 10px;
+  border-bottom: 1px solid var(--line-2);
+}
+.mr-table thead th.check,
+.mr-table tbody td.check {
+  width: 40px;
+  padding-left: 4px;
+  padding-right: 0;
+}
+.mr-table tbody td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-2);
+  vertical-align: middle;
+}
+.mr-table tbody tr {
+  transition: background 0.12s;
+  cursor: pointer;
+}
+.mr-table tbody tr:hover {
+  background: var(--surface);
+}
+.mr-table tbody tr.sel {
+  background: var(--acc-tint);
+}
+.mr-table tbody tr.sel:hover {
+  background: var(--acc-tint);
+}
+.mr-cell-title {
+  color: var(--ink);
+  font-weight: 450;
+  letter-spacing: -0.01em;
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mr-cell-mute {
+  color: var(--ink-4);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+/* ── pagination ──────────────────────────────────────────────── */
+.mr-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 18px 0 4px;
+}
+.mr-pager .page {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.mr-pager .page b {
+  color: var(--ink);
+  font-weight: 500;
+}
+.mr-pgbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 13px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line-2);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    color 0.15s;
+}
+.mr-pgbtn:hover:not(:disabled) {
+  border-color: var(--line-3);
+  color: var(--ink);
+}
+.mr-pgbtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.mr-pgbtn .a {
+  font-family: var(--font-mono);
+}
+
+/* ── selection footer (list/search multi-select confirm) ─────── */
+.mr-selbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--mint-line);
+  background: var(--mint-tint);
+}
+.mr-selbar .lead {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  color: var(--mint);
+  font-weight: 500;
+}
+.mr-selbar .lead .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 4px;
+  background: var(--mint);
+}
+.mr-selbar .send {
+  margin-left: auto;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--mint-line);
+  background: var(--app-bg);
+  color: var(--mint);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  transition: background 0.15s;
+}
+.mr-selbar .send:hover {
+  background: var(--mint-tint);
+}
+
+/* "Select all N results" inline link (sits next to .mr-selcount). */
+.mr-selall a {
+  color: var(--acc-2);
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 500;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+.mr-selall a:hover {
+  color: var(--acc);
 }

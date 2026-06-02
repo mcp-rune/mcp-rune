@@ -32,14 +32,14 @@ describe('lib/mcp/apps/shared/formatters', () => {
 
     it('enum renders a status badge with humanized label', () => {
       const out = getFormatter('enum').format('in_progress', { column: { enumHints: {} } })
-      expect(out.className).toContain('status-badge')
+      expect(out.className).toContain('mr-badge')
       expect(out.textContent).toBe('In Progress')
     })
 
     it('array renders a tag list', () => {
       const out = getFormatter('array').format(['fiction', 'mystery'])
-      expect(out.className).toBe('tag-list')
-      expect(out.querySelectorAll('.tag')).toHaveLength(2)
+      expect(out.className).toBe('mr-badge-row')
+      expect(out.querySelectorAll('.mr-badge')).toHaveLength(2)
     })
 
     it('json renders a pre block', () => {

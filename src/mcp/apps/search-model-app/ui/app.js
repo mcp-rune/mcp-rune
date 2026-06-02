@@ -85,10 +85,9 @@ function renderChips() {
   // Query chip first
   if (hasQuery) {
     const chip = document.createElement('span')
-    chip.className = 'filter-chip query-chip'
+    chip.className = 'mr-badge acc'
     chip.innerHTML =
-      `<span class="chip-label">Search:</span>` +
-      `<span class="chip-value">${escapeHtml(currentQuery)}</span>`
+      `<span class="k">Search:</span> ` + `<span class="v">${escapeHtml(currentQuery)}</span>`
     container.appendChild(chip)
   }
 
@@ -108,21 +107,23 @@ function renderTable(schema, records) {
   selection.clear()
 
   if (records.length === 0) {
-    container.innerHTML = '<p class="empty-state">No results match the current filters</p>'
+    container.innerHTML = '<div class="mr-empty">No results match the current filters</div>'
     return
   }
 
   const table = document.createElement('table')
+  table.className = 'mr-table'
 
   // Header
   const thead = document.createElement('thead')
   const headerRow = document.createElement('tr')
 
   const selectAllTh = document.createElement('th')
-  selectAllTh.className = 'col-checkbox'
+  selectAllTh.className = 'check'
   const selectAllCb = document.createElement('input')
   selectAllCb.type = 'checkbox'
   selectAllCb.id = 'select-all'
+  selectAllCb.className = 'mr-check'
   selectAllCb.addEventListener('change', (e) => selection.toggleAll(e.target.checked))
   selectAllTh.appendChild(selectAllCb)
   headerRow.appendChild(selectAllTh)
@@ -142,9 +143,10 @@ function renderTable(schema, records) {
     tr.dataset.id = record.id
 
     const cbTd = document.createElement('td')
-    cbTd.className = 'col-checkbox'
+    cbTd.className = 'check'
     const cb = document.createElement('input')
     cb.type = 'checkbox'
+    cb.className = 'mr-check'
     cb.dataset.id = record.id
     cb.addEventListener('change', (e) => {
       selection.toggleRecord(record.id, e.target.checked)
@@ -180,8 +182,11 @@ function renderPagination(pagination) {
   const perPage = pagination.per_page || 50
   const totalPages = Math.ceil(total / perPage) || 1
 
-  document.getElementById('page-info').textContent =
-    total > 0 ? `Page ${currentPage} of ${totalPages} (${total} records)` : `Page ${currentPage}`
+  const pageInfo = document.getElementById('page-info')
+  pageInfo.innerHTML =
+    total > 0
+      ? `Page <b>${currentPage}</b> of <b>${totalPages}</b> · ${total} records`
+      : `Page <b>${currentPage}</b>`
 
   document.getElementById('btn-prev').disabled = currentPage <= 1
   document.getElementById('btn-next').disabled = currentPage >= totalPages

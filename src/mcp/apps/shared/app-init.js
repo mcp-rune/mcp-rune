@@ -34,10 +34,10 @@ export function initApp(app, { rootEl = document.body } = {}) {
 
 export function showStatus(statusBar, message, type = 'info') {
   statusBar.textContent = message
-  statusBar.className = 'status-bar ' + type
+  statusBar.className = 'mr-statusbar ' + type
 }
 
 export function clearStatus(statusBar) {
-  statusBar.className = 'status-bar'
+  statusBar.className = 'mr-statusbar'
   statusBar.textContent = ''
 }

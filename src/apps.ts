@@ -21,3 +21,8 @@ export { createNewModelApp } from './mcp/apps/new-model-app/index.js'
 export { createPickModelApp } from './mcp/apps/pick-model-app/index.js'
 export { createSearchModelApp } from './mcp/apps/search-model-app/index.js'
 export { createShowModelApp } from './mcp/apps/show-model-app/index.js'
+export type {
+  WorkflowPanelEntry,
+  WorkflowPanelOptions
+} from './mcp/apps/workflow-panel-app/index.js'
+export { createWorkflowPanelApp } from './mcp/apps/workflow-panel-app/index.js'

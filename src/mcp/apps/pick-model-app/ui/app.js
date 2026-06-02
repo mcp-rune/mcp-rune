@@ -115,74 +115,85 @@ function renderResults(results) {
   if (results.length === 0) {
     const input = document.getElementById('search-input')
     container.innerHTML = input.value
-      ? '<p class="empty-state">No results found</p>'
-      : '<p class="empty-state">Type to search for records</p>'
+      ? '<div class="mr-empty">No results found</div>'
+      : '<div class="mr-empty">Type to search for records</div>'
     return
   }
 
-  const ul = document.createElement('ul')
-  ul.className = 'result-list'
+  const list = document.createElement('div')
+  list.className = 'mr-results'
 
   for (const result of results) {
-    const li = document.createElement('li')
-    li.className = 'result-item'
+    const row = document.createElement('div')
+    row.className = 'mr-result'
     if (selectedIds.has(String(result.id))) {
-      li.classList.add('selected')
+      row.classList.add('active')
     }
 
     const cb = document.createElement('input')
     cb.type = 'checkbox'
+    cb.className = 'mr-check'
     cb.checked = selectedIds.has(String(result.id))
     cb.addEventListener('change', (e) => {
       e.stopPropagation()
       toggleSelection(result, e.target.checked)
-      li.classList.toggle('selected', e.target.checked)
+      row.classList.toggle('active', e.target.checked)
     })
+    row.appendChild(cb)
 
-    const info = document.createElement('div')
-    info.className = 'result-info'
+    // Initials avatar — uses entityType in group mode, otherwise first letters of display.
+    const mark = document.createElement('span')
+    mark.className = 'rmark'
+    const seed = result.entityType || result.display || '?'
+    mark.textContent =
+      seed
+        .replace(/[^A-Za-z0-9]/g, '')
+        .slice(0, 2)
+        .toUpperCase() || '?'
+    row.appendChild(mark)
 
-    // Entity type badge for group mode
+    const body = document.createElement('span')
+    body.className = 'rbody'
+
     if (result.entityType) {
       const tag = document.createElement('span')
-      tag.className = 'entity-type-tag'
+      tag.className = 'mr-badge neutral'
+      tag.style.marginRight = '6px'
       tag.textContent = humanize(result.entityType)
-      info.appendChild(tag)
+      body.appendChild(tag)
     }
 
-    const display = document.createElement('div')
-    display.className = 'result-display'
+    const display = document.createElement('span')
+    display.className = 'rname'
     display.textContent = result.display
+    body.appendChild(display)
 
-    info.appendChild(display)
-
-    // Show extra autocomplete fields as secondary text (skip entityType — already shown as badge)
     const extraFields = Object.entries(result)
       .filter(([k]) => k !== 'id' && k !== 'display' && k !== 'entityType')
       .map(([k, v]) => `${humanize(k)}: ${v}`)
       .join(' · ')
 
     if (extraFields) {
-      const fields = document.createElement('div')
-      fields.className = 'result-fields'
+      const fields = document.createElement('span')
+      fields.className = 'rmeta'
       fields.textContent = extraFields
-      info.appendChild(fields)
+      body.appendChild(fields)
     }
 
-    li.addEventListener('click', (e) => {
+    row.appendChild(body)
+
+    row.addEventListener('click', (e) => {
       if (e.target === cb) return
       cb.checked = !cb.checked
       toggleSelection(result, cb.checked)
-      li.classList.toggle('selected', cb.checked)
+      row.classList.toggle('active', cb.checked)
     })
 
-    li.appendChild(cb)
-    li.appendChild(info)
-    ul.appendChild(li)
+    list.appendChild(row)
   }
 
   container.innerHTML = ''
-  container.appendChild(ul)
+  container.appendChild(list)
 }
 
 // ─── Selection ──────────────────────────────────────────────────────────────

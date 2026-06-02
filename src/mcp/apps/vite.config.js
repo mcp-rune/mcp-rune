@@ -35,6 +35,10 @@ const configs = {
   'multi-pick-model-app': {
     root: 'multi-pick-model-app/ui',
     outFile: 'multi-pick-model-app.html'
+  },
+  'workflow-panel-app': {
+    root: 'workflow-panel-app/ui',
+    outFile: 'workflow-panel-app.html'
   }
 }
 

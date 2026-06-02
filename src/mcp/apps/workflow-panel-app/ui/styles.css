@@ -1,0 +1,130 @@
+/*
+ * workflow-panel-app — grouped launcher cards.
+ * Lifted from the design's .mr-wf system.
+ */
+
+.mr-wf {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.mr-wf-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mr-wf-grouphead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 2px;
+}
+.mr-wf-grouphead .lbl {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--acc-2);
+  white-space: nowrap;
+}
+.mr-wf-grouphead .ct {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-4);
+  white-space: nowrap;
+}
+.mr-wf-grouphead .line {
+  flex: 1;
+  height: 1px;
+  background: var(--line-2);
+}
+
+.mr-wf-card {
+  position: relative;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  padding: 15px 17px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    transform 0.08s;
+}
+.mr-wf-card:hover,
+.mr-wf-card.active {
+  border-color: var(--acc-line);
+  background: var(--acc-tint);
+}
+.mr-wf-card:active {
+  transform: translateY(1px);
+}
+
+.mr-wf-top {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.mr-wf-name {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.015em;
+}
+.mr-wf-launch {
+  margin-left: auto;
+  padding-left: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--acc-2);
+  opacity: 0;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.mr-wf-card:hover .mr-wf-launch,
+.mr-wf-card.active .mr-wf-launch {
+  opacity: 1;
+}
+
+.mr-wf-desc {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  line-height: 1.5;
+  margin: 7px 0 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mr-wf-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 11px;
+}
+.mr-wf-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  border: 1px solid var(--line-2);
+  background: var(--app-bg);
+  color: var(--ink-3);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.mr-wf-loading {
+  text-align: center;
+  padding: 24px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}

@@ -65,8 +65,8 @@ export interface AppDefinition {
  * Per-deployment theming applied to every app's bundled HTML at serve time.
  * Both fields are optional and additive: `cssVariables` writes a `:root { … }`
  * block, `css` is appended verbatim. Variable names should match the tokens
- * defined in `src/mcp/apps/shared/base.css` (e.g. `--color-accent`,
- * `--color-accent-soft`, `--border-radius-md`).
+ * defined in `src/mcp/apps/shared/base.css` (e.g. `--acc`, `--acc-tint`,
+ * `--ink`, `--surface`, `--line-2`, `--radius-md`).
  */
 export interface ThemeOverrides {
   cssVariables?: Record<string, string>

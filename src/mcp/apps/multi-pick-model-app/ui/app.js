@@ -58,40 +58,50 @@ function renderResults() {
   const container = document.getElementById('results-container')
 
   if (allRecords.length === 0) {
-    container.innerHTML = '<p class="empty-state">No records available</p>'
+    container.innerHTML = '<div class="mr-empty">No records available</div>'
     return
   }
 
-  const ul = document.createElement('ul')
-  ul.className = 'result-list'
-  ul.id = 'result-list'
+  const list = document.createElement('div')
+  list.className = 'mr-results'
+  list.id = 'result-list'
 
   for (const record of allRecords) {
-    const li = document.createElement('li')
-    li.className = 'result-item'
-    li.dataset.id = record.id
-    li.dataset.searchText = record.display.toLowerCase()
+    const row = document.createElement('div')
+    row.className = 'mr-result'
+    row.dataset.id = record.id
+    row.dataset.searchText = record.display.toLowerCase()
     if (selectedIds.has(String(record.id))) {
-      li.classList.add('selected')
+      row.classList.add('active')
     }
 
     const cb = document.createElement('input')
     cb.type = 'checkbox'
+    cb.className = 'mr-check'
     cb.checked = selectedIds.has(String(record.id))
     cb.addEventListener('change', (e) => {
       e.stopPropagation()
       toggleSelection(record, e.target.checked)
-      li.classList.toggle('selected', e.target.checked)
+      row.classList.toggle('active', e.target.checked)
     })
+    row.appendChild(cb)
 
-    const info = document.createElement('div')
-    info.className = 'result-info'
+    const mark = document.createElement('span')
+    mark.className = 'rmark'
+    mark.textContent =
+      record.display
+        .replace(/[^A-Za-z0-9]/g, '')
+        .slice(0, 2)
+        .toUpperCase() || '?'
+    row.appendChild(mark)
 
-    const display = document.createElement('div')
-    display.className = 'result-display'
+    const body = document.createElement('span')
+    body.className = 'rbody'
+
+    const display = document.createElement('span')
+    display.className = 'rname'
     display.textContent = record.display
-
-    info.appendChild(display)
+    body.appendChild(display)
 
     const extraFields = Object.entries(record)
       .filter(([k]) => k !== 'id' && k !== 'display')
@@ -99,26 +109,26 @@ function renderResults() {
       .join(' · ')
 
     if (extraFields) {
-      const fields = document.createElement('div')
-      fields.className = 'result-fields'
+      const fields = document.createElement('span')
+      fields.className = 'rmeta'
       fields.textContent = extraFields
-      info.appendChild(fields)
+      body.appendChild(fields)
     }
 
-    li.addEventListener('click', (e) => {
+    row.appendChild(body)
+
+    row.addEventListener('click', (e) => {
       if (e.target === cb) return
       cb.checked = !cb.checked
       toggleSelection(record, cb.checked)
-      li.classList.toggle('selected', cb.checked)
+      row.classList.toggle('active', cb.checked)
     })
 
-    li.appendChild(cb)
-    li.appendChild(info)
-    ul.appendChild(li)
+    list.appendChild(row)
   }
 
   container.innerHTML = ''
-  container.appendChild(ul)
+  container.appendChild(list)
 }
 
 // ─── Selection ──────────────────────────────────────────────────────────────
@@ -175,13 +185,13 @@ function toggleSelectAll(checked) {
     } else {
       selectedIds.delete(id)
     }
-    li.classList.toggle('selected', checked)
+    li.classList.toggle('active', checked)
   }
   updateSelectionBar()
 }
 
 function getVisibleItems() {
-  return [...document.querySelectorAll('.result-item:not(.hidden)')]
+  return [...document.querySelectorAll('.mr-result:not(.hidden)')]
 }
 
 async function sendSelection() {
@@ -197,7 +207,7 @@ async function sendSelection() {
 // ─── Client-Side Filter ─────────────────────────────────────────────────────
 
 function applyFilter(query) {
-  const items = document.querySelectorAll('.result-item')
+  const items = document.querySelectorAll('.mr-result')
   const lower = query.toLowerCase()
 
   for (const li of items) {

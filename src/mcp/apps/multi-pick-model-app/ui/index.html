@@ -5,41 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <title>Multi-Pick Records</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap"
+    />
     <link rel="stylesheet" href="../../shared/base.css" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="header">
-      <div class="header-row">
-        <h1 id="title">Loading…</h1>
-        <span id="selection-info" class="selection-info" style="display: none">
-          — <span id="selection-count">0 selected</span>
-        </span>
-        <button
-          type="button"
-          class="btn-primary"
-          id="btn-send-selection"
-          style="visibility: hidden"
-        >
-          Send Selection
-        </button>
-      </div>
-      <p class="subtitle" id="subtitle"></p>
+    <div class="mr-titlebar">
+      <h1 class="mr-title" id="title">Loading…</h1>
+      <span id="selection-info" class="mr-selcount" style="display: none">
+        <span class="dash">—</span><span id="selection-count">0 selected</span>
+      </span>
+      <span style="flex: 1"></span>
+      <button type="button" class="mr-btn acc" id="btn-send-selection" style="visibility: hidden">
+        Send selection <span class="arr">→</span>
+      </button>
     </div>
+    <p class="mr-subtitle" id="subtitle"></p>
 
-    <div class="filter-box">
-      <input type="text" id="filter-input" placeholder="Filter…" autocomplete="off" />
-      <label class="select-all-toggle">
-        <input type="checkbox" id="select-all" />
+    <div class="mr-filterbar">
+      <div class="mr-search">
+        <span class="ico" aria-hidden="true">
+          <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
+            <circle cx="7.3" cy="7.3" r="5.3" stroke="currentColor" stroke-width="1.6" />
+            <path
+              d="M11.4 11.4L15 15"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            />
+          </svg>
+        </span>
+        <input type="text" id="filter-input" placeholder="Filter…" autocomplete="off" />
+      </div>
+      <label class="mr-selall-toggle">
+        <input type="checkbox" id="select-all" class="mr-check" />
         <span>Select all</span>
       </label>
     </div>
 
     <div id="results-container">
-      <p class="empty-state" id="empty-state">Loading…</p>
+      <div class="mr-empty" id="empty-state">Loading…</div>
     </div>
 
-    <div id="status-bar" class="status-bar"></div>
+    <div id="status-bar" class="mr-statusbar"></div>
 
     <script type="module" src="./app.js"></script>
   </body>

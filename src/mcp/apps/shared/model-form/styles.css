@@ -1,251 +1,351 @@
-/* model-form — app-specific styles (base.css provides reset, palette, buttons, status bar) */
+/*
+ * Model form styles — the .mr-form system from the default app theme.
+ * Used by new-model-app and edit-model-app via shared/model-form/main.js.
+ */
 
-.subtitle {
-  margin-bottom: 16px;
+.mr-form {
+  margin-top: 18px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
-/* Horizontal label-field layout (CSS grid: label left, input right) */
-.field {
+.mr-field {
   display: grid;
-  grid-template-columns: minmax(100px, 25%) 1fr;
+  grid-template-columns: 168px 1fr;
+  gap: 18px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
   align-items: start;
-  gap: 0 8px;
-  margin-bottom: 10px;
 }
-.field:last-child {
-  margin-bottom: 0;
+.mr-field:last-child {
+  border-bottom: 0;
+}
+.mr-field:nth-child(even) {
+  background: var(--surface);
 }
 
-/* Stacked variant for field types with inline option labels (checkbox_group, multiselect, checkbox) */
-.field--stacked {
+.mr-field--stacked {
   grid-template-columns: 1fr;
 }
-.field--stacked label {
+.mr-field--stacked label {
   text-align: left;
   padding-top: 0;
 }
 
-label {
+.mr-form label {
   display: block;
-  font-size: 0.85em;
-  font-weight: 500;
-  text-align: right;
-  padding-top: 7px;
-  color: var(--color-text-info);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.01em;
+  color: var(--acc-2);
+  padding-top: 9px;
 }
 
-label .required {
-  color: var(--color-accent);
-  margin-left: 2px;
+.mr-flabel__req {
+  color: var(--ink-4);
 }
 
-input[type='text'],
-input[type='number'],
-input[type='url'],
-input[type='date'],
-select,
-textarea {
+.mr-fhint {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-4);
+  margin-top: 4px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.mr-input,
+.mr-textarea,
+.mr-select,
+.mr-form input[type='text'],
+.mr-form input[type='number'],
+.mr-form input[type='email'],
+.mr-form input[type='url'],
+.mr-form input[type='date'],
+.mr-form input[type='datetime-local'],
+.mr-form input[type='time'],
+.mr-form input[type='color'],
+.mr-form select,
+.mr-form textarea {
   width: 100%;
-  padding: 7px 10px;
-  background: var(--input-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--border-radius-md);
-  color: var(--color-text-primary);
-  font-size: 0.9em;
-  font-family: inherit;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--app-bg);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+  letter-spacing: -0.01em;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
-  outline: none;
-  border-color: var(--color-accent);
-}
-
-textarea {
+.mr-form textarea {
   resize: vertical;
-  min-height: 60px;
+  min-height: 90px;
+  line-height: 1.55;
 }
 
-/* Checkbox group (fixed enum values like formats) */
-.checkbox-group {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+.mr-form input:focus,
+.mr-form textarea:focus,
+.mr-form select:focus {
+  outline: none;
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px var(--acc-tint);
 }
-.checkbox-group label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.9em;
-  color: var(--color-text-primary);
+
+.mr-form input::placeholder,
+.mr-form textarea::placeholder {
+  color: var(--ink-4);
+}
+
+.mr-form select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%239a9aa8' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 34px;
   cursor: pointer;
 }
 
-/* Multiselect group (association values like tags) */
-.multiselect-group {
+/* Form footer (cancel / save buttons) */
+.mr-formfoot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+.mr-formfoot .note {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-4);
+}
+.mr-formfoot .spacer {
+  flex: 1;
+}
+
+/* ── checkbox_group (fixed enums like formats) ──────────────── */
+.mr-checks {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.mr-checks label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: var(--ink);
+  cursor: pointer;
+  padding-top: 0;
+  text-transform: none;
+  letter-spacing: -0.005em;
+}
+
+/* Single inline checkbox (boolean field) */
+.mr-checks__opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: var(--ink);
+  cursor: pointer;
+  padding-top: 0 !important;
+  text-transform: none;
+  letter-spacing: -0.005em;
+}
+
+/* ── multiselect (association tags as toggle pills) ─────────── */
+.mr-multi {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
-.multiselect-group label {
-  display: flex;
+.mr-multi label {
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.9em;
-  color: var(--color-text-primary);
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
   cursor: pointer;
-  padding: 3px 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--border-radius-md);
-  transition: border-color 0.2s;
+  padding: 5px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  text-transform: none;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    color 0.15s;
 }
-.multiselect-group label:has(input:checked) {
-  border-color: var(--color-accent);
+.mr-multi label:hover {
+  border-color: var(--line-3);
+}
+.mr-multi label:has(input:checked) {
+  border-color: var(--acc-line);
+  background: var(--acc-tint);
+  color: var(--acc-2);
 }
 
-.color-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+.mr-color-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-pill);
   display: inline-block;
+  flex-shrink: 0;
 }
 
-.empty-options {
-  font-size: 0.85em;
-  color: var(--color-text-info);
-  font-style: italic;
+.mr-empty-opts {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink-4);
+  font-style: normal;
 }
 
-/* Parent-context banner — shown when the form is for a nested model
-   and the server resolved the parent's display label. */
-.parent-banner {
+/* ── parent-context banner ──────────────────────────────────── */
+.mr-banner {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   align-items: baseline;
-  padding: 8px 12px;
-  margin-bottom: 14px;
-  background: var(--color-accent-soft, rgba(99, 102, 241, 0.1));
-  border-left: 3px solid var(--color-accent);
-  border-radius: var(--border-radius-md);
-  font-size: 0.85em;
-  color: var(--color-text-primary);
+  padding: 10px 14px;
+  margin: 0 0 14px;
+  background: var(--acc-tint);
+  border-left: 3px solid var(--acc);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--ink);
 }
-.parent-banner strong {
-  color: var(--color-text-info);
+.mr-banner strong {
+  color: var(--ink-4);
   text-transform: uppercase;
-  font-size: 0.75em;
-  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  font-weight: 500;
 }
 
-/* Searchable select (inline autocomplete for large option lists) */
-.searchable-select {
+/* ── searchable select (inline autocomplete for large option lists) ── */
+.mr-srselect {
   position: relative;
 }
-.searchable-select__input {
+.mr-srselect__input {
   width: 100%;
-  padding: 7px 10px;
-  background: var(--input-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--border-radius-md);
-  color: var(--color-text-primary);
-  font-size: 0.9em;
-  font-family: inherit;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--app-bg);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+  letter-spacing: -0.01em;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
-.searchable-select__input:focus {
+.mr-srselect__input:focus {
   outline: none;
-  border-color: var(--color-accent);
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px var(--acc-tint);
 }
-.searchable-select__dropdown {
+.mr-srselect__dropdown {
   display: none;
   position: absolute;
   top: 100%;
   left: 0;
   right: 0;
-  max-height: 180px;
+  max-height: 200px;
   overflow-y: auto;
-  background: var(--input-bg);
-  border: 1px solid var(--border);
+  background: var(--app-bg);
+  border: 1px solid var(--line-2);
   border-top: none;
-  border-radius: 0 0 var(--border-radius-md) var(--border-radius-md);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
   z-index: 10;
+  box-shadow: var(--shadow);
 }
-.searchable-select__option {
-  padding: 6px 10px;
+.mr-srselect__option {
+  padding: 9px 12px;
   cursor: pointer;
-  font-size: 0.9em;
-  color: var(--color-text-primary);
+  font-size: 14px;
+  color: var(--ink);
+  transition: background 0.1s;
 }
-.searchable-select__option:hover {
-  background: var(--color-accent);
-  color: #fff;
+.mr-srselect__option:hover {
+  background: var(--acc-tint);
+  color: var(--acc-2);
 }
-.searchable-select__empty {
-  padding: 6px 10px;
-  font-size: 0.85em;
-  color: var(--color-text-info);
-  font-style: italic;
+.mr-srselect__empty {
+  padding: 9px 12px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink-4);
 }
 
-/* Actions */
-.actions {
+/* ── form actions ────────────────────────────────────────────── */
+.mr-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 10px;
+  margin-top: 18px;
 }
-.actions button[disabled] {
-  opacity: 0.5;
+.mr-actions button[disabled] {
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
-/* Error states */
-.field.has-error input,
-.field.has-error select,
-.field.has-error textarea {
-  border-color: var(--color-error);
+/* ── error states ────────────────────────────────────────────── */
+.mr-field--error input,
+.mr-field--error select,
+.mr-field--error textarea,
+.mr-field--error .mr-srselect__input {
+  border-color: var(--rose);
 }
-.field .error-msg {
+.mr-field__err {
   grid-column: 1 / -1;
-  color: var(--color-error);
-  font-size: 0.8em;
-  margin-top: 2px;
+  color: var(--rose);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  margin-top: 4px;
 }
 
-/* Field row layout (side-by-side fields within a group) */
-.field-row {
+/* Field-row layout (side-by-side fields within a group) */
+.mr-field-row {
   display: flex;
-  gap: 12px;
+  gap: 0;
 }
-.field-row > .field {
+.mr-field-row > .mr-field {
   flex: 1;
   grid-template-columns: 1fr;
+  border-bottom: 1px solid var(--line);
 }
-.field-row > .field label {
+.mr-field-row > .mr-field label {
   text-align: left;
   padding-top: 0;
 }
-
-/* Legacy row layout (kept for compatibility with hardcoded forms) */
-.row {
-  display: flex;
-  gap: 12px;
-}
-.row > .field {
-  flex: 1;
+.mr-field-row > .mr-field + .mr-field {
+  border-left: 1px solid var(--line);
 }
 
 /* Narrow viewport: revert to stacked layout */
-@media (max-width: 400px) {
-  .field {
+@media (max-width: 460px) {
+  .mr-field {
     grid-template-columns: 1fr;
   }
-  .field label {
+  .mr-field label {
     text-align: left;
     padding-top: 0;
   }
-  .field-row {
+  .mr-field-row {
     flex-direction: column;
-    gap: 0;
+  }
+  .mr-field-row > .mr-field + .mr-field {
+    border-left: 0;
   }
 }

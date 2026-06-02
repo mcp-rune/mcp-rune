@@ -76,21 +76,23 @@ function renderTable(schema, records) {
   selection.clear()
 
   if (records.length === 0) {
-    container.innerHTML = '<p class="empty-state">No records found</p>'
+    container.innerHTML = '<div class="mr-empty">No records found</div>'
     return
   }
 
   const table = document.createElement('table')
+  table.className = 'mr-table'
 
   // Header
   const thead = document.createElement('thead')
   const headerRow = document.createElement('tr')
 
   const selectAllTh = document.createElement('th')
-  selectAllTh.className = 'col-checkbox'
+  selectAllTh.className = 'check'
   const selectAllCb = document.createElement('input')
   selectAllCb.type = 'checkbox'
   selectAllCb.id = 'select-all'
+  selectAllCb.className = 'mr-check'
   selectAllCb.addEventListener('change', (e) => selection.toggleAll(e.target.checked))
   selectAllTh.appendChild(selectAllCb)
   headerRow.appendChild(selectAllTh)
@@ -110,9 +112,10 @@ function renderTable(schema, records) {
     tr.dataset.id = record.id
 
     const cbTd = document.createElement('td')
-    cbTd.className = 'col-checkbox'
+    cbTd.className = 'check'
     const cb = document.createElement('input')
     cb.type = 'checkbox'
+    cb.className = 'mr-check'
     cb.dataset.id = record.id
     cb.addEventListener('change', (e) => {
       selection.toggleRecord(record.id, e.target.checked)
@@ -149,8 +152,11 @@ function renderPagination(pagination) {
   const perPage = pagination.per_page || 20
   const totalPages = Math.ceil(total / perPage) || 1
 
-  document.getElementById('page-info').textContent =
-    total > 0 ? `Page ${currentPage} of ${totalPages} (${total} records)` : `Page ${currentPage}`
+  const pageInfo = document.getElementById('page-info')
+  pageInfo.innerHTML =
+    total > 0
+      ? `Page <b>${currentPage}</b> of <b>${totalPages}</b> · ${total} records`
+      : `Page <b>${currentPage}</b>`
 
   document.getElementById('btn-prev').disabled = currentPage <= 1
   document.getElementById('btn-next').disabled = currentPage >= totalPages

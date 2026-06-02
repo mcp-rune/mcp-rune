@@ -143,7 +143,7 @@ export async function initModelFormApp() {
   function renderParentContextBanner(form) {
     if (!parentContext || !parentContext.label) return
     const banner = document.createElement('div')
-    banner.className = 'parent-banner'
+    banner.className = 'mr-banner'
     banner.dataset.parentModel = parentContext.parentModel
     banner.dataset.parentId = parentContext.parentId
 
@@ -167,7 +167,7 @@ export async function initModelFormApp() {
   function renderFieldGroup(fields, layout) {
     if (layout?.type === 'row') {
       const row = document.createElement('div')
-      row.className = 'field-row'
+      row.className = 'mr-field-row'
       for (const field of fields) row.appendChild(renderField(field))
       return row
     }
@@ -185,7 +185,7 @@ export async function initModelFormApp() {
    */
   function renderField(field) {
     const container = document.createElement('div')
-    container.className = STACKED_TYPES.has(field.type) ? 'field field--stacked' : 'field'
+    container.className = STACKED_TYPES.has(field.type) ? 'mr-field mr-field--stacked' : 'mr-field'
     container.dataset.field = field.name
 
     // Label
@@ -194,7 +194,7 @@ export async function initModelFormApp() {
     label.textContent = field.label
     if (field.required) {
       const req = document.createElement('span')
-      req.className = 'required'
+      req.className = 'mr-flabel__req'
       req.textContent = ' *'
       label.appendChild(req)
     }
@@ -327,7 +327,7 @@ export async function initModelFormApp() {
 
   function createSearchableSelect(field) {
     const wrapper = document.createElement('div')
-    wrapper.className = 'searchable-select'
+    wrapper.className = 'mr-srselect'
 
     const hidden = document.createElement('input')
     hidden.type = 'hidden'
@@ -337,12 +337,12 @@ export async function initModelFormApp() {
 
     const search = document.createElement('input')
     search.type = 'text'
-    search.className = 'searchable-select__input'
+    search.className = 'mr-srselect__input'
     search.placeholder = `Search ${field.label.toLowerCase()}…`
     search.autocomplete = 'off'
 
     const dropdown = document.createElement('div')
-    dropdown.className = 'searchable-select__dropdown'
+    dropdown.className = 'mr-srselect__dropdown'
 
     // Set initial display text from default value
     if (field.default !== undefined && field.options) {
@@ -357,13 +357,13 @@ export async function initModelFormApp() {
 
       if (filtered.length === 0) {
         const empty = document.createElement('div')
-        empty.className = 'searchable-select__empty'
+        empty.className = 'mr-srselect__empty'
         empty.textContent = 'No matches'
         dropdown.appendChild(empty)
       } else {
         for (const opt of filtered.slice(0, 20)) {
           const item = document.createElement('div')
-          item.className = 'searchable-select__option'
+          item.className = 'mr-srselect__option'
           item.textContent = opt.label
           item.dataset.value = opt.value
           item.addEventListener('mousedown', (e) => {
@@ -394,12 +394,12 @@ export async function initModelFormApp() {
 
   function createMultiselect(field) {
     const wrapper = document.createElement('div')
-    wrapper.className = 'multiselect-group'
+    wrapper.className = 'mr-multi'
     wrapper.dataset.field = field.name
 
     if (!field.options || field.options.length === 0) {
       const empty = document.createElement('span')
-      empty.className = 'empty-options'
+      empty.className = 'mr-empty-opts'
       empty.textContent = `No ${field.label.toLowerCase()} available`
       wrapper.appendChild(empty)
       return wrapper
@@ -418,7 +418,7 @@ export async function initModelFormApp() {
       // Color indicator for tags
       if (opt.color) {
         const dot = document.createElement('span')
-        dot.className = 'color-dot'
+        dot.className = 'mr-color-dot'
         dot.style.backgroundColor = opt.color
         label.appendChild(cb)
         label.appendChild(dot)
@@ -436,7 +436,7 @@ export async function initModelFormApp() {
 
   function createCheckboxGroup(field) {
     const wrapper = document.createElement('div')
-    wrapper.className = 'checkbox-group'
+    wrapper.className = 'mr-checks'
 
     for (const opt of field.options || []) {
       const label = document.createElement('label')
@@ -454,7 +454,7 @@ export async function initModelFormApp() {
 
   function createCheckbox(field) {
     const label = document.createElement('label')
-    label.className = 'checkbox-label'
+    label.className = 'mr-checks__opt'
     const cb = document.createElement('input')
     cb.type = 'checkbox'
     cb.id = field.name
@@ -486,7 +486,7 @@ export async function initModelFormApp() {
       const controlEl = form.querySelector(`[name="${rule.field}"]`)
       if (!controlEl) continue
 
-      const container = form.querySelector(`.field[data-field="${field.name}"]`)
+      const container = form.querySelector(`.mr-field[data-field="${field.name}"]`)
       if (!container) continue
 
       const evaluate = () => {
@@ -542,7 +542,7 @@ export async function initModelFormApp() {
     const requiredFields = formSchema.fields.filter((f) => f.required)
     for (const field of requiredFields) {
       // Skip fields hidden by visibleWhen — they're not part of "required" right now.
-      const container = form.querySelector(`.field[data-field="${field.name}"]`)
+      const container = form.querySelector(`.mr-field[data-field="${field.name}"]`)
       if (container && container.style.display === 'none') continue
       if (!hasValue(form, field)) {
         btn.disabled = true
@@ -587,7 +587,7 @@ export async function initModelFormApp() {
 
     for (const field of formSchema.fields) {
       // Skip conditionally hidden fields
-      const container = form.querySelector(`.field[data-field="${field.name}"]`)
+      const container = form.querySelector(`.mr-field[data-field="${field.name}"]`)
       if (container && container.style.display === 'none') continue
 
       switch (field.type) {
@@ -679,9 +679,9 @@ export async function initModelFormApp() {
 
   function clearFieldErrors() {
     const form = document.getElementById('model-form')
-    for (const el of form.querySelectorAll('.has-error')) {
-      el.classList.remove('has-error')
-      const errMsg = el.querySelector('.error-msg')
+    for (const el of form.querySelectorAll('.mr-field--error')) {
+      el.classList.remove('mr-field--error')
+      const errMsg = el.querySelector('.mr-field__err')
       if (errMsg) errMsg.remove()
     }
   }
@@ -689,17 +689,17 @@ export async function initModelFormApp() {
   function showFieldError(fieldName, message) {
     const form = document.getElementById('model-form')
     // Find by data-field attribute on container or by input name
-    let container = form.querySelector(`.field[data-field="${fieldName}"]`)
+    let container = form.querySelector(`.mr-field[data-field="${fieldName}"]`)
     if (!container) {
       const field = form.querySelector(`[name="${fieldName}"]`)
       if (!field) return
-      container = field.closest('.field')
+      container = field.closest('.mr-field')
     }
     if (!container) return
 
-    container.classList.add('has-error')
+    container.classList.add('mr-field--error')
     const errEl = document.createElement('div')
-    errEl.className = 'error-msg'
+    errEl.className = 'mr-field__err'
     errEl.textContent = message
     container.appendChild(errEl)
   }

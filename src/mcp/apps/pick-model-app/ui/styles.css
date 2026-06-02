@@ -1,120 +1,118 @@
-/* pick-model-app — app-specific styles (base.css provides reset, palette, buttons, status bar) */
+/*
+ * pick-model-app — app-specific search + result list styles.
+ *
+ * base.css supplies tokens, .mr-titlebar/.mr-title/.mr-selcount/.mr-btn,
+ * .mr-check, .mr-statusbar, and .mr-empty.
+ */
 
-/* Inline selection info in header */
-.header-row {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: nowrap;
-}
-.header-row h1 {
-  margin-bottom: 0;
-}
-.header-row .btn-primary {
+.mr-titlebar .mr-btn.acc {
   margin-left: auto;
 }
-.selection-info {
-  font-size: 1.15em;
-  color: var(--color-accent);
-  white-space: nowrap;
-}
-#selection-count {
-  font-weight: 500;
+
+/* Subtitle right below the title bar */
+.mr-subtitle {
+  margin-top: 0;
+  margin-bottom: 16px;
 }
 
-/* Search input */
-.search-box {
-  margin-bottom: 12px;
+/* ── search input with leading icon ──────────────────────────── */
+.mr-search {
+  position: relative;
+  margin-top: 6px;
 }
-
-.search-box input {
+.mr-search .ico {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-4);
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+}
+.mr-search input {
   width: 100%;
-  padding: 10px 14px;
-  background: var(--input-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--border-radius-md);
-  color: var(--color-text-primary);
-  font-size: 0.95em;
-  font-family: inherit;
+  height: 48px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--app-bg);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-lg);
+  padding: 0 16px 0 44px;
+  letter-spacing: -0.01em;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.mr-search input::placeholder {
+  color: var(--ink-4);
+}
+.mr-search input:focus {
   outline: none;
-  transition: border-color 0.2s;
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px var(--acc-tint);
 }
 
-.search-box input:focus {
-  border-color: var(--color-accent);
+/* ── results list ────────────────────────────────────────────── */
+.mr-results {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
-
-.search-box input::placeholder {
-  color: var(--color-text-info);
-}
-
-/* Results list */
-.result-list {
-  list-style: none;
-}
-
-.result-item {
+.mr-result {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.12s;
 }
-
-.result-item:hover {
-  background: var(--row-hover);
+.mr-result:hover,
+.mr-result.active {
+  background: var(--acc-tint);
 }
-
-.result-item.selected {
-  background: var(--color-accent-soft);
-}
-
-.result-item input[type='checkbox'] {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
+.mr-result .rmark {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-3);
   flex-shrink: 0;
 }
-
-.result-info {
+.mr-result .rbody {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
 }
-
-.result-display {
-  font-weight: 500;
+.mr-result .rname {
+  display: block;
+  font-size: 14px;
+  color: var(--ink);
+  font-weight: 450;
+  letter-spacing: -0.01em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  width: 100%;
 }
-
-.result-fields {
-  font-size: 0.8em;
-  color: var(--color-text-info);
+.mr-result .rmeta {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-4);
+  width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  margin-top: 2px;
-}
-
-/* Entity type tag (group mode) */
-.entity-type-tag {
-  display: inline-block;
-  font-size: 0.7em;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 1px 6px;
-  border-radius: 3px;
-  background: var(--row-hover);
-  color: var(--color-text-info);
-  margin-bottom: 2px;
-}
-
-/* Button size override */
-button {
-  padding: 6px 14px;
-  font-size: 0.85em;
 }
