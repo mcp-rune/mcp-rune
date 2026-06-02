@@ -49,7 +49,7 @@ vi.mock('node:fs', async () => {
   }
 })
 
-import { createDefaultAppRegistry } from '../../../../src/mcp/apps/create-default-registry.js'
+import { createDefaultAppRegistry } from '../../../../src/mcp/apps/lib/create-default-registry.js'
 
 class FakeModel {
   static singularName = 'book'

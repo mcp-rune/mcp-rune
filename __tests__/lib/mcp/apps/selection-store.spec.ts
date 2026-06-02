@@ -1,4 +1,4 @@
-import { SelectionStore } from '../../../../src/mcp/apps/selection-store.js'
+import { SelectionStore } from '../../../../src/mcp/apps/lib/selection-store.js'
 
 describe('SelectionStore', () => {
   let store

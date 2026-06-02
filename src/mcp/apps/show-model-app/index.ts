@@ -18,15 +18,15 @@ import path from 'node:path'
 import { z } from 'zod'
 
 import type { DataLayer } from '#src/core/data-layer.js'
-import { generateDetailSchema } from '#src/mcp/apps/detail-schema.js'
-import { appResponseMeta, formatAppSummary } from '#src/mcp/apps/format-summary.js'
-import { errorMeta } from '#src/mcp/apps/helpers.js'
+import { generateDetailSchema } from '#src/mcp/apps/lib/detail-schema.js'
+import { appResponseMeta, formatAppSummary } from '#src/mcp/apps/lib/format-summary.js'
+import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
 import * as logger from '#src/services/logger.js'
 
-import type { SelectionStore } from './selection-store.js'
-import type { AppModelClass, DetailFieldDefinition, ToolResult } from './types.js'
+import type { SelectionStore } from '../lib/selection-store.js'
+import type { AppModelClass, DetailFieldDefinition, ToolResult } from '../lib/types.js'
 
-const DIST_DIR = path.resolve(import.meta.dirname, 'dist')
+const DIST_DIR = path.resolve(import.meta.dirname, '..', 'dist')
 const HTML_PATH = path.join(DIST_DIR, 'show-model-app.html')
 const MAX_RECORDS = 20
 

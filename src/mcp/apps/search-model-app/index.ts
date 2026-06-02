@@ -15,20 +15,20 @@ import { z } from 'zod'
 import type { SearchService } from '#src/api-extensions/search/index.js'
 import { getSearchConfig } from '#src/api-extensions/search/index.js'
 import { resolveDerivedFields } from '#src/core/derived-fields.js'
-import { appResponseMeta, extractIds, formatAppSummary } from '#src/mcp/apps/format-summary.js'
-import { errorMeta } from '#src/mcp/apps/helpers.js'
+import { appResponseMeta, extractIds, formatAppSummary } from '#src/mcp/apps/lib/format-summary.js'
+import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
 import {
   applyColumnSelection,
   generateListSchema,
   getAvailableColumnNames
-} from '#src/mcp/apps/list-schema.js'
-import { createSelectionTools } from '#src/mcp/apps/selection-tools.js'
+} from '#src/mcp/apps/lib/list-schema.js'
+import { createSelectionTools } from '#src/mcp/apps/lib/selection-tools.js'
 import * as logger from '#src/services/logger.js'
 
-import type { AppModelClass, ListSchema, ToolResult } from './types.js'
+import type { AppModelClass, ListSchema, ToolResult } from '../lib/types.js'
 
 const MAX_VIEW_PER_PAGE = 20
-const DIST_DIR = path.resolve(import.meta.dirname, 'dist')
+const DIST_DIR = path.resolve(import.meta.dirname, '..', 'dist')
 const HTML_PATH = path.join(DIST_DIR, 'search-model-app.html')
 
 let _cachedHtml: string | null = null

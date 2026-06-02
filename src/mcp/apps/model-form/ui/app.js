@@ -9,10 +9,10 @@
  */
 
 import { App } from '@modelcontextprotocol/ext-apps'
-import { humanize } from '../shared/helpers.js'
-import { initApp, showStatus, clearStatus } from '../shared/app-init.js'
-import { getFormatter } from '../shared/formatters.js'
-import '../shared/formatters.runtime.js'
+import { humanize } from '../../shared/helpers.js'
+import { initApp, showStatus, clearStatus } from '../../shared/app-init.js'
+import { getFormatter } from '../../shared/formatters.js'
+import '../../shared/formatters.runtime.js'
 
 // ─── State ──────────────────────────────────────────────────────────────────
 

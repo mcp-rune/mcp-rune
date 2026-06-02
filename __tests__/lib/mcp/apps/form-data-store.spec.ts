@@ -1,4 +1,4 @@
-import { FormDataStore } from '../../../../src/mcp/apps/form-data-store.js'
+import { FormDataStore } from '../../../../src/mcp/apps/lib/form-data-store.js'
 
 describe('FormDataStore', () => {
   let store

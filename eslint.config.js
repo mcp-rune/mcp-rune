@@ -72,7 +72,7 @@ export default [
   },
   // Browser UI files (MCP Apps)
   {
-    files: ['**/apps/*-ui/**/*.js', '**/apps/shared/**/*.js'],
+    files: ['**/apps/*/ui/**/*.js', '**/apps/shared/**/*.js'],
     languageOptions: {
       globals: {
         document: 'readonly',

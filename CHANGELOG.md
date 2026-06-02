@@ -4,6 +4,49 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.62.0] - 2026-06-02
+
+> Internal restructure. Each MCP app's server-side factory and its UI iframe source are now co-located under a single directory, and shared helper modules consumed across app factories live under `src/mcp/apps/lib/`. The public barrel at `@mcp-rune/mcp-rune/apps` is unchanged — same export names, same shapes. Consumers using only the documented `./apps` entry point are unaffected. Consumers reaching into deep subpaths (e.g. `@mcp-rune/mcp-rune/lib/mcp/apps/registry.js`) must update those paths to the new layout. Per pre-1.0 policy there are no aliases or deprecation paths.
+
+### Changed
+
+- **App directories co-located** — each app's factory (`index.ts`) and UI source (`ui/`) now live in one folder:
+
+  | Before                                           | After                                |
+  | ------------------------------------------------ | ------------------------------------ |
+  | `src/mcp/apps/model-form.ts` + `model-form-ui/`  | `src/mcp/apps/model-form/`           |
+  | `src/mcp/apps/list-model-app.ts` + `…-ui/`       | `src/mcp/apps/list-model-app/`       |
+  | `src/mcp/apps/show-model-app.ts` + `…-ui/`       | `src/mcp/apps/show-model-app/`       |
+  | `src/mcp/apps/search-model-app.ts` + `…-ui/`     | `src/mcp/apps/search-model-app/`     |
+  | `src/mcp/apps/pick-model-app.ts` + `…-ui/`       | `src/mcp/apps/pick-model-app/`       |
+  | `src/mcp/apps/multi-pick-model-app.ts` + `…-ui/` | `src/mcp/apps/multi-pick-model-app/` |
+
+  Each app directory now contains an `index.ts` (factory + `handleToolCall`) and a `ui/` subdirectory (`index.html`, `app.js`, `styles.css`).
+
+- **Shared helpers moved to `lib/`** — modules used across multiple app factories (registry, schema generators, stores, formatters, helpers, types) moved from `src/mcp/apps/*.ts` to `src/mcp/apps/lib/*.ts`:
+
+  `base-form.ts`, `create-default-registry.ts`, `detail-schema.ts`, `display-adapter.ts`, `form-associations.ts`, `form-data-store.ts`, `form-data-tools.ts`, `form-schema.ts`, `format-summary.ts`, `helpers.ts`, `list-schema.ts`, `registry.ts`, `selection-store.ts`, `selection-tools.ts`, `types.ts`.
+
+- **Vite build pipeline** updated — `BUILD_TARGET` config `root` paths now point at `<app>/ui/` instead of `<app>-ui/`. App `HTML_PATH` constants resolve `..` upward to the shared `dist/` directory.
+- **ESLint browser-globals scope** updated from `**/apps/*-ui/**/*.js` to `**/apps/*/ui/**/*.js`.
+- **Internal imports** updated across `src/apps.ts` (the public barrel), `src/extensions/center-of-control.ts`, `src/mcp/extensions/tool-flow.ts`, `src/mcp/server-factory.ts`, and all app factories to reference the new `lib/` and per-app `index.ts` paths. Test specs and documentation guides updated to match.
+
+### Migration
+
+For consumers using the public `@mcp-rune/mcp-rune/apps` entry point: no changes required.
+
+For consumers using deep subpaths via `@mcp-rune/mcp-rune/lib/*`:
+
+```ts
+// BEFORE
+import { AppRegistry } from '@mcp-rune/mcp-rune/lib/mcp/apps/registry.js'
+import { createShowModelApp } from '@mcp-rune/mcp-rune/lib/mcp/apps/show-model-app.js'
+
+// AFTER
+import { AppRegistry } from '@mcp-rune/mcp-rune/lib/mcp/apps/lib/registry.js'
+import { createShowModelApp } from '@mcp-rune/mcp-rune/lib/mcp/apps/show-model-app/index.js'
+```
+
 ## [0.61.0] - 2026-06-02
 
 > Breaking. Every MCP app tool is renamed to the uniform shape `<ui-verb>_model_app`. The previous catalog mixed three suffixes (`_form`, `_app`, `_picker`), three nouns (`model` / `records` / none), and overloaded mutation verbs (`create_*`, `update_*`) on UI tools. After this release every app tool name is `<ui-verb>_model_app`: a UI-intent verb (`new` / `edit` / `show` / `list` / `search` / `pick` / `multi_pick`) on the singular `model` noun with the `_app` suffix. Mutation verbs (`create_*`, `update_*`, `delete_*`) are reserved for data tools that actually mutate. Per pre-1.0 policy there are no aliases or deprecation paths — consumers must update.
@@ -211,6 +254,7 @@ import { ModelService, EndpointResolver } from '@mcp-rune/mcp-rune/model-service
 
 The `/lib/*` catch-all subpath remains, so the old `/lib/mcp/services/index.js` form is not broken — just no longer the recommended path.
 
+[0.62.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.61.0...v0.62.0
 [0.61.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.60.1...v0.61.0
 [0.59.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.58.1...v0.59.0
 

@@ -27,7 +27,7 @@ const BUNDLE_PATH = path.join(REPO_ROOT, 'dist/mcp/apps/dist/model-form.html')
 
 // Field types `buildField` emits as hardcoded string literals (not via
 // `getKind(...).htmlInputType`). Kept in sync with the if/else chain in
-// `src/mcp/apps/form-schema.ts buildField()`.
+// `src/mcp/apps/lib/form-schema.ts buildField()`.
 const HARDCODED_EMIT_TYPES = ['select', 'number', 'multiselect', 'checkbox_group'] as const
 
 // Field types that `buildField` can emit via `getKind(...).htmlInputType` —
@@ -78,7 +78,7 @@ describe('bundle coverage', () => {
           `field.type "${fieldType}" is emitted by the server (kind-metadata.ts or form-schema.ts) ` +
             `but has no \`case "${fieldType}":\` arm in the bundled model-form.html. ` +
             `It will silently fall back to <input type="text">. Add a case to renderField() ` +
-            `in src/mcp/apps/model-form-ui/app.js and rebuild.`
+            `in src/mcp/apps/model-form/ui/app.js and rebuild.`
         )
       })
     }

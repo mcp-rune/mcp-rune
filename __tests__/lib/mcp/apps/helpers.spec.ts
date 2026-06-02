@@ -1,4 +1,4 @@
-import { errorMeta } from '../../../../src/mcp/apps/helpers.js'
+import { errorMeta } from '../../../../src/mcp/apps/lib/helpers.js'
 
 describe('errorMeta', () => {
   it('extracts basic error fields', () => {

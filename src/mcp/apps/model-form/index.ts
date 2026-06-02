@@ -22,16 +22,16 @@ import { z } from 'zod'
 import {
   buildAssociationInstructions,
   resolveFormAssociations
-} from '#src/mcp/apps/form-associations.js'
-import { generateFormSchema } from '#src/mcp/apps/form-schema.js'
-import { errorMeta } from '#src/mcp/apps/helpers.js'
+} from '#src/mcp/apps/lib/form-associations.js'
+import { generateFormSchema } from '#src/mcp/apps/lib/form-schema.js'
+import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
 import { normalizeListWithConvention } from '#src/mcp/services/model-service.js'
 import * as logger from '#src/services/logger.js'
 
-import type { FormSubmitMode } from '../extensions/tool-flow.js'
-import type { AppModelClass, DataLayer, FormFieldDefinition, ToolResult } from './types.js'
+import type { FormSubmitMode } from '../../extensions/tool-flow.js'
+import type { AppModelClass, DataLayer, FormFieldDefinition, ToolResult } from '../lib/types.js'
 
-const DIST_DIR = path.resolve(import.meta.dirname, 'dist')
+const DIST_DIR = path.resolve(import.meta.dirname, '..', 'dist')
 const HTML_PATH = path.join(DIST_DIR, 'model-form.html')
 
 let _cachedHtml: string | null = null

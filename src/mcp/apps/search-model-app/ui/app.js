@@ -6,12 +6,12 @@
  */
 
 import { App } from '@modelcontextprotocol/ext-apps'
-import { escapeHtml } from '../shared/helpers.js'
-import { initApp, showStatus, clearStatus } from '../shared/app-init.js'
-import { renderFilterChips, renderAvailableFilters } from '../shared/filter-chips.js'
-import { createTableSelection } from '../shared/selection.js'
-import { renderCellValue } from '../shared/formatters.js'
-import '../shared/formatters.runtime.js'
+import { escapeHtml } from '../../shared/helpers.js'
+import { initApp, showStatus, clearStatus } from '../../shared/app-init.js'
+import { renderFilterChips, renderAvailableFilters } from '../../shared/filter-chips.js'
+import { createTableSelection } from '../../shared/selection.js'
+import { renderCellValue } from '../../shared/formatters.js'
+import '../../shared/formatters.runtime.js'
 
 // ─── State ──────────────────────────────────────────────────────────────────
 

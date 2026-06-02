@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
-    <title>Multi-Pick Records</title>
-    <link rel="stylesheet" href="../shared/base.css" />
+    <title>Pick Record</title>
+    <link rel="stylesheet" href="../../shared/base.css" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -27,16 +27,12 @@
       <p class="subtitle" id="subtitle"></p>
     </div>
 
-    <div class="filter-box">
-      <input type="text" id="filter-input" placeholder="Filter…" autocomplete="off" />
-      <label class="select-all-toggle">
-        <input type="checkbox" id="select-all" />
-        <span>Select all</span>
-      </label>
+    <div class="search-box">
+      <input type="text" id="search-input" placeholder="Type to search…" autocomplete="off" />
     </div>
 
     <div id="results-container">
-      <p class="empty-state" id="empty-state">Loading…</p>
+      <p class="empty-state" id="empty-state">Type to search for records</p>
     </div>
 
     <div id="status-bar" class="status-bar"></div>

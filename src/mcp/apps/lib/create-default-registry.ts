@@ -13,14 +13,14 @@
 import type { SearchAdapter, SearchGroup } from '#src/api-extensions/search/index.js'
 import type { DataLayerFactory } from '#src/core/data-layer.js'
 
-import { createListModelApp } from './list-model-app.js'
-import { createEditModelApp, createNewModelApp } from './model-form.js'
-import { createMultiPickModelApp } from './multi-pick-model-app.js'
-import { createPickModelApp } from './pick-model-app.js'
+import { createListModelApp } from '../list-model-app/index.js'
+import { createEditModelApp, createNewModelApp } from '../model-form/index.js'
+import { createMultiPickModelApp } from '../multi-pick-model-app/index.js'
+import { createPickModelApp } from '../pick-model-app/index.js'
+import { createSearchModelApp } from '../search-model-app/index.js'
+import { createShowModelApp } from '../show-model-app/index.js'
 import type { AppDefinition, FormatterDescriptor, ThemeOverrides } from './registry.js'
 import { AppRegistry } from './registry.js'
-import { createSearchModelApp } from './search-model-app.js'
-import { createShowModelApp } from './show-model-app.js'
 import type { ApiClient, AppModelClass } from './types.js'
 
 export type DefaultAppName =

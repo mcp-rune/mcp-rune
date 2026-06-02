@@ -1,4 +1,4 @@
-import { createShowModelApp } from '../../../../src/mcp/apps/show-model-app.js'
+import { createShowModelApp } from '../../../../src/mcp/apps/show-model-app/index.js'
 
 const modelClasses = {
   book: {

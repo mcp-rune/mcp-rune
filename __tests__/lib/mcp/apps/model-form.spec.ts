@@ -1,6 +1,6 @@
 import { vi } from 'vitest'
 
-import { createNewModelApp } from '../../../../src/mcp/apps/model-form.js'
+import { createNewModelApp } from '../../../../src/mcp/apps/model-form/index.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 

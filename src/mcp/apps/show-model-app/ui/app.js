@@ -6,10 +6,10 @@
  */
 
 import { App } from '@modelcontextprotocol/ext-apps'
-import { pluralize } from '../shared/helpers.js'
-import { initApp, showStatus } from '../shared/app-init.js'
-import { renderCellValue } from '../shared/formatters.js'
-import '../shared/formatters.runtime.js'
+import { pluralize } from '../../shared/helpers.js'
+import { initApp, showStatus } from '../../shared/app-init.js'
+import { renderCellValue } from '../../shared/formatters.js'
+import '../../shared/formatters.runtime.js'
 
 // ─── MCP App Connection ─────────────────────────────────────────────────────
 

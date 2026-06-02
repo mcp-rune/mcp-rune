@@ -12,7 +12,7 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { AppRegistry } from '../../../../src/mcp/apps/registry.js'
+import { AppRegistry } from '../../../../src/mcp/apps/lib/registry.js'
 import {
   defineContextKey,
   type ToolFlowExtension

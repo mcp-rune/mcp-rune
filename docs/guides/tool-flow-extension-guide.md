@@ -225,8 +225,8 @@ The framework's built-in extension — short enough to fit in 30 lines and a per
 
 ```ts file=src/apps/form-app.ts
 // src/extensions/center-of-control.ts
-import { FormDataStore } from '#src/mcp/apps/form-data-store.js'
-import { createFormDataTools } from '#src/mcp/apps/form-data-tools.js'
+import { FormDataStore } from '#src/mcp/apps/lib/form-data-store.js'
+import { createFormDataTools } from '#src/mcp/apps/lib/form-data-tools.js'
 import { defineContextKey, type ToolFlowExtension } from '#src/mcp/extensions/tool-flow.js'
 
 export const FORM_DATA_STORE_KEY = defineContextKey<FormDataStore>('formDataStore')
@@ -261,8 +261,8 @@ export const centerOfControlExtension: ToolFlowExtension = {
 
 ```js file=src/apps/form-app.js
 // src/extensions/center-of-control.ts
-import { FormDataStore } from '#src/mcp/apps/form-data-store.js'
-import { createFormDataTools } from '#src/mcp/apps/form-data-tools.js'
+import { FormDataStore } from '#src/mcp/apps/lib/form-data-store.js'
+import { createFormDataTools } from '#src/mcp/apps/lib/form-data-tools.js'
 import { defineContextKey } from '#src/mcp/extensions/tool-flow.js'
 export const FORM_DATA_STORE_KEY = defineContextKey('formDataStore')
 export const centerOfControlExtension = {

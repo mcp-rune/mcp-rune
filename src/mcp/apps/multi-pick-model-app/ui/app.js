@@ -5,9 +5,9 @@
  */
 
 import { App } from '@modelcontextprotocol/ext-apps'
-import { humanize } from '../shared/helpers.js'
-import { initApp, showStatus } from '../shared/app-init.js'
-import { storeSelection } from '../shared/selection.js'
+import { humanize } from '../../shared/helpers.js'
+import { initApp, showStatus } from '../../shared/app-init.js'
+import { storeSelection } from '../../shared/selection.js'
 
 // ─── State ──────────────────────────────────────────────────────────────────
 

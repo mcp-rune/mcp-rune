@@ -9,27 +9,27 @@ const target = process.env.BUILD_TARGET || 'model-form'
 
 const configs = {
   'model-form': {
-    root: 'model-form-ui',
+    root: 'model-form/ui',
     outFile: 'model-form.html'
   },
   'list-model-app': {
-    root: 'list-model-app-ui',
+    root: 'list-model-app/ui',
     outFile: 'list-model-app.html'
   },
   'show-model-app': {
-    root: 'show-model-app-ui',
+    root: 'show-model-app/ui',
     outFile: 'show-model-app.html'
   },
   'search-model-app': {
-    root: 'search-model-app-ui',
+    root: 'search-model-app/ui',
     outFile: 'search-model-app.html'
   },
   'pick-model-app': {
-    root: 'pick-model-app-ui',
+    root: 'pick-model-app/ui',
     outFile: 'pick-model-app.html'
   },
   'multi-pick-model-app': {
-    root: 'multi-pick-model-app-ui',
+    root: 'multi-pick-model-app/ui',
     outFile: 'multi-pick-model-app.html'
   }
 }

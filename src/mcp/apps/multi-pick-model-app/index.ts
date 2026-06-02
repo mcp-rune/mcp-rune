@@ -16,14 +16,14 @@ import { z } from 'zod'
 import type { SearchService } from '#src/api-extensions/search/index.js'
 import { getSearchConfig } from '#src/api-extensions/search/index.js'
 import type { DataLayer } from '#src/core/data-layer.js'
-import { errorMeta } from '#src/mcp/apps/helpers.js'
-import { createSelectionTools } from '#src/mcp/apps/selection-tools.js'
+import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
+import { createSelectionTools } from '#src/mcp/apps/lib/selection-tools.js'
 import * as logger from '#src/services/logger.js'
 
-import type { AppModelClass, ToolResult } from './types.js'
+import type { AppModelClass, ToolResult } from '../lib/types.js'
 
 const MAX_RECORDS = 200
-const DIST_DIR = path.resolve(import.meta.dirname, 'dist')
+const DIST_DIR = path.resolve(import.meta.dirname, '..', 'dist')
 const HTML_PATH = path.join(DIST_DIR, 'multi-pick-model-app.html')
 
 let _cachedHtml: string | null = null

@@ -25,7 +25,7 @@ vi.mock('#src/services/logger.js', () => mockLogger)
 import { z } from 'zod'
 
 import { centerOfControlExtension } from '../../../src/extensions/center-of-control.js'
-import { AppRegistry } from '../../../src/mcp/apps/registry.js'
+import { AppRegistry } from '../../../src/mcp/apps/lib/registry.js'
 import type {
   ToolFlowExtensionContext,
   ToolFlowExtensionMap

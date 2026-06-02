@@ -404,27 +404,37 @@ That's it. The generic form app handles the rest — fieldsets, validation, subm
 ## File Structure
 
 ```
-lib/mcp/apps/
-├── form-schema.js              # generateFormSchema() — pure function
-├── list-schema.js              # generateListSchema() — list/table schema
-├── detail-schema.js            # generateDetailSchema() — record detail schema
-├── selection-store.js          # SelectionStore — session-scoped selection Map
-└── selection-tools.js          # createSelectionTools() — per-app selection tools
-
-src/engineer/apps/
-├── index.js                    # AppRegistry + createAppRegistry
-├── model-form.js               # Generic create/update form factory
-├── list-model-app.js                # Generic list/table view factory
-├── show-model-app.js            # Record detail view factory
-├── search-model-app.js              # Search view with filters + selection
-├── pick-model-app.js      # Type-ahead search picker
-├── multi-pick-model-app.js             # Multi-select picker
-├── model-form-ui/              # Generic form client-side app
-├── list-model-app-ui/               # List view client-side app
-├── show-model-app-ui/           # Record detail client-side app
-├── search-model-app-ui/             # Search view client-side app
-├── pick-model-app-ui/     # Autocomplete picker client-side app
-├── multi-pick-model-app-ui/            # Multi-select picker client-side app
+src/mcp/apps/
+├── model-form/                 # Generic create/update form
+│   ├── index.ts                # Factory + handleToolCall (server)
+│   └── ui/                     # Client iframe source
+│       ├── index.html
+│       ├── app.js
+│       └── styles.css
+├── list-model-app/             # Generic list/table view
+│   ├── index.ts
+│   └── ui/
+├── show-model-app/             # Record detail view
+│   ├── index.ts
+│   └── ui/
+├── search-model-app/           # Search view with filters + selection
+│   ├── index.ts
+│   └── ui/
+├── pick-model-app/             # Type-ahead search picker
+│   ├── index.ts
+│   └── ui/
+├── multi-pick-model-app/       # Multi-select picker
+│   ├── index.ts
+│   └── ui/
+├── lib/                        # Shared server-side helpers
+│   ├── form-schema.ts          # generateFormSchema() — pure function
+│   ├── list-schema.ts          # generateListSchema() — list/table schema
+│   ├── detail-schema.ts        # generateDetailSchema() — record detail schema
+│   ├── selection-store.ts      # SelectionStore — session-scoped Map
+│   ├── selection-tools.ts      # createSelectionTools() — per-app selection
+│   ├── registry.ts             # AppRegistry + createAppRegistry
+│   └── …                       # types, helpers, formatters, etc.
+├── shared/                     # Shared client-side JS/CSS for ui/ folders
 ├── vite.config.js              # Build config (multi-target single-file HTML)
 └── dist/                       # Built outputs (one HTML per app)
     ├── model-form.html
@@ -437,7 +447,7 @@ src/engineer/apps/
 
 ## Key Components
 
-### `generateFormSchema(ModelClass, PromptClass)` — `lib/mcp/apps/form-schema.js`
+### `generateFormSchema(ModelClass, PromptClass)` — `src/mcp/apps/lib/form-schema.ts`
 
 Pure function that generates a form schema from model attributes and prompt configuration. No API calls, no side effects.
 
@@ -872,7 +882,7 @@ Client renders 3-column table (no horizontal scroll)
 
 ### Column Resolution Order
 
-`applyColumnSelection()` (`lib/mcp/apps/list-schema.js`) resolves columns in this order:
+`applyColumnSelection()` (`src/mcp/apps/lib/list-schema.ts`) resolves columns in this order:
 
 1. **Explicit columns** — LLM passes `columns: ['title', 'status']` → show only those
 2. **Model defaults** — LLM omits `columns`, model has `static defaultColumns` → use those
@@ -900,7 +910,7 @@ Without `defaultColumns`, all inferred columns are shown (which may cause horizo
 
 ### Infrastructure
 
-All column selection logic lives in `lib/mcp/apps/list-schema.js`:
+All column selection logic lives in `src/mcp/apps/lib/list-schema.ts`:
 
 | Function                                            | Purpose                                                  |
 | --------------------------------------------------- | -------------------------------------------------------- |
@@ -984,8 +994,8 @@ Returns stored selection → LLM uses for follow-up operations
 
 | File                                        | Purpose                                                                          |
 | ------------------------------------------- | -------------------------------------------------------------------------------- |
-| `lib/mcp/apps/selection-store.js`           | `SelectionStore` class — session-scoped Map                                      |
-| `lib/mcp/apps/selection-tools.js`           | `createSelectionTools()` factory — creates per-app select + shared get_selection |
+| `src/mcp/apps/lib/selection-store.ts`       | `SelectionStore` class — session-scoped Map                                      |
+| `src/mcp/apps/lib/selection-tools.ts`       | `createSelectionTools()` factory — creates per-app select + shared get_selection |
 | `src/engineer/apps/search-model-app.js`     | Uses `createSelectionTools()` for search view                                    |
 | `src/engineer/apps/pick-model-app.js`       | Uses `createSelectionTools()` for autocomplete                                   |
 | `src/engineer/apps/multi-pick-model-app.js` | Uses `createSelectionTools()` for multi-pick-model-app                           |
