@@ -1,8 +1,8 @@
 /**
- * List View MCP App
+ * Search View MCP App
  *
- * Creates an MCP App that renders a browseable table of records for any model.
- * The schema is generated from model attributes, records are fetched from the API.
+ * Creates an MCP App that renders text search results with optional structured
+ * filters. Only available for models with `static search` defined.
  *
  * Build: npm run build:engineer:apps
  */
@@ -14,7 +14,6 @@ import { z } from 'zod'
 
 import type { SearchService } from '#src/api-extensions/search/index.js'
 import { getSearchConfig } from '#src/api-extensions/search/index.js'
-import type { DataLayer } from '#src/core/data-layer.js'
 import { resolveDerivedFields } from '#src/core/derived-fields.js'
 import { appResponseMeta, extractIds, formatAppSummary } from '#src/mcp/apps/format-summary.js'
 import { errorMeta } from '#src/mcp/apps/helpers.js'
@@ -28,8 +27,9 @@ import * as logger from '#src/services/logger.js'
 
 import type { AppModelClass, ListSchema, ToolResult } from './types.js'
 
+const MAX_VIEW_PER_PAGE = 20
 const DIST_DIR = path.resolve(import.meta.dirname, 'dist')
-const HTML_PATH = path.join(DIST_DIR, 'list-view.html')
+const HTML_PATH = path.join(DIST_DIR, 'search-model-app.html')
 
 let _cachedHtml: string | null = null
 
@@ -40,41 +40,47 @@ function getHtml(): string {
   return _cachedHtml
 }
 
-interface ListViewOptions {
+interface SearchViewOptions {
   modelClasses: Record<string, AppModelClass>
   namespace: string
 }
 
-/** Create the list view MCP App. */
-export function createListViewApp({ modelClasses, namespace }: ListViewOptions): unknown[] {
-  const modelNames = Object.keys(modelClasses) as [string, ...string[]]
-  const resourceUri = `ui://${namespace}/list-records-app`
+/** Create the search view MCP App. */
+export function createSearchModelApp({ modelClasses, namespace }: SearchViewOptions): unknown[] {
+  // Convention: only models with query search are eligible
+  const eligible = Object.fromEntries(
+    Object.entries(modelClasses).filter(([, MC]) => getSearchConfig(MC)?.query)
+  )
+  const modelNames = Object.keys(eligible)
+  const resourceUri = `ui://${namespace}/search-model-app`
 
-  const columnInfo = Object.entries(modelClasses)
+  if (modelNames.length === 0) return []
+
+  const columnInfo = Object.entries(eligible)
     .map(([name, MC]) => `${name}: ${getAvailableColumnNames(MC).join(', ')}`)
     .join('. ')
 
-  const listTool = {
+  const searchTool = {
     resourceUri,
-    toolName: 'list_records_app',
+    toolName: 'search_model_app',
     needsAuth: true,
-    name: 'List Records',
-    description: 'Interactive table for browsing records with optional filters',
+    name: 'Search Records',
+    description: 'Display filtered search results with active filter indicators',
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
 
     toolDescription:
-      `Use this when the user wants to browse records visually in an interactive, paginated table they can filter and select from. ` +
+      `Use this when the user wants to search records by text and/or structured filters and browse the results in an interactive MCP App with filter/query chips. ` +
       `Renders an MCP App; the tool result contains a summary only — do not repeat record contents in your reply. ` +
-      `For raw JSON suitable for programmatic processing, use search_records or find_records instead. ` +
+      `For raw JSON suitable for programmatic processing, use search_records instead. ` +
       `For large-scale analysis use analysis_ingest. ` +
-      `Not suited for text search (use search_records_app) or nested-only models (e.g. scheduling) that lack a top-level list endpoint. ` +
-      `Call get_filters_guide first when the user wants to filter. ` +
-      `Available models: ${modelNames.join(', ')}. ` +
+      `Call get_filters_guide first to see available structured filters for a model. ` +
+      `Results are paginated (${MAX_VIEW_PER_PAGE} per page) — use page parameter to navigate. ` +
       `Available columns — ${columnInfo}. ` +
-      `Choose columns relevant to what the user wants to see, or omit to use defaults.`,
+      `Choose columns relevant to the user's query, or omit to use defaults.`,
 
     toolInputSchema: {
-      model: z.enum(modelNames).describe('Model to browse'),
+      model: z.enum(modelNames as [string, ...string[]]).describe('Model to display'),
+      query: z.string().describe('Text search query (keyword or phrase)').optional(),
       columns: z
         .array(z.string())
         .describe('Column names to display. Omit to use defaults.')
@@ -85,24 +91,32 @@ export function createListViewApp({ modelClasses, namespace }: ListViewOptions):
           'Structured filters (call get_filters_guide to see options). Omit to show all records.'
         )
         .optional(),
-      page: z.number().describe('Page number (default: 1)').optional()
+      page: z.number().describe('Page number (default: 1)').optional(),
+      per_page: z
+        .number()
+        .describe(`Results per page (max: ${MAX_VIEW_PER_PAGE}, default: ${MAX_VIEW_PER_PAGE})`)
+        .optional()
     },
 
     async handleToolCall(
       args: Record<string, unknown> = {},
-      { dataLayer, searchClient }: { dataLayer?: DataLayer; searchClient?: SearchService } = {}
+      { searchClient }: { searchClient?: SearchService } = {}
     ): Promise<ToolResult> {
       const {
         model,
+        query,
         filters = {},
-        page = 1
+        page = 1,
+        per_page = MAX_VIEW_PER_PAGE
       } = args as {
         model?: string
+        query?: string
         filters?: Record<string, unknown>
         page?: number
+        per_page?: number
       }
 
-      if (!model || !modelClasses[model]) {
+      if (!model || !eligible[model]) {
         return {
           content: [
             {
@@ -115,58 +129,48 @@ export function createListViewApp({ modelClasses, namespace }: ListViewOptions):
         }
       }
 
-      const ModelClass = modelClasses[model]!
+      const ModelClass = eligible[model]!
       const fullSchema = generateListSchema(ModelClass)
       const schema: ListSchema & { model?: string } = applyColumnSelection(
         fullSchema,
         args.columns as string[] | undefined,
         ModelClass
       )
-      schema.model = model as string
+      schema.model = model!
       const filterDefinitions = getSearchConfig(ModelClass)?.filters || {}
 
       let records: Record<string, unknown>[] = []
+      const clampedPerPage = Math.min(per_page!, MAX_VIEW_PER_PAGE)
       let pagination: { page: number; per_page: number; total: number } = {
-        page: page as number,
-        per_page: 20,
+        page: page!,
+        per_page: clampedPerPage,
         total: 0
       }
-      const isNestedOnly = ModelClass.api?.standalone === false
-      const hasFilters = Object.keys(filters as Record<string, unknown>).length > 0
+      const hasFilters = Object.keys(filters!).length > 0
 
-      if (isNestedOnly && searchClient) {
-        // Nested-only models can't be listed via top-level GET -- use search endpoint
+      if (searchClient) {
         try {
-          const result = await searchClient.search(ModelClass as never, '', {
-            page: page as number,
-            perPage: 20,
-            filters: hasFilters ? (filters as Record<string, unknown>) : undefined
-          })
-          records = result.records
-          pagination = { ...pagination, ...result.pagination }
+          if (query || hasFilters) {
+            const result = await searchClient.search(ModelClass as never, query || '', {
+              page: page!,
+              perPage: clampedPerPage,
+              filters: hasFilters ? filters : undefined
+            })
+            records = result.records
+            pagination = result.pagination
+          } else {
+            const result = await searchClient.list(ModelClass as never, {
+              page: page!,
+              perPage: clampedPerPage
+            })
+            records = result.records
+            pagination = result.pagination
+          }
         } catch (err) {
-          logger.warn('Failed to search list records', {
+          logger.warn('Failed to search records', {
             service: 'mcp-app',
             model,
-            page,
-            ...errorMeta(err)
-          })
-          records = []
-        }
-      } else if (dataLayer) {
-        try {
-          const normalized = await dataLayer.listNormalized(
-            model as string,
-            filters as Record<string, unknown>,
-            { page: page as number, perPage: 20 }
-          )
-          records = normalized.records
-          pagination = { ...pagination, ...normalized.pagination }
-        } catch (err) {
-          logger.warn('Failed to fetch list records', {
-            service: 'mcp-app',
-            model,
-            page,
+            query: query || null,
             ...errorMeta(err)
           })
           records = []
@@ -175,18 +179,21 @@ export function createListViewApp({ modelClasses, namespace }: ListViewOptions):
 
       const totalRecords = pagination.total || records.length
       resolveDerivedFields(records, ModelClass)
+      const parts: string[] = []
+      if (query) parts.push(`query: "${query}"`)
+      if (hasFilters) parts.push(`filters: ${Object.keys(filters!).join(', ')}`)
+      const queryContext = parts.length > 0 ? parts.join(', ') : 'no filters (showing all)'
 
       const totalPages =
         pagination.total > 0 ? Math.max(1, Math.ceil(pagination.total / pagination.per_page)) : 1
       const summary = formatAppSummary({
-        toolName: 'list_records_app',
+        toolName: 'search_model_app',
         count: records.length,
         ids: extractIds(records),
         page: pagination.page,
         totalPages,
         totalRecords,
-        context:
-          'Users may select records and click Send Selection — if they later refer to "selected" records, call get_selection to retrieve the stored IDs.'
+        context: `Search context: ${queryContext}. Users may select records and click Send Selection — if they later refer to "selected" records, call get_selection to retrieve the stored IDs.`
       })
 
       return {
@@ -197,6 +204,7 @@ export function createListViewApp({ modelClasses, namespace }: ListViewOptions):
               schema,
               records,
               pagination,
+              query: query || null,
               activeFilters: filters,
               filterDefinitions
             })
@@ -213,9 +221,12 @@ export function createListViewApp({ modelClasses, namespace }: ListViewOptions):
     getHtml
   }
 
-  const selectionTools = createSelectionTools('select_list_records', resourceUri, modelNames, {
-    getHtml
-  })
+  const selectionTools = createSelectionTools(
+    'select_search_records',
+    resourceUri,
+    modelNames as [string, ...string[]],
+    { getHtml }
+  )
 
-  return [listTool, ...selectionTools]
+  return [searchTool, ...selectionTools]
 }

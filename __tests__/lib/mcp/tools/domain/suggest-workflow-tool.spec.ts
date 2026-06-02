@@ -140,15 +140,15 @@ describe('SuggestWorkflowTool', () => {
     const toolWithApps = new SuggestWorkflowTool({
       domainRegistry: createTestRegistry(),
       serverContext: {
-        appToolNames: ['search_records_app', 'list_records_app', 'find_records_app']
+        appToolNames: ['search_model_app', 'list_model_app', 'show_model_app']
       }
     })
     const result = await toolWithApps.execute({ workflow: 'setup_vod' })
     const text = result.content[0].text
     // Should include actual app tool names in exclusion
-    expect(text).toContain('search_records_app')
-    expect(text).toContain('list_records_app')
-    expect(text).toContain('find_records_app')
+    expect(text).toContain('search_model_app')
+    expect(text).toContain('list_model_app')
+    expect(text).toContain('show_model_app')
     // Should NOT include the old hardcoded name
     expect(text).not.toContain('record_detail_view')
   })

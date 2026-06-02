@@ -1,5 +1,5 @@
 /**
- * Autocomplete Picker MCP App
+ * Pick Record MCP App
  *
  * Type-ahead search to find and select records by text.
  * Supports single-model search (model param) and cross-model group search
@@ -23,7 +23,7 @@ import * as logger from '#src/services/logger.js'
 import type { AppModelClass, ToolResult } from './types.js'
 
 const DIST_DIR = path.resolve(import.meta.dirname, 'dist')
-const HTML_PATH = path.join(DIST_DIR, 'autocomplete-picker.html')
+const HTML_PATH = path.join(DIST_DIR, 'pick-model-app.html')
 
 let _cachedHtml: string | null = null
 
@@ -73,7 +73,7 @@ interface AutocompletePickerOptions {
 }
 
 /** Create the autocomplete picker MCP App. */
-export function createAutocompletePickerApp({
+export function createPickModelApp({
   modelClasses,
   searchGroups = {},
   namespace
@@ -91,7 +91,7 @@ export function createAutocompletePickerApp({
 
   if (modelNames.length === 0 && !hasGroups) return []
 
-  const resourceUri = `ui://${namespace}/autocomplete-picker`
+  const resourceUri = `ui://${namespace}/pick-model-app`
 
   // Build typeToModel mapping for group mode
   const typeToModel = hasGroups ? buildTypeToModelMap(eligible) : {}
@@ -140,9 +140,9 @@ export function createAutocompletePickerApp({
 
   const autocompleteTool = {
     resourceUri,
-    toolName: 'autocomplete_picker',
+    toolName: 'pick_model_app',
     needsAuth: true,
-    name: 'Autocomplete Picker',
+    name: 'Pick Record',
     description: 'Type-ahead search to find and select records',
 
     toolDescription: toolDesc,

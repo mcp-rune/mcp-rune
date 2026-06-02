@@ -399,11 +399,11 @@ The prompt-chaining approach (`suggest_workflow` → `get_workflow_step`) scopes
 
 Data tools and view tools occupy overlapping semantic space:
 
-| Data tool        | View tool            | Shared semantics              |
-| ---------------- | -------------------- | ----------------------------- |
-| `list_models`    | `list_records_app`   | "list", "show", "browse"      |
-| `search_records` | `search_records_app` | "search", "find", "filter"    |
-| `find_records`   | `find_records_app`   | "view", "see", "show details" |
+| Data tool        | View tool          | Shared semantics              |
+| ---------------- | ------------------ | ----------------------------- |
+| `list_models`    | `list_model_app`   | "list", "show", "browse"      |
+| `search_records` | `search_model_app` | "search", "find", "filter"    |
+| `find_records`   | `show_model_app`   | "view", "see", "show details" |
 
 The LLM treats `_view` tools as strictly better (same data + visual UI), so it will substitute them unless the workflow step explicitly steers it away.
 
@@ -411,11 +411,11 @@ The LLM treats `_view` tools as strictly better (same data + visual UI), so it w
 
 **1. Use data tools in workflow steps, not `_view` tools.**
 
-Data tools (`list_models`, `search_records`, `find_records`) return raw JSON for programmatic use. View tools (`list_records_app`, `search_records_app`, `find_records_app`) render interactive MCP Apps. Workflows need data, not UI.
+Data tools (`list_models`, `search_records`, `find_records`) return raw JSON for programmatic use. View tools (`list_model_app`, `search_model_app`, `show_model_app`) render interactive MCP Apps. Workflows need data, not UI.
 
 ```js file=examples/workflow-creation-guide-09.js
 // WRONG — opens an interactive table when you just need the data
-tool: 'list_records_app'
+tool: 'list_model_app'
 
 // CORRECT — returns raw JSON for the LLM to process
 tool: 'list_models'
@@ -423,7 +423,7 @@ tool: 'list_models'
 
 ```ts file=examples/workflow-creation-guide-09.ts
 // WRONG — opens an interactive table when you just need the data
-tool: 'list_records_app'
+tool: 'list_model_app'
 
 // CORRECT — returns raw JSON for the LLM to process
 tool: 'list_models'
@@ -434,7 +434,7 @@ tool: 'list_models'
 The LLM matches step descriptions against tool descriptions. Words like "browse", "visually review", "display" match `_view` tools. Words like "fetch", "retrieve", "get data" match data tools.
 
 ```js file=examples/workflow-creation-guide-10.js
-// WRONG — "browse" semantically matches search_records_app
+// WRONG — "browse" semantically matches search_model_app
 description: 'Browse all activities to identify misclassified ones.'
 
 // CORRECT — "retrieve" semantically matches search_records
@@ -442,7 +442,7 @@ description: 'Retrieve activity data to identify records with incorrect assignme
 ```
 
 ```ts file=examples/workflow-creation-guide-10.ts
-// WRONG — "browse" semantically matches search_records_app
+// WRONG — "browse" semantically matches search_model_app
 description: 'Browse all activities to identify misclassified ones.'
 
 // CORRECT — "retrieve" semantically matches search_records

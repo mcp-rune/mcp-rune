@@ -1,12 +1,11 @@
 /**
- * Search View MCP App — Client-side
+ * List View MCP App — Client-side
  *
- * Renders filtered search results with active filter chips, table, and pagination.
- * Filter chips show currently applied filters with available filter hints for discoverability.
+ * Renders a browseable table of records from a schema received via the MCP Apps protocol.
+ * Supports pagination, row selection with checkboxes, and clicking a row to open the edit form.
  */
 
 import { App } from '@modelcontextprotocol/ext-apps'
-import { escapeHtml } from '../shared/helpers.js'
 import { initApp, showStatus, clearStatus } from '../shared/app-init.js'
 import { renderFilterChips, renderAvailableFilters } from '../shared/filter-chips.js'
 import { createTableSelection } from '../shared/selection.js'
@@ -19,14 +18,13 @@ let listSchema = null
 let currentRecords = []
 let currentPage = 1
 let modelName = null
-let currentQuery = null
 let activeFilters = {}
 let filterDefinitions = {}
 let currentPagination = null
 
 // ─── MCP App Connection ─────────────────────────────────────────────────────
 
-const app = new App({ name: 'Search Results', version: '1.0.0' })
+const app = new App({ name: 'List Records', version: '1.0.0' })
 
 app.ontoolresult = (result) => {
   try {
@@ -44,13 +42,17 @@ app.ontoolresult = (result) => {
       modelName = data.schema.model
       currentRecords = data.records || []
       currentPage = data.pagination?.page || 1
-      currentQuery = data.query || null
       activeFilters = data.activeFilters || {}
       filterDefinitions = data.filterDefinitions || {}
       currentPagination = data.pagination || null
 
       renderHeader(data.schema)
-      renderChips()
+      renderFilterChips(document.getElementById('filter-chips'), activeFilters, filterDefinitions)
+      renderAvailableFilters(
+        document.getElementById('available-filters'),
+        activeFilters,
+        filterDefinitions
+      )
       renderTable(data.schema, currentRecords)
       renderPagination(data.pagination)
     }
@@ -68,47 +70,13 @@ function renderHeader(schema) {
   document.getElementById('list-title').textContent = schema.title
 }
 
-function renderChips() {
-  const container = document.getElementById('filter-chips')
-  const hasQuery = currentQuery && currentQuery.trim().length > 0
-  const hasFilters = Object.keys(activeFilters).length > 0
-
-  if (!hasQuery && !hasFilters) {
-    container.style.display = 'none'
-    document.getElementById('available-filters').style.display = 'none'
-    return
-  }
-
-  container.style.display = 'flex'
-  container.innerHTML = ''
-
-  // Query chip first
-  if (hasQuery) {
-    const chip = document.createElement('span')
-    chip.className = 'filter-chip query-chip'
-    chip.innerHTML =
-      `<span class="chip-label">Search:</span>` +
-      `<span class="chip-value">${escapeHtml(currentQuery)}</span>`
-    container.appendChild(chip)
-  }
-
-  // Filter chips (append after query chip)
-  renderFilterChips(container, activeFilters, filterDefinitions, { append: true })
-
-  renderAvailableFilters(
-    document.getElementById('available-filters'),
-    activeFilters,
-    filterDefinitions
-  )
-}
-
 function renderTable(schema, records) {
   const container = document.getElementById('table-container')
 
   selection.clear()
 
   if (records.length === 0) {
-    container.innerHTML = '<p class="empty-state">No results match the current filters</p>'
+    container.innerHTML = '<p class="empty-state">No records found</p>'
     return
   }
 
@@ -159,6 +127,7 @@ function renderTable(schema, records) {
       tr.appendChild(td)
     }
 
+    // Click to open edit form
     tr.addEventListener('click', () => {
       openEditForm(record.id)
     })
@@ -177,7 +146,7 @@ function renderPagination(pagination) {
   container.style.display = 'flex'
 
   const total = pagination.total || 0
-  const perPage = pagination.per_page || 50
+  const perPage = pagination.per_page || 20
   const totalPages = Math.ceil(total / perPage) || 1
 
   document.getElementById('page-info').textContent =
@@ -196,10 +165,9 @@ async function fetchPage(page) {
 
   try {
     const args = { model: modelName, page }
-    if (currentQuery) args.query = currentQuery
     if (Object.keys(activeFilters).length > 0) args.filters = activeFilters
     const result = await app.callServerTool({
-      name: 'search_records_app',
+      name: 'list_model_app',
       arguments: args
     })
 
@@ -221,10 +189,14 @@ async function fetchPage(page) {
     currentRecords = data.records || []
     currentPage = data.pagination?.page || page
     currentPagination = data.pagination || null
-    currentQuery = data.query || currentQuery
     activeFilters = data.activeFilters || activeFilters
 
-    renderChips()
+    renderFilterChips(document.getElementById('filter-chips'), activeFilters, filterDefinitions)
+    renderAvailableFilters(
+      document.getElementById('available-filters'),
+      activeFilters,
+      filterDefinitions
+    )
     renderTable(listSchema, currentRecords)
     renderPagination(data.pagination)
     clearStatus(statusBar)
@@ -238,10 +210,11 @@ async function openEditForm(recordId) {
 
   try {
     await app.callServerTool({
-      name: 'update_model_form',
+      name: 'edit_model_app',
       arguments: { model: modelName, record_id: String(recordId) }
     })
   } catch {
+    // If update form tool doesn't exist, try find_records as fallback
     try {
       await app.callServerTool({
         name: 'find_records',
@@ -260,7 +233,7 @@ const statusBar = document.getElementById('status-bar')
 const selection = createTableSelection({
   app,
   statusBar,
-  selectToolName: 'select_search_records',
+  selectToolName: 'select_list_records',
   getState: () => ({ modelName, currentRecords, currentPagination, activeFilters })
 })
 

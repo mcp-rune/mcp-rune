@@ -1,5 +1,5 @@
 /**
- * Multi-Select Picker MCP App
+ * Multi-Pick Records MCP App
  *
  * Browse all records for a model and pick one or many.
  * Loads all records upfront, then filters client-side.
@@ -24,7 +24,7 @@ import type { AppModelClass, ToolResult } from './types.js'
 
 const MAX_RECORDS = 200
 const DIST_DIR = path.resolve(import.meta.dirname, 'dist')
-const HTML_PATH = path.join(DIST_DIR, 'multi-select.html')
+const HTML_PATH = path.join(DIST_DIR, 'multi-pick-model-app.html')
 
 let _cachedHtml: string | null = null
 
@@ -40,8 +40,11 @@ interface MultiSelectOptions {
   namespace: string
 }
 
-/** Create the multi-select picker MCP App. */
-export function createMultiSelectApp({ modelClasses, namespace }: MultiSelectOptions): unknown[] {
+/** Create the multi-pick-model-app picker MCP App. */
+export function createMultiPickModelApp({
+  modelClasses,
+  namespace
+}: MultiSelectOptions): unknown[] {
   // Convention: only models with lookup support are eligible
   const eligible = Object.fromEntries(
     Object.entries(modelClasses).filter(([, MC]) => {
@@ -53,13 +56,13 @@ export function createMultiSelectApp({ modelClasses, namespace }: MultiSelectOpt
 
   if (modelNames.length === 0) return []
 
-  const resourceUri = `ui://${namespace}/multi-select`
+  const resourceUri = `ui://${namespace}/multi-pick-model-app`
 
   const multiSelectTool = {
     resourceUri,
-    toolName: 'multi_select_picker',
+    toolName: 'multi_pick_model_app',
     needsAuth: true,
-    name: 'Multi-Select Picker',
+    name: 'Multi-Pick Records',
     description: 'Browse and select records from a complete list',
 
     toolDescription:
@@ -108,7 +111,7 @@ export function createMultiSelectApp({ modelClasses, namespace }: MultiSelectOpt
             }
           })
         } catch (err) {
-          logger.warn('Failed to list records for multi-select', {
+          logger.warn('Failed to list records for multi-pick-model-app', {
             service: 'mcp-app',
             model,
             ...errorMeta(err)
@@ -131,7 +134,7 @@ export function createMultiSelectApp({ modelClasses, namespace }: MultiSelectOpt
             }
           })
         } catch (err) {
-          logger.warn('Failed to fetch records for multi-select', {
+          logger.warn('Failed to fetch records for multi-pick-model-app', {
             service: 'mcp-app',
             model,
             ...errorMeta(err)

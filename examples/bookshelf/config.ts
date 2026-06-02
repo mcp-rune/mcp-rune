@@ -70,8 +70,8 @@ const toolRegistry = new ToolRegistry({
   dataLayer
 })
 
-// MCP Apps — interactive UI widgets (list, detail, form, multi-select, search,
-// autocomplete-picker). One call wires all six.
+// MCP Apps — interactive UI widgets (list, detail, form, multi-pick-model-app, search,
+// pick-model-app). One call wires all six.
 const appRegistry = createDefaultAppRegistry({
   modelClasses: MODEL_CLASSES,
   namespace: 'bookshelf'

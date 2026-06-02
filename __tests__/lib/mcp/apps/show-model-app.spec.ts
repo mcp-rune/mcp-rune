@@ -1,4 +1,4 @@
-import { createRecordDetailApp } from '../../../../src/mcp/apps/record-detail.js'
+import { createShowModelApp } from '../../../../src/mcp/apps/show-model-app.js'
 
 const modelClasses = {
   book: {
@@ -19,12 +19,12 @@ const dataLayer = {
   }
 }
 
-describe('find_records_app', () => {
-  const app = createRecordDetailApp({ modelClasses, namespace }) as Record<string, unknown>
+describe('show_model_app', () => {
+  const app = createShowModelApp({ modelClasses, namespace }) as Record<string, unknown>
 
   it('renames toolName and resourceUri to use _app suffix', () => {
-    expect(app.toolName).toBe('find_records_app')
-    expect((app.resourceUri as string).endsWith('find-records-app')).toBe(true)
+    expect(app.toolName).toBe('show_model_app')
+    expect((app.resourceUri as string).endsWith('show-model-app')).toBe(true)
   })
 
   it('declares readOnlyHint annotation', () => {
@@ -43,7 +43,7 @@ describe('find_records_app', () => {
 
     const block1 = result.content[1]
     expect(block1.text).toMatch(/Displayed 2/)
-    expect(block1.text).toMatch(/find_records_app/)
+    expect(block1.text).toMatch(/show_model_app/)
     expect(block1.text).toMatch(/Do NOT repeat/)
     expect(block1.text).toMatch(/ids: \[1, 2\]/)
 

@@ -390,7 +390,7 @@ wrapper, custom implementation), see
 
 This example wires `createDefaultAppRegistry` in `config.ts` so the server
 serves all six framework apps out of the box: list view, record detail,
-create/update forms, multi-select picker, search view, and autocomplete
+create/update forms, multi-pick-model-app picker, search view, and autocomplete
 picker. Each app's UI is a vanilla-JS bundle the host renders in an iframe.
 
 Per-deployment theming and custom-kind formatters slot in through the same

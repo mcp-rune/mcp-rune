@@ -884,7 +884,7 @@ describe('PromptContentGenerator', () => {
         .allSections()
         .build()
 
-      expect(result).toContain('autocomplete_picker(group: "catalogue")')
+      expect(result).toContain('pick_model_app(group: "catalogue")')
       expect(result).toContain('Preferred Method')
       expect(result).toContain('Fallback Method')
     })

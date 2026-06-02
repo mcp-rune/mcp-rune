@@ -1,4 +1,4 @@
-import { createSearchViewApp } from '../../../../src/mcp/apps/search-view.js'
+import { createSearchModelApp } from '../../../../src/mcp/apps/search-model-app.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 
@@ -15,8 +15,8 @@ const modelClasses = {
 }
 const namespace = 'test'
 
-describe('search_records_app', () => {
-  const tools = createSearchViewApp({ modelClasses, namespace })
+describe('search_model_app', () => {
+  const tools = createSearchModelApp({ modelClasses, namespace })
   const searchTool = tools[0]
 
   it('response includes selection hint for LLM', async () => {
@@ -49,7 +49,7 @@ describe('search_records_app', () => {
   })
 
   it('declares readOnlyHint and uses _app suffix', () => {
-    expect(searchTool.toolName).toBe('search_records_app')
+    expect(searchTool.toolName).toBe('search_model_app')
     expect(searchTool.annotations?.readOnlyHint).toBe(true)
   })
 })

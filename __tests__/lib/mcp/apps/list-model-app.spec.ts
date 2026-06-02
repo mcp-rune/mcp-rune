@@ -1,4 +1,4 @@
-import { createListViewApp } from '../../../../src/mcp/apps/list-view.js'
+import { createListModelApp } from '../../../../src/mcp/apps/list-model-app.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 
@@ -15,8 +15,8 @@ const modelClasses = {
 }
 const namespace = 'test'
 
-describe('list_records_app', () => {
-  const tools = createListViewApp({ modelClasses, namespace })
+describe('list_model_app', () => {
+  const tools = createListModelApp({ modelClasses, namespace })
   const listTool = tools[0]
 
   it('response includes selection hint for LLM', async () => {
@@ -55,7 +55,7 @@ describe('list_records_app', () => {
   })
 
   it('uses _app suffix in toolName and resourceUri', () => {
-    expect(listTool.toolName).toBe('list_records_app')
-    expect(listTool.resourceUri).toMatch(/list-records-app$/)
+    expect(listTool.toolName).toBe('list_model_app')
+    expect(listTool.resourceUri).toMatch(/list-model-app$/)
   })
 })

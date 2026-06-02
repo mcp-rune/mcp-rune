@@ -7,7 +7,7 @@
  * review interstitial register this extension explicitly.
  *
  * When registered:
- *   - `create_model_form` / `update_model_form` advertise `submitMode: 'collect'`.
+ *   - `new_model_app` / `edit_model_app` advertise `submitMode: 'collect'`.
  *   - The client-side form calls `collect_form_data` on Done instead of
  *     `create_model` / `update_model`.
  *   - `collect_form_data` (app-only) stages the payload into a
@@ -28,7 +28,7 @@
  * })
  * ```
  *
- * The extension depends on a `create_model_form` app being registered so it
+ * The extension depends on a `new_model_app` app being registered so it
  * can derive the form's `resourceUri` and `getHtml` for the
  * `collect_form_data` tool. If no such app exists, registration throws at
  * boot.
@@ -38,7 +38,7 @@ import { FormDataStore } from '#src/mcp/apps/form-data-store.js'
 import { createFormDataTools } from '#src/mcp/apps/form-data-tools.js'
 import { defineContextKey, type ToolFlowExtension } from '#src/mcp/extensions/tool-flow.js'
 
-const FORM_TOOL_NAME = 'create_model_form'
+const FORM_TOOL_NAME = 'new_model_app'
 
 /**
  * Typed key for the per-server `FormDataStore` that `centerOfControlExtension`
@@ -56,7 +56,7 @@ export const centerOfControlExtension: ToolFlowExtension = {
     if (!formApp || !formApp.resourceUri || !formApp.getHtml) {
       throw new Error(
         `centerOfControlExtension: "${FORM_TOOL_NAME}" app is required (resourceUri + getHtml). ` +
-          'Register createCreateFormApp on the AppRegistry before applying this extension.'
+          'Register createNewModelApp on the AppRegistry before applying this extension.'
       )
     }
 

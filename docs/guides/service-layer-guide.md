@@ -47,10 +47,10 @@ This guide covers the two services that sit between MCP tools and the API: `Mode
 
 The service layer provides two focused services that encapsulate all API communication:
 
-| Service             | Purpose                                                                       | Consumers                                                                                 | Composes                                  |
-| ------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------- |
-| **`ModelService`**  | CRUD operations + custom actions (create, find, list, update, delete, action) | CRUD tools, bulk tools, model_action tool                                                 | EndpointResolver + Convention + ApiClient |
-| **`SearchService`** | Search, lookup, group search, listing                                         | search_records tool, analysis_ingest, MCP Apps (list, search, autocomplete, multi-select) | SearchAdapter + Convention + ApiClient    |
+| Service             | Purpose                                                                       | Consumers                                                                                         | Composes                                  |
+| ------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **`ModelService`**  | CRUD operations + custom actions (create, find, list, update, delete, action) | CRUD tools, bulk tools, model_action tool                                                         | EndpointResolver + Convention + ApiClient |
+| **`SearchService`** | Search, lookup, group search, listing                                         | search_records tool, analysis_ingest, MCP Apps (list, search, autocomplete, multi-pick-model-app) | SearchAdapter + Convention + ApiClient    |
 
 Both services follow the same pattern: wrap `ApiClient` with domain logic, resolve endpoints from model config, normalize requests/responses, and return clean results. Tools delegate data operations to these services and focus on MCP-specific concerns (input validation, response formatting, vector storage).
 

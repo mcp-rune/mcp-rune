@@ -180,14 +180,14 @@ describe('AppRegistry logging', () => {
 
   describe('getToolNames', () => {
     it('should return all registered app tool names', () => {
-      const app1 = makeApp({ toolName: 'search_records_app' })
-      const app2 = makeApp({ toolName: 'list_records_app' })
-      const app3 = makeApp({ toolName: 'find_records_app' })
+      const app1 = makeApp({ toolName: 'search_model_app' })
+      const app2 = makeApp({ toolName: 'list_model_app' })
+      const app3 = makeApp({ toolName: 'show_model_app' })
       const registry = new AppRegistry([app1, app2, app3])
       expect(registry.getToolNames()).toEqual([
-        'search_records_app',
-        'list_records_app',
-        'find_records_app'
+        'search_model_app',
+        'list_model_app',
+        'show_model_app'
       ])
     })
 

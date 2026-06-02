@@ -9,7 +9,7 @@ extension:
 A **`ToolFlowExtension`** is a sibling to [`HttpExtension`](./extensions.md). HTTP extensions add routes and middleware; tool-flow extensions modify the MCP **tool surface** and the **runtime context** threaded into app tool handlers. Use one when you want to:
 
 - Register additional MCP App tools tied to an integration (review queues, approval flows, async notifiers).
-- Flip the `create_model_form` / `update_model_form` `submitMode` from `'direct'` (write straight to the API) to `'collect'` (stage for review, then submit on confirmation).
+- Flip the `new_model_app` / `edit_model_app` `submitMode` from `'direct'` (write straight to the API) to `'collect'` (stage for review, then submit on confirmation).
 - Thread shared per-server state into every app tool handler without coupling each handler to the extension.
 
 The framework ships one — [`centerOfControlExtension`](../../src/extensions/center-of-control.ts) — and exposes the seam so deployers can author their own.
@@ -154,22 +154,22 @@ ctx.registerTool({
 Look up an already-registered app. Useful when your extension needs to clone metadata from a framework app (the way Center-of-Control reuses the create-form's `resourceUri` and `getHtml`):
 
 ```ts file=src/apps/form-app.ts
-const formApp = ctx.getApp('create_model_form')
+const formApp = ctx.getApp('new_model_app')
 if (!formApp?.resourceUri) {
-  throw new Error('myExtension: create_model_form must be registered first')
+  throw new Error('myExtension: new_model_app must be registered first')
 }
 ```
 
 ```js file=src/apps/form-app.js
-const formApp = ctx.getApp('create_model_form')
+const formApp = ctx.getApp('new_model_app')
 if (!formApp?.resourceUri) {
-  throw new Error('myExtension: create_model_form must be registered first')
+  throw new Error('myExtension: new_model_app must be registered first')
 }
 ```
 
 ### `setFormSubmitMode('collect' | 'direct')`
 
-Flips the submit-mode advertised in every `create_model_form` and `update_model_form` response. Clients respect this — `'collect'` makes the iframe call your collect tool on Done instead of `create_model`/`update_model`.
+Flips the submit-mode advertised in every `new_model_app` and `edit_model_app` response. Clients respect this — `'collect'` makes the iframe call your collect tool on Done instead of `create_model`/`update_model`.
 
 Use `'collect'` to insert a human-in-the-loop review interstitial. Use `'direct'` (the default) for low-stakes flows.
 
@@ -234,9 +234,9 @@ export const FORM_DATA_STORE_KEY = defineContextKey<FormDataStore>('formDataStor
 export const centerOfControlExtension: ToolFlowExtension = {
   requires: ['apps'],
   register(ctx) {
-    const formApp = ctx.getApp('create_model_form')
+    const formApp = ctx.getApp('new_model_app')
     if (!formApp?.resourceUri || !formApp.getHtml) {
-      throw new Error('centerOfControlExtension: create_model_form app is required')
+      throw new Error('centerOfControlExtension: new_model_app app is required')
     }
 
     // 1. Flip the submit mode.
@@ -268,9 +268,9 @@ export const FORM_DATA_STORE_KEY = defineContextKey('formDataStore')
 export const centerOfControlExtension = {
   requires: ['apps'],
   register(ctx) {
-    const formApp = ctx.getApp('create_model_form')
+    const formApp = ctx.getApp('new_model_app')
     if (!formApp?.resourceUri || !formApp.getHtml) {
-      throw new Error('centerOfControlExtension: create_model_form app is required')
+      throw new Error('centerOfControlExtension: new_model_app app is required')
     }
     // 1. Flip the submit mode.
     ctx.setFormSubmitMode('collect')
@@ -338,8 +338,8 @@ export function slackApprovalExtension(config: SlackApprovalConfig): ToolFlowExt
   return {
     requires: ['apps'],
     async register(ctx) {
-      const formApp = ctx.getApp('create_model_form')
-      if (!formApp) throw new Error('slackApproval: create_model_form app required')
+      const formApp = ctx.getApp('new_model_app')
+      if (!formApp) throw new Error('slackApproval: new_model_app app required')
 
       ctx.setFormSubmitMode('collect')
 
@@ -406,8 +406,8 @@ export function slackApprovalExtension(config) {
   return {
     requires: ['apps'],
     async register(ctx) {
-      const formApp = ctx.getApp('create_model_form')
-      if (!formApp) throw new Error('slackApproval: create_model_form app required')
+      const formApp = ctx.getApp('new_model_app')
+      if (!formApp) throw new Error('slackApproval: new_model_app app required')
       ctx.setFormSubmitMode('collect')
       const slack = new SlackClient(config.slackToken)
       const store = new ApprovalStore({
@@ -575,7 +575,7 @@ describe('slackApprovalExtension', () => {
 })
 ```
 
-Integration-test through `createServer` with the extension registered, asserting the produced MCP server exposes the new tools and that `create_model_form` advertises `submitMode: 'collect'`.
+Integration-test through `createServer` with the extension registered, asserting the produced MCP server exposes the new tools and that `new_model_app` advertises `submitMode: 'collect'`.
 
 ---
 

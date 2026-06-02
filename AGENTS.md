@@ -1,12 +1,16 @@
 # AGENTS.md
 
-## Design Principles
+## App tool naming
 
-- **Never design for backward compatibility.** When introducing a new pattern, apply it fully. Remove the old code path — do not keep fallback branches, shims, or deprecated re-exports. One way to do things, not two.
-- **No speculative abstractions.** Only add complexity the task actually requires.
-- **Delete, don't deprecate.** If something is replaced, remove it. No `@deprecated` aliases, no `// legacy fallback` branches, no re-exports of old names.
-- **Tool responses stay concise.** Return a short summary string or a small JSON envelope. Never return per-record arrays from batch / bulk tools — sample errors or a count summary is enough. The LLM should never have to scroll a tool response. Full per-record results belong in the server log, not the context window.
-- **No banner-comment section dividers.** Do not add `// ====…` separators (or `// ---` block dividers, or boxed `/** ===== Foo ===== */` headers) to chunk a file into "Types / Errors / Public API / Internals" sections. If a file is long enough that you feel the urge to add them, the file is doing too much — split it, collapse the grouping, or trust the reader to follow the symbol names. Whitespace + a one-line JSDoc on the symbol itself is enough.
+MCP app tool names follow `<ui-verb>_model_app`. Three rules:
+
+1. **Uniform `_app` suffix.** Every interactive MCP app tool ends in `_app`. No `_form` or other variants.
+2. **Verb describes UI intent, not the underlying mutation.** The form for a new record is `new_model_app` (it eventually triggers `create_model`). The form for editing is `edit_model_app` (triggers `update_model`). Read-only display is `show_model_app`. Browse / paginated table is `list_model_app`. Search is `search_model_app`. Reserve `create_*` / `update_*` / `delete_*` for **data tools that perform the mutation**.
+3. **Object noun is `model` (singular), never `records` (plural).** `_model_` qualifies the app's scope — "this app operates on instances of one model class" — not the cardinality of what it renders. `list_model_app` and `show_model_app` may still surface many records.
+
+Profile filtering in `~/Code/engineer-mcp` ensures no profile exposes both an app and its data twin for the same operation (`chat` profile excludes the data tools; `agent` profile excludes apps), so names can be chosen for clarity rather than collision-avoidance.
+
+Data tools take the opposite shape: action verbs directly (`create_model`, `update_model`, `delete_model`, `bulk_action_models`, `find_records`, `list_models`).
 
 ## Roadmap
 
