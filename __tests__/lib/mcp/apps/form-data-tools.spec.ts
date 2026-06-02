@@ -3,7 +3,7 @@ import { createFormDataTools } from '../../../../src/mcp/apps/lib/form-data-tool
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 
-const resourceUri = 'ui://test/model-form'
+const resourceUri = 'ui://test/new-model-app'
 const modelNames = ['activity', 'book', 'deal']
 const getHtml = () => '<html></html>'
 

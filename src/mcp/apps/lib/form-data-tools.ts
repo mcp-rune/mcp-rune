@@ -32,7 +32,10 @@ interface AppToolDefinition {
 }
 
 /**
- * Create form data tools for the model-form MCP App.
+ * Create form data tools for the form MCP Apps (`new_model_app` /
+ * `edit_model_app`). The tools bind to one form app's `resourceUri` +
+ * `getHtml` — by convention `new_model_app`'s, since both bundles wrap the
+ * same `shared/model-form/main.js` and render identically.
  */
 export function createFormDataTools(
   resourceUri: string,

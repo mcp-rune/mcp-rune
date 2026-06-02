@@ -11,7 +11,11 @@
  *   - The client-side form calls `collect_form_data` on Done instead of
  *     `create_model` / `update_model`.
  *   - `collect_form_data` (app-only) stages the payload into a
- *     session-scoped `FormDataStore`.
+ *     session-scoped `FormDataStore`. Its iframe UI is bound to the
+ *     `new_model_app` bundle's resourceUri + getHtml; since both form-app
+ *     bundles wrap the same shared `shared/model-form/main.js` module,
+ *     the review interstitial renders identically whether the source was a
+ *     new or edit submission.
  *   - `get_form_data` (model-only) lets the LLM retrieve the staged payload,
  *     present a review to the user, and submit on confirmation.
  *

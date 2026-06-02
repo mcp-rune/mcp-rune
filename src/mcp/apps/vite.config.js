@@ -4,13 +4,17 @@ import path from 'node:path'
 
 const isDevelopment = process.env.NODE_ENV === 'development'
 
-// Build target: 'model-form' (default) or any generic app
-const target = process.env.BUILD_TARGET || 'model-form'
+// Build target: 'new-model-app' (default) or any generic app
+const target = process.env.BUILD_TARGET || 'new-model-app'
 
 const configs = {
-  'model-form': {
-    root: 'model-form/ui',
-    outFile: 'model-form.html'
+  'new-model-app': {
+    root: 'new-model-app/ui',
+    outFile: 'new-model-app.html'
+  },
+  'edit-model-app': {
+    root: 'edit-model-app/ui',
+    outFile: 'edit-model-app.html'
   },
   'list-model-app': {
     root: 'list-model-app/ui',
@@ -61,6 +65,6 @@ export default defineConfig({
     cssMinify: !isDevelopment,
     minify: !isDevelopment,
     outDir: path.resolve(import.meta.dirname, 'dist'),
-    emptyOutDir: process.env.SKIP_CLEAN !== '1' && target === 'model-form'
+    emptyOutDir: process.env.SKIP_CLEAN !== '1' && target === 'new-model-app'
   }
 })

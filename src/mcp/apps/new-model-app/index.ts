@@ -1,17 +1,17 @@
 /**
- * Generic Model Form MCP Apps
+ * new_model_app — MCP App tool for creating a new record interactively.
  *
- * Creates two MCP App tools -- `new_model_app` and `edit_model_app` --
- * that accept a `model` parameter, analogous to `create_model`/`update_model`.
- *
- * The form schema is generated from the FormClass (fields + fieldsets) and
+ * Renders a form generated from the FormClass (fields + fieldsets) and
  * ModelClass (attributes + associations). PromptClass is optional -- used
  * only for default values when available.
  *
- * Association options (belongsTo selects, hasMany multiselects) are the ONLY thing
- * fetched from the API, using the user's access token at form-open time.
+ * Association options (belongsTo selects, hasMany multiselects) are the ONLY
+ * thing fetched from the API, using the user's access token at form-open time.
  *
- * Build: npm run build:engineer:apps
+ * The new and edit form apps share their iframe UI through
+ * `src/mcp/apps/shared/model-form/main.js`; each app builds its own bundle
+ * (`new-model-app.html` / `edit-model-app.html`) but the rendered DOM is the
+ * same.
  */
 
 import fs from 'node:fs'
@@ -25,14 +25,18 @@ import {
 } from '#src/mcp/apps/lib/form-associations.js'
 import { generateFormSchema } from '#src/mcp/apps/lib/form-schema.js'
 import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
-import { normalizeListWithConvention } from '#src/mcp/services/model-service.js'
 import * as logger from '#src/services/logger.js'
 
 import type { FormSubmitMode } from '../../extensions/tool-flow.js'
-import type { AppModelClass, DataLayer, FormFieldDefinition, ToolResult } from '../lib/types.js'
+import {
+  buildDefaultsFromModel,
+  filterEmpty,
+  resolveAssociationOptions
+} from '../lib/form-app-helpers.js'
+import type { AppModelClass, DataLayer, ToolResult } from '../lib/types.js'
 
 const DIST_DIR = path.resolve(import.meta.dirname, '..', 'dist')
-const HTML_PATH = path.join(DIST_DIR, 'model-form.html')
+const HTML_PATH = path.join(DIST_DIR, 'new-model-app.html')
 
 let _cachedHtml: string | null = null
 
@@ -93,7 +97,7 @@ export function createNewModelApp({
   const modelNames = Object.keys(eligible) as [string, ...string[]]
 
   return {
-    resourceUri: `ui://${namespace}/model-form`,
+    resourceUri: `ui://${namespace}/new-model-app`,
     toolName: 'new_model_app',
     needsAuth: true,
     name: 'New Record',
@@ -252,123 +256,6 @@ export function createNewModelApp({
   }
 }
 
-/** Create the edit_model_app MCP App. */
-export function createEditModelApp({
-  modelClasses,
-  formClasses,
-  promptClasses = {},
-  namespace
-}: FormAppOptions): AppDefinition {
-  // Convention: only models with a form class are eligible
-  const eligible = Object.fromEntries(
-    Object.entries(modelClasses).filter(([name]) => name in formClasses)
-  )
-  const modelNames = Object.keys(eligible) as [string, ...string[]]
-
-  return {
-    resourceUri: `ui://${namespace}/model-form`,
-    toolName: 'edit_model_app',
-    needsAuth: true,
-    name: 'Edit Record',
-    description: 'Interactive form for editing an existing record',
-
-    toolDescription:
-      `Show an interactive form for editing an existing record. ` +
-      `The form pre-fills with current values and submits changes via update_model. ` +
-      `Use this when the user wants to edit a record interactively. ` +
-      `Available models: ${modelNames.join(', ')}.`,
-
-    toolInputSchema: {
-      model: z.enum(modelNames).describe('Model to edit'),
-      record_id: z.string().describe('ID of the record to edit')
-    },
-
-    async handleToolCall(
-      args: Record<string, unknown> = {},
-      {
-        dataLayer,
-        formSubmitMode = 'direct'
-      }: {
-        dataLayer?: DataLayer
-        formSubmitMode?: FormSubmitMode
-      } = {}
-    ) {
-      const { model, record_id, ...prefillArgs } = args
-
-      if (!model || !eligible[model as string]) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({
-                error: `Unknown model: ${model}. Available: ${modelNames.join(', ')}`
-              })
-            }
-          ]
-        }
-      }
-
-      const ModelClass = eligible[model as string]!
-      const FormClass = formClasses[model as string]!
-      const PromptClass = promptClasses[model as string]
-
-      const schema = generateFormSchema(ModelClass, FormClass, { allModelClasses: eligible })
-
-      let defaults: Record<string, unknown>
-      if (record_id && dataLayer) {
-        defaults = await fetchRecord(dataLayer, ModelClass.api.endpoint, record_id as string)
-      } else if (PromptClass) {
-        defaults = new PromptClass(prefillArgs).getDefaultFormState()
-        Object.assign(defaults, filterEmpty(prefillArgs))
-      } else {
-        defaults = buildDefaultsFromModel(ModelClass, FormClass)
-        Object.assign(defaults, filterEmpty(prefillArgs))
-      }
-
-      if (dataLayer) {
-        await resolveAssociationOptions(schema.fields, dataLayer, defaults)
-      }
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              schema,
-              defaults,
-              mode: 'update',
-              submitMode: formSubmitMode,
-              ...(record_id ? { recordId: record_id } : {})
-            })
-          }
-        ]
-      }
-    },
-
-    getHtml
-  }
-}
-
-/** Fetch a single record from the API for pre-filling the update form. */
-async function fetchRecord(
-  dataLayer: DataLayer,
-  endpoint: string,
-  recordId: string
-): Promise<Record<string, unknown>> {
-  try {
-    const data = await dataLayer.dispatch('GET', `${endpoint}/${recordId}`)
-    return (data.data as Record<string, unknown>) || data
-  } catch (err) {
-    logger.warn('Failed to fetch record for form', {
-      service: 'mcp-app',
-      model: endpoint,
-      recordId,
-      ...errorMeta(err)
-    })
-    return {}
-  }
-}
-
 /**
  * When the form is for a nested model (e.g. `subdomain` under `domains/`),
  * resolve the parent record so the client can render a context banner
@@ -419,89 +306,4 @@ async function resolveParentContext(
     }
   }
   return null
-}
-
-/**
- * Fetch association options from the API for fields that declare associations.
- * Mutates the fields array in place, adding `options` to association fields.
- */
-async function resolveAssociationOptions(
-  fields: FormFieldDefinition[],
-  dataLayer: DataLayer,
-  defaults: Record<string, unknown> = {}
-): Promise<void> {
-  const associationFields = fields.filter((f) => f.association)
-  if (associationFields.length === 0) return
-
-  const fetches = associationFields.map(async (field) => {
-    try {
-      let endpoint = field.association!.endpoint
-
-      // Handle nested associations (e.g., categories under themes)
-      if (field.association!.nested) {
-        const { parentModel, childEndpoint } = field.association!.nested
-        const parentValue = defaults[`${parentModel}_id`]
-        if (!parentValue) {
-          field.options = []
-          return
-        }
-        const parentModelEndpoint = field.association!.endpoint
-        endpoint = `${parentModelEndpoint}/${String(parentValue)}/${childEndpoint}`
-      }
-
-      const data = await dataLayer.dispatch('GET', endpoint)
-      const { records } = normalizeListWithConvention(data, field.association!.convention, {
-        page: 1,
-        perPage: 200
-      })
-
-      const valueField = field.association!.valueField || 'id'
-      field.options = records.map((record) => ({
-        value: String(record[valueField] || record.id),
-        label: String(record[field.association!.labelField] || record.name || `ID: ${record.id}`),
-        ...(record.color ? { color: String(record.color) } : {})
-      }))
-    } catch (err) {
-      logger.warn('Failed to resolve association options', {
-        service: 'mcp-app',
-        field: field.name,
-        endpoint: field.association!.endpoint,
-        ...errorMeta(err)
-      })
-      // If API call fails, leave as empty select -- form still renders
-      field.options = []
-    }
-  })
-
-  await Promise.all(fetches)
-}
-
-/**
- * Build default values from model attributes for fields in the form.
- * Used when no PromptClass is available.
- */
-function buildDefaultsFromModel(
-  ModelClass: AppModelClass,
-  FormClass: { fields?: string[]; [key: string]: unknown }
-): Record<string, unknown> {
-  const defaults: Record<string, unknown> = {}
-  const fieldNames = FormClass?.fields || []
-  for (const name of fieldNames) {
-    const attr = ModelClass.attributes[name]
-    if (attr?.default !== undefined) {
-      defaults[name] = attr.default
-    }
-  }
-  return defaults
-}
-
-/** Filter out null/undefined/empty-string values from an object */
-function filterEmpty(obj: Record<string, unknown>): Record<string, unknown> {
-  const result: Record<string, unknown> = {}
-  for (const [key, val] of Object.entries(obj)) {
-    if (val !== null && val !== undefined && val !== '') {
-      result[key] = val
-    }
-  }
-  return result
 }

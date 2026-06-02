@@ -116,7 +116,7 @@ Each method has a precise role. Read them as a contract between three caller gro
 
 - **`form-schema.ts` (server)** reads `htmlInputType` when generating `FormFieldDefinition.type` so the iframe knows which `<input>` widget to render.
 - **`schema-derivation.ts` (server)** reads `promptType` to populate the "Type" column of LLM-facing attribute reference tables.
-- **`model-form-ui/app.js` (iframe)** calls `parse(apiValue)` to hydrate the form from a record, then `toInput(internal)` to write the `<input value="…">`. On submit, it calls `fromInput(rawString)` then `serialize(internal)` to produce the API payload.
+- **`shared/model-form/main.js` (iframe)** calls `parse(apiValue)` to hydrate the form from a record, then `toInput(internal)` to write the `<input value="…">`. On submit, it calls `fromInput(rawString)` then `serialize(internal)` to produce the API payload.
 - **`list-model-app-ui` / `show-model-app-ui` / `search-model-app-ui`** call `parse` then `format` (the DOM-returning function from `formatters.ts`, which is layered on top of the descriptor and not part of it).
 - **`HybridStrategy.generateHumanSummary` and `BasePrompt.generateHumanReadableSummary`** (server) call `describe(value)` for every populated field so the LLM-facing summary mirrors the iframe's `format()` output.
 - **`BaseStrategy.validateField` (server)** calls `validate(value)` for kind-aware error messages. Range / length / pattern checks from `FieldValidation` are orthogonal and live in `base-strategy.ts`.
@@ -298,7 +298,7 @@ class Book extends BaseModel {
 Now:
 
 - `show-model-app-ui` and `list-model-app-ui` render `ISBN: 978-0-13-235088-4`.
-- `model-form-ui` renders `<input type="text">` for the create/update form.
+- `new-model-app` / `edit-model-app` render `<input type="text">` for the create/update form (via shared `shared/model-form/main.js`).
 - `validate_form` rejects values that don't match the pattern or are outside 10–17 chars.
 - The prompt's attribute reference table says **ISBN** in the "Type" column.
 
@@ -440,13 +440,13 @@ Trace a single `published_at` attribute (`type: 'datetime'`) from definition to 
 
 2. **Prompt docs**: `schema-derivation.ts` calls `getKind('datetime').promptType` → `'datetime'`. Renders in the LLM-facing attribute reference table.
 
-3. **Form schema**: `form-schema.ts` calls `getKind('datetime').htmlInputType` → `'datetime-local'`. Renders as `<input type="datetime-local">` in `model-form-ui`.
+3. **Form schema**: `form-schema.ts` calls `getKind('datetime').htmlInputType` → `'datetime-local'`. Renders as `<input type="datetime-local">` in the form-app iframes.
 
-4. **Form prefill**: `model-form-ui/app.js` receives an API value `"2026-05-28T14:30:00Z"`, calls `getFormatter('datetime').parse(...)` → `Date`, then `.toInput(date)` → `"2026-05-28T14:30"`. Sets the `<input value="…">`.
+4. **Form prefill**: `shared/model-form/main.js` receives an API value `"2026-05-28T14:30:00Z"`, calls `getFormatter('datetime').parse(...)` → `Date`, then `.toInput(date)` → `"2026-05-28T14:30"`. Sets the `<input value="…">`.
 
 5. **Cell rendering** in list-model-app: `renderCellValue(apiValue, column)` calls `getFormatter('datetime').format(parsedDate)` → a `<span>` with a localized "May 28, 2026, 2:30 PM" (locale overridable via `formatters.datetime.display.locale`).
 
-6. **Form submit**: user changes the input to `"2026-06-01T09:00"`. `model-form-ui/app.js` calls `getFormatter('datetime').fromInput(raw)` → `Date`, then `.serialize(date)` → `"2026-06-01T09:00:00.000Z"`. Sent to the API.
+6. **Form submit**: user changes the input to `"2026-06-01T09:00"`. `shared/model-form/main.js` calls `getFormatter('datetime').fromInput(raw)` → `Date`, then `.serialize(date)` → `"2026-06-01T09:00:00.000Z"`. Sent to the API.
 
 7. **`validate_form`**: if the user instead pasted `"garbage"`, `BaseStrategy.validateField` calls `getKind('datetime').validate('garbage')` → `'must be a valid datetime'`. The tool returns the error before any API call.
 

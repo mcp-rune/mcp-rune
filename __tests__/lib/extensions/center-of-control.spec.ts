@@ -33,7 +33,7 @@ import type {
 
 function makeFormApp() {
   return {
-    resourceUri: 'ui://test/model-form',
+    resourceUri: 'ui://test/new-model-app',
     toolName: 'new_model_app',
     needsAuth: true,
     name: 'New Record',

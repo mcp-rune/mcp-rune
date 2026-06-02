@@ -4,6 +4,63 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.63.0] - 2026-06-02
+
+> Breaking. The `model-form/` folder is split into two per-tool app folders — `new-model-app/` and `edit-model-app/` — mirroring the rest of the catalog where every tool has its own folder named after it. The shared client-side form code is extracted to `src/mcp/apps/shared/model-form/` and consumed by both. Each tool now owns its own bundle (`new-model-app.html`, `edit-model-app.html`) and its own MCP resource URI. The public `@mcp-rune/mcp-rune/apps` exports (`createNewModelApp`, `createEditModelApp`) are unchanged. This reverses the 0.62.0 note that "`model-form.html` is still shared by `new_model_app` and `edit_model_app`": as of 0.63.0 they each have their own bundle.
+
+### Changed
+
+- **App folders split** — `src/mcp/apps/model-form/` is removed; each form factory + UI lives in its own folder:
+
+  | Before                             | After                                                                |
+  | ---------------------------------- | -------------------------------------------------------------------- |
+  | `src/mcp/apps/model-form/index.ts` | `src/mcp/apps/new-model-app/index.ts` + `edit-model-app/index.ts`    |
+  | `src/mcp/apps/model-form/ui/`      | `src/mcp/apps/new-model-app/ui/` + `edit-model-app/ui/` (thin shims) |
+
+- **Shared client-side code** — the bulk of the old `model-form/ui/app.js` moves to `src/mcp/apps/shared/model-form/main.js`, exported as `initModelFormApp()`. Each per-app `ui/app.js` is a two-line shim that imports and invokes it. `styles.css` moves to `shared/model-form/styles.css`.
+- **Shared server-side helpers** — `resolveAssociationOptions`, `buildDefaultsFromModel`, and `filterEmpty` extracted to `src/mcp/apps/lib/form-app-helpers.ts` so both factories consume the same implementation.
+- **Resource URIs** — `new_model_app` is now `ui://{namespace}/new-model-app` (was `…/model-form`); `edit_model_app` is `ui://{namespace}/edit-model-app` (was `…/model-form`). Both `centerOfControlExtension` and any consumer holding hard-coded URIs in client config must update. CoC keeps binding `collect_form_data` to `new_model_app`'s URI + getHtml; since both form bundles wrap the same shared module, the review interstitial renders identically.
+- **Vite build pipeline** — `model-form` build target replaced with `new-model-app` (cleans `dist/` first) and `edit-model-app` (runs with `SKIP_CLEAN=1` alongside the other apps). `package.json` scripts `build:apps:new-model-app` / `build:apps:edit-model-app` replace `build:apps:model-form`.
+- **Internal imports** updated across `src/apps.ts` (public barrel), `src/mcp/apps/lib/create-default-registry.ts`, and the test suite to reference the new paths.
+- **Documentation guides** — `mcp-apps-guide.md`, `mcp-apps-architecture.md`, `model-form-customization-guide.md`, `attribute-kinds-guide.md`, and `api-convention-guide.md` updated to reference the new structure. Stale doc comments in `lib/form-data-tools.ts` and `shared/formatters.ts` updated.
+
+### Added
+
+- **`__tests__/lib/mcp/apps/edit-model-app.spec.ts`** — covers the previously-untested `createEditModelApp`: tool shape, URI distinctness from `new_model_app`, no mode gate, `record_id` flow, `mode: 'update'` response, and submit-mode echo.
+- **`bundle-coverage.spec.ts`** now parametrizes over both `new-model-app.html` and `edit-model-app.html` so each bundle is independently verified against the server's `field.type` emit set.
+
+### Migration
+
+For consumers using the public `@mcp-rune/mcp-rune/apps` entry point: no source changes required. Existing calls to `createNewModelApp(...)` and `createEditModelApp(...)` continue to work.
+
+For consumers with hard-coded resource URIs in client config:
+
+```ts
+// BEFORE
+const newModelFormUri = 'ui://my-app/model-form'
+const editModelFormUri = 'ui://my-app/model-form'
+
+// AFTER
+const newModelFormUri = 'ui://my-app/new-model-app'
+const editModelFormUri = 'ui://my-app/edit-model-app'
+```
+
+For consumers reaching into deep subpaths:
+
+```ts
+// BEFORE
+import {
+  createNewModelApp,
+  createEditModelApp
+} from '@mcp-rune/mcp-rune/lib/mcp/apps/model-form/index.js'
+
+// AFTER
+import { createNewModelApp } from '@mcp-rune/mcp-rune/lib/mcp/apps/new-model-app/index.js'
+import { createEditModelApp } from '@mcp-rune/mcp-rune/lib/mcp/apps/edit-model-app/index.js'
+```
+
+Per pre-1.0 policy, no aliases or shims.
+
 ## [0.62.0] - 2026-06-02
 
 > Internal restructure. Each MCP app's server-side factory and its UI iframe source are now co-located under a single directory, and shared helper modules consumed across app factories live under `src/mcp/apps/lib/`. The public barrel at `@mcp-rune/mcp-rune/apps` is unchanged — same export names, same shapes. Consumers using only the documented `./apps` entry point are unaffected. Consumers reaching into deep subpaths (e.g. `@mcp-rune/mcp-rune/lib/mcp/apps/registry.js`) must update those paths to the new layout. Per pre-1.0 policy there are no aliases or deprecation paths.
@@ -254,6 +311,7 @@ import { ModelService, EndpointResolver } from '@mcp-rune/mcp-rune/model-service
 
 The `/lib/*` catch-all subpath remains, so the old `/lib/mcp/services/index.js` form is not broken — just no longer the recommended path.
 
+[0.63.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.62.0...v0.63.0
 [0.62.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.61.0...v0.62.0
 [0.61.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.60.1...v0.61.0
 [0.59.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.58.1...v0.59.0

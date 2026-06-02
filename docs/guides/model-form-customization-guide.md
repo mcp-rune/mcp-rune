@@ -102,7 +102,7 @@ fieldGroups: {        →   buildGroupLayouts()    →   renderFieldGroup()   �
 
 ### Step 1: Add rendering in `renderFieldGroup()`
 
-In `src/engineer/apps/model-form-ui/app.js`:
+In `src/mcp/apps/shared/model-form/main.js`:
 
 ```js file=src/render-field-group.js
 function renderFieldGroup(fields, layout) {
@@ -148,7 +148,7 @@ function renderFieldGroup(fields, layout) {
 
 ### Step 2: Add CSS
 
-In `src/engineer/apps/model-form-ui/styles.css`:
+In `src/mcp/apps/shared/model-form/styles.css`:
 
 ```css
 .field-grid {

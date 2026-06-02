@@ -1,6 +1,6 @@
 import { vi } from 'vitest'
 
-import { createNewModelApp } from '../../../../src/mcp/apps/model-form/index.js'
+import { createNewModelApp } from '../../../../src/mcp/apps/new-model-app/index.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 
@@ -45,7 +45,7 @@ function createApp() {
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
-describe('lib/mcp/apps/model-form', () => {
+describe('lib/mcp/apps/new-model-app', () => {
   describe('mode gate', () => {
     it('returns isError with redirect when mode is not set', async () => {
       const app = createApp()

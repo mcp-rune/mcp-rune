@@ -13,9 +13,10 @@
 import type { SearchAdapter, SearchGroup } from '#src/api-extensions/search/index.js'
 import type { DataLayerFactory } from '#src/core/data-layer.js'
 
+import { createEditModelApp } from '../edit-model-app/index.js'
 import { createListModelApp } from '../list-model-app/index.js'
-import { createEditModelApp, createNewModelApp } from '../model-form/index.js'
 import { createMultiPickModelApp } from '../multi-pick-model-app/index.js'
+import { createNewModelApp } from '../new-model-app/index.js'
 import { createPickModelApp } from '../pick-model-app/index.js'
 import { createSearchModelApp } from '../search-model-app/index.js'
 import { createShowModelApp } from '../show-model-app/index.js'

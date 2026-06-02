@@ -19,7 +19,7 @@ You write a custom convention when your API:
 - Uses **flat unwrapped payloads** and a hand-rolled pagination scheme (`{ items, page, total }`).
 - Has an **idiosyncratic envelope** (Rails-style `{ data: [...], meta: {...} }`, or a wrapper your team invented years ago).
 
-The seam isolates that idiosyncrasy. Tools, prompts, apps, and `model-form-ui` never see your envelope — they see normalized records.
+The seam isolates that idiosyncrasy. Tools, prompts, apps, and the form-app iframes never see your envelope — they see normalized records.
 
 ## Table of Contents
 
