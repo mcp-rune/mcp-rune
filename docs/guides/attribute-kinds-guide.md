@@ -13,7 +13,7 @@ API value  ⇄  internal value  ⇄  HTML <input> value
 mcp-rune ships 17 built-in kinds (`string`, `integer`, `boolean`, `date`, `enum`, `array`, `email`, `url`, `uuid`, `json`, `color`, `rating`, …). The same kind taxonomy is used by:
 
 - The polymorphic **form generator** to pick the right `<input type="…">`.
-- The **iframe display layer** (`list-model-app`, `show-model-app`, `search-model-app`) to render cells.
+- The **iframe display layer** (`find-model-app`, `show-model-app`, `view-selection-app`) to render cells.
 - The **prompt system** to set the type label LLMs see in attribute-reference tables.
 - The **`validate_form` tool** to reject malformed inputs (`uuid`, `email`, `date`, `json`, …) before they hit the API.
 - The **server-side prompt summary** so the LLM's mental model of the form state matches what the user just saw on screen (boolean → `Yes`/`No`, enum → humanized label, base64 → `(binary)`).
@@ -117,7 +117,7 @@ Each method has a precise role. Read them as a contract between three caller gro
 - **`form-schema.ts` (server)** reads `htmlInputType` when generating `FormFieldDefinition.type` so the iframe knows which `<input>` widget to render.
 - **`schema-derivation.ts` (server)** reads `promptType` to populate the "Type" column of LLM-facing attribute reference tables.
 - **`shared/model-form/main.js` (iframe)** calls `parse(apiValue)` to hydrate the form from a record, then `toInput(internal)` to write the `<input value="…">`. On submit, it calls `fromInput(rawString)` then `serialize(internal)` to produce the API payload.
-- **`list-model-app-ui` / `show-model-app-ui` / `search-model-app-ui`** call `parse` then `format` (the DOM-returning function from `formatters.ts`, which is layered on top of the descriptor and not part of it).
+- **`find-model-app-ui` / `show-model-app-ui` / `view-selection-app-ui`** call `parse` then `format` (the DOM-returning function from `formatters.ts`, which is layered on top of the descriptor and not part of it).
 - **`HybridStrategy.generateHumanSummary` and `BasePrompt.generateHumanReadableSummary`** (server) call `describe(value)` for every populated field so the LLM-facing summary mirrors the iframe's `format()` output.
 - **`BaseStrategy.validateField` (server)** calls `validate(value)` for kind-aware error messages. Range / length / pattern checks from `FieldValidation` are orthogonal and live in `base-strategy.ts`.
 
@@ -297,7 +297,7 @@ class Book extends BaseModel {
 
 Now:
 
-- `show-model-app-ui` and `list-model-app-ui` render `ISBN: 978-0-13-235088-4`.
+- `show-model-app-ui` and `find-model-app-ui` render `ISBN: 978-0-13-235088-4`.
 - `new-model-app` / `edit-model-app` render `<input type="text">` for the create/update form (via shared `shared/model-form/main.js`).
 - `validate_form` rejects values that don't match the pattern or are outside 10–17 chars.
 - The prompt's attribute reference table says **ISBN** in the "Type" column.
@@ -444,7 +444,7 @@ Trace a single `published_at` attribute (`type: 'datetime'`) from definition to 
 
 4. **Form prefill**: `shared/model-form/main.js` receives an API value `"2026-05-28T14:30:00Z"`, calls `getFormatter('datetime').parse(...)` → `Date`, then `.toInput(date)` → `"2026-05-28T14:30"`. Sets the `<input value="…">`.
 
-5. **Cell rendering** in list-model-app: `renderCellValue(apiValue, column)` calls `getFormatter('datetime').format(parsedDate)` → a `<span>` with a localized "May 28, 2026, 2:30 PM" (locale overridable via `formatters.datetime.display.locale`).
+5. **Cell rendering** in find-model-app: `renderCellValue(apiValue, column)` calls `getFormatter('datetime').format(parsedDate)` → a `<span>` with a localized "May 28, 2026, 2:30 PM" (locale overridable via `formatters.datetime.display.locale`).
 
 6. **Form submit**: user changes the input to `"2026-06-01T09:00"`. `shared/model-form/main.js` calls `getFormatter('datetime').fromInput(raw)` → `Date`, then `.serialize(date)` → `"2026-06-01T09:00:00.000Z"`. Sent to the API.
 

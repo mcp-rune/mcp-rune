@@ -167,6 +167,48 @@ export class SearchEnabledDataLayer implements DataLayer {
 
     return this._base.listNormalized(model, filters, pagination, options)
   }
+
+  /**
+   * Route single-model typeahead through `SearchService.lookup`, which
+   * handles the dedicated-endpoint / search-fallback / list-fallback
+   * resolution chain internally. Falls back to the base adapter's
+   * `lookupNormalized` if the model is unknown.
+   */
+  async lookupNormalized(
+    model: string,
+    query: string,
+    options?: { perPage?: number }
+  ): Promise<NormalizedListResponse> {
+    const modelConfig = this._base.models[model]
+    if (!modelConfig) {
+      return this._base.lookupNormalized(model, query, options)
+    }
+    const result = await this._searchService.lookup(
+      modelConfig as unknown as SearchModelClass,
+      query,
+      { perPage: options?.perPage ?? 10 }
+    )
+    return { records: result.records, pagination: result.pagination }
+  }
+
+  /**
+   * Multi-model typeahead via `SearchService.groupSearch`. The group must
+   * be configured in `searchGroups` at the registry; if not, the
+   * underlying `SearchService` throws and the error surfaces back to the
+   * caller (the app can render an error state).
+   */
+  async groupSearchNormalized(
+    group: string,
+    query: string,
+    options?: { perPage?: number; models?: string[] }
+  ): Promise<NormalizedListResponse> {
+    const result = await this._searchService.groupSearch(group, query, {
+      page: 1,
+      perPage: options?.perPage ?? 20,
+      ...(options?.models ? { models: options.models } : {})
+    })
+    return { records: result.records, pagination: result.pagination }
+  }
 }
 
 /**

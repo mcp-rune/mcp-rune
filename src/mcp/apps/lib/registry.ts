@@ -298,12 +298,12 @@ export class AppRegistry {
               formSubmitMode: this._formSubmitMode
             }
 
-            // Build the authenticated DataLayer + search client for apps that need it.
-            // The DataLayer exposed to handlers is wrapped in SearchEnabledDataLayer
-            // so app code can route text + filter search through `searchNormalized`
-            // instead of reaching for `searchClient` (which would leak the search
-            // extension into the projection layer). `context.searchClient` is kept
-            // for pre-existing apps that still compose `SearchService` directly.
+            // Build the authenticated DataLayer for apps that need it. The
+            // DataLayer exposed to handlers is wrapped in SearchEnabledDataLayer
+            // so app code routes every text/filter/lookup/group operation
+            // through the `*Normalized` methods on the seam — apps never see
+            // SearchService directly. This enforces the projection-layer rule
+            // by absence: the context bag has no `searchClient` field.
             if (app.needsAuth && getAccessToken && this._apiUrl && this._createApiClient) {
               const token = await getAccessToken()
               const apiClient = this._createApiClient(token, { apiUrl: this._apiUrl })
@@ -312,12 +312,11 @@ export class AppRegistry {
                 models: this._models,
                 logger
               })
-              const searchClient = createSearchService(baseDataLayer, {
+              const searchService = createSearchService(baseDataLayer, {
                 searchGroups: this._searchGroups,
                 defaultAdapter: this._defaultAdapter
               })
-              context.dataLayer = new SearchEnabledDataLayer(baseDataLayer, searchClient)
-              context.searchClient = searchClient
+              context.dataLayer = new SearchEnabledDataLayer(baseDataLayer, searchService)
             }
 
             if (selectionStore) {

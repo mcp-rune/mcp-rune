@@ -238,6 +238,38 @@ export class ModelService implements DataLayer {
     return this.listNormalized(model, filters, pagination, options)
   }
 
+  /**
+   * Plain `ModelService` has no notion of lookup endpoints. Falls back to
+   * `listNormalized` so the projection layer can still ask for typeahead
+   * results without crashing — the result is a plain page rather than a
+   * query-filtered set. Integrators that want real typeahead wrap this
+   * adapter in `SearchEnabledDataLayer`.
+   */
+  async lookupNormalized(
+    model: string,
+    _query: string,
+    options?: { perPage?: number }
+  ): Promise<NormalizedListResponse> {
+    return this.listNormalized(model, undefined, { page: 1, perPage: options?.perPage ?? 10 })
+  }
+
+  /**
+   * Group search requires the search ApiExtension to be wired (it owns
+   * the `searchGroups` config). Plain `ModelService` throws a clear
+   * error so callers know they need `SearchEnabledDataLayer` for this
+   * capability.
+   */
+  async groupSearchNormalized(
+    _group: string,
+    _query: string,
+    _options?: { perPage?: number; models?: string[] }
+  ): Promise<NormalizedListResponse> {
+    throw new Error(
+      'Group search requires the search ApiExtension. Wrap this adapter in SearchEnabledDataLayer ' +
+        '(see src/api-extensions/search/search-enabled-data-layer.ts).'
+    )
+  }
+
   /** Update a record (partial attributes). Supports compound IDs. */
   async update(
     model: string,

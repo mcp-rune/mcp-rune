@@ -4,6 +4,56 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.65.0] - 2026-06-03
+
+> Breaking. Completes the projection-layer migration started in v0.64.0. The two remaining apps that composed `SearchService` directly — `pick_model_app` and `multi_pick_model_app` — now consume only the `DataLayer` interface. `searchClient` is removed from the app handler context, so the projection-layer rule is now enforced by absence: no app can violate it because the seam doesn't expose `SearchService`. To support the migration, `DataLayer` gains two new methods: `lookupNormalized` (single-model typeahead) and `groupSearchNormalized` (multi-model typeahead across a configured group). `SearchEnabledDataLayer` implements both. Custom `DataLayer` adapters must implement them too — delegating to `listNormalized` and throwing respectively is the simplest implementation, mirroring how the in-memory stub does it.
+>
+> Documentation sweep: ten guides updated to reflect v0.64.0 and v0.65.0 reality. A canonical "Projection-Layer Rule" section lands in `data-layer-guide.md`, cross-linked by one-line callouts in six consumer guides. References to the deleted `list_model_app` and `search_model_app` are gone — `find_model_app` and `view_selection_app` are the unified successors. `SearchService` is reframed as adapter-internal across the guides.
+
+### Added
+
+- **`DataLayer.lookupNormalized(model, query, options?)`** — typeahead lookup for finding a record by name within a single model. Base adapters delegate to `listNormalized`; `SearchEnabledDataLayer` routes through `SearchService.lookup`.
+- **`DataLayer.groupSearchNormalized(group, query, options?)`** — multi-model typeahead across a configured search group. Base adapters throw a clear error pointing at the search ApiExtension; `SearchEnabledDataLayer` routes through `SearchService.groupSearch`.
+- **Canonical "Projection-Layer Rule" section** in [`docs/guides/data-layer-guide.md`](docs/guides/data-layer-guide.md#the-projection-layer-rule) — the load-bearing contract that apps/tools/prompts consume only `DataLayer`. Cross-linked by one-line callouts in `mcp-apps-architecture.md`, `mcp-apps-guide.md`, `custom-app-guide.md`, `authoring-extensions-guide.md`, `service-layer-guide.md`, and `extensibility-overview.md`.
+- **"Adding search to the default adapter" subsection** in `data-layer-guide.md` — documents `SearchEnabledDataLayer` and the `withSearchEnabledDataLayer(base, ctx)` factory.
+- **"When to extend `DataLayer` vs compose privately" subsection** in `authoring-extensions-guide.md` — teaches extension authors the pattern: if a capability is projection-facing, extend the interface and ship a decorator; otherwise compose privately.
+- **Adapter-level specs** for `lookupNormalized` / `groupSearchNormalized`: new `__tests__/lib/api-extensions/search/search-enabled-data-layer.spec.ts` covers the routing chain end-to-end; `model-service.spec.ts` and `data-layer-stub.spec.ts` cover the base-adapter behavior (delegate / throw).
+- **New `__tests__/lib/mcp/apps/pick-model-app.spec.ts`** — covers both paths (single-model lookup via `dataLayer.lookupNormalized`, group search via `dataLayer.groupSearchNormalized`) and asserts the handler never reads `searchClient` from context.
+
+### Changed
+
+- **`pick_model_app` migrated to `DataLayer` only** — `searchClient.groupSearch(...)` becomes `dataLayer.groupSearchNormalized(...)`; `searchClient.lookup(...)` becomes `dataLayer.lookupNormalized(...)`. The handler context destructure is `{ dataLayer }` only.
+- **`multi_pick_model_app` migrated to `DataLayer` only** — `searchClient.list(...)` becomes `dataLayer.searchNormalized(model, undefined, undefined, { perPage })`. The handler context destructure is `{ dataLayer }` only.
+- **`AppRegistry.registerTools`** no longer sets `context.searchClient`. The `SearchEnabledDataLayer` wrapping continues; only the redundant raw `SearchService` reference is removed.
+- **`AppToolContext` type** drops the `searchClient` field. The `SearchService` import goes with it. App handlers that reach for `context.searchClient` now fail at compile time.
+- **`multi-pick-model-app.spec.ts`** rewritten to fake `dataLayer.searchNormalized` instead of `searchClient.list`.
+- **Guide-level reframing of `SearchService`** in `service-layer-guide.md` — consumer table reframes the service as adapter-internal; the section opens with a projection-layer-rule callout; direct consumers (`search_records` tool, `analysis_ingest` tool) are noted as the only callers that still compose `SearchService` directly, pending future migration.
+- **Documentation sweep** — `docs/guides/data-layer-guide.md`, `mcp-apps-guide.md`, `custom-app-guide.md`, `mcp-apps-architecture.md`, `quickstart-guide.md`, `workflow-creation-guide.md`, `attribute-kinds-guide.md`, `analysis-memories-guide.md`, `extensibility-overview.md`, `extension-recipes.md`, `search-filter-integration-guide.md`, `authoring-extensions-guide.md`, and `service-layer-guide.md` all updated to reflect the v0.64.0 / v0.65.0 reality.
+
+### Removed
+
+- **`searchClient` from app handler context** — `AppToolContext.searchClient`, the `SearchService` type import on the types module, and the assignment line in `registry.ts`. New apps that try to access it fail at compile time, enforcing the projection-layer rule by absence.
+- **All references to the deleted `list_model_app` / `search_model_app`** from every guide. The unified `find_model_app` and `view_selection_app` are the successors; the documentation no longer references the old pair anywhere.
+
+### Migration
+
+- **Custom `DataLayer` adapters** must implement `lookupNormalized` and `groupSearchNormalized`. The simplest implementations:
+
+  ```ts
+  async lookupNormalized(model, _query, options) {
+    return this.listNormalized(model, undefined, { page: 1, perPage: options?.perPage ?? 10 })
+  }
+  async groupSearchNormalized(_group, _query, _options) {
+    throw new Error('Group search requires the search ApiExtension')
+  }
+  ```
+
+  Both `ModelService` and `InMemoryDataLayer` do exactly this. Wrap with `withSearchEnabledDataLayer(base, ctx)` for real text-search routing.
+
+- **App authors who read `context.searchClient`** must switch to `dataLayer.searchNormalized` / `lookupNormalized` / `groupSearchNormalized`. The `SearchService` API is still available via `import { SearchService } from '@mcp-rune/mcp-rune/api-extensions/search'` for advanced cases (group routing customization, lookup-endpoint resolution), but consuming it directly from an app handler is now an anti-pattern.
+
+- **Tool authors** are unaffected — `ToolRegistry` does not auto-wrap DataLayer with `SearchEnabledDataLayer` today. Tools that need text search compose `withSearchEnabledDataLayer` explicitly. The `search_records` and `analysis_ingest` tools still compose `SearchService` directly and are tracked as follow-up migration work.
+
 ## [0.64.0] - 2026-06-02
 
 > Breaking. `list_model_app` and `search_model_app` are deleted and replaced by a single **`find_model_app`** with optional `query` + interactive filter editor. A new **`view_selection_app`** renders and manages the current selection store. Selection submissions now choose an explicit `strategy` (replace vs add) so users can build a selection across multiple components. The `DataLayer` interface gains a `searchNormalized()` method that absorbs the search-vs-list-vs-nested routing previously duplicated inside the app handlers — apps no longer reach for `SearchService` / `searchClient` directly, the seam stays intact. Any alternative `DataLayer` adapter must implement `searchNormalized` (the default `ModelService` and `InMemoryDataLayer` stub both delegate to `listNormalized` when no search backend is wired; the `SearchEnabledDataLayer` wrapper exposed from `api-extensions/search` adds search routing on top).
@@ -382,6 +432,7 @@ import { ModelService, EndpointResolver } from '@mcp-rune/mcp-rune/model-service
 
 The `/lib/*` catch-all subpath remains, so the old `/lib/mcp/services/index.js` form is not broken — just no longer the recommended path.
 
+[0.65.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.64.0...v0.65.0
 [0.64.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.63.0...v0.64.0
 [0.63.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.62.0...v0.63.0
 [0.62.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.61.0...v0.62.0

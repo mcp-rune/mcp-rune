@@ -16,7 +16,9 @@ The seam exists for two reasons:
 ## Table of Contents
 
 - [The Interface](#the-interface)
+- [The Projection-Layer Rule](#the-projection-layer-rule)
 - [The Default Adapter](#the-default-adapter)
+  - [Adding search to the default adapter](#adding-search-to-the-default-adapter)
 - [Swapping the Adapter](#swapping-the-adapter)
 - [Using DataLayer in a Custom Tool](#using-datalayer-in-a-custom-tool)
 - [In-Memory Stub for Tests](#in-memory-stub-for-tests)
@@ -29,13 +31,23 @@ The seam exists for two reasons:
 import type { DataLayer } from '@mcp-rune/mcp-rune/core'
 
 interface DataLayer {
+  // CRUD
   create(model, attributes, options?)
   find(model, recordId, options?)
   list(model, filters?, pagination?, options?)
   update(model, recordId, attributes, options?)
   delete(model, recordId, options?)
+
+  // Normalized read surface — the projection layer consumes these for reads
+  listNormalized(model, filters?, pagination?, options?)
+  searchNormalized(model, query?, filters?, pagination?, options?)
+  lookupNormalized(model, query, options?)
+  groupSearchNormalized(group, query, options?)
+
+  // Escape hatches
   dispatch(method, url, payload?, params?, options?)
   buildPayload(model, modelConfig, attrs)
+
   readonly models: ModelsRegistry
   readonly endpointResolver: EndpointResolver // unstable; for custom-actions
 }
@@ -44,9 +56,8 @@ interface DataLayer {
 ```js file=src/layers/data-layer.js
 /**
  * The seam between the projection layer (polymorphic CRUD tools, prompt
- * strategies, schema-driven apps) and any concrete data backend. Every
- * method returns Promise<Object> — adapters are responsible for response
- * normalization upstream of this boundary.
+ * strategies, schema-driven apps) and any concrete data backend. Reads
+ * flow through the four `*Normalized` methods; writes through CRUD.
  *
  * @typedef {Object} DataLayer
  * @property {(model: string, attributes: Object, options?: Object) => Promise<Object>} create
@@ -54,6 +65,10 @@ interface DataLayer {
  * @property {(model: string, filters?: Object, pagination?: Object, options?: Object) => Promise<Object>} list
  * @property {(model: string, recordId: string, attributes: Object, options?: Object) => Promise<Object>} update
  * @property {(model: string, recordId: string, options?: Object) => Promise<Object>} delete
+ * @property {(model: string, filters?: Object, pagination?: Object, options?: Object) => Promise<NormalizedListResponse>} listNormalized
+ * @property {(model: string, query?: string, filters?: Object, pagination?: Object, options?: Object) => Promise<NormalizedListResponse>} searchNormalized
+ * @property {(model: string, query: string, options?: { perPage?: number }) => Promise<NormalizedListResponse>} lookupNormalized
+ * @property {(group: string, query: string, options?: { perPage?: number, models?: string[] }) => Promise<NormalizedListResponse>} groupSearchNormalized
  * @property {(method: string, url: string, payload?: Object, params?: Object, options?: Object) => Promise<Object>} dispatch
  * @property {(model: string, modelConfig: Object, attrs: Object) => Object} buildPayload
  * @property {ModelsRegistry} models
@@ -61,7 +76,25 @@ interface DataLayer {
  */
 ```
 
-Every method returns `Promise<Record<string, unknown>>`. Adapters are responsible for their own response normalization upstream of this boundary; the projection layer treats payloads as opaque.
+Every CRUD method returns `Promise<Record<string, unknown>>`; the four `*Normalized` methods return `Promise<NormalizedListResponse>` (`{ records, pagination }`). Adapters are responsible for their own response normalization upstream of this boundary; the projection layer treats payloads as opaque.
+
+The read surface splits by intent: `listNormalized` for "give me a page", `searchNormalized` for "find records matching a text query and/or filters", `lookupNormalized` for "single-model typeahead", `groupSearchNormalized` for "multi-model typeahead across a configured group". Base adapters without a search backend may delegate the latter three to `listNormalized`; the [`SearchEnabledDataLayer`](#adding-search-to-the-default-adapter) decorator is what actually implements text-search routing.
+
+## The Projection-Layer Rule
+
+> **Apps, tools, prompts, and domain workflows consume only the `DataLayer` interface.** They must never import `SearchService`, `ApiClient`, or `ModelService` directly. When the projection layer needs a capability the interface doesn't expose, the right move is to extend `DataLayer` with a method and implement it in adapters (or in a decorator like [`SearchEnabledDataLayer`](#adding-search-to-the-default-adapter)) — not to reach around the seam.
+
+This is the load-bearing contract that lets alternative adapters slot in. Three things hold the rule up:
+
+- **`AppRegistry.registerTools`** wraps the configured DataLayer factory output in `SearchEnabledDataLayer` and exposes only `context.dataLayer` to app handlers. There is no `context.searchClient`. Apps cannot violate the rule because the seam doesn't expose it.
+- **`BaseTool.requireDataLayer()`** is the only sanctioned way for tools to read the seam. It throws if the tool ran without authentication; it never hands back an `ApiClient`.
+- **`InMemoryDataLayer`** has no HTTP transport and no search engine. Code paths that reach past the interface (e.g., importing `ModelService` to coerce a method) fail loudly when run against the stub, surfacing the leak at test time rather than in production.
+
+Why the rule pays off:
+
+- **Adapter interchangeability.** The same projection-layer code runs against `ModelService` (HTTP), `InMemoryDataLayer` (tests), and any future library-backed adapter (Zodios, fetch-only, GraphQL).
+- **One auditable surface.** "What can a tool ask the data layer to do?" is answered by reading one TypeScript file.
+- **Honest extensions.** The pattern for extending the seam is documented and copy-paste-able — the `search` ApiExtension is the worked example.
 
 ## The Default Adapter
 
@@ -72,6 +105,28 @@ Every method returns `Promise<Record<string, unknown>>`. Adapters are responsibl
 - `BaseConvention` for payload wrapping and association resolution (JSON:API, HAL, custom)
 
 If you don't configure anything, `ToolRegistry` and `AppRegistry` instantiate `ModelService` automatically and apply any `ApiExtension` mixins (`custom-actions`, etc.).
+
+### Adding search to the default adapter
+
+Plain `ModelService` has no notion of search endpoints — it delegates `searchNormalized` and `lookupNormalized` to `listNormalized` and throws on `groupSearchNormalized`. The `search` ApiExtension ships a decorator that wraps any `DataLayer` and routes the three search-related methods through `SearchService`:
+
+```ts file=src/registry.ts
+import { withSearchEnabledDataLayer } from '@mcp-rune/mcp-rune/api-extensions/search'
+
+const base = new ModelService({ apiClient, models, namespace })
+const dataLayer = withSearchEnabledDataLayer(base, { searchGroups, defaultAdapter })
+```
+
+```js file=src/registry.js
+import { withSearchEnabledDataLayer } from '@mcp-rune/mcp-rune/api-extensions/search'
+
+const base = new ModelService({ apiClient, models, namespace })
+const dataLayer = withSearchEnabledDataLayer(base, { searchGroups, defaultAdapter })
+```
+
+`AppRegistry.registerTools` does this automatically — every app handler receives a `dataLayer` already wrapped. `ToolRegistry` does not auto-wrap today; tools that need text search call `withSearchEnabledDataLayer` explicitly.
+
+The decorator is a thin proxy: every CRUD method forwards to the base adapter; the three search methods route through `SearchService.search` / `.lookup` / `.groupSearch`. Apps cannot tell whether they're talking to a raw `ModelService` or the search-enabled wrapper — they call `dataLayer.searchNormalized` either way.
 
 ## Swapping the Adapter
 
@@ -235,7 +290,7 @@ The stub is deliberately convention-free — it does not implement HAL `_link` d
 An adapter is any class or object that satisfies the `DataLayer` interface. Minimal example wrapping a fetch-based REST client:
 
 ```ts file=src/adapters/fetch-data-layer.ts
-import type { DataLayer } from '@mcp-rune/mcp-rune/core'
+import type { DataLayer, NormalizedListResponse } from '@mcp-rune/mcp-rune/core'
 import type { ModelsRegistry } from '@mcp-rune/mcp-rune/tools'
 import { EndpointResolver } from '@mcp-rune/mcp-rune/model-service'
 
@@ -259,7 +314,27 @@ export class FetchDataLayer implements DataLayer {
     })
     return res.json()
   }
+
   // ... find / list / update / delete / dispatch / buildPayload
+
+  async listNormalized(model, filters, pagination): Promise<NormalizedListResponse> {
+    const raw = await this.list(model, filters, pagination)
+    return { records: raw.data ?? [], pagination: raw.meta ?? { page: 1, per_page: 20, total: 0 } }
+  }
+
+  // No text-search backend on this adapter — wrap with `withSearchEnabledDataLayer`
+  // if you want `dataLayer.searchNormalized` to honor a query.
+  async searchNormalized(model, _query, filters, pagination) {
+    return this.listNormalized(model, filters, pagination)
+  }
+
+  async lookupNormalized(model, _query, options) {
+    return this.listNormalized(model, undefined, { page: 1, perPage: options?.perPage ?? 10 })
+  }
+
+  async groupSearchNormalized(_group, _query, _options): Promise<NormalizedListResponse> {
+    throw new Error('Group search requires the search ApiExtension')
+  }
 }
 ```
 
@@ -283,11 +358,29 @@ export class FetchDataLayer {
     })
     return res.json()
   }
+
   // ... find / list / update / delete / dispatch / buildPayload
+
+  async listNormalized(model, filters, pagination) {
+    const raw = await this.list(model, filters, pagination)
+    return { records: raw.data ?? [], pagination: raw.meta ?? { page: 1, per_page: 20, total: 0 } }
+  }
+
+  async searchNormalized(model, _query, filters, pagination) {
+    return this.listNormalized(model, filters, pagination)
+  }
+
+  async lookupNormalized(model, _query, options) {
+    return this.listNormalized(model, undefined, { page: 1, perPage: options?.perPage ?? 10 })
+  }
+
+  async groupSearchNormalized(_group, _query, _options) {
+    throw new Error('Group search requires the search ApiExtension')
+  }
 }
 ```
 
-Adapters that already speak HTTP can usually subclass `ModelService` and override the convention or endpoint-resolution behavior instead of reimplementing the whole interface.
+Adapters that already speak HTTP can usually subclass `ModelService` and override the convention or endpoint-resolution behavior instead of reimplementing the whole interface. To add text search, compose with `withSearchEnabledDataLayer` rather than reimplementing the routing chain.
 
 ## Why Conventions Stay Below the Seam
 

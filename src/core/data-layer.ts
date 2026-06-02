@@ -114,6 +114,37 @@ export interface DataLayer {
     options?: ModelRequestOptions
   ): Promise<NormalizedListResponse>
 
+  /**
+   * Typeahead lookup for finding a record by name within a single model.
+   * The projection-facing entry point for autocomplete pickers — adapters
+   * decide internally whether to call a dedicated lookup endpoint, fall
+   * back to text search, or filter the list by the model's lookup field.
+   *
+   * Base adapters with no search backend may delegate to `listNormalized`;
+   * the `SearchEnabledDataLayer` decorator routes through `SearchService.lookup`.
+   */
+  lookupNormalized(
+    model: string,
+    query: string,
+    options?: { perPage?: number }
+  ): Promise<NormalizedListResponse>
+
+  /**
+   * Multi-model typeahead across a configured search group. Used by
+   * pickers that span related models (e.g. an "any title" picker that
+   * searches across `episode` and `feature`). Requires the deployment
+   * to declare `searchGroups` on the search ApiExtension — base
+   * adapters without that wiring throw a clear error.
+   *
+   * The `SearchEnabledDataLayer` decorator routes through
+   * `SearchService.groupSearch`.
+   */
+  groupSearchNormalized(
+    group: string,
+    query: string,
+    options?: { perPage?: number; models?: string[] }
+  ): Promise<NormalizedListResponse>
+
   /** Partial update of an existing record. Compound IDs supported. */
   update(
     model: string,

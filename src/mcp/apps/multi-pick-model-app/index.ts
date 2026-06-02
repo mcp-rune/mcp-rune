@@ -13,7 +13,6 @@ import path from 'node:path'
 
 import { z } from 'zod'
 
-import type { SearchService } from '#src/api-extensions/search/index.js'
 import { getSearchConfig } from '#src/api-extensions/search/index.js'
 import type { DataLayer } from '#src/core/data-layer.js'
 import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
@@ -79,7 +78,7 @@ export function createMultiPickModelApp({
 
     async handleToolCall(
       args: Record<string, unknown> = {},
-      { dataLayer, searchClient }: { dataLayer?: DataLayer; searchClient?: SearchService } = {}
+      { dataLayer }: { dataLayer?: DataLayer } = {}
     ): Promise<ToolResult> {
       const { model } = args as { model?: string }
 
@@ -99,29 +98,11 @@ export function createMultiPickModelApp({
       const ModelClass = eligible[model]!
       let records: Array<{ id: unknown; display: string; [key: string]: unknown }> = []
 
-      if (searchClient) {
+      if (dataLayer) {
         try {
-          const result = await searchClient.list(ModelClass as never, { perPage: MAX_RECORDS })
-          records = result.records.map((record) => {
-            const instance = new ModelClass(record)
-            return {
-              id: record.id,
-              display: instance.displayValue,
-              ...instance.lookupFields
-            }
-          })
-        } catch (err) {
-          logger.warn('Failed to list records for multi-pick-model-app', {
-            service: 'mcp-app',
+          const { records: rawRecords } = await dataLayer.searchNormalized(
             model,
-            ...errorMeta(err)
-          })
-          records = []
-        }
-      } else if (dataLayer) {
-        try {
-          const { records: rawRecords } = await dataLayer.listNormalized(
-            model as string,
+            undefined,
             undefined,
             { page: 1, perPage: MAX_RECORDS }
           )

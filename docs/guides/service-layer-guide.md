@@ -12,7 +12,7 @@ This guide covers the two services that sit between MCP tools and the API: `Mode
 >
 > **`ModelService.action()` moved to the [`custom-actions` ApiExtension](./api-extensions.md) in v0.44.0.** It's still callable on the same instance — but only when `customActionsExtension()` is registered on `ToolRegistry`, which contributes it as a mixin. The signature and behavior are unchanged.
 >
-> **`SearchService`, `SearchAdapter`, `RailsSearchAdapter`, and their types moved to the [`search` ApiExtension](./api-extensions.md) in v0.47.0** (`@mcp-rune/mcp-rune/api-extensions/search`). The new `createSearchService(dataLayer, context)` factory (v0.49.0) is the recommended construction site for all three consumer clusters — it accepts a `DataLayer` so search composes with any adapter.
+> **`SearchService` moved behind the seam in v0.65.0.** As of v0.65.0, `SearchService` is adapter-internal — composed by [`SearchEnabledDataLayer`](./data-layer-guide.md#adding-search-to-the-default-adapter) and reached through `dataLayer.searchNormalized` / `lookupNormalized` / `groupSearchNormalized`. New apps and tools must consume the `DataLayer` interface (see [The Projection-Layer Rule](./data-layer-guide.md#the-projection-layer-rule)). The `SearchService` API documented below is still callable, but the only first-party callers are the `search_records` and `analysis_ingest` tools that haven't been migrated yet, plus deployer code wiring up `withSearchEnabledDataLayer`. `SearchService`, `SearchAdapter`, and `RailsSearchAdapter` live in `@mcp-rune/mcp-rune/api-extensions/search` (moved there in v0.47.0).
 
 ## Table of Contents
 
@@ -47,10 +47,10 @@ This guide covers the two services that sit between MCP tools and the API: `Mode
 
 The service layer provides two focused services that encapsulate all API communication:
 
-| Service             | Purpose                                                                       | Consumers                                                                                         | Composes                                  |
-| ------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| **`ModelService`**  | CRUD operations + custom actions (create, find, list, update, delete, action) | CRUD tools, bulk tools, model_action tool                                                         | EndpointResolver + Convention + ApiClient |
-| **`SearchService`** | Search, lookup, group search, listing                                         | search_records tool, analysis_ingest, MCP Apps (list, search, autocomplete, multi-pick-model-app) | SearchAdapter + Convention + ApiClient    |
+| Service             | Purpose                                                                       | Consumers                                                                                                                                                                                                                                     | Composes                                  |
+| ------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **`ModelService`**  | CRUD operations + custom actions (create, find, list, update, delete, action) | CRUD tools, bulk tools, model_action tool — via `DataLayer.{find,list,…}`                                                                                                                                                                     | EndpointResolver + Convention + ApiClient |
+| **`SearchService`** | Search, lookup, group search, listing                                         | `SearchEnabledDataLayer` (the canonical consumer) wires it behind `dataLayer.searchNormalized` / `lookupNormalized` / `groupSearchNormalized`. The `search_records` and `analysis_ingest` tools still compose it directly for advanced cases. | SearchAdapter + Convention + ApiClient    |
 
 Both services follow the same pattern: wrap `ApiClient` with domain logic, resolve endpoints from model config, normalize requests/responses, and return clean results. Tools delegate data operations to these services and focus on MCP-specific concerns (input validation, response formatting, vector storage).
 
@@ -438,7 +438,9 @@ try {
 
 ## SearchService
 
-`SearchService` provides a normalized search interface for tools and apps. It wraps the API client with a 3-tier endpoint resolution chain for search and a separate chain for lookup (typeahead/autocomplete).
+> **Projection-layer rule.** Apps consume only the `DataLayer` interface — never import `SearchService`, `ApiClient`, or `ModelService` directly. See [The Projection-Layer Rule](./data-layer-guide.md#the-projection-layer-rule). The methods documented below are for adapter authors composing `SearchEnabledDataLayer`, deployers wiring up `withSearchEnabledDataLayer`, and the two tools (`search_records`, `analysis_ingest`) that haven't been migrated yet.
+
+`SearchService` provides a normalized search interface for the `SearchEnabledDataLayer` decorator and a small set of advanced tools. It wraps the API client with a 3-tier endpoint resolution chain for search and a separate chain for lookup (typeahead/autocomplete). Apps reach this functionality through `dataLayer.searchNormalized` / `lookupNormalized` / `groupSearchNormalized` — see [Adding search to the default adapter](./data-layer-guide.md#adding-search-to-the-default-adapter).
 
 ### Setup
 

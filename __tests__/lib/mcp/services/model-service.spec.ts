@@ -239,6 +239,64 @@ describe('lib/mcp/services/model-service', () => {
   })
 
   // =========================================================================
+  // searchNormalized / lookupNormalized / groupSearchNormalized
+  // =========================================================================
+
+  describe('searchNormalized', () => {
+    it('ignores query and delegates to listNormalized (no search backend on base adapter)', async () => {
+      const { service, apiClient } = makeService({
+        get: vi.fn().mockResolvedValue({
+          data: [{ id: '1', title: 'A' }],
+          meta: { page: 1, per_page: 20, total: 1 }
+        })
+      })
+
+      const result = await service.searchNormalized('book', 'some query', { status: 'live' })
+
+      expect(result.records).toEqual([{ id: '1', title: 'A' }])
+      expect(apiClient.get).toHaveBeenCalledWith(
+        'books',
+        expect.objectContaining({ status: 'live', page: 1, per_page: 20 })
+      )
+    })
+  })
+
+  describe('lookupNormalized', () => {
+    it('falls back to listNormalized with the requested page size', async () => {
+      const { service, apiClient } = makeService({
+        get: vi.fn().mockResolvedValue({
+          data: [],
+          meta: { page: 1, per_page: 5, total: 0 }
+        })
+      })
+
+      await service.lookupNormalized('book', 'alpha', { perPage: 5 })
+
+      expect(apiClient.get).toHaveBeenCalledWith(
+        'books',
+        expect.objectContaining({ page: 1, per_page: 5 })
+      )
+    })
+
+    it('defaults perPage to 10', async () => {
+      const { service, apiClient } = makeService({
+        get: vi.fn().mockResolvedValue({ data: [], meta: { page: 1, per_page: 10, total: 0 } })
+      })
+      await service.lookupNormalized('book', 'alpha')
+      expect(apiClient.get).toHaveBeenCalledWith('books', expect.objectContaining({ per_page: 10 }))
+    })
+  })
+
+  describe('groupSearchNormalized', () => {
+    it('throws — group search requires the search ApiExtension', async () => {
+      const { service } = makeService()
+      await expect(service.groupSearchNormalized('catalogue', 'x')).rejects.toThrow(
+        /search ApiExtension/
+      )
+    })
+  })
+
+  // =========================================================================
   // update
   // =========================================================================
 
