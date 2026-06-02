@@ -1,9 +1,12 @@
 /**
  * Pick Record MCP App
  *
- * Type-ahead search to find and select records by text.
- * Supports single-model search (model param) and cross-model group search
- * (group param) via SearchService.groupSearch().
+ * Type-ahead search to find and select records by text. Supports
+ * single-model lookup (model param) and cross-model group search
+ * (group param) — both via `DataLayer.lookupNormalized` /
+ * `DataLayer.groupSearchNormalized`. The handler never imports
+ * `SearchService`; routing decisions live in the DataLayer adapter
+ * (`SearchEnabledDataLayer` for HTTP deployments).
  *
  * Build: npm run build:apps:lib
  */
@@ -13,7 +16,6 @@ import path from 'node:path'
 
 import { z } from 'zod'
 
-import type { SearchService } from '#src/api-extensions/search/index.js'
 import { getSearchConfig } from '#src/api-extensions/search/index.js'
 import type { DataLayer } from '#src/core/data-layer.js'
 import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
@@ -151,7 +153,7 @@ export function createPickModelApp({
 
     async handleToolCall(
       args: Record<string, unknown> = {},
-      { searchClient }: { dataLayer?: DataLayer; searchClient?: SearchService } = {}
+      { dataLayer }: { dataLayer?: DataLayer } = {}
     ): Promise<ToolResult> {
       const {
         model,
@@ -209,9 +211,11 @@ export function createPickModelApp({
         }
 
         let results: Array<{ id: unknown; display: string; entityType: unknown }> = []
-        if (searchClient && query) {
+        if (dataLayer && query) {
           try {
-            const { records } = await searchClient.groupSearch(group, query, { perPage: limit })
+            const { records } = await dataLayer.groupSearchNormalized(group, query, {
+              perPage: limit
+            })
             results = records.map((record) => ({
               id: record.id,
               display: String(record.name || record.title || `ID: ${record.id}`),
@@ -252,7 +256,7 @@ export function createPickModelApp({
         }
       }
 
-      // --- Single-model search path (uses SearchService.lookup) ---
+      // --- Single-model lookup path (routes through DataLayer.lookupNormalized) ---
       if (!eligible[model!]) {
         return {
           content: [
@@ -270,9 +274,9 @@ export function createPickModelApp({
       const searchFields = getSearchConfig(ModelClass)?.lookup?.fields || []
       let results: Array<{ id: unknown; display: string; [key: string]: unknown }> = []
 
-      if (searchClient && query) {
+      if (dataLayer && query) {
         try {
-          const { records } = await searchClient.lookup(ModelClass as never, query, {
+          const { records } = await dataLayer.lookupNormalized(model!, query, {
             perPage: limit
           })
           results = records.map((record) => {

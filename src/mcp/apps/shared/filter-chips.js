@@ -1,7 +1,9 @@
 /**
- * Shared filter chip rendering for search-model-app and list-model-app apps.
+ * Shared filter chip rendering for table-view MCP apps.
  *
- * Renders active filter chips and available filter hints from filter definitions.
+ * Renders active filter chips from a `filterDefinitions` map. The
+ * interactive filter editor lives in `filter-popover.js`; this module is
+ * the read-only summary shown next to the title bar.
  */
 
 import { humanize, escapeHtml } from './helpers.js'

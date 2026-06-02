@@ -40,6 +40,7 @@ export { createSearchService } from './factory.js'
 export type { RailsAdapterConfig } from './rails-search-adapter.js'
 export { RailsSearchAdapter } from './rails-search-adapter.js'
 export { SearchAdapter } from './search-adapter.js'
+export { SearchEnabledDataLayer, withSearchEnabledDataLayer } from './search-enabled-data-layer.js'
 export { SearchService } from './search-service.js'
 export type {
   LookupConfig,

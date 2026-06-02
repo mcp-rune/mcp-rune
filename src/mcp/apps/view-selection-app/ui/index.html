@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Current Selection</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap"
+    />
+    <link rel="stylesheet" href="../../shared/base.css" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="mr-titlebar">
+      <h1 class="mr-title" id="view-title">Loading…</h1>
+      <span style="flex: 1"></span>
+      <button type="button" class="mr-btn ghost" id="btn-materialize" style="display: none">
+        Materialize as IDs
+      </button>
+      <button type="button" class="mr-btn ghost" id="btn-clear" style="display: none">
+        Clear selection
+      </button>
+    </div>
+
+    <div class="mr-badge-row" id="filter-chips" style="display: none"></div>
+    <p class="mr-subtitle" id="selection-meta" style="display: none"></p>
+
+    <div id="table-container">
+      <div class="mr-empty" id="empty-state">Loading…</div>
+    </div>
+
+    <div id="status-bar" class="mr-statusbar"></div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

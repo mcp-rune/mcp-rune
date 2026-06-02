@@ -85,7 +85,7 @@ function createTestRegistry() {
   })
 }
 
-const APP_TOOL_NAMES = ['search_model_app', 'list_model_app', 'show_model_app']
+const APP_TOOL_NAMES = ['find_model_app', 'show_model_app']
 
 describe('GetWorkflowStepTool', () => {
   let tool
@@ -181,8 +181,7 @@ describe('GetWorkflowStepTool', () => {
   it('should include dynamic exclusion for data tools', async () => {
     const result = await tool.execute({ workflow: 'multi_step', step: 1 })
     const text = result.content[0].text
-    expect(text).toContain('search_model_app')
-    expect(text).toContain('list_model_app')
+    expect(text).toContain('find_model_app')
     expect(text).toContain('show_model_app')
     expect(text).not.toContain('record_detail_view')
   })
@@ -192,7 +191,7 @@ describe('GetWorkflowStepTool', () => {
     const text = result.content[0].text
     // bulk_action_models is not a data tool — simpler warning
     expect(text).toContain('Do NOT substitute with any other tool')
-    expect(text).not.toContain('search_model_app')
+    expect(text).not.toContain('find_model_app')
   })
 
   // ─── Error Handling ─────────────────────────────────────────────────────

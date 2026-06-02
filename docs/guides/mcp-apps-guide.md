@@ -413,19 +413,19 @@ src/mcp/apps/
 ├── edit-model-app/             # Edit-record form (mirrors new-model-app)
 │   ├── index.ts
 │   └── ui/
-├── list-model-app/             # Generic list/table view
+├── find-model-app/             # Browseable table — query + filter popover + selection
 │   ├── index.ts
 │   └── ui/
 ├── show-model-app/             # Record detail view
 │   ├── index.ts
 │   └── ui/
-├── search-model-app/           # Search view with filters + selection
+├── view-selection-app/         # Inspect + manage the in-session selection store
 │   ├── index.ts
 │   └── ui/
-├── pick-model-app/             # Type-ahead search picker
+├── pick-model-app/             # Type-ahead picker (single-model or group)
 │   ├── index.ts
 │   └── ui/
-├── multi-pick-model-app/       # Multi-select picker
+├── multi-pick-model-app/       # Browse-and-select picker for small/medium sets
 │   ├── index.ts
 │   └── ui/
 ├── lib/                        # Shared server-side helpers
@@ -446,9 +446,9 @@ src/mcp/apps/
 └── dist/                       # Built outputs (one HTML per app)
     ├── new-model-app.html
     ├── edit-model-app.html
-    ├── list-model-app.html
+    ├── find-model-app.html
     ├── show-model-app.html
-    ├── search-model-app.html
+    ├── view-selection-app.html
     ├── pick-model-app.html
     └── multi-pick-model-app.html
 ```
@@ -875,7 +875,7 @@ return new AppRegistry(apps, { apiUrl })
 
 ## Column Selection (List View & Search View)
 
-Table apps (list-model-app, search-model-app) support **LLM-driven column selection** — the tool description lists all available columns per model, and the LLM chooses which columns are relevant to display based on the user's request. This prevents horizontal scroll when models have many attributes.
+Table apps (`find-model-app`, `view-selection-app`) support **LLM-driven column selection** — the tool description lists all available columns per model, and the LLM chooses which columns are relevant to display based on the user's request. This prevents horizontal scroll when models have many attributes.
 
 ### How It Works
 
@@ -933,7 +933,9 @@ All column selection logic lives in `src/mcp/apps/lib/list-schema.ts`:
 
 ## Selection Store & Selection Tools
 
-MCP Apps that display record lists (search view, autocomplete picker, multi-pick-model-app) support **server-side selection** — users check records in the UI, the selection is stored on the MCP server, and the LLM can retrieve it for follow-up operations.
+> **Projection-layer rule.** App handlers consume only the `DataLayer` interface. The selection store and its tools are exposed through `context.selectionStore` and the shared model-visible tools below — no app reaches for `SearchService` or any other adapter directly. See [The Projection-Layer Rule](./data-layer-guide.md#the-projection-layer-rule).
+
+MCP Apps that display record lists (`find_model_app`, `pick_model_app`, `multi_pick_model_app`) support **server-side selection** — users check records in the UI, the selection is stored on the MCP server, and the LLM can retrieve and manage it for follow-up operations. `view_selection_app` is the dedicated visual surface for inspecting, pruning, and clearing the store.
 
 ### Architecture
 
@@ -942,10 +944,11 @@ MCP Apps that display record lists (search view, autocomplete picker, multi-pick
 │                                                         │
 │  User checks rows → [✓] Activity 1  [✓] Activity 3    │
 │                                                         │
-│  Click "Confirm" →                                      │
-│    callServerTool('select_search_records', {            │
+│  Click "Send (Replace)" or "Send (Add)" →               │
+│    callServerTool('select_find_records', {              │
 │      model: 'activity', mode: 'ids',                   │
-│      ids: ['1', '3'], total: 2                         │
+│      ids: ['1', '3'], total: 2,                        │
+│      strategy: 'replace' // or 'add'                    │
 │    })                                                   │
 │                                                         │
 └─────────────────────────────────────────────────────────┘
@@ -956,10 +959,16 @@ MCP Apps that display record lists (search view, autocomplete picker, multi-pick
 │    activity → { mode: 'ids', ids: ['1','3'], total: 2 }│
 │    contact  → { mode: 'filter', filters: {city:'NY'} } │
 │                                                         │
-│  Tools:                                                 │
-│    select_search_records  (visibility: ['app'])         │
-│    select_autocomplete_records (visibility: ['app'])    │
-│    get_selection          (visibility: ['model','app']) │
+│  Per-app tools (visibility: ['app']):                   │
+│    select_find_records, select_view_records,            │
+│    select_autocomplete_records, select_multi_records    │
+│                                                         │
+│  Shared tools (visibility: ['model']):                  │
+│    get_selection           — read                       │
+│    add_to_selection        — union IDs                  │
+│    remove_from_selection   — drop IDs                   │
+│    clear_selection         — empty one or all           │
+│    materialize_selection   — filter-mode → ids-mode     │
 │                                                         │
 └─────────────────────────────────────────────────────────┘
           ↕
@@ -967,7 +976,7 @@ MCP Apps that display record lists (search view, autocomplete picker, multi-pick
 │                                                         │
 │  Calls get_selection({ model: 'activity' })            │
 │  → { ids: ['1','3'], total: 2 }                        │
-│  → Uses IDs for bulk_create, update, export, etc.      │
+│  → Uses IDs for bulk_action_models, update, export, …  │
 │                                                         │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -981,14 +990,15 @@ User selects records in UI
 App calls select_*_records tool ──── visibility: ['app'] only
         │                            (LLM cannot call this)
         ▼
-SelectionStore.set({ model, mode, ids, filters, total })
+SelectionStore.set({ model, mode, ids, filters, total, strategy })
         │
         ▼
-App sends message to conversation: "Selection saved: 2 Activities"
+App sends status message: "Selection saved: 2 Activities" (replace)
+                       or "Added 2 — total is now 5"      (add)
         │
         ▼
-LLM calls get_selection tool ─────── visibility: ['model','app']
-        │                            (both LLM and apps can call)
+LLM calls get_selection / add_to_selection / remove_from_selection
+        / clear_selection / materialize_selection
         ▼
 Returns stored selection → LLM uses for follow-up operations
 ```
@@ -998,28 +1008,57 @@ Returns stored selection → LLM uses for follow-up operations
 | Mode     | When                               | Data                          |
 | -------- | ---------------------------------- | ----------------------------- |
 | `ids`    | User checks specific rows          | `ids: ['1', '3', '7']`        |
-| `filter` | User selects "all matching filter" | `filters: { status: 'open' }` |
+| `filter` | User clicks "Select all N results" | `filters: { status: 'open' }` |
+
+### Selection strategy: replace vs add
+
+The `select_*_records` schema includes an optional `strategy: 'replace' | 'add'` field that controls how a submission combines with any existing selection for the same model:
+
+- `strategy: 'replace'` (default) — overwrite the model's prior selection. Matches the find-model-app "Send (Replace)" button.
+- `strategy: 'add'` — union the submitted IDs with the existing ids-mode selection. Rejected (with `SelectionMergeError`) when either side is filter-mode, because a predicate plus an explicit ID list can't be merged losslessly. Matches the find-model-app "Send (Add)" button.
+
+The find-model-app UI hides the "Send (Add)" button when the selection escalates to filter-mode (via "Select all N results"), so the LLM never has to reason about an impossible merge.
+
+### Managing selections from the model side
+
+Four model-visible tools let the LLM read and edit the selection store directly. Each is shared across every app (registered once via `createSharedSelectionTools()` and deduplicated by `AppRegistry`).
+
+| Tool                    | Schema                     | Behavior                                                                                                                |
+| ----------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `get_selection`         | `{ model? }`               | Reads the stored selection for one model, or every model when `model` is omitted.                                       |
+| `add_to_selection`      | `{ model, ids: string[] }` | Unions IDs with the existing ids-mode selection. Errors when either side is filter-mode.                                |
+| `remove_from_selection` | `{ model, ids: string[] }` | Drops IDs from the ids-mode selection. No-op for filter-mode. Removing every remaining ID clears the entry.             |
+| `clear_selection`       | `{ model? }`               | Clears one model when `model` is supplied, every model when omitted.                                                    |
+| `materialize_selection` | `{ model }`                | For a filter-mode entry, calls `dataLayer.searchNormalized` with the stored filters and rewrites the entry as ids-mode. |
+
+`materialize_selection` is the bridge between the two modes — once filter-mode is materialized, individual rows can be pruned with `remove_from_selection`. The implementation lives in `selection-tools.ts` and consumes only `dataLayer` and `selectionStore` from context; it never imports `SearchService`.
 
 ### Key Files
 
-| File                                        | Purpose                                                                          |
-| ------------------------------------------- | -------------------------------------------------------------------------------- |
-| `src/mcp/apps/lib/selection-store.ts`       | `SelectionStore` class — session-scoped Map                                      |
-| `src/mcp/apps/lib/selection-tools.ts`       | `createSelectionTools()` factory — creates per-app select + shared get_selection |
-| `src/engineer/apps/search-model-app.js`     | Uses `createSelectionTools()` for search view                                    |
-| `src/engineer/apps/pick-model-app.js`       | Uses `createSelectionTools()` for autocomplete                                   |
-| `src/engineer/apps/multi-pick-model-app.js` | Uses `createSelectionTools()` for multi-pick-model-app                           |
+| File                                         | Purpose                                                                           |
+| -------------------------------------------- | --------------------------------------------------------------------------------- |
+| `src/mcp/apps/lib/selection-store.ts`        | `SelectionStore` class — session-scoped Map with `set({ strategy })`, `removeIds` |
+| `src/mcp/apps/lib/selection-tools.ts`        | `createSelectionTools()` + `createSharedSelectionTools()` factories               |
+| `src/mcp/apps/find-model-app/index.ts`       | Calls `createSelectionTools('select_find_records', …)`                            |
+| `src/mcp/apps/view-selection-app/index.ts`   | Calls `createSelectionTools('select_view_records', …)` + reads selection store    |
+| `src/mcp/apps/pick-model-app/index.ts`       | Calls `createSelectionTools('select_autocomplete_records', …)`                    |
+| `src/mcp/apps/multi-pick-model-app/index.ts` | Calls `createSelectionTools('select_multi_records', …)`                           |
 
 ### Tool Visibility
 
-Each app gets its **own** `select_*_records` tool bound to its `resourceUri`, because the ext-apps host enforces that app-initiated tool calls can only target tools registered with the same `resourceUri`. The `get_selection` tool is shared (deduplicated by `AppRegistry`).
+Each app gets its **own** `select_*_records` tool bound to its `resourceUri`, because the ext-apps host enforces that app-initiated tool calls can only target tools registered with the same `resourceUri`. The five model-visible tools are shared (deduplicated by `AppRegistry`).
 
-| Tool                          | Visibility         | Who calls it                |
-| ----------------------------- | ------------------ | --------------------------- |
-| `select_search_records`       | `['app']`          | Search view UI only         |
-| `select_autocomplete_records` | `['app']`          | Autocomplete picker UI only |
-| `select_multiselect_records`  | `['app']`          | Multi-select UI only        |
-| `get_selection`               | `['model', 'app']` | LLM or any app              |
+| Tool                          | Visibility  | Who calls it                   |
+| ----------------------------- | ----------- | ------------------------------ |
+| `select_find_records`         | `['app']`   | `find_model_app` UI only       |
+| `select_view_records`         | `['app']`   | `view_selection_app` UI only   |
+| `select_autocomplete_records` | `['app']`   | `pick_model_app` UI only       |
+| `select_multi_records`        | `['app']`   | `multi_pick_model_app` UI only |
+| `get_selection`               | `['model']` | LLM                            |
+| `add_to_selection`            | `['model']` | LLM                            |
+| `remove_from_selection`       | `['model']` | LLM                            |
+| `clear_selection`             | `['model']` | LLM                            |
+| `materialize_selection`       | `['model']` | LLM                            |
 
 ## Design Decisions
 

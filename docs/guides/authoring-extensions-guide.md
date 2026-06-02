@@ -40,6 +40,19 @@ BaseModel.extensions['xxx']     ← read by piece 3, written via piece 2
 
 The pattern is symmetric and intentional: pieces 1–3 are pure types/functions (callable from anywhere); piece 4 is a construction helper; piece 5 is what you register on `ToolRegistry`.
 
+## When to extend `DataLayer` vs compose privately
+
+> **Projection-layer rule.** Apps, tools, prompts, and domain workflows consume only the `DataLayer` interface — never `SearchService`, `ApiClient`, or `ModelService` directly. See [The Projection-Layer Rule](./data-layer-guide.md#the-projection-layer-rule).
+
+If your extension's capability is something the projection layer should consume — something an app or tool would want to call — extend `DataLayer` with a method and ship a decorator adapter that implements it. The `search` ApiExtension is the worked example: it added `searchNormalized`, `lookupNormalized`, and `groupSearchNormalized` to the interface, then shipped `SearchEnabledDataLayer` to implement them. Apps and tools now call `dataLayer.searchNormalized(...)` and never see `SearchService`.
+
+If your capability is service-internal — transport helpers, request shaping, response normalization that other code uses through your own service — compose `ApiClient` privately inside your extension's service and don't surface a method on `DataLayer`. The `custom-actions` extension is this shape: it adds a `ModelService` mixin (`action()`) callable from tools that already hold a `ModelService` instance, but the contract is "tools call `this.modelService.action(...)`," not "tools reach for a generic `DataLayer` method."
+
+Rule of thumb:
+
+- **Extend `DataLayer`** when projection-layer callers (multiple apps, multiple tools, deployers) would all benefit from the same method shape. Add the method to the interface, give base adapters a sensible default (delegate or throw), ship a decorator with the real implementation, and document the wiring pattern (`withSearchEnabledDataLayer`-style factory).
+- **Compose privately** when the capability is single-consumer or transport-level. Don't grow the interface for one caller; let that caller import your service directly. Note: this still respects the projection-layer rule — the caller is your own extension code, not an app/tool/prompt elsewhere in the framework.
+
 ## Step-by-step: build a `bulk-actions` extension
 
 We'll build an extension that adds a `bulk_update_records` MCP tool — taking an array of record IDs and an attributes patch, dispatching a single PATCH to a `bulk-update` collection endpoint. The same pattern scales to any non-CRUD capability.

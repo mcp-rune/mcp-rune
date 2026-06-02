@@ -142,4 +142,98 @@ describe('SelectionStore', () => {
       expect(store.get('deal').total).toBe(3)
     })
   })
+
+  describe("set({ strategy: 'add' })", () => {
+    it('unions IDs with existing ids-mode selection', () => {
+      store.set({ model: 'activity', mode: 'ids', ids: ['1', '2'], total: 2 })
+      const merged = store.set({
+        model: 'activity',
+        mode: 'ids',
+        ids: ['3', '4'],
+        strategy: 'add'
+      })
+      expect(merged.ids.sort()).toEqual(['1', '2', '3', '4'])
+      expect(merged.total).toBe(4)
+      expect(merged.mode).toBe('ids')
+    })
+
+    it('is idempotent: re-adding the same IDs produces the same set', () => {
+      store.set({ model: 'activity', mode: 'ids', ids: ['1', '2'], total: 2 })
+      store.set({ model: 'activity', mode: 'ids', ids: ['1', '2', '3'], strategy: 'add' })
+      const final = store.set({
+        model: 'activity',
+        mode: 'ids',
+        ids: ['2', '3'],
+        strategy: 'add'
+      })
+      expect(final.ids.sort()).toEqual(['1', '2', '3'])
+      expect(final.total).toBe(3)
+    })
+
+    it("seeds an empty model with strategy='add'", () => {
+      const seeded = store.set({
+        model: 'activity',
+        mode: 'ids',
+        ids: ['1', '2'],
+        strategy: 'add'
+      })
+      expect(seeded.ids.sort()).toEqual(['1', '2'])
+      expect(seeded.total).toBe(2)
+    })
+
+    it('rejects when the submission itself is filter-mode', () => {
+      expect(() =>
+        store.set({
+          model: 'activity',
+          mode: 'filter',
+          filters: { status: 'open' },
+          strategy: 'add'
+        })
+      ).toThrow(/filter-mode/i)
+    })
+
+    it('rejects when the existing selection is filter-mode', () => {
+      store.set({
+        model: 'activity',
+        mode: 'filter',
+        filters: { status: 'open' },
+        total: 5
+      })
+      expect(() =>
+        store.set({ model: 'activity', mode: 'ids', ids: ['1'], strategy: 'add' })
+      ).toThrow(/filter-mode/i)
+    })
+  })
+
+  describe('removeIds()', () => {
+    it('drops the given IDs from an ids-mode selection', () => {
+      store.set({ model: 'activity', mode: 'ids', ids: ['1', '2', '3'], total: 3 })
+      const next = store.removeIds('activity', ['2'])
+      expect(next.ids).toEqual(['1', '3'])
+      expect(next.total).toBe(2)
+    })
+
+    it('returns null and clears the entry when every ID is removed', () => {
+      store.set({ model: 'activity', mode: 'ids', ids: ['1'], total: 1 })
+      const result = store.removeIds('activity', ['1'])
+      expect(result).toBeNull()
+      expect(store.get('activity')).toBeUndefined()
+    })
+
+    it('returns null for unknown model', () => {
+      expect(store.removeIds('unknown', ['1'])).toBeNull()
+    })
+
+    it('is a no-op for filter-mode selections', () => {
+      store.set({
+        model: 'activity',
+        mode: 'filter',
+        filters: { status: 'open' },
+        total: 5
+      })
+      const result = store.removeIds('activity', ['1'])
+      expect(result.mode).toBe('filter')
+      expect(result.filters).toEqual({ status: 'open' })
+    })
+  })
 })

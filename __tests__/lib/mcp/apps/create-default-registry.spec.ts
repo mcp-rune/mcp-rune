@@ -59,8 +59,8 @@ class FakeModel {
     rating: { type: 'integer' }
   }
   static defaultColumns: string[] | undefined = undefined
-  // The search-model-app / pick-model-app / multi-pick-model-app factories filter
-  // by the model's `extensions.search` config (see api-extensions/search
+  // The pick-model-app / multi-pick-model-app factories filter by the
+  // model's `extensions.search` config (see api-extensions/search
   // capabilities), so declare both `query` and `lookup` to keep every app
   // eligible.
   static extensions = {
@@ -91,20 +91,22 @@ describe('createDefaultAppRegistry', () => {
     })
 
     const names = registry.getToolNames()
-    // All seven framework app tools register…
+    // Every framework app tool registers…
     for (const expected of [
       'pick_model_app',
       'new_model_app',
       'show_model_app',
-      'list_model_app',
+      'find_model_app',
       'multi_pick_model_app',
-      'search_model_app',
+      'view_selection_app',
       'edit_model_app'
     ]) {
       expect(names).toContain(expected)
     }
-    // …and `createListModelApp` also threads its selection tools through.
+    // …and the selection tools thread through whichever factory registers them.
     expect(names).toContain('get_selection')
+    expect(names).toContain('add_to_selection')
+    expect(names).toContain('clear_selection')
   })
 
   it('omits apps listed in `exclude` without affecting the others', () => {
@@ -117,7 +119,7 @@ describe('createDefaultAppRegistry', () => {
     const names = registry.getToolNames()
     expect(names).not.toContain('multi_pick_model_app')
     expect(names).not.toContain('new_model_app')
-    expect(names).toContain('list_model_app')
+    expect(names).toContain('find_model_app')
     expect(names).toContain('edit_model_app')
   })
 

@@ -26,7 +26,7 @@ Rails API
   ↓
 { records: [...], pagination: { page, per_page, total } }
   ↓
-search_model_app (MCP App) — OR — analysis memory (map-reduce)
+find_model_app (MCP App) — OR — analysis memory (map-reduce)
 ```
 
 The model's `extensions['search']` slice is the shared contract. The MCP framework derives the `filters` map into a prompt (via `get_filters_guide`), and the Rails API implements the same filter keys.
@@ -341,7 +341,7 @@ User: "Show me activities from last week about React"
   ↓
 LLM: get_filters_guide("activity")  → learns filter spec
 LLM: search_records({ model: "activity", filters: { started_at: { from: "2024-03-05" } } })
-LLM: search_model_app(same args)  → renders paginated table in MCP App
+LLM: find_model_app(same args)  → renders paginated table in MCP App
 ```
 
 ### Analysis (Multi-Page Map-Reduce)
@@ -369,4 +369,4 @@ LLM: clear_analysis_memories({ analysis_id: "q1-review" })
 - [ ] Rails view: Add `search.json.jbuilder` with `{ records, pagination }` shape
 - [ ] Rails tests: Integration tests for search endpoint
 - [ ] MCP tests: Verify filters definition and framework activation
-- [ ] E2E: Call `get_filters_guide` → `search_records` → `search_model_app`
+- [ ] E2E: Call `get_filters_guide` → `search_records` → `find_model_app`

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
-    <title>Records</title>
+    <title>Find Records</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -27,13 +27,28 @@
         </span>
       </span>
       <span style="flex: 1"></span>
-      <button type="button" class="mr-btn acc" id="btn-send-selection" style="visibility: hidden">
-        Send selection <span class="arr">→</span>
+      <button type="button" class="mr-btn" id="btn-filters">
+        Filters <span id="filter-count-badge" class="mr-badge neutral" style="display: none">0</span>
       </button>
+      <span id="send-selection-group" style="visibility: hidden; display: inline-flex; gap: 4px">
+        <button type="button" class="mr-btn" id="btn-send-add">Add</button>
+        <button type="button" class="mr-btn acc" id="btn-send-replace">
+          Replace <span class="arr">→</span>
+        </button>
+      </span>
     </div>
 
     <div class="mr-badge-row" id="filter-chips" style="display: none"></div>
-    <p class="mr-subtitle" id="available-filters" style="display: none"></p>
+
+    <div id="filter-popover" class="mr-popover" style="display: none">
+      <div class="mr-popover-rows" id="filter-rows"></div>
+      <div class="mr-popover-actions">
+        <button type="button" class="mr-btn ghost" id="btn-add-filter">+ Add filter</button>
+        <span style="flex: 1"></span>
+        <button type="button" class="mr-btn ghost" id="btn-clear-filters">Clear all</button>
+        <button type="button" class="mr-btn acc" id="btn-apply-filters">Apply</button>
+      </div>
+    </div>
 
     <div id="table-container">
       <div class="mr-empty" id="empty-state">Loading…</div>

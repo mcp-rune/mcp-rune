@@ -63,4 +63,48 @@ describe('lib/core/data-layer-stub', () => {
       expect(result.records.map((r) => r.id)).toEqual(['1', '3'])
     })
   })
+
+  describe('searchNormalized', () => {
+    it('delegates to listNormalized (ignores query, has no search backend)', async () => {
+      const layer = new InMemoryDataLayer({
+        models: makeModels(),
+        fixtures: {
+          book: { '1': { id: '1', title: 'A' }, '2': { id: '2', title: 'B' } }
+        }
+      })
+      const result = await layer.searchNormalized('book', 'whatever')
+      expect(result.records).toHaveLength(2)
+    })
+  })
+
+  describe('lookupNormalized', () => {
+    it('returns a small page from the model bucket regardless of query', async () => {
+      const layer = new InMemoryDataLayer({
+        models: makeModels(),
+        fixtures: {
+          book: {
+            '1': { id: '1', title: 'Alpha' },
+            '2': { id: '2', title: 'Beta' },
+            '3': { id: '3', title: 'Gamma' }
+          }
+        }
+      })
+      const result = await layer.lookupNormalized('book', 'beta', { perPage: 5 })
+      expect(result.records).toHaveLength(3)
+      expect(result.pagination.per_page).toBe(5)
+    })
+
+    it('defaults perPage to 10', async () => {
+      const layer = new InMemoryDataLayer({ models: makeModels() })
+      const result = await layer.lookupNormalized('book', 'x')
+      expect(result.pagination.per_page).toBe(10)
+    })
+  })
+
+  describe('groupSearchNormalized', () => {
+    it('throws a clear error pointing at the search extension', async () => {
+      const layer = new InMemoryDataLayer({ models: makeModels() })
+      await expect(layer.groupSearchNormalized('any', 'x')).rejects.toThrow(/search ApiExtension/)
+    })
+  })
 })

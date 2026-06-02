@@ -4,9 +4,9 @@
  * Kind taxonomy + parse/serialize/toInput/fromInput/describe/validate live in
  * `src/core/kind-metadata.ts` (server- and browser-importable). This module
  * adds the only piece that requires the DOM: `format(value, opts) -> Node`,
- * consumed by list-model-app, show-model-app, and search-model-app through
- * `renderCellValue`, and by the form apps' iframes (new-model-app /
- * edit-model-app, via `shared/model-form/main.js`) through `getFormatter`.
+ * consumed by find-model-app and show-model-app through `renderCellValue`,
+ * and by the form apps' iframes (new-model-app / edit-model-app, via
+ * `shared/model-form/main.js`) through `getFormatter`.
  *
  * Deployers extend display rendering through the declarative
  * `FormatterDescriptor` channel on `AppRegistry`, which both server and iframe

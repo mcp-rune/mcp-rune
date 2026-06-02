@@ -10,8 +10,7 @@ describe('FindRecordsTool', () => {
 
   it('should not cross-reference view tools in description', () => {
     const tool = new FindRecordsTool({ models: {}, serverContext: { appsEnabled: true } })
-    expect(tool.baseDescription).not.toContain('list_model_app')
-    expect(tool.baseDescription).not.toContain('search_model_app')
+    expect(tool.baseDescription).not.toContain('find_model_app')
   })
 
   // ============================================================================

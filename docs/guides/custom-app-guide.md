@@ -6,7 +6,9 @@ extension:
 
 # Writing a Custom MCP App
 
-mcp-rune ships seven **MCP App tools** — interactive iframe widgets the LLM can summon: `new_model_app`, `edit_model_app`, `show_model_app`, `list_model_app`, `search_model_app`, `multi_pick_model_app`, `pick_model_app`. They share infrastructure: the kind taxonomy from [`kind-metadata`](./attribute-kinds-guide.md), the formatter registry from `apps/shared/formatters.ts`, the form-schema generator, the selection store, theming.
+mcp-rune ships seven **MCP App tools** — interactive iframe widgets the LLM can summon: `new_model_app`, `edit_model_app`, `find_model_app`, `show_model_app`, `pick_model_app`, `multi_pick_model_app`, `view_selection_app`. They share infrastructure: the kind taxonomy from [`kind-metadata`](./attribute-kinds-guide.md), the formatter registry from `apps/shared/formatters.ts`, the form-schema generator, the selection store, theming.
+
+> **Projection-layer rule.** App handlers consume only the `DataLayer` interface — `context.dataLayer` is the single data-access seam. Handlers never receive `searchClient`, `apiClient`, or any concrete adapter. See [The Projection-Layer Rule](./data-layer-guide.md#the-projection-layer-rule).
 
 You write a **custom app** when the seven don't fit. Examples:
 

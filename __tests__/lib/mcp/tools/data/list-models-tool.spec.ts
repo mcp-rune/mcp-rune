@@ -20,7 +20,7 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
     it('should have correct base description', () => {
       const tool = new ListModelsTool({})
       expect(tool.baseDescription).toContain('discover the model schemas')
-      expect(tool.baseDescription).toContain('list_model_app')
+      expect(tool.baseDescription).toContain('find_model_app')
     })
 
     it('should have empty inputSchema', () => {
@@ -128,7 +128,7 @@ describe('lib/mcp/tools/data/list-models-tool', () => {
       expect(content[0].filterable_search).toEqual({
         available: true,
         filter_count: 2,
-        hint: 'Call get_filters_guide for filter docs, then use search_records (raw JSON) or search_model_app (interactive)'
+        hint: 'Call get_filters_guide for filter docs, then use search_records (raw JSON) or find_model_app (interactive)'
       })
     })
 

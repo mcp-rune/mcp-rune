@@ -21,7 +21,7 @@ npx @modelcontextprotocol/inspector -- npx tsx server.ts
 
 The Inspector opens in your browser. You're now connected to a working MCP
 server with one model (`Book`), a hybrid prompt strategy, all polymorphic
-data tools, and six interactive apps — backed by an in-memory store
+data tools, and seven interactive apps — backed by an in-memory store
 pre-seeded with three books.
 
 ## Try a tool
@@ -74,10 +74,10 @@ registered nine tools — all working immediately, no backend needed:
 - **CRUD** — `find_records`, `create_model`, `update_model`, `delete_model`,
   `bulk_action_models`
 
-Plus six interactive MCP apps (list view, record detail, create/update
-forms, multi-pick-model-app picker, search view, autocomplete picker) wired via
-`createDefaultAppRegistry`. The bookshelf example's full source is ~150
-lines total. See
+Plus seven interactive MCP apps (`find_model_app`, `show_model_app`,
+`new_model_app`, `edit_model_app`, `pick_model_app`, `multi_pick_model_app`,
+`view_selection_app`) wired via `createDefaultAppRegistry`. The bookshelf
+example's full source is ~150 lines total. See
 [`examples/bookshelf/`](https://github.com/mcp-rune/mcp-rune/tree/main/examples/bookshelf)
 for the model, prompt, and server wiring.
 

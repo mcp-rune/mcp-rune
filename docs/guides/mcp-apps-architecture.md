@@ -45,7 +45,7 @@ The tool declares its UI resource via `_meta.ui.resourceUri`. When the LLM calls
 │  │  Outbound tool calls:                          │   │
 │  │    → callServerTool('validate_form', {...})    │   │
 │  │    → callServerTool('create_model', {...})     │   │
-│  │    → callServerTool('list_model_app', {...})   │   │
+│  │    → callServerTool('find_model_app', {...})   │   │
 │  └────────────────────────────────────────────────┘   │
 │                                                       │
 └───────────────────────────────────────────────────────┘
@@ -57,11 +57,13 @@ The tool declares its UI resource via `_meta.ui.resourceUri`. When the LLM calls
 │    └── registerResources(mcpServer)                   │
 │                                                       │
 │  App Definitions (tool + resource pairs):             │
-│    ├── new_model_app    → ui://engineer/new-model-app  │
-│    ├── edit_model_app   → ui://engineer/edit-model-app │
-│    ├── list_model_app   → ui://engineer/list-model-app │
-│    ├── show_model_app   → ui://engineer/show-model-app │
-│    └── search_model_app → ui://engineer/search-model-app│
+│    ├── new_model_app       → ui://…/new-model-app      │
+│    ├── edit_model_app      → ui://…/edit-model-app     │
+│    ├── find_model_app      → ui://…/find-model-app     │
+│    ├── show_model_app      → ui://…/show-model-app     │
+│    ├── pick_model_app      → ui://…/pick-model-app     │
+│    ├── multi_pick_model_app→ ui://…/multi-pick-model-app│
+│    └── view_selection_app  → ui://…/view-selection-app │
 │                                                       │
 │  Schema Generators (pure functions, no API calls):    │
 │    ├── generateFormSchema(Model, Prompt)              │
@@ -96,19 +98,23 @@ The `App` class from `@modelcontextprotocol/ext-apps` provides the communication
 
 ---
 
-## 3. The Five Apps
+## 3. Default Apps
 
 ### App Catalog
 
-| App              | Tool Name          | Resource URI                     | Auth | Purpose                                  |
-| ---------------- | ------------------ | -------------------------------- | ---- | ---------------------------------------- |
-| New Model App    | `new_model_app`    | `ui://engineer/new-model-app`    | Yes  | Interactive form to create records       |
-| Edit Model App   | `edit_model_app`   | `ui://engineer/edit-model-app`   | Yes  | Interactive form to edit records         |
-| List Model App   | `list_model_app`   | `ui://engineer/list-model-app`   | Yes  | Paginated table with text search         |
-| Show Model App   | `show_model_app`   | `ui://engineer/show-model-app`   | Yes  | Read-only detail cards                   |
-| Search Model App | `search_model_app` | `ui://engineer/search-model-app` | Yes  | Filtered search with active filter chips |
+| App                | Tool Name              | Resource URI                         | Auth | Purpose                                                    |
+| ------------------ | ---------------------- | ------------------------------------ | ---- | ---------------------------------------------------------- |
+| New Model App      | `new_model_app`        | `ui://engineer/new-model-app`        | Yes  | Interactive form to create records                         |
+| Edit Model App     | `edit_model_app`       | `ui://engineer/edit-model-app`       | Yes  | Interactive form to edit records                           |
+| Find Model App     | `find_model_app`       | `ui://engineer/find-model-app`       | Yes  | Browseable table with optional text query + filter popover |
+| Show Model App     | `show_model_app`       | `ui://engineer/show-model-app`       | Yes  | Read-only detail cards                                     |
+| Pick Model App     | `pick_model_app`       | `ui://engineer/pick-model-app`       | Yes  | Type-ahead picker (single-model or cross-model group)      |
+| Multi-Pick App     | `multi_pick_model_app` | `ui://engineer/multi-pick-model-app` | Yes  | Browse-and-select picker for small/medium model sets       |
+| View Selection App | `view_selection_app`   | `ui://engineer/view-selection-app`   | Yes  | Inspect and manage the in-session selection store          |
 
 Note: `new_model_app` and `edit_model_app` each build their own bundle, but both wrap the same shared client module at `src/mcp/apps/shared/model-form/main.js` — the rendered DOM is identical, and the mode (`'create'` vs `'update'`) is set from the server's tool result.
+
+> **Projection-layer rule.** App handlers consume only the `DataLayer` interface — `context.dataLayer` is the only data-access seam exposed. The handler signature never receives `searchClient`, `apiClient`, or any concrete adapter. See [The Projection-Layer Rule](./data-layer-guide.md#the-projection-layer-rule) for the full contract.
 
 ### App Data Flows
 
@@ -146,22 +152,28 @@ Returns: { schema, defaults, mode: 'update', recordId: 'abc-123' }
 App renders pre-filled form → User edits → callServerTool('update_model')
 ```
 
-#### Browse Records
+#### Find Records
 
 ```
-User: "Show me all books"
+User: "Show me all unread books with rating ≥ 4"
   ↓
-LLM calls list_model_app({ model: 'book' })
+LLM calls find_model_app({ model: 'book', filters: { status: 'unread', rating: { from: 4 } } })
   ↓
-Server:
+Server (handler):
   1. generateListSchema(Book) → { columns, searchFields }
-  2. apiClient.get('books', { page: 1 }) → records
+  2. dataLayer.searchNormalized('book', undefined, filters, { page: 1, perPage: 20 })
+     ← single call; the SearchEnabledDataLayer wrapper routes to a search
+       endpoint, a list endpoint, or a nested-resource path based on the
+       model's `extensions.search` config — the handler doesn't care
+  3. getSearchConfig(Book)?.filters → filterDefinitions (drives the popover)
   ↓
-Returns: { schema, records, pagination }
+Returns: { schema, records, pagination, activeFilters, filterDefinitions }
   ↓
-App renders table → Row click → callServerTool('edit_model_app')
-                  → Search → callServerTool('list_model_app', { search })
-                  → Paginate → callServerTool('list_model_app', { page })
+App renders table + Filters button → User edits filters in popover →
+   callServerTool('find_model_app', { filters: <new> })
+                                  → Paginate → callServerTool('find_model_app', { page })
+                                  → Row click → callServerTool('edit_model_app')
+                                  → Send (Replace|Add) → callServerTool('select_find_records')
 ```
 
 #### Show Model App
@@ -180,28 +192,25 @@ Returns: { schema, records }
 App renders read-only detail card with sections, badges, stars
 ```
 
-#### Search Model App
+#### Inspect Selection
 
 ```
-User: "Find active titles by licensor X"
+User: "What do I have selected for titles?"
   ↓
-LLM calls get_filters_guide({ model: 'title' }) → learns filters
-LLM calls search_records({ model: 'title', filters: { status: 'active', licensor_id: 'X' } })
-LLM calls search_model_app({ model: 'title', filters: { status: 'active', licensor_id: 'X' } })
+LLM calls view_selection_app({ model: 'title' })
   ↓
-Server:
-  1. generateListSchema(Title) → { columns }
-  2. apiClient.post('titles/search', { filters, page }) → records
-  3. Title.filters → filterDefinitions
+Server (handler):
+  1. selectionStore.get('title') → { mode: 'ids', ids: [...], total: N }
+  2. dataLayer.searchNormalized('title', undefined, { id: ids }, …) → records
   ↓
-Returns: { schema, records, pagination, activeFilters, filterDefinitions }
+Returns: { view: 'ids', schema, records, ids, total }
   ↓
-App renders:
-  - Filter chips (removable tags: "Status: Active", "Licensor: X")
-  - Results table
-  - Pagination (preserves filters across pages)
-  - Remove chip → re-search without that filter
+App renders table with per-row × → User clicks ×:
+  → callServerTool('remove_from_selection', { model: 'title', ids: [<id>] })
+  → callServerTool('view_selection_app', { model: 'title' })   // refresh
 ```
+
+For filter-mode selections (built via the "Select all N results" escalation in `find_model_app`), the app renders the filter chips + a "Materialize as IDs" button that calls `materialize_selection`.
 
 ---
 
@@ -211,11 +220,11 @@ Schema generators are **pure functions** — no API calls, no side effects. They
 
 ### Schema Generators
 
-| Generator                | Input                     | Output                                    | Used By                          |
-| ------------------------ | ------------------------- | ----------------------------------------- | -------------------------------- |
-| `generateFormSchema()`   | ModelClass + PromptClass  | `{ model, title, fieldsets, fields }`     | New/Edit Model App               |
-| `generateListSchema()`   | ModelClass                | `{ model, title, columns, searchFields }` | List Model App, Search Model App |
-| `generateDetailSchema()` | ModelClass + PromptClass? | `{ model, title, fields, fieldsets? }`    | Show Model App                   |
+| Generator                | Input                     | Output                                    | Used By                            |
+| ------------------------ | ------------------------- | ----------------------------------------- | ---------------------------------- |
+| `generateFormSchema()`   | ModelClass + PromptClass  | `{ model, title, fieldsets, fields }`     | New/Edit Model App                 |
+| `generateListSchema()`   | ModelClass                | `{ model, title, columns, searchFields }` | Find Model App, View Selection App |
+| `generateDetailSchema()` | ModelClass + PromptClass? | `{ model, title, fields, fieldsets? }`    | Show Model App                     |
 
 ### Single Source of Truth
 
@@ -525,12 +534,12 @@ Fields are grouped into `<fieldset>` elements based on `field.group` matching `s
 
 ### Pagination Pattern
 
-Table-based apps (list_model_app, search_model_app) paginate by calling their own tool:
+Table-based apps (`find_model_app`, `view_selection_app`) paginate by calling their own tool:
 
 ```js file=src/fetch-page.js
 async function fetchPage(page) {
   await app.callServerTool({
-    name: 'list_model_app', // or 'search_model_app'
+    name: 'find_model_app',
     arguments: { model: modelName, page, ...extraArgs }
   })
   // ontoolresult fires → re-renders table
@@ -540,14 +549,14 @@ async function fetchPage(page) {
 ```ts file=src/fetch-page.ts
 async function fetchPage(page) {
   await app.callServerTool({
-    name: 'list_model_app', // or 'search_model_app'
+    name: 'find_model_app',
     arguments: { model: modelName, page, ...extraArgs }
   })
   // ontoolresult fires → re-renders table
 }
 ```
 
-The search view preserves `activeFilters` across pagination calls.
+`find_model_app` preserves both `activeFilters` and the optional `query` across pagination calls.
 
 ### Theming
 
@@ -580,9 +589,9 @@ Apps are built with Vite and `vite-plugin-singlefile`, which inlines all CSS and
 const configs = {
   'new-model-app': { root: 'new-model-app/ui', outFile: 'new-model-app.html' },
   'edit-model-app': { root: 'edit-model-app/ui', outFile: 'edit-model-app.html' },
-  'list-model-app': { root: 'list-model-app/ui', outFile: 'list-model-app.html' },
+  'find-model-app': { root: 'find-model-app/ui', outFile: 'find-model-app.html' },
   'show-model-app': { root: 'show-model-app/ui', outFile: 'show-model-app.html' },
-  'search-model-app': { root: 'search-model-app/ui', outFile: 'search-model-app.html' },
+  'view-selection-app': { root: 'view-selection-app/ui', outFile: 'view-selection-app.html' },
   'create-book': { root: 'create-book/ui', outFile: 'create-book.html' }
 }
 ```
@@ -592,9 +601,9 @@ const configs = {
 const configs = {
   'new-model-app': { root: 'new-model-app/ui', outFile: 'new-model-app.html' },
   'edit-model-app': { root: 'edit-model-app/ui', outFile: 'edit-model-app.html' },
-  'list-model-app': { root: 'list-model-app/ui', outFile: 'list-model-app.html' },
+  'find-model-app': { root: 'find-model-app/ui', outFile: 'find-model-app.html' },
   'show-model-app': { root: 'show-model-app/ui', outFile: 'show-model-app.html' },
-  'search-model-app': { root: 'search-model-app/ui', outFile: 'search-model-app.html' },
+  'view-selection-app': { root: 'view-selection-app/ui', outFile: 'view-selection-app.html' },
   'create-book': { root: 'create-book/ui', outFile: 'create-book.html' }
 }
 ```
@@ -610,9 +619,9 @@ This runs sequentially for each target:
 ```
 BUILD_TARGET=new-model-app vite build
 BUILD_TARGET=edit-model-app vite build
-BUILD_TARGET=list-model-app vite build
+BUILD_TARGET=find-model-app vite build
 BUILD_TARGET=show-model-app vite build
-BUILD_TARGET=search-model-app vite build
+BUILD_TARGET=view-selection-app vite build
 BUILD_TARGET=create-book vite build
 ```
 
@@ -669,7 +678,7 @@ src/mcp/apps/
 │   ├── index.ts
 │   └── ui/                            # Thin shim → shared/model-form/main.js
 │
-├── list-model-app/                    # Browse records
+├── find-model-app/                    # Browseable table + query + filter popover
 │   ├── index.ts
 │   └── ui/
 │
@@ -677,7 +686,7 @@ src/mcp/apps/
 │   ├── index.ts
 │   └── ui/
 │
-├── search-model-app/                  # Search results
+├── view-selection-app/                # Inspect + manage the selection store
 │   ├── index.ts
 │   └── ui/
 │
@@ -694,9 +703,9 @@ src/mcp/apps/
 └── dist/                              # Built single-file HTML (git-tracked)
     ├── new-model-app.html
     ├── edit-model-app.html
-    ├── list-model-app.html
+    ├── find-model-app.html
     ├── show-model-app.html
-    └── search-model-app.html
+    └── view-selection-app.html
 ```
 
 ---
@@ -768,10 +777,10 @@ The search view app works alongside the search tool system:
 
 3. LLM calls search_records({ model, filters })   [crud category, auth required]
    → Returns JSON results for LLM processing
-   → Usage rule hints: "call search_model_app to display visually"
+   → Usage rule hints: "call find_model_app to display visually"
 
-4. LLM calls search_model_app({ model, filters })  [app tool, auth required]
-   → Renders visual table with filter chips in the host
+4. LLM calls find_model_app({ model, filters })  [app tool, auth required]
+   → Renders visual table with filter popover + chips in the host
 ```
 
 ### Tool Precedence
@@ -780,15 +789,27 @@ The search view app works alongside the search tool system:
 - `find_records` usage rules direct LLM to prefer `search_records` for filterable models
 - `find_records` remains the tool for ID lookups and simple text search on non-filterable models
 
-### Search View vs Browse Records
+### How `find_model_app` routes searches
 
-| Aspect        | `list_model_app`                                | `search_model_app`                                                                  |
-| ------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Data source   | GET `{endpoint}`                                | POST `{endpoint}/search`                                                            |
-| Input         | `model`, `search?`, `page?`                     | `model`, `filters`, `page?`                                                         |
-| Filtering     | Single text search field                        | Multi-criteria ES filters                                                           |
-| UI            | Search input + table                            | Filter chips + table                                                                |
-| Available for | Only models **without** declared search filters | Only models **with** declared search filters (via `searchConfig({ filters: ... })`) |
+`find_model_app` is the single browseable surface for every model. The handler makes one call:
+
+```ts file=src/result.ts
+const result = await dataLayer.searchNormalized(model, query, filters, { page, perPage })
+```
+
+```js file=src/result.js
+const result = await dataLayer.searchNormalized(model, query, filters, { page, perPage })
+```
+
+The `SearchEnabledDataLayer` decorator (composed automatically by `AppRegistry`) picks the right backend:
+
+| Model shape                         | Routing                                              |
+| ----------------------------------- | ---------------------------------------------------- |
+| Declares `extensions.search.query`  | POST to the model's search endpoint                  |
+| `api.standalone === false` (nested) | Routed through search to avoid a top-level list call |
+| Plain model, no query, just filters | Plain `listNormalized` — GET on the model endpoint   |
+
+The app handler never branches on model shape; the seam does it.
 
 ---
 
@@ -928,25 +949,13 @@ MCP resources must be self-contained. Vite + singlefile plugin inlines all CSS a
 
 Association options (locations, tags) are fetched when the form opens, not at schema time. This ensures options are fresh, user-scoped, and the schema generator stays pure.
 
-### Separate Search App
+### Unified Find Surface
 
-Search results use a dedicated app (`search_model_app`) rather than overloading `list_model_app`. The split is structural — models that declare filters in their `extensions['search']` slice are **only** available in `search_model_app`, models without filters are only in `list_model_app`. This eliminates routing ambiguity at the schema level.
+A single `find_model_app` handles every browseable scenario — plain list, text query, structured filter, or both — across every registered model. Routing decisions (search endpoint vs. plain list vs. nested fallback) live inside the `SearchEnabledDataLayer` decorator, not the app handler. The user always lands on the same UI with an optional `query` input and the Filters popover.
 
-### Conditional Registration
+### Separate Selection-Management Surface
 
-The search view app is only registered when models with declared search filters exist. This avoids exposing a non-functional tool:
-
-```js file=examples/mcp-apps-architecture-13.js
-if (Object.keys(SEARCH_VIEW_MODELS).length > 0) {
-  apps.push(createSearchModelApp({ modelClasses: SEARCH_VIEW_MODELS }))
-}
-```
-
-```ts file=examples/mcp-apps-architecture-13.ts
-if (Object.keys(SEARCH_VIEW_MODELS).length > 0) {
-  apps.push(createSearchModelApp({ modelClasses: SEARCH_VIEW_MODELS }))
-}
-```
+`view_selection_app` is a dedicated surface for inspecting and pruning the in-session selection store. Picker apps (`find_model_app`, `pick_model_app`, `multi_pick_model_app`) write to the store; `view_selection_app` is the read/manage view. Keeping them separate means the selection store has one canonical visualization without overloading the picker UIs.
 
 ## 15. Tool Response Pattern: UI Data vs LLM Context
 
@@ -1062,8 +1071,8 @@ app.ontoolresult = async () => {
 
 ### Apps by Strategy
 
-| Strategy      | App                | LLM Context                                 |
-| ------------- | ------------------ | ------------------------------------------- |
-| A (two-block) | `list_model_app`   | JSON + record count + selection hint        |
-| A (two-block) | `search_model_app` | JSON + record count + filter summary        |
-| B (app-fetch) | `workflow_panel`   | Summary only (N workflows, click to launch) |
+| Strategy      | App                  | LLM Context                                 |
+| ------------- | -------------------- | ------------------------------------------- |
+| A (two-block) | `find_model_app`     | JSON + record count + filter/query summary  |
+| A (two-block) | `view_selection_app` | JSON + selection state + management hint    |
+| B (app-fetch) | `workflow_panel`     | Summary only (N workflows, click to launch) |

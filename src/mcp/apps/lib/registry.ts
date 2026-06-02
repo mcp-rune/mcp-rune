@@ -20,7 +20,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { z } from 'zod'
 
 import type { SearchAdapter, SearchGroup } from '#src/api-extensions/search/index.js'
-import { createSearchService } from '#src/api-extensions/search/index.js'
+import { createSearchService, SearchEnabledDataLayer } from '#src/api-extensions/search/index.js'
 import type { DataLayer, DataLayerFactory } from '#src/core/data-layer.js'
 import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
 import { ModelService } from '#src/mcp/services/model-service.js'
@@ -298,20 +298,25 @@ export class AppRegistry {
               formSubmitMode: this._formSubmitMode
             }
 
-            // Build the authenticated DataLayer + search client for apps that need it
+            // Build the authenticated DataLayer for apps that need it. The
+            // DataLayer exposed to handlers is wrapped in SearchEnabledDataLayer
+            // so app code routes every text/filter/lookup/group operation
+            // through the `*Normalized` methods on the seam — apps never see
+            // SearchService directly. This enforces the projection-layer rule
+            // by absence: the context bag has no `searchClient` field.
             if (app.needsAuth && getAccessToken && this._apiUrl && this._createApiClient) {
               const token = await getAccessToken()
               const apiClient = this._createApiClient(token, { apiUrl: this._apiUrl })
-              const dataLayer = this._dataLayerFactory({
+              const baseDataLayer = this._dataLayerFactory({
                 apiClient,
                 models: this._models,
                 logger
               })
-              context.dataLayer = dataLayer
-              context.searchClient = createSearchService(dataLayer, {
+              const searchService = createSearchService(baseDataLayer, {
                 searchGroups: this._searchGroups,
                 defaultAdapter: this._defaultAdapter
               })
+              context.dataLayer = new SearchEnabledDataLayer(baseDataLayer, searchService)
             }
 
             if (selectionStore) {

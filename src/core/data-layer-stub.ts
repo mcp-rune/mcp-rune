@@ -163,6 +163,49 @@ export class InMemoryDataLayer implements DataLayer {
     }
   }
 
+  /**
+   * The in-memory stub has no text-search backend; `query` is ignored and
+   * the call delegates to `listNormalized`. Tests that need to exercise
+   * search-routing logic should wrap this adapter in `SearchEnabledDataLayer`.
+   */
+  async searchNormalized(
+    model: string,
+    _query?: string,
+    filters?: Record<string, unknown>,
+    pagination?: PaginationParams,
+    options?: ModelRequestOptions
+  ): Promise<NormalizedListResponse> {
+    return this.listNormalized(model, filters, pagination, options)
+  }
+
+  /**
+   * Typeahead in the stub is a plain page from the model's bucket. The
+   * `query` arg is ignored — tests should seed fixtures so the first page
+   * contains the records the picker expects to see.
+   */
+  async lookupNormalized(
+    model: string,
+    _query: string,
+    options?: { perPage?: number }
+  ): Promise<NormalizedListResponse> {
+    return this.listNormalized(model, undefined, { page: 1, perPage: options?.perPage ?? 10 })
+  }
+
+  /**
+   * Group search requires the search ApiExtension and search-group
+   * configuration. The stub has neither — throws so tests reaching for
+   * group search fail loudly rather than silently returning empty.
+   */
+  async groupSearchNormalized(
+    _group: string,
+    _query: string,
+    _options?: { perPage?: number; models?: string[] }
+  ): Promise<NormalizedListResponse> {
+    throw new Error(
+      'Group search requires the search ApiExtension and is not supported by InMemoryDataLayer.'
+    )
+  }
+
   async update(
     model: string,
     recordId: string,

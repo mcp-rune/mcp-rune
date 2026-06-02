@@ -6,7 +6,6 @@
  * layer does not know about.
  */
 
-import type { SearchService } from '#src/api-extensions/search/index.js'
 import type { DataLayer } from '#src/core/data-layer.js'
 import type { AssociationConfig, BaseConvention } from '#src/mcp/api-conventions/base-convention.js'
 
@@ -89,7 +88,6 @@ export interface ToolResult {
 /** Context passed to handleToolCall by AppRegistry */
 export interface AppToolContext {
   dataLayer?: DataLayer
-  searchClient?: SearchService
   selectionStore?: SelectionStore
   formDataStore?: FormDataStore
 }

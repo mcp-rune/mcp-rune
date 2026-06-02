@@ -1,30 +1,34 @@
 /**
- * List View MCP App — Client-side
+ * Find Model MCP App — Client-side
  *
- * Renders a browseable table of records from a schema received via the MCP Apps protocol.
- * Supports pagination, row selection with checkboxes, and clicking a row to open the edit form.
+ * Single browseable surface for "show me records of X" with optional
+ * text query, structured filters, columns, and pagination. Selection
+ * sends with explicit Replace vs Add strategy.
+ *
+ * The interactive filter editor lives in shared/filter-popover.js; this
+ * module wires it to the title-bar Filters button and re-issues the
+ * find_model_app tool call whenever filters change.
  */
 
 import { App } from '@modelcontextprotocol/ext-apps'
+import { escapeHtml } from '../../shared/helpers.js'
 import { initApp, showStatus, clearStatus } from '../../shared/app-init.js'
-import { renderFilterChips, renderAvailableFilters } from '../../shared/filter-chips.js'
+import { renderFilterChips } from '../../shared/filter-chips.js'
+import { createFilterPopover } from '../../shared/filter-popover.js'
 import { createTableSelection } from '../../shared/selection.js'
 import { renderCellValue } from '../../shared/formatters.js'
 import '../../shared/formatters.runtime.js'
-
-// ─── State ──────────────────────────────────────────────────────────────────
 
 let listSchema = null
 let currentRecords = []
 let currentPage = 1
 let modelName = null
+let currentQuery = null
 let activeFilters = {}
 let filterDefinitions = {}
 let currentPagination = null
 
-// ─── MCP App Connection ─────────────────────────────────────────────────────
-
-const app = new App({ name: 'List Records', version: '1.0.0' })
+const app = new App({ name: 'Find Records', version: '1.0.0' })
 
 app.ontoolresult = (result) => {
   try {
@@ -42,17 +46,14 @@ app.ontoolresult = (result) => {
       modelName = data.schema.model
       currentRecords = data.records || []
       currentPage = data.pagination?.page || 1
+      currentQuery = data.query || null
       activeFilters = data.activeFilters || {}
       filterDefinitions = data.filterDefinitions || {}
       currentPagination = data.pagination || null
 
       renderHeader(data.schema)
-      renderFilterChips(document.getElementById('filter-chips'), activeFilters, filterDefinitions)
-      renderAvailableFilters(
-        document.getElementById('available-filters'),
-        activeFilters,
-        filterDefinitions
-      )
+      renderChips()
+      updateFilterButton()
       renderTable(data.schema, currentRecords)
       renderPagination(data.pagination)
     }
@@ -64,10 +65,43 @@ app.ontoolresult = (result) => {
 await app.connect()
 initApp(app)
 
-// ─── Rendering ──────────────────────────────────────────────────────────────
-
 function renderHeader(schema) {
   document.getElementById('list-title').textContent = schema.title
+}
+
+function renderChips() {
+  const container = document.getElementById('filter-chips')
+  const hasQuery = currentQuery && currentQuery.trim().length > 0
+  const hasFilters = Object.keys(activeFilters).length > 0
+
+  if (!hasQuery && !hasFilters) {
+    container.style.display = 'none'
+    return
+  }
+
+  container.style.display = 'flex'
+  container.innerHTML = ''
+
+  if (hasQuery) {
+    const chip = document.createElement('span')
+    chip.className = 'mr-badge acc'
+    chip.innerHTML =
+      `<span class="k">Search:</span> ` + `<span class="v">${escapeHtml(currentQuery)}</span>`
+    container.appendChild(chip)
+  }
+
+  renderFilterChips(container, activeFilters, filterDefinitions, { append: true })
+}
+
+function updateFilterButton() {
+  const badge = document.getElementById('filter-count-badge')
+  const count = Object.keys(activeFilters).length
+  if (count > 0) {
+    badge.textContent = String(count)
+    badge.style.display = 'inline'
+  } else {
+    badge.style.display = 'none'
+  }
 }
 
 function renderTable(schema, records) {
@@ -76,14 +110,13 @@ function renderTable(schema, records) {
   selection.clear()
 
   if (records.length === 0) {
-    container.innerHTML = '<div class="mr-empty">No records found</div>'
+    container.innerHTML = '<div class="mr-empty">No records match the current filters</div>'
     return
   }
 
   const table = document.createElement('table')
   table.className = 'mr-table'
 
-  // Header
   const thead = document.createElement('thead')
   const headerRow = document.createElement('tr')
 
@@ -105,7 +138,6 @@ function renderTable(schema, records) {
   thead.appendChild(headerRow)
   table.appendChild(thead)
 
-  // Body
   const tbody = document.createElement('tbody')
   for (const record of records) {
     const tr = document.createElement('tr')
@@ -130,7 +162,6 @@ function renderTable(schema, records) {
       tr.appendChild(td)
     }
 
-    // Click to open edit form
     tr.addEventListener('click', () => {
       openEditForm(record.id)
     })
@@ -162,18 +193,21 @@ function renderPagination(pagination) {
   document.getElementById('btn-next').disabled = currentPage >= totalPages
 }
 
-// ─── Actions ────────────────────────────────────────────────────────────────
-
-async function fetchPage(page) {
+async function fetchPage(page, overrides = {}) {
   if (!modelName) return
   clearStatus(statusBar)
   showStatus(statusBar, 'Loading…', 'info')
 
+  const nextFilters = overrides.filters ?? activeFilters
+  const nextQuery = overrides.query !== undefined ? overrides.query : currentQuery
+
   try {
     const args = { model: modelName, page }
-    if (Object.keys(activeFilters).length > 0) args.filters = activeFilters
+    if (nextQuery) args.query = nextQuery
+    if (Object.keys(nextFilters).length > 0) args.filters = nextFilters
+
     const result = await app.callServerTool({
-      name: 'list_model_app',
+      name: 'find_model_app',
       arguments: args
     })
 
@@ -195,14 +229,11 @@ async function fetchPage(page) {
     currentRecords = data.records || []
     currentPage = data.pagination?.page || page
     currentPagination = data.pagination || null
-    activeFilters = data.activeFilters || activeFilters
+    currentQuery = data.query ?? nextQuery
+    activeFilters = data.activeFilters ?? nextFilters
 
-    renderFilterChips(document.getElementById('filter-chips'), activeFilters, filterDefinitions)
-    renderAvailableFilters(
-      document.getElementById('available-filters'),
-      activeFilters,
-      filterDefinitions
-    )
+    renderChips()
+    updateFilterButton()
     renderTable(listSchema, currentRecords)
     renderPagination(data.pagination)
     clearStatus(statusBar)
@@ -220,7 +251,6 @@ async function openEditForm(recordId) {
       arguments: { model: modelName, record_id: String(recordId) }
     })
   } catch {
-    // If update form tool doesn't exist, try find_records as fallback
     try {
       await app.callServerTool({
         name: 'find_records',
@@ -232,15 +262,28 @@ async function openEditForm(recordId) {
   }
 }
 
-// ─── Event Handlers ─────────────────────────────────────────────────────────
-
 const statusBar = document.getElementById('status-bar')
 
 const selection = createTableSelection({
   app,
   statusBar,
-  selectToolName: 'select_list_records',
+  selectToolName: 'select_find_records',
   getState: () => ({ modelName, currentRecords, currentPagination, activeFilters })
+})
+
+const popover = createFilterPopover({
+  trigger: document.getElementById('btn-filters'),
+  panel: document.getElementById('filter-popover'),
+  rowsContainer: document.getElementById('filter-rows'),
+  addBtn: document.getElementById('btn-add-filter'),
+  clearBtn: document.getElementById('btn-clear-filters'),
+  applyBtn: document.getElementById('btn-apply-filters'),
+  getDefinitions: () => filterDefinitions,
+  getCurrentFilters: () => activeFilters,
+  onApply: (filters) => {
+    activeFilters = filters
+    fetchPage(1, { filters })
+  }
 })
 
 document.getElementById('btn-prev').addEventListener('click', () => {
@@ -251,9 +294,21 @@ document.getElementById('btn-next').addEventListener('click', () => {
   fetchPage(currentPage + 1)
 })
 
-document.getElementById('btn-send-selection').addEventListener('click', () => selection.send())
+document
+  .getElementById('btn-send-replace')
+  .addEventListener('click', () => selection.send('replace'))
+document.getElementById('btn-send-add').addEventListener('click', () => selection.send('add'))
 
 document.getElementById('btn-select-all-results').addEventListener('click', (e) => {
   e.preventDefault()
   selection.selectAllResults()
+})
+
+// Hide popover when clicking outside it.
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('filter-popover')
+  const trigger = document.getElementById('btn-filters')
+  if (panel.style.display === 'none') return
+  if (panel.contains(e.target) || trigger.contains(e.target)) return
+  popover.close()
 })
