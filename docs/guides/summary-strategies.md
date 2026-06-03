@@ -102,17 +102,32 @@ export interface SummaryStrategy {
 
 ## Built-ins
 
-Five strategies ship with the framework. `distribution` is the default; the other four exist to be picked by the LLM (via `summary_strategy` / `summary_strategies`) or run after the fact via `analysis_summarize`.
+Nine strategies ship with the framework. `distribution` is the default; the rest are picked by the LLM via `summary_strategy` / `summary_strategies`, or run after the fact via `analysis_summarize`. The four GraphRAG-aware strategies (`relationship-coverage`, `concept-touch`, `rule-violation`, `semantic-cluster`) require auxiliary data the dispatcher loads lazily based on each strategy's `requires` declaration.
 
-| Name                | Always applies?                    | What it produces                                                                              |
-| ------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------- |
-| `distribution`      | Yes                                | Per-field value distributions (low-cardinality), numeric min/max/avg/median, ISO-date ranges. |
-| `coverage`          | Yes                                | Null/empty rate per field; flags fields above a 50% missing-rate threshold.                   |
-| `anomaly`           | Yes (≥ 4 recs)                     | Numeric z-score outliers (\|z\| > 2) and rare enum values (< 5% frequency).                   |
-| `temporal`          | When ≥ 1 ISO-date field            | Day/week/month bucketed counts, gap detection, recency over the latest timestamp.             |
-| `entity-extraction` | When ≥ 1 `*_id` field besides `id` | Foreign-key crosswalk; top-N association references per `*_id` field.                         |
+### Field-level strategies
 
-Each strategy's `description` is what the LLM sees when picking — they're tuned for one-shot disambiguation. If you find the LLM consistently picking the wrong one for your domain, ship a custom strategy with a sharper `description`.
+| Name                                                             | Always applies?    | Requires | Guide                                                      |
+| ---------------------------------------------------------------- | ------------------ | -------- | ---------------------------------------------------------- |
+| [`distribution`](./summary-strategies/distribution.md)           | Yes                | —        | Per-field value distributions, numeric stats, date ranges. |
+| [`coverage`](./summary-strategies/coverage.md)                   | Yes                | —        | Null/empty rate per field; flags fields above 50% missing. |
+| [`anomaly`](./summary-strategies/anomaly.md)                     | ≥ 4 records        | —        | Numeric z-score outliers and rare enum values.             |
+| [`temporal`](./summary-strategies/temporal.md)                   | ≥ 1 ISO-date field | —        | Time-bucketed counts, gap detection, recency.              |
+| [`entity-extraction`](./summary-strategies/entity-extraction.md) | ≥ 1 `*_id` field   | —        | Top-N references per `*_id` field.                         |
+
+### GraphRAG-aware strategies
+
+These read from the relationship graph and embeddings that `analysis_ingest` populates when run with `hop_depth ≥ 1` and `embed_records: true`.
+
+| Name                                                                     | Requires                      | Guide                                                     |
+| ------------------------------------------------------------------------ | ----------------------------- | --------------------------------------------------------- |
+| [`relationship-coverage`](./summary-strategies/relationship-coverage.md) | `['edges']`                   | Per-edge-type coverage %, degree stats, gap-records list. |
+| [`concept-touch`](./summary-strategies/concept-touch.md)                 | `['edges', 'domainRegistry']` | Per-concept participation %, per-target-model breakdown.  |
+| [`rule-violation`](./summary-strategies/rule-violation.md)               | `['domainRegistry']`          | Per-`BusinessRule` pass/fail counts + failing IDs.        |
+| [`semantic-cluster`](./summary-strategies/semantic-cluster.md)           | `['embeddings']`              | Anchor-nearest clustering, sizes + representatives.       |
+
+Each strategy's `description` is what the LLM sees when picking — they're tuned for one-shot disambiguation. The per-strategy guides above include real bookshelf output and edge-case notes; the [Analysis Quickstart](./analysis-quickstart-guide.md) walks all nine end to end against a runnable example.
+
+If you find the LLM consistently picking the wrong strategy for your domain, ship a custom one with a sharper `description`.
 
 ## Choosing a strategy at call time
 

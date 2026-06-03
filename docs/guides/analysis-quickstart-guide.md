@@ -9,12 +9,14 @@ series:
 
 Part 2 of the [Quickstart](./quickstart-guide.md). Once the bookshelf is
 running with its 5,000-book dataset, this guide brings up
-postgres+pgvector, points the analysis tools at it, and walks the five
-built-in **summary strategies** end to end — first one at a time, then
-all in a single ingest call.
+postgres+pgvector, points the analysis tools at it, and walks **all nine
+built-in summary strategies** end to end — five field-level strategies
+on the `large` dataset, then four GraphRAG-aware strategies on the
+`graph` dataset (500 books with author + genre + intentional gaps).
 
-You'll spend about twelve minutes: ~3 on infrastructure, ~6 on the
-strategies, ~3 on semantic recall and teardown.
+You'll spend about twenty minutes: ~3 on infrastructure, ~7 on the
+field-level tour, ~7 on the GraphRAG tour, ~3 on graph-aware sampling
+and teardown.
 
 ## Prerequisites
 
@@ -200,6 +202,162 @@ analysis_ingest({
 `summary_strategy` (singular) and `summary_strategies` (plural) are
 mutually exclusive — passing both fails fast at validation time.
 
+## 5.5 Switch to the graph dataset for the GraphRAG strategies
+
+The remaining four strategies — `relationship-coverage`, `concept-touch`,
+`rule-violation`, `semantic-cluster` — read from edges, embeddings, and
+the domain registry. None of those exist on the flat `large` dataset.
+Restart the bookshelf with the **graph** dataset, which adds `author`
+and `genre` models with proper foreign keys, two `DomainConcept`s
+(`reading-pipeline`, `catalogue`), and two `BusinessRule`s
+(`completed-books-need-rating`, `books-need-author`). The graph
+generator deliberately leaves ~5% of books without an `author_id` and
+~15% of completed books without a `rating` so every GraphRAG strategy
+has real signal to surface.
+
+Stop the running Inspector, then:
+
+```bash
+DATABASE_URL=postgres://bookshelf:bookshelf@localhost:5432/bookshelf \
+ANALYSIS_ENABLED=true \
+BOOKSHELF_DATASET=graph \
+npx @modelcontextprotocol/inspector -- npx tsx server.ts
+```
+
+In the Inspector, run a fresh ingest. The new args are `hop_depth: 1`
+(follow declared `belongsTo` associations) and `embed_records: true`
+(the default — embeddings are needed for `semantic-cluster`):
+
+```jsonc
+analysis_ingest({
+  analysis_id: "graphrag",
+  model: "book",
+  ingest_all: true,
+  hop_depth: 1,
+  embed_records: true,
+  summary_strategies: [
+    "relationship-coverage",
+    "concept-touch",
+    "rule-violation",
+    "semantic-cluster"
+  ]
+})
+// → Stored 500 record(s) across 10 page(s). Hopped: 10 author, 6 genre.
+// → ~40 memories written (one per page per strategy, modulo appliesTo gates).
+```
+
+Four strategy lenses, walked one at a time:
+
+### `relationship-coverage`
+
+```jsonc
+analysis_query({
+  analysis_id: "graphrag",
+  mode: "semantic",
+  category: "page_summary:relationship-coverage",
+  query: "missing author edge"
+})
+// → top finding names belongsTo:author coverage % per page (around 94%)
+//   and the 1–3 gap IDs per page that lack an author edge.
+```
+
+The [`relationship-coverage` guide](./summary-strategies/relationship-coverage.md)
+explains the per-edge-type stats; the takeaway here is that the gap
+records surface directly in the finding text so the LLM can
+`analysis_query mode:"filter" where:{id:[...]}` to inspect them.
+
+### `concept-touch`
+
+```jsonc
+analysis_query({
+  analysis_id: "graphrag",
+  mode: "semantic",
+  category: "page_summary:concept-touch",
+  query: "catalogue gap"
+})
+// → finding contains "catalogue → [author, genre]: 47/50 (94%);
+//   per-target author=47, genre=50". The 3-record gap matches the
+//   bookshelf's missing-author rate.
+```
+
+`reading-pipeline` (book + genre) lands at 100% because every book has a
+genre. `catalogue` (book + author + genre) lands lower because of the
+missing-author records. See the [`concept-touch` guide](./summary-strategies/concept-touch.md).
+
+### `rule-violation`
+
+```jsonc
+analysis_query({
+  analysis_id: "graphrag",
+  mode: "semantic",
+  category: "page_summary:rule-violation",
+  query: "completed books missing rating"
+})
+// → finding names the failing rule + the first few IDs per page:
+//   "completed-books-need-rating (warning): N/50 failed (e.g. b127, b223)".
+//   "books-need-author (error): 2/50 failed (e.g. b34, b48)".
+```
+
+See the [`rule-violation` guide](./summary-strategies/rule-violation.md).
+
+### `semantic-cluster`
+
+```jsonc
+analysis_query({
+  analysis_id: "graphrag",
+  mode: "semantic",
+  category: "page_summary:semantic-cluster",
+  query: "natural book groupings"
+})
+// → finding names the cluster representatives by title hint:
+//   "cluster 1 (size 14, mean dist 0.18): rep b3 \"Clean Patterns #3\""
+//   …
+```
+
+See the [`semantic-cluster` guide](./summary-strategies/semantic-cluster.md).
+
+## 5.6 Graph-aware sampling with composable stratifiers
+
+With edges + embeddings + concepts in play, `analysis_query mode:"sample"`
+can balance a sample across multiple graph dimensions at once. The
+`stratifiers` param accepts up to 3 entries that compose with the
+existing `where` / `proximity` / `stratify_by` partitioning:
+
+```jsonc
+analysis_query({
+  mode: "describe",
+  analysis_id: "graphrag",
+  model: "book"
+})
+// → A "Graph dimensions available" section lists registered concepts,
+//   observed edge types, and embedding coverage %.
+```
+
+A three-stratifier sample, pre-filtered to completed books:
+
+```jsonc
+analysis_query({
+  mode: "sample",
+  analysis_id: "graphrag",
+  sample_size: 12,
+  where: { status: "completed" },
+  stratifiers: [
+    { kind: "concept", concept: "catalogue" },
+    { kind: "edge",    edge_type: "belongsTo:genre", bucket: "present" },
+    { kind: "cluster", k: 3 }
+  ],
+  sample_model: "book"
+})
+// → 12 completed-status books, balanced across:
+//   - concept (catalogue touched vs not)
+//   - edge presence (has genre edge vs not — uniform on bookshelf)
+//   - semantic cluster (3 anchor-nearest groups)
+```
+
+When `kind: "cluster"` is requested on a session that was ingested with
+`embed_records: false`, the tool auto-back-fills missing embeddings
+before sampling. No re-ingest required.
+
 ## 6. Recall by category
 
 Every memory is written with `category: "page_summary:<strategy>"`,
@@ -242,11 +400,18 @@ the analysis loop is opt-in infrastructure, not a permanent dependency.
 
 ## Where to go next
 
-- [Summary Strategies](./summary-strategies.md) — full catalog, the
-  `SummaryStrategy` contract, and a walk-through for shipping your own
-  strategy via an `ApiExtension`.
+- [Summary Strategies](./summary-strategies.md) — full catalog with
+  links to each strategy's deep-dive guide, the `SummaryStrategy`
+  contract, and a walk-through for shipping your own strategy via an
+  `ApiExtension`.
+- Per-strategy guides under [`summary-strategies/`](./summary-strategies/) —
+  one file each for the nine built-ins; explains the algorithm, inputs
+  consumed, output shape, and edge cases.
 - [Analysis Memories](./analysis-memories-guide.md) — the full feature
   reference: ingest modes, the five-mode `analysis_query` API,
   stratified sampling, `analysis_act`, lifecycle and retention.
 - [Proximity Sampling](./proximity-sampling-guide.md) — date-windowed
   bucketed sampling for the `analysis_query mode: sample` path.
+- [Domain Knowledge Guide](./domain-knowledge-guide.md) — how
+  `DomainConcept` and `BusinessRule` feed `concept-touch` and
+  `rule-violation`.

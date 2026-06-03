@@ -416,6 +416,39 @@ const appRegistry = createDefaultAppRegistry({
 })
 ```
 
+## Dataset switch — `BOOKSHELF_DATASET`
+
+Out of the box the server seeds 3 hand-picked starter books. Set
+`BOOKSHELF_DATASET` to choose a bigger fixture for the analysis tools:
+
+| Value     | Records                           | Shape                                                                                                                                                                                                                                                                   |
+| --------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| _(unset)_ | 3 books                           | Hand-picked starter set for the CRUD tour                                                                                                                                                                                                                               |
+| `large`   | 5,000                             | Procedurally generated books with signal for the field-level strategies                                                                                                                                                                                                 |
+| `json`    | 5,000                             | Same dataset, loaded from `fixtures/books.5000.json`                                                                                                                                                                                                                    |
+| `graph`   | 500 books + 10 authors + 6 genres | **Full graph mode** — books carry `author_id` / `genre_id`, the server wires a `DomainRegistry` with two concepts and two business rules. Used by the GraphRAG-aware analysis strategies and the [Analysis Quickstart](../../docs/guides/analysis-quickstart-guide.md). |
+
+The `graph` mode is what makes the bookshelf a complete GraphRAG demo. The fixture intentionally bakes in:
+
+- **~5% of books missing `author_id`** — `relationship-coverage` reports the gap on `belongsTo:author`, and the `books-need-author` business rule fires on the same records.
+- **~15% of completed books missing `rating`** — the `completed-books-need-rating` business rule fires; `rule-violation` lists the failing IDs per page.
+- **Two `DomainConcept`s**: `reading-pipeline` (book + genre) and `catalogue` (book + author + genre). `concept-touch` reports per-concept coverage; the gap is the missing-author records.
+- **Stable text content per book** (varied adjective + noun + index) so `semantic-cluster` produces meaningful groupings.
+
+To run it:
+
+```bash
+DATABASE_URL=postgres://bookshelf:bookshelf@localhost:5432/bookshelf \
+ANALYSIS_ENABLED=true \
+BOOKSHELF_DATASET=graph \
+npx @modelcontextprotocol/inspector -- npx tsx server.ts
+```
+
+See the [Analysis Quickstart](../../docs/guides/analysis-quickstart-guide.md)
+for the full end-to-end recipe walking every summary strategy plus the
+composable graph stratifiers (`concept` / `edge` / `cluster`) on
+`analysis_query mode:"sample"`.
+
 ## Next Steps
 
 - Add more models (Author, Category) — same nine tools, polymorphic
