@@ -2,6 +2,24 @@
 
 Per-field null/empty rate. Flags fields above the **sparse threshold** (default 50% missing) so the LLM has a quick read on where the data is incomplete before drawing conclusions from aggregates.
 
+At a glance — what the strategy reads, what it computes, what it writes:
+
+```
+┌────────────────────┐    ┌────────────────────┐    ┌────────────────────┐
+│       INPUT        │    │     ALGORITHM      │    │       OUTPUT       │
+├────────────────────┤    ├────────────────────┤    ├────────────────────┤
+│ All records, all   │    │ Per field:         │    │ coverage[field]    │
+│ fields:            │    │   count null,      │    │   {present,        │
+│                    │    │   undefined, ""    │    │    missing, rate}  │
+│  title    50/50    │ ─▶ │                    │ ─▶ │                    │
+│  rating   38/50    │    │ missing_rate =     │    │ sparse_fields[]    │
+│  notes    29/50    │    │   missing / total  │    │   (fields with     │
+│  genre_id 50/50    │    │ Flag if ≥ 50%      │    │    ≥ 50% missing)  │
+└────────────────────┘    └────────────────────┘    └────────────────────┘
+```
+
+The **left** panel shows population per field on a page; the **middle** panel computes a missing rate per field; the **right** panel both keeps the full per-field stats and surfaces a `sparse_fields` shortlist for fields above the threshold — that shortlist is what the LLM reads first.
+
 ## When to pick
 
 - Data-quality audits: "which fields are reliably populated?".

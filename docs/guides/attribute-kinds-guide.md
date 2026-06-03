@@ -10,6 +10,29 @@ API value  ⇄  internal value  ⇄  HTML <input> value
    format(internal)  -> DOM Node   (display rendering, browser only)
 ```
 
+A concrete walk-through — an ISBN attribute declared as `string:isbn` — makes the boundaries obvious:
+
+```
+   API JSON                                       HTML form input
+   { isbn: "9780132350884" }                      <input value="9780132350884">
+            │                                                 ▲
+            │ parse(api)                       toInput(internal)
+            ▼                                                 │
+   ┌──────────────────────────────────────────────────────────┴──┐
+   │                  Internal value                              │
+   │                  "9780132350884"  (normalized, hyphens out)  │
+   └─────────┬───────────────┬─────────────────────┬──────────────┘
+             │               │                     │
+   serialize │   describe    │      validate       │  format
+             ▼               ▼                     ▼
+   API JSON          "ISBN-13: 978-0-13-235088-4"  "ok"  →  <code>9780132350884</code>
+   { isbn: "..." }   (LLM-facing summary,          | null    (DOM node, browser
+                      humanized)                   | error    only)
+                                                   |  msg
+```
+
+Every kind plugs into the same six methods. Override one, all, or none — defaults fall back to `String(value)`.
+
 mcp-rune ships 17 built-in kinds (`string`, `integer`, `boolean`, `date`, `enum`, `array`, `email`, `url`, `uuid`, `json`, `color`, `rating`, …). The same kind taxonomy is used by:
 
 - The polymorphic **form generator** to pick the right `<input type="…">`.

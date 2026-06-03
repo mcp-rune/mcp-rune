@@ -33,6 +33,31 @@ Prompts guide LLM interactions for creating/updating models. They define:
 
 ## Prompt Strategies
 
+The three strategies are an escalation: as form complexity grows, the framework adds more LLM-facing tools so the agent can validate in smaller bites.
+
+```
+   ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+   │    STATELESS     │  │      HYBRID      │  │     STATEFUL     │
+   ├──────────────────┤  ├──────────────────┤  ├──────────────────┤
+   │ < 10 fields      │  │ 10 – 20 fields   │  │ 20+ fields       │
+   │                  │  │                  │  │                  │
+   │ Ops:             │  │ Ops:             │  │ Ops:             │
+   │  getDocumen-     │  │  getDocumen-     │  │  getDocumen-     │
+   │   tation         │  │   tation         │  │   tation         │
+   │                  │  │  validateFields  │  │  validateFields  │
+   │                  │  │  generateSummary │  │  generateSummary │
+   │                  │  │                  │  │  validateSection │
+   │                  │  │                  │  │  getProgress     │
+   │                  │  │                  │  │                  │
+   │ Validate at      │  │ Validate full    │  │ Validate per     │
+   │ submit only      │  │ form once        │  │ section + track  │
+   │                  │  │ before submit    │  │ progress         │
+   └──────────────────┘  └──────────────────┘  └──────────────────┘
+        Simple forms       Medium forms          Complex forms
+```
+
+Same model definition drives all three — choose by setting `static strategy = 'stateless' | 'hybrid' | 'stateful'` on the prompt class. Upgrading later doesn't change the model.
+
 | Strategy    | Use Case      | Fields       | Validation           |
 | ----------- | ------------- | ------------ | -------------------- |
 | `stateless` | Simple forms  | < 10 fields  | None before submit   |

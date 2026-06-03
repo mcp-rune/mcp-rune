@@ -4,6 +4,25 @@ The default summary strategy. Captures the **shape of a page** without taking a 
 
 If you don't ask for a strategy by name, this is what `analysis_ingest` runs.
 
+At a glance — what the strategy reads, what it computes, what it writes:
+
+```
+┌────────────────────┐    ┌────────────────────┐    ┌────────────────────┐
+│       INPUT        │    │     ALGORITHM      │    │       OUTPUT       │
+├────────────────────┤    ├────────────────────┤    ├────────────────────┤
+│ First record's     │    │ Classify field:    │    │ fields[name]       │
+│ fields, then       │    │  ≤ 20 distinct →   │    │   enum   : top 5   │
+│ scan all records:  │    │     enum-like      │    │   numeric: min/max │
+│                    │ ─▶ │  numeric →         │ ─▶ │     avg/median     │
+│  status (enum)     │    │     min/max/avg/   │    │   date   : early-  │
+│  rating (numeric)  │    │     median         │    │     iest / latest  │
+│  created_at (date) │    │  ISO date → range  │    │   other  : skipped │
+│  title (other)     │    │  else → skip       │    │                    │
+└────────────────────┘    └────────────────────┘    └────────────────────┘
+```
+
+The **left** panel is a mixed-shape record; the **middle** panel routes each field to the appropriate per-kind summarizer; the **right** panel keys everything by field name so semantic recall by field name is direct.
+
 ## When to pick
 
 - The first pass over a new dataset: you want a quick map of what fields exist, what values each one carries, and what ranges the numeric and date fields span.

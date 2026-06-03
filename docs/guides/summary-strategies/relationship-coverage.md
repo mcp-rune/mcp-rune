@@ -6,6 +6,25 @@ This is the edge-table-driven counterpart to `entity-extraction`: that strategy 
 
 **Requires:** `['edges']`. The dispatcher bulk-loads the page's edges (one query per page) before calling `generate`.
 
+At a glance — what the strategy reads, what it computes, what it writes:
+
+```
+┌────────────────────┐    ┌────────────────────┐    ┌────────────────────┐
+│       INPUT        │    │     ALGORITHM      │    │       OUTPUT       │
+├────────────────────┤    ├────────────────────┤    ├────────────────────┤
+│ Records + edges    │    │ Per edge_type:     │    │ edge_types[name]   │
+│ from multi-hop     │    │   unique src_ids   │    │   coverage_pct     │
+│ ingest             │    │   coverage_pct =   │    │   mean_degree      │
+│                    │ ─▶ │     unique / total │ ─▶ │   max_degree       │
+│  belongsTo:author  │    │   mean degree      │    │   target_models{}  │
+│  belongsTo:genre   │    │   max degree       │    │   gap_ids[]        │
+│  hasMany:reviews   │    │   target dist.     │    │   (first 10 src    │
+│                    │    │   first 10 gaps    │    │    with 0 edges)   │
+└────────────────────┘    └────────────────────┘    └────────────────────┘
+```
+
+The **left** panel is the page's records plus the persisted edges from `ingested_edges` (multi-hop captures `hasMany` arrays that `entity-extraction` misses); the **middle** panel groups by `edge_type` and computes coverage + degree per type; the **right** panel surfaces the per-type stats plus the first 10 source IDs that lack any edge of that type — direct ammunition for a `where:{id:[...]}` follow-up.
+
 ## When to pick
 
 - After a multi-hop ingest (`hop_depth: 1+`): the edge table is populated and this strategy gives you per-edge-type coverage at a glance.

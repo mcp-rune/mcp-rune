@@ -13,6 +13,32 @@ The seam exists for two reasons:
 1. The projection layer is what makes mcp-rune unique. The data layer overlaps heavily with mature client-side libraries (Warp Drive / Ember Data, Zodios, ts-rest, etc.). Naming the seam lets the ecosystem decide which adapter to use without forking the framework.
 2. The pre-v0.49 framework leaked `apiClient` across tools and apps. Closing the leak — and exposing a single typed surface — makes the boundary auditable.
 
+At a glance, the seam and what sits above and below it:
+
+```
+   ┌────────────────────────────────────────────────────┐
+   │   Projection layer                                 │
+   │     tools · prompts · apps · workflows             │
+   └──────────────────────┬─────────────────────────────┘
+                          │   reads/writes through ONLY
+                          ▼
+   ┌────────────────────────────────────────────────────┐
+   │   DataLayer  (interface)                           │
+   │     create · find · list · update · delete         │
+   │     listNormalized · searchNormalized · ...        │
+   │     dispatch / buildPayload  (escape hatches)      │
+   └──────────────────────┬─────────────────────────────┘
+                          │
+                          ▼
+   ┌────────────────────────────────────────────────────┐
+   │   Default adapter: ModelService                    │
+   │     ├─ ApiClient   (HTTP verbs against URLs)       │
+   │     └─ Convention  (payload / association shape)   │
+   └────────────────────────────────────────────────────┘
+```
+
+The projection layer never imports `ApiClient`, `SearchClient`, or a `Convention` directly — `DataLayer` is the only seam it crosses. Swap the adapter (in-memory stub, fetch-only, third-party wrapper) without touching anything above the line.
+
 ## Table of Contents
 
 - [The Interface](#the-interface)

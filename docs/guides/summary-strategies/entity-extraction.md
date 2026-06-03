@@ -4,6 +4,25 @@ Tallies **foreign-key references** on each page. For every `*_id` field other th
 
 Field-shape heuristic (the field name must end in `_id`) — no schema lookup required.
 
+At a glance — what the strategy reads, what it computes, what it writes:
+
+```
+┌────────────────────┐    ┌────────────────────┐    ┌────────────────────┐
+│       INPUT        │    │     ALGORITHM      │    │       OUTPUT       │
+├────────────────────┤    ├────────────────────┤    ├────────────────────┤
+│ Records with *_id  │    │ For each *_id      │    │ fields[name]       │
+│ scalar fields      │    │ field (excluding   │    │   total_refs       │
+│ (not 'id'):        │    │  'id' itself):     │    │   unique_refs      │
+│                    │ ─▶ │                    │ ─▶ │   top: [           │
+│  author_id: a-3    │    │   count per value  │    │     {id, count}    │
+│  author_id: a-7    │    │   sort descending  │    │     × 5            │
+│  genre_id:  g-sw   │    │   take top 5       │    │   ]                │
+│  genre_id:  g-arch │    │                    │    │                    │
+└────────────────────┘    └────────────────────┘    └────────────────────┘
+```
+
+The **left** panel is the scalar FK columns on a page; the **middle** panel runs a per-field tally; the **right** panel keeps total/unique counts plus the top-5 most-referenced IDs per field — the LLM's quickest read on "which targets dominate this page".
+
 ## When to pick
 
 - A first look at how records hang together: "which authors are most common on this page?", "which genres dominate?".

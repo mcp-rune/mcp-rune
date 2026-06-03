@@ -87,6 +87,34 @@ interface AppDefinition {
 
 Every field is optional except `name` and `description`. What you populate determines which category your app falls into.
 
+The three categories form a simple decision tree:
+
+```
+                    What does your app need?
+                            │
+   ┌────────────────────────┼────────────────────────┐
+   │                        │                        │
+   ▼                        ▼                        ▼
+ Static HTML only      Server logic only      Server logic + UI
+ (self-contained)      (no iframe)            (the standard widget)
+   │                        │                        │
+   ▼                        ▼                        ▼
+ ┌───────────┐         ┌───────────┐          ┌────────────┐
+ │  Pure UI  │         │  Tool-    │          │ Resource + │
+ │           │         │  backed   │          │   tool     │
+ ├───────────┤         ├───────────┤          ├────────────┤
+ │ getHtml   │         │ toolName  │          │ getHtml +  │
+ │ +         │         │ +         │          │ resourceUri│
+ │ resource  │         │ tool-     │          │ +          │
+ │ Uri       │         │ Input-    │          │ toolName + │
+ │           │         │ Schema +  │          │ schema +   │
+ │           │         │ handle-   │          │ handle-    │
+ │           │         │ ToolCall  │          │ ToolCall   │
+ └───────────┘         └───────────┘          └────────────┘
+```
+
+Almost every framework-shipped app is **resource + tool**: the LLM calls the tool, the handler fetches data, and the response points the iframe at an `mcp://` resource the host then loads.
+
 ## Three Categories of App
 
 | Category            | Populates                                       | Use when                                                                                                                                  |

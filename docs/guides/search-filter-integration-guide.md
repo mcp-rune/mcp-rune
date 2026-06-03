@@ -59,6 +59,36 @@ Add an `extensions['search']` slice to the model class via the typed `searchConf
 
 ### Filter Types
 
+Five filter types cover the common cases. The model's declaration is what the LLM sees in `get_filters_guide`; the same key flows through the search adapter and lands as a Rails params row:
+
+```
+   Model declaration                MCP wire shape                Rails receives
+   ─────────────────                ──────────────                ──────────────
+
+   text                             "title":                      params[:filters]
+                       ─────────▶   "clean architect"  ─────────▶  [:title]
+
+   enum                             "status":                     params[:filters]
+   { enum: ['draft',   ─────────▶   "published"        ─────────▶  [:status]
+            'pub'] }
+
+   relation                         "author_id":                  params[:filters]
+   { relatedModel:     ─────────▶   "7"                ─────────▶  [:author_id]
+     'author' }
+
+   date_range                       "started_at": {               params.dig(
+                       ─────────▶     "from": "2025-01-01",  ──▶   :filters,
+                                      "to":   "2025-12-31" }       :started_at,
+                                    }                              :from / :to)
+
+   integer_range                    "duration_minutes": {         params.dig(
+                       ─────────▶     "from": 30,           ──▶    :filters,
+                                      "to":   120 }                :duration_minutes,
+                                    }                              :from / :to)
+```
+
+The table below restates the same contract row by row:
+
 | Type            | MCP sends                                               | Rails receives                           | Description                          |
 | --------------- | ------------------------------------------------------- | ---------------------------------------- | ------------------------------------ |
 | `text`          | `"field": "search term"`                                | `params[:filters][:field]`               | Free text search                     |

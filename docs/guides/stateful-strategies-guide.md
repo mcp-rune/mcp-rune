@@ -10,6 +10,42 @@ For complex models with many fields organized into sections, mcp-rune ships a **
 
 This guide covers the configuration knobs, the validation flow, and the `StatefulStrategy` API. For the structure stateful strategies consume (sections + fieldGroups), see the [Sections & Field Groups guide](./sections-groups-guide.md). For the comparison with stateless and hybrid, see the [Prompt Creation guide](./prompt-creation-guide.md).
 
+The walk is per-section, not per-field:
+
+```
+   get_prompt_guide
+        │
+        ▼
+   ┌────────────────────┐
+   │  Section 1: basics │  validateSection('basics')
+   │  ─────────────────│  ─▶ errors? loop back
+   │  title             │  ─▶ ok?    advance
+   │  description       │
+   └─────────┬──────────┘
+             │ advance
+             ▼
+   ┌────────────────────┐
+   │  Section 2:        │  validateSection('classification')
+   │  classification    │  ─▶ errors? loop back
+   │  ─────────────────│  ─▶ ok?    advance
+   │  theme_id          │
+   │  category_id       │
+   └─────────┬──────────┘
+             │ advance         ┌─────────────────┐
+             ▼                 │ getProgress()   │ ◀── status anytime
+   ┌────────────────────┐     │ → completed:    │
+   │  Section 3: timing │     │   ['basics',    │
+   │  ─────────────────│     │    'classifi-   │
+   │  occurred_at       │     │     cation']    │
+   │  duration_minutes  │     │   pending:      │
+   └─────────┬──────────┘     │   ['timing']    │
+             │ advance         └─────────────────┘
+             ▼
+   generateSummary  ─▶  apply mutation (create_model / update_model)
+```
+
+`validateSection` is the only validation the LLM calls during the walk — section-scoped, so an error in `timing` doesn't reopen `basics`. `getProgress` is a status query the LLM can call at any point to know what's done and what's left.
+
 ## Mode configuration
 
 Stateful prompts support two interaction modes:

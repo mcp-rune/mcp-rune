@@ -6,7 +6,7 @@
   <a href="https://github.com/mcp-rune/mcp-rune/actions/workflows/ci.yml"><img src="https://github.com/mcp-rune/mcp-rune/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <img src="https://img.shields.io/badge/MCP-2025--11--25-blue" alt="MCP Spec" />
   <img src="https://img.shields.io/badge/node-%3E%3D24-green" alt="Node.js" />
-  <img src="https://img.shields.io/badge/tests-2139%20passing-brightgreen" alt="Tests" />
+  <img src="https://img.shields.io/badge/tests-2933%20passing-brightgreen" alt="Tests" />
   <img src="https://img.shields.io/badge/coverage-81%25-yellow" alt="Coverage" />
   <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License" />
 </p>
@@ -32,11 +32,11 @@ export class Book extends BaseModel {
 }
 
 // That's it. You now have:
-//   list_models, find_records, create_model, update_model, delete_model
-//   search_records, bulk_action_models, ...
+//   list_models, find_records, create_model, update_model, delete_model,
+//   search_records, get_filters_guide, bulk_action_models
 //   + compound IDs for nested resources (titles/42/assets/7)
 //   + prompt guide with validation strategy
-//   + interactive form app
+//   + interactive form, list, picker, and detail apps
 //   + auto-generated documentation
 //
 // All tools are polymorphic — they work with every model you register.
@@ -92,7 +92,9 @@ _Inscribe small. Cast large._
   - [Prompt Strategies](#prompt-strategies)
   - [API-Agnostic Integration](#api-agnostic-integration)
   - [Interactive MCP Apps](#interactive-mcp-apps)
+  - [Analysis & Summary Strategies](#analysis--summary-strategies)
   - [Domain Intelligence](#domain-intelligence)
+  - [Extensibility](#extensibility)
   - [OAuth 2.1 + PKCE](#oauth-21--pkce)
   - [Dual Transport](#dual-transport)
   - [Observability](#observability)
@@ -135,19 +137,20 @@ mcp-rune works at the **application** level. You describe your domain, the frame
 
 ### How It Compares
 
-|                                     | Protocol Wrappers | API Converters | **mcp-rune** |
-| ----------------------------------- | :---------------: | :------------: | :----------: |
-| Transport (stdio + HTTP)            |        ✅         |       ✅       |      ✅      |
-| Tool registration & schema          |        ✅         |       ✅       |      ✅      |
-| OAuth 2.1 + PKCE                    |        ⚠️         |       ❌       |      ✅      |
-| Polymorphic CRUD from model config  |        ❌         |       ⚠️       |      ✅      |
-| Bulk operations (batch CRUD)        |        ❌         |       ❌       |      ✅      |
-| API convention abstraction          |        ❌         |       ❌       |      ✅      |
-| Prompt strategies (form validation) |        ❌         |       ❌       |      ✅      |
-| Schema-driven interactive Apps      |        ⚠️         |       ❌       |      ✅      |
-| Search adapters                     |        ❌         |       ❌       |      ✅      |
-| Domain workflows & business rules   |        ❌         |       ❌       |      ✅      |
-| Documentation generation pipeline   |        ❌         |       ❌       |      ✅      |
+|                                        | Protocol Wrappers | API Converters | **mcp-rune** |
+| -------------------------------------- | :---------------: | :------------: | :----------: |
+| Transport (stdio + HTTP)               |        ✅         |       ✅       |      ✅      |
+| Tool registration & schema             |        ✅         |       ✅       |      ✅      |
+| OAuth 2.1 + PKCE                       |        ⚠️         |       ❌       |      ✅      |
+| Polymorphic CRUD from model config     |        ❌         |       ⚠️       |      ✅      |
+| Bulk operations (batch CRUD)           |        ❌         |       ❌       |      ✅      |
+| API convention abstraction             |        ❌         |       ❌       |      ✅      |
+| Prompt strategies (form validation)    |        ❌         |       ❌       |      ✅      |
+| Schema-driven interactive Apps         |        ⚠️         |       ❌       |      ✅      |
+| Search adapters                        |        ❌         |       ❌       |      ✅      |
+| Domain workflows & business rules      |        ❌         |       ❌       |      ✅      |
+| Analysis & GraphRAG summary strategies |        ❌         |       ❌       |      ✅      |
+| Documentation generation pipeline      |        ❌         |       ❌       |      ✅      |
 
 ---
 
@@ -372,17 +375,45 @@ export class ActivitySearchAdapter extends SearchAdapter {
 
 Seven schema-driven app tools render interactive UI in the MCP host (Claude Desktop, VS Code, Cursor) via [`@modelcontextprotocol/ext-apps`](https://github.com/anthropics/anthropic-cookbook/tree/main/misc/model-context-protocol-apps):
 
-| Tool                       | Description                                       |
-| -------------------------- | ------------------------------------------------- |
-| **`new_model_app`**        | Form to input a new record (calls `create_model`) |
-| **`edit_model_app`**       | Form to edit a record (calls `update_model`)      |
-| **`list_model_app`**       | Paginated browse with filters                     |
-| **`show_model_app`**       | Read-only detail cards                            |
-| **`search_model_app`**     | Multi-model full-text search                      |
-| **`pick_model_app`**       | Type-ahead for `belongsTo` associations           |
-| **`multi_pick_model_app`** | Checkbox picker for `hasMany` relations           |
+| Tool                       | Description                                          |
+| -------------------------- | ---------------------------------------------------- |
+| **`new_model_app`**        | Form to input a new record (calls `create_model`)    |
+| **`edit_model_app`**       | Form to edit a record (calls `update_model`)         |
+| **`find_model_app`**       | Interactive table — text search + structured filters |
+| **`show_model_app`**       | Read-only detail cards                               |
+| **`view_selection_app`**   | Inspect and manage the current record selection      |
+| **`pick_model_app`**       | Type-ahead for `belongsTo` associations              |
+| **`multi_pick_model_app`** | Checkbox picker for `hasMany` relations              |
 
 Generated from the same `attributesConfig` that drives the tools and prompts. Adding a new model form = one registry entry, zero new HTML. This turns your MCP server from a tool collection into a full application with UI.
+
+### Analysis & Summary Strategies
+
+Most MCP servers stop at CRUD. mcp-rune ships a map-reduce analysis layer that lets the LLM ingest large datasets (thousands of records), summarize them along multiple dimensions, store findings as semantic memories, and act on them — all without burning context window on raw rows.
+
+Enable with `ANALYSIS_ENABLED=true` and a `DATABASE_URL`. Six tools then become available alongside the polymorphic CRUD set:
+
+| Tool                 | Description                                                        |
+| -------------------- | ------------------------------------------------------------------ |
+| `analysis_ingest`    | Stage a dataset (1h TTL) for downstream summarization and querying |
+| `analysis_summarize` | Run one or more summary strategies over the staged data            |
+| `analysis_query`     | Semantic search across stored findings (384-dim embeddings)        |
+| `analysis_store`     | Persist a finding as an ephemeral (1h) or long-lived memory        |
+| `analysis_act`       | Apply a stored finding back as a CRUD operation                    |
+| `analysis_clear`     | Drop the ingested dataset and any ephemeral findings               |
+
+**Nine composable summary strategies**, in two families:
+
+| Family      | Strategies                                                                        |
+| ----------- | --------------------------------------------------------------------------------- |
+| Field-level | `distribution` · `coverage` · `anomaly` · `temporal` · `entity-extraction`        |
+| GraphRAG    | `concept-touch` · `relationship-coverage` · `semantic-cluster` · `rule-violation` |
+
+Each is documented in its own [per-strategy guide](docs/guides/summary-strategies/) with input shape, algorithm, and output schema. Strategies can be **stratified** before they run (by concept, edge type, or cluster) so a single ingest yields multiple slice-aware summaries in one pass.
+
+The GraphRAG family builds on the framework's relationship-aware storage: records carry embeddings, ingestion follows declared edges (multi-hop), and `relationship-coverage` reports per-edge-type completeness so you can spot dangling references before they reach the LLM.
+
+See [Analysis Memories](docs/guides/analysis-memories-guide.md) for the session lifecycle, [Analysis Quickstart](docs/guides/analysis-quickstart-guide.md) for an end-to-end walkthrough, and [Summary Strategies](docs/guides/summary-strategies.md) for the strategy index.
 
 ### Domain Intelligence
 
@@ -440,6 +471,18 @@ export const onboardNewUser = new WorkflowDefinition({
 ```
 
 </details>
+
+### Extensibility
+
+Every framework-shipped surface is a default, not a wall. Three extension protocols let you add behavior without forking:
+
+| Extension           | What it extends                                            | Typical use                                         |
+| ------------------- | ---------------------------------------------------------- | --------------------------------------------------- |
+| `HttpExtension`     | Routes mounted on `HttpServer` (auth-aware, order-defined) | Webhooks, health probes, custom OAuth endpoints     |
+| `ApiExtension`      | Per-model config bag consumed by tools                     | Per-model bulk actions, custom autocomplete sources |
+| `ToolFlowExtension` | Context threaded into tool handlers                        | Approval flows, multi-step LLM ↔ user handoffs      |
+
+mcp-rune never auto-registers an extension — every surface is opt-in at the call site. See [Extensibility Overview](docs/guides/extensibility-overview.md) for the architecture, [Extension Recipes](docs/guides/extension-recipes.md) for ready-to-paste patterns, and [Authoring Extensions](docs/guides/authoring-extensions-guide.md) for the contract a custom extension must satisfy.
 
 ### OAuth 2.1 + PKCE
 
@@ -909,7 +952,7 @@ mcp-rune/                              (the framework)
     ├─ tools                           BaseTool, CRUD tools, categories
     ├─ mcp/services                    ModelService, EndpointResolver
     ├─ prompts                         BasePrompt, strategies, pipeline
-    ├─ apps                            AppRegistry, 6 generic app factories
+    ├─ apps                            AppRegistry, 7 generic app factories
     ├─ domain                          Workflows, knowledge, business rules
     ├─ search                          SearchService, SearchAdapter
     ├─ oauth2                          OAuthService, token store
@@ -921,23 +964,69 @@ mcp-rune/                              (the framework)
 
 ## Documentation
 
-### Guides
+### Getting started
 
-| Guide                                                                           | Description                                    |
-| ------------------------------------------------------------------------------- | ---------------------------------------------- |
-| [Tool Creation](docs/guides/tool-creation-guide.md)                             | Build custom tools with category-based auth    |
-| [Prompt Creation](docs/guides/prompt-creation-guide.md)                         | Create prompts with the derivation framework   |
-| [Prompt Derivation Framework](docs/guides/prompt-derivation-framework-guide.md) | Deep dive into the generator pipeline          |
-| [MCP Apps](docs/guides/mcp-apps-guide.md)                                       | Interactive UI forms and views                 |
-| [MCP Apps Architecture](docs/guides/mcp-apps-architecture.md)                   | Schema-driven app internals                    |
-| [Model Form Customization](docs/guides/model-form-customization-guide.md)       | Customize form rendering                       |
-| [Service Layer](docs/guides/service-layer-guide.md)                             | ModelService, EndpointResolver, namespaces     |
-| [Search & Filters](docs/guides/search-filter-integration-guide.md)              | Search adapters and filter transformation      |
-| [Domain Knowledge](docs/guides/domain-knowledge-guide.md)                       | Business rules, knowledge, workflows           |
-| [Workflow Creation](docs/guides/workflow-creation-guide.md)                     | Multi-step operational workflows               |
-| [OAuth2 Discovery](docs/guides/oauth2-discovery-flow.md)                        | OAuth2 server discovery (RFC 8414/9728)        |
-| [Analysis Memories](docs/guides/analysis-memories-guide.md)                     | Map-reduce over large datasets with embeddings |
-| [Transient Context](docs/guides/transient-context-protocol.md)                  | Stateless context handling protocol            |
+| Guide                                                           | Description                                                      |
+| --------------------------------------------------------------- | ---------------------------------------------------------------- |
+| [Quickstart](docs/guides/quickstart-guide.md)                   | Build your first model-driven MCP server (tutorial 1/2)          |
+| [Analysis Quickstart](docs/guides/analysis-quickstart-guide.md) | End-to-end walkthrough of the analysis tool suite (tutorial 2/2) |
+| [Project Structure](docs/guides/project-structure-guide.md)     | What lives where, in your server and in the framework            |
+| [Extensibility Overview](docs/guides/extensibility-overview.md) | The three-tier seam map of every extension point                 |
+
+### Building blocks
+
+| Guide                                                         | Description                                                  |
+| ------------------------------------------------------------- | ------------------------------------------------------------ |
+| [Tool Creation](docs/guides/tool-creation-guide.md)           | Build custom tools with category-based auth                  |
+| [Prompt Creation](docs/guides/prompt-creation-guide.md)       | Author prompts with stateless / hybrid / stateful strategies |
+| [MCP Apps](docs/guides/mcp-apps-guide.md)                     | Interactive UI forms and views                               |
+| [MCP Apps Architecture](docs/guides/mcp-apps-architecture.md) | Schema-driven app internals                                  |
+| [Custom App](docs/guides/custom-app-guide.md)                 | Build an app outside the generic CRUD family                 |
+| [Workflow Creation](docs/guides/workflow-creation-guide.md)   | Multi-step operational workflows                             |
+| [Domain Knowledge](docs/guides/domain-knowledge-guide.md)     | Business rules, knowledge, workflows                         |
+
+### Data, services, APIs
+
+| Guide                                                                     | Description                                               |
+| ------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [Data Layer](docs/guides/data-layer-guide.md)                             | The DataLayer abstraction — projection-layer boundary     |
+| [Service Layer](docs/guides/service-layer-guide.md)                       | ModelService, EndpointResolver, namespaces                |
+| [API Convention](docs/guides/api-convention-guide.md)                     | HAL, JSON:API, and custom payload conventions             |
+| [API Config](docs/guides/api-config-guide.md)                             | Per-model namespaces and per-action endpoint overrides    |
+| [API Client](docs/guides/api-client-guide.md)                             | Per-request ApiClient factory + OAuth integration         |
+| [Search Adapter](docs/guides/search-adapter-guide.md)                     | Bridge mcp-rune's generic filter format to your backend   |
+| [Search & Filters](docs/guides/search-filter-integration-guide.md)        | End-to-end filter wiring through the LLM                  |
+| [Model Form Customization](docs/guides/model-form-customization-guide.md) | Layouts, grids, and stacked variants                      |
+| [Attribute Kinds](docs/guides/attribute-kinds-guide.md)                   | parse / serialize / toInput / fromInput per kind          |
+| [Sections & Groups](docs/guides/sections-groups-guide.md)                 | Sections (UX layout) vs fieldGroups (validation grouping) |
+
+### Analysis & summary strategies
+
+| Guide                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Description                                                    |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| [Summary Strategies](docs/guides/summary-strategies.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Index and selection guide for the nine strategies              |
+| [Analysis Memories](docs/guides/analysis-memories-guide.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Session lifecycle of ingest → summarize → query → act          |
+| [Stateful Strategies](docs/guides/stateful-strategies-guide.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Multi-section prompts with progress and per-section validation |
+| [Proximity Sampling](docs/guides/proximity-sampling-guide.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Temporal bucketing + composite stratification for ingest       |
+| [Prompt Derivation Framework](docs/guides/prompt-derivation-framework-guide.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Deep dive into the prompt generator pipeline (5 layers)        |
+| [Transient Context Protocol](docs/guides/transient-context-protocol.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Stateless context handling between server and LLM              |
+| Per-strategy guides — [`anomaly`](docs/guides/summary-strategies/anomaly.md) · [`coverage`](docs/guides/summary-strategies/coverage.md) · [`distribution`](docs/guides/summary-strategies/distribution.md) · [`entity-extraction`](docs/guides/summary-strategies/entity-extraction.md) · [`temporal`](docs/guides/summary-strategies/temporal.md) · [`concept-touch`](docs/guides/summary-strategies/concept-touch.md) · [`relationship-coverage`](docs/guides/summary-strategies/relationship-coverage.md) · [`semantic-cluster`](docs/guides/summary-strategies/semantic-cluster.md) · [`rule-violation`](docs/guides/summary-strategies/rule-violation.md) | Input → algorithm → output per strategy                        |
+
+### Extensions
+
+| Guide                                                             | Description                                                  |
+| ----------------------------------------------------------------- | ------------------------------------------------------------ |
+| [Extensions](docs/guides/extensions.md)                           | HttpExtension contract, mount order, guarantees              |
+| [Extension Recipes](docs/guides/extension-recipes.md)             | Ready-to-paste patterns across the three extension protocols |
+| [API Extensions](docs/guides/api-extensions.md)                   | Per-model config bag for tool-side customization             |
+| [Tool Flow Extensions](docs/guides/tool-flow-extension-guide.md)  | Context threading for approval flows and handoffs            |
+| [Authoring Extensions](docs/guides/authoring-extensions-guide.md) | Five-piece pattern for shipping your own extension package   |
+
+### Auth & discovery
+
+| Guide                                                    | Description                             |
+| -------------------------------------------------------- | --------------------------------------- |
+| [OAuth2 Discovery](docs/guides/oauth2-discovery-flow.md) | OAuth2 server discovery (RFC 8414/9728) |
 
 ### Operations
 
@@ -1015,7 +1104,7 @@ npm run build
 # Full pipeline from scratch (Vite apps + tsc + copy)
 npm run build:full
 
-# Run all 2054 tests
+# Run all 2933 tests
 npm test
 
 # Watch mode (re-runs on file changes)
@@ -1067,7 +1156,7 @@ Add to your `claude_desktop_config.json`:
 - **OAuth2:** openid-client (RFCs 6749, 7591, 7636, 7662, 8414, 8707, 9728 + OIDC Core)
 - **Database:** PostgreSQL
 - **Apps:** Vite (build only)
-- **Testing:** Vitest (2054 tests, 81%+ coverage)
+- **Testing:** Vitest (2933 tests, 81%+ coverage)
 - **CI:** GitHub Actions
 
 ---

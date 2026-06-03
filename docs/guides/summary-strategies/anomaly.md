@@ -5,6 +5,24 @@ Surfaces the **records that don't look like everything else** on the page. Two c
 - **Numeric z-score outliers** — values whose absolute z-score exceeds 2 in their field. Catches "this book has 2,500 pages" when the mean is 280.
 - **Rare enum values** — values that occur on less than 5% of records. Catches "one record has `status: 'archived'`" when 49 of 50 say `completed` or `reading`.
 
+At a glance — what the strategy reads, what it computes, what it writes:
+
+```
+┌────────────────────┐    ┌────────────────────┐    ┌────────────────────┐
+│       INPUT        │    │     ALGORITHM      │    │       OUTPUT       │
+├────────────────────┤    ├────────────────────┤    ├────────────────────┤
+│ Page of N records  │    │ Numeric fields:    │    │ outlier_records[]  │
+│ (N ≥ 4)            │    │   mean, stddev     │    │   {id, field,      │
+│                    │ ─▶ │   flag |z| > 2     │ ─▶ │    value, z_score} │
+│ e.g. pages column: │    │                    │    │                    │
+│  312, 285, 2854,   │    │ Categorical        │    │ rare_values[]      │
+│  401, 268, ...     │    │ (≤ 20 distinct):   │    │   {field, value,   │
+│                    │    │   flag share < 5%  │    │    count, share}   │
+└────────────────────┘    └────────────────────┘    └────────────────────┘
+```
+
+The 2854-pages row is the outlier the **left** panel feeds in; the **middle** panel flags it via z-score; the **right** panel is what lands in `analysis_memories.metadata` for later semantic recall.
+
 ## When to pick
 
 - After a `distribution` pass: you've seen what's typical, now see what isn't.
