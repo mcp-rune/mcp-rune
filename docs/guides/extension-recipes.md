@@ -10,6 +10,39 @@ Start here. mcp-rune ships three extension surfaces (`HttpExtension`, `ApiExtens
 
 This page is that map. Each recipe is organized by deployer intent, not by extension type. Pick the entry that matches what you're trying to do, copy the example, then follow the link for the full reference.
 
+```
+   I want to...
+        │
+        ├── Add a non-CRUD verb to a model
+        │       (publish, archive, status changes)
+        │       → customActionsExtension       (ApiExtension)
+        │
+        ├── Add an MCP tool unrelated to a model
+        │       → ToolRegistry + BaseTool subclass
+        │
+        ├── Add an HTTP route (webhook, health, custom OAuth)
+        │       → HttpExtension
+        │
+        ├── Stage a write for human review
+        │       (collect → review → submit)
+        │       → ToolFlowExtension  (e.g. centerOfControlExtension)
+        │
+        ├── Add a new summary lens
+        │       → SummaryStrategy via ApiExtension
+        │
+        ├── Swap payload / association shape for one model
+        │       → BaseConvention override
+        │
+        ├── Stub the API for integration tests
+        │       → DataLayer override          (in-memory)
+        │
+        └── Touch many surfaces at once
+                (Stripe-style integration)
+                → see "Multi-surface" recipe below
+```
+
+Each leaf below is one section in this guide. Pick the row that matches, copy the snippet, follow the link for the full reference.
+
 ## Table of Contents
 
 - [Add a non-CRUD verb to a model (publish, archive)](#add-a-non-crud-verb-to-a-model-publish-archive)

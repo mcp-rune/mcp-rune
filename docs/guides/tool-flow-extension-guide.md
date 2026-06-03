@@ -18,6 +18,39 @@ This guide walks through the interface, the Center-of-Control implementation, an
 
 > **Looking for the minimal "collect → review → submit" recipe?** The [Extension Recipes Cookbook](./extension-recipes.md#stage-a-write-for-human-review-before-submitting-to-the-api) has a copy-pasteable example that just enables `centerOfControlExtension` on `createServer`.
 
+The lifecycle is two phases — once at boot, then per tool call:
+
+```
+   Boot                                Per tool call
+   ─────                                ─────────────
+
+   createServer({                       LLM invokes
+     toolFlowExtensions: [             new_model_app(...)
+       myExt                                  │
+     ]                                        ▼
+   })                                  ┌───────────────┐
+       │                               │ collect form  │
+       ▼                               │ data (because │
+   register(ctx)                       │ submitMode =  │
+     ctx.registerTool(...)             │ 'collect')    │
+     ctx.setFormSubmitMode('collect')  └──────┬────────┘
+     ctx.provideContext(KEY, store)          │
+       │                                      ▼
+       ▼                                  Extension's own tool
+   tool registry sealed                 (e.g. review_approval)
+                                                │
+                                                ▼
+                                        Handler reads KEY from
+                                        context, decides to
+                                        submit or reject
+                                                │
+                                                ▼
+                                        Resume CRUD via
+                                        DataLayer
+```
+
+`setFormSubmitMode('collect')` flips `new_model_app` / `edit_model_app` from "write directly" to "stage the payload". `provideContext(KEY, value)` threads a typed store into every later tool handler so the extension's own tools can read what was staged — without each handler having to import the extension.
+
 ## Table of Contents
 
 - [The Interface](#the-interface)

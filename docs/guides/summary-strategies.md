@@ -20,6 +20,35 @@ This guide covers:
 
 For the broader analysis-tool family, see [Analysis Memories Guide](./analysis-memories-guide.md). For how to register your strategy through an `ApiExtension`, see [API Extensions](./api-extensions.md).
 
+The nine built-ins split into two families based on what extra data the dispatcher loads for them:
+
+```
+       ┌──────────────────────────────────────────────────────┐
+       │              9 SUMMARY STRATEGIES                    │
+       ├──────────────────────────┬───────────────────────────┤
+       │      Field-level (5)     │     GraphRAG-aware (4)    │
+       │      (records only)      │  (records + auxiliary)    │
+       ├──────────────────────────┼───────────────────────────┤
+       │  distribution            │  relationship-coverage    │
+       │  coverage                │    requires: edges        │
+       │  anomaly                 │                           │
+       │  temporal                │  concept-touch            │
+       │  entity-extraction       │    requires: edges +      │
+       │                          │              domain       │
+       │                          │                           │
+       │                          │  rule-violation           │
+       │                          │    requires: domain       │
+       │                          │                           │
+       │                          │  semantic-cluster         │
+       │                          │    requires: embeddings   │
+       └──────────────────────────┴───────────────────────────┘
+              always runs             only when the dispatcher
+            (or simple shape gate)    can load the required
+                                      auxiliary data
+```
+
+A field-level strategy works on any page with records. A GraphRAG-aware strategy needs the auxiliary side-channel populated by `analysis_ingest` — `edges` from multi-hop ingest, `embeddings` from `embed_records: true`, or `domainRegistry` passed at server boot. Each strategy declares its needs via `requires`; the dispatcher loads them lazily and silently skips strategies whose requirements aren't met. See the per-strategy guides below for input/algorithm/output diagrams.
+
 ## The contract
 
 A strategy is a deterministic pure function over a page of records.

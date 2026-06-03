@@ -11,6 +11,40 @@ This guide is the reference for how the two work together. For the strategy that
 3. **Flexibility** — multiple fieldGroups can be grouped under one section
 4. **Single source of truth** — section titles and descriptions defined once
 
+The relationship is one-section-to-many-groups, with fields mapped at the group level:
+
+```
+   SECTIONS (user-facing flow)            FIELD GROUPS (validation)
+   ─────────────────────────              ──────────────────────────
+
+   ┌──────────────────────┐  ──────▶      ┌─────────────────────┐
+   │ basics               │   groups:     │ basics              │
+   │  title  : "Basics"   │     basics    │  fields:            │
+   │  required: true      │               │   ['title', 'desc'] │
+   └──────────────────────┘               │  required: true     │
+                                          └─────────────────────┘
+
+   ┌──────────────────────┐  ──────▶      ┌─────────────────────┐
+   │ classification       │   groups:     │ classification      │
+   │  title : "Classify"  │     classifi- │  fields:            │
+   │  required: true      │     cation    │   ['theme_id',      │
+   └──────────────────────┘               │    'category_id']   │
+                                          └─────────────────────┘
+
+   ┌──────────────────────┐  ──────┬─▶    ┌─────────────────────┐
+   │ timing               │       │       │ timing-when         │
+   │  title : "Timing"    │   groups:     │  fields:            │
+   │  required: false     │   ['timing-   │   ['occurred_at']   │
+   └──────────────────────┘    when',     └─────────────────────┘
+                               'timing-   ┌─────────────────────┐
+                                duration']│ timing-duration     │
+                                          │  fields:            │
+                                          │   ['duration_min']  │
+                                          └─────────────────────┘
+```
+
+Left column is what the LLM walks the user through; right column is what `validateSection` evaluates. A section can carry one **or many** field groups — that's how a "Timing" section can host both a "when" group and a "duration" group without changing the user-facing flow.
+
 ## Sections vs FieldGroups
 
 | Aspect      | Sections                                           | FieldGroups                                              |

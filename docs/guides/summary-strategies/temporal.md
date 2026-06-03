@@ -2,6 +2,24 @@
 
 Time-bucketed counts over the first ISO-date field on the page, with **gap detection** for empty buckets inside the observed span and a recency flag for the most-recent timestamp.
 
+At a glance — what the strategy reads, what it computes, what it writes:
+
+```
+┌────────────────────┐    ┌────────────────────┐    ┌────────────────────┐
+│       INPUT        │    │     ALGORITHM      │    │       OUTPUT       │
+├────────────────────┤    ├────────────────────┤    ├────────────────────┤
+│ First ISO-date     │    │ Pick bucket size:  │    │ buckets[]          │
+│ field on records:  │    │   span ≤ 14d  day  │    │   {start, count}   │
+│  2024-01-04        │ ─▶ │   span ≤ 90d  week │ ─▶ │                    │
+│  2024-02-11        │    │   else      month  │    │ gaps[]  (empty     │
+│  (60-day gap)      │    │                    │    │   buckets inside   │
+│  2024-10-22        │    │ Bucket + walk;     │    │   the span)        │
+│  ...               │    │ flag empty buckets │    │ days_since_latest  │
+└────────────────────┘    └────────────────────┘    └────────────────────┘
+```
+
+The **left** panel is a column of dates (here with a deliberate mid-span gap); the **middle** panel chooses a bucket granularity from the observed span and walks the buckets; the **right** panel surfaces the empty buckets so the LLM can spot ingestion gaps without scanning rows.
+
 ## When to pick
 
 - Any dataset with an `*_at` / `*_date` field where cadence matters: ingest activity, sessions, events.

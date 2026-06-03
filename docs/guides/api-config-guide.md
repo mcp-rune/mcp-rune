@@ -52,6 +52,45 @@ This guide covers the `static api` configuration on models and the services that
 
 ## Overview
 
+`EndpointResolver` walks a five-step chain to produce the URL for any `(model, action)` pair. First match wins:
+
+```
+   Resolve endpoint for (model, action)
+                 │
+                 ▼
+   ┌────────────────────────────┐  yes
+   │ Per-action override?       │ ──────▶ endpoints[<action>]
+   │ api.endpoints[<action>]    │
+   └─────────────┬──────────────┘
+                 │ no
+                 ▼
+   ┌────────────────────────────┐  yes
+   │ Collection override?       │ ──────▶ api.endpoint
+   │ api.endpoint               │
+   └─────────────┬──────────────┘
+                 │ no
+                 ▼
+   ┌────────────────────────────┐  yes
+   │ Parent path?               │ ──────▶ parent.endpoint + own
+   │ api.parent                 │
+   └─────────────┬──────────────┘
+                 │ no
+                 ▼
+   ┌────────────────────────────┐  yes
+   │ Namespace?                 │ ──────▶ namespace + default
+   │ api.namespace              │
+   └─────────────┬──────────────┘
+                 │ no
+                 ▼
+   ┌────────────────────────────┐
+   │ Default                    │
+   │   pluralize(model name)    │
+   │   "book" → /books          │
+   └────────────────────────────┘
+```
+
+Later steps only fire when the prior one declined to provide a path. Custom actions (publish, archive) follow the same chain but consult `api.endpoints[<action>]` first, then fall through to `api.endpoint + ':id/<action>'`.
+
 Every model declares a `static api` configuration that describes how it maps to a REST API:
 
 ```ts file=src/models/book.ts

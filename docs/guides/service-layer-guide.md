@@ -95,6 +95,30 @@ Supporting classes:
 
 ### Resolution Chain
 
+A real call traces the chain end-to-end:
+
+```
+   ModelService.findById('book', 42)
+            │
+            ▼
+   ┌─────────────────────────────────────────────────────────────┐
+   │  EndpointResolver.resolveRecord({ model, recordId: '42' })  │
+   ├─────────────────────────────────────────────────────────────┤
+   │                                                             │
+   │   1. api.endpoints.find?     ─▶ use it                      │
+   │   2. api.endpoints.record?   ─▶ replace ':id' with '42'     │
+   │   3. recordId contains '/'?  ─▶ use compound id as path     │
+   │   4. namespace + endpoint    ─▶ /api/v1/books/42            │
+   │                                                             │
+   │   First match wins. Explicit overrides bypass namespace.    │
+   └──────────────────────────┬──────────────────────────────────┘
+                              │
+                              ▼
+              apiClient.get('/api/v1/books/42')
+```
+
+The same shape applies to collections (with `resolveCollection`); per-action overrides win over collection overrides, parent paths join when present, and the default falls back to `pluralize(model)`.
+
 When resolving a collection endpoint (list or create):
 
 1. **Per-action override** — `api.endpoints.create` (highest priority)

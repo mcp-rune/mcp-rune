@@ -15,6 +15,29 @@ auth setup required: the example is wired to an **in-memory `DataLayer`
 adapter** that ships with the framework, so every CRUD tool works out of
 the box.
 
+The Rails analogy: one declaration, one fan-out.
+
+```
+       What you write                  What the framework derives
+   ┌──────────────────┐             ┌──────────────────────────┐
+   │ class Book       │             │ 8 polymorphic tools      │
+   │   extends        │             │   list_models,           │
+   │   BaseModel      │             │   find_records,          │
+   │                  │             │   create_/update_/       │
+   │ attributes = {   │  ────────▶  │   delete_model,          │
+   │   title,         │  derivation │   search_records,        │
+   │   author,        │             │   get_filters_guide,     │
+   │   status,        │             │   bulk_action_models     │
+   │   rating         │             │                          │
+   │ }                │             │ Prompt + form validation │
+   │                  │             │ 7 schema-driven apps     │
+   │                  │             │ Auto-generated docs      │
+   └──────────────────┘             └──────────────────────────┘
+```
+
+Add a second model and the same eight tools serve it too — that's the
+"polymorphic" promise; the LLM's tool list does not grow with your domain.
+
 ## Install
 
 Clone the repo and start the bookshelf example through the MCP Inspector:

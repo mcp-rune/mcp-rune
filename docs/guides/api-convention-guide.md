@@ -21,6 +21,43 @@ You write a custom convention when your API:
 
 The seam isolates that idiosyncrasy. Tools, prompts, apps, and the form-app iframes never see your envelope — they see normalized records.
 
+The same `belongsTo` and `hasMany` declarations produce different wire payloads depending on which convention is active:
+
+```
+                  Internal record
+              ┌────────────────────────┐
+              │ Book {                 │
+              │   title: "Clean Code", │
+              │   author: <Author#7>,  │  ← belongsTo
+              │   tags:   [<Tag#1>,    │  ← hasMany
+              │           <Tag#3>]     │
+              │ }                      │
+              └───────────┬────────────┘
+                          │
+            ┌─────────────┴─────────────┐
+            ▼                           ▼
+        HAL                       JSON:API
+   ┌─────────────────────┐   ┌──────────────────────────────┐
+   │  {                  │   │  {                           │
+   │    title: "...",    │   │    data: {                   │
+   │    author_link:     │   │      type: "books",          │
+   │      "/authors/7",  │   │      attributes: {           │
+   │    author_id: 7,    │   │        title: "..."          │
+   │    tag_ids: [1, 3]  │   │      },                      │
+   │  }                  │   │      relationships: {        │
+   │                     │   │        author: { data: {     │
+   │  belongsTo:         │   │          type: "authors",    │
+   │   {rel}_link +      │   │          id: "7" } },        │
+   │   {rel}_id          │   │        tags:   { data: [...] │
+   │                     │   │      }                       │
+   │  hasMany:           │   │    }                         │
+   │   {singular}_ids[]  │   │  }                           │
+   │                     │   │                              │
+   └─────────────────────┘   └──────────────────────────────┘
+```
+
+Tools and prompts above the convention only see the _internal_ record — they never branch on HAL vs JSON:API. Adding a third convention (custom envelope) is a single class; nothing in the layer above changes.
+
 ## Table of Contents
 
 - [The Interface](#the-interface)

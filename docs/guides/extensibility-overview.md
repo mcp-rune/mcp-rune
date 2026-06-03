@@ -25,6 +25,33 @@ Three quick checks before reaching for a seam:
 
 If you genuinely need a new seam (response middleware, telemetry hooks, etc.), file an issue. mcp-rune adds seams when there's a real consumer; the framework deliberately avoids speculative abstractions.
 
+The extensibility surface is organized in three tiers — pick the tier that matches the layer your concern lives at:
+
+```
+   ┌────────────────────────────────────────────────────────────┐
+   │  Tier 3 — HTTP & Transport                                 │
+   │  HttpExtension · OAuthService                              │
+   │  (express routes, middleware, RFC discovery)               │
+   ├────────────────────────────────────────────────────────────┤
+   │  Tier 2 — Tool & App Extensions                            │
+   │  ApiExtension · ToolFlowExtension · AppDefinition          │
+   │  BasePrompt · custom BaseTool                              │
+   │  (extend the MCP surface itself: tools, apps, prompts)     │
+   ├────────────────────────────────────────────────────────────┤
+   │  Tier 1 — Core Adapters                                    │
+   │  DataLayer · ApiClient · BaseConvention · SearchAdapter    │
+   │  Kinds (KindDescriptor / FormatterDescriptor)              │
+   │  (data path: HTTP → normalize → CRUD → projection)         │
+   └────────────────────────────────────────────────────────────┘
+                              │
+                              ▼  composition (bottom-up)
+       Tier 1 powers Tier 2; Tier 2 powers Tier 3.
+       A Tier 3 extension may rely on Tier 2 surfaces;
+       a Tier 2 extension consumes Tier 1 through DataLayer.
+```
+
+Tier 1 is where the wire-format and HTTP plumbing lives — swap it when the backend's shape doesn't match the defaults. Tier 2 is where the MCP surface is shaped — add tools, apps, prompts, or summary strategies. Tier 3 is where HTTP-level concerns sit — webhooks, custom OAuth endpoints, health probes.
+
 ## The Three Tiers
 
 ### Core Adapters

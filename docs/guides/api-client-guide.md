@@ -15,6 +15,41 @@ extension:
 
 This guide covers writing one, plugging it in, and testing it.
 
+The lifecycle is per-request — never reuse a client across users:
+
+```
+   ┌─────────────────┐                ┌─────────────────┐
+   │  Incoming MCP   │                │  OAuthService   │
+   │  tool request   │                │  (per session)  │
+   └────────┬────────┘                └────────┬────────┘
+            │                                  │
+            │   sessionId                      │
+            └─────────────────┬────────────────┘
+                              │
+                              ▼
+              ┌──────────────────────────────┐
+              │  getValidAccessToken(sessId) │
+              │   → token                    │
+              │   (auto-refresh, 5min        │
+              │    buffer)                   │
+              └──────────────┬───────────────┘
+                             │
+                             ▼
+              ┌──────────────────────────────┐
+              │  createApiClient(token,      │
+              │                  { apiUrl }) │
+              │   → ApiClient instance       │
+              └──────────────┬───────────────┘
+                             │  (lifetime = ONE request)
+                             ▼
+              ┌──────────────────────────────┐
+              │  Tool / App handler          │
+              │  apiClient.get / post / ...  │
+              └──────────────────────────────┘
+```
+
+The factory shape — `createApiClient(token, { apiUrl })` — is the only contract the framework cares about. The implementation can be axios, fetch, gRPC bridge, or an in-memory stub for tests. The framework calls this factory **once per request**, so the token stays bound to a single user's call and never bleeds between concurrent sessions.
+
 ## Table of Contents
 
 - [The Interface](#the-interface)

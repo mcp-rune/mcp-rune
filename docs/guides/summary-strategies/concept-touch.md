@@ -6,6 +6,25 @@ This is the **domain-aware** counterpart to `relationship-coverage`. The latter 
 
 **Requires:** `['edges', 'domainRegistry']`.
 
+At a glance — what the strategy reads, what it computes, what it writes:
+
+```
+┌────────────────────┐    ┌────────────────────┐    ┌────────────────────┐
+│       INPUT        │    │     ALGORITHM      │    │       OUTPUT       │
+├────────────────────┤    ├────────────────────┤    ├────────────────────┤
+│ Records + edges +  │    │ For each concept   │    │ concepts[name]     │
+│ DomainRegistry     │    │ covering the model:│    │   touched / total  │
+│                    │    │  targets =         │    │   target_models[]  │
+│ Concept "catalogue"│ ─▶ │   concept.models   │ ─▶ │   touched_by_      │
+│  = [book, author,  │    │   - { model }      │    │     target{model}  │
+│      genre]        │    │  count records     │    │   missing_ids[]    │
+│                    │    │  with ≥ 1 edge     │    │   (first 10 with   │
+│                    │    │  into any target   │    │    no touch)       │
+└────────────────────┘    └────────────────────┘    └────────────────────┘
+```
+
+The **left** panel supplies the page records plus the `DomainConcept` declaring which models belong together; the **middle** panel checks each record for ≥1 edge into the concept's other models; the **right** panel reports both the overall coverage and the per-target breakdown so you can see which side of the concept is sparse.
+
 ## When to pick
 
 - Domain-level audits. When a `DomainConcept` declares "these N models hang together for purpose X", `concept-touch` measures how often that promise is kept.

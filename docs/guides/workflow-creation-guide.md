@@ -32,6 +32,37 @@ Workflows are multi-step process definitions that guide the LLM through complex 
 
 The LLM receives the workflow via `suggest_workflow` (roadmap + first step), then advances step-by-step using `get_workflow_step`. This prompt-chaining approach scopes tool context per step, preventing the LLM from substituting similar-looking tools.
 
+A workflow is an ordered chain of typed steps. The five step types compose into linear flows, parallel branches, decisions, and loops:
+
+```
+   suggest_workflow(name) ──▶ roadmap + step 1
+                                       │
+                                       ▼
+   ┌──────────────────────────────────────────────────────────────┐
+   │                                                              │
+   │  Step 1  [tool]   ──▶  call MCP tool, capture result         │
+   │     │                                                        │
+   │     ▼                                                        │
+   │  Step 2  [analysis] ──▶ LLM digests result, no tool call     │
+   │     │                                                        │
+   │     ▼                                                        │
+   │  Step 3  [parallel] ──┬──▶ sub-step A                        │
+   │     │                 └──▶ sub-step B                        │
+   │     ▼                                                        │
+   │  Step 4  [decision] ──┬──▶ branch X  (user picks)            │
+   │     │                 └──▶ branch Y                          │
+   │     ▼                                                        │
+   │  Step 5  [loop]    ──▶ repeat until exit condition           │
+   │                                                              │
+   └──────────────────────────────────────────────────────────────┘
+                                       │
+                                       ▼
+                          get_workflow_step(step n+1)
+                          advances one step at a time
+```
+
+The single-step advance is what scopes tool context. The LLM only sees the tools relevant to the current step, so it can't drift to a similarly-named tool from a later step before getting there.
+
 ## Schema Reference
 
 ### WorkflowDefinition

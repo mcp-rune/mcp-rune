@@ -6,6 +6,25 @@ Complementary to the SQL `cluster` stratifier (see [analysis-quickstart](../anal
 
 **Requires:** `['embeddings']`. The dispatcher loads them in one query per page.
 
+At a glance — what the strategy reads, what it computes, what it writes:
+
+```
+┌────────────────────┐    ┌────────────────────┐    ┌────────────────────┐
+│       INPUT        │    │     ALGORITHM      │    │       OUTPUT       │
+├────────────────────┤    ├────────────────────┤    ├────────────────────┤
+│ Records +          │    │ Pick first k       │    │ clusters[i]        │
+│ embeddings         │    │ records as anchors │    │   size             │
+│ Float32Array(384)  │    │ (default k = 5)    │    │   mean_distance    │
+│                    │ ─▶ │                    │ ─▶ │   representative_  │
+│  rec1: [embedding] │    │ For each record:   │    │     id + hint      │
+│  rec2: [embedding] │    │   cosine dist to   │    │     (title/name)   │
+│  ...               │    │   each anchor;     │    │   member_ids[]     │
+│                    │    │   assign nearest   │    │                    │
+└────────────────────┘    └────────────────────┘    └────────────────────┘
+```
+
+The **left** panel feeds the dispatcher-loaded 384-dim embeddings keyed by record ID; the **middle** panel runs deterministic anchor-nearest clustering (the first k records are the anchors — pure-function contract); the **right** panel labels each cluster with a representative record's title/name so the embedded finding text is human-readable for later semantic recall.
+
 ## When to pick
 
 - After an ingest with `embed_records: true` (the default). You get a sense of how the page's records group by semantic similarity, without taking a sample.

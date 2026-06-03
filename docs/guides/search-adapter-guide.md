@@ -62,6 +62,31 @@ Flat. That's the contract you usually want to break.
 
 ## `buildBody` vs `buildRequest` vs `_buildQueryParams`
 
+The three hooks are concentric scopes — pick the **narrowest** one that does the job:
+
+```
+   SearchService.search()
+            │
+            ▼
+   ┌─────────────────────────────────────────────────────┐
+   │  buildRequest()                          (rare)     │
+   │   ┌──────────────────────────────────────────────┐  │
+   │   │  buildBody()                  (95% of cases) │  │
+   │   │   shape the POST body / filter envelope      │  │
+   │   └──────────────────────────────────────────────┘  │
+   │                                                     │
+   │   ┌──────────────────────────────────────────────┐  │
+   │   │  _buildQueryParams()               (edge)    │  │
+   │   │   add expansion hints, sparse fieldsets,     │  │
+   │   │   etc. as URL params                         │  │
+   │   └──────────────────────────────────────────────┘  │
+   └─────────────────────────────────────────────────────┘
+```
+
+- Inner `buildBody()` — reshape the POST body. Almost all customizations sit here.
+- Inner `_buildQueryParams()` — when extra metadata rides on the URL rather than the body.
+- Outer `buildRequest()` — only when body and query params have to be derived together (the body depends on a value that also appears as a query param, or vice versa).
+
 `buildRequest` is the top-level entry point `SearchService` calls. It returns `{ body, queryParams }` — a body POSTed to the endpoint and an optional query string appended to the URL.
 
 ```ts file=examples/search-adapter-guide-01.ts

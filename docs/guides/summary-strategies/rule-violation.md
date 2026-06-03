@@ -6,6 +6,27 @@ The `finding` text is embedded as an `analysis_memories` row, so a later `analys
 
 **Requires:** `['domainRegistry']`. No edges or embeddings.
 
+At a glance — what the strategy reads, what it computes, what it writes:
+
+```
+┌────────────────────┐    ┌────────────────────┐    ┌────────────────────┐
+│       INPUT        │    │     ALGORITHM      │    │       OUTPUT       │
+├────────────────────┤    ├────────────────────┤    ├────────────────────┤
+│ Records +          │    │ For each rule      │    │ rules[name]        │
+│ DomainRegistry     │    │ scoping the model: │    │   passed / failed  │
+│ rules              │    │                    │    │   severity         │
+│                    │ ─▶ │  iterate records   │ ─▶ │   description      │
+│ BusinessRules with │    │   rule.evaluate()  │    │   failed_ids[]     │
+│ scope = [book]:    │    │   tally pass/fail  │    │     (cap 10)       │
+│  completed-needs-  │    │   collect first 10 │    │   example_         │
+│   rating (warning) │    │   failing IDs +    │    │     messages[]     │
+│  needs-author      │    │   3 example msgs   │    │     (cap 3)        │
+│   (error)          │    │                    │    │                    │
+└────────────────────┘    └────────────────────┘    └────────────────────┘
+```
+
+The **left** panel is the page records plus every `BusinessRule` whose `scope` includes the model; the **middle** panel evaluates every rule against every record and tallies outcomes; the **right** panel keeps per-rule counts, severity, and the first 10 failing IDs — direct ammunition for `analysis_query mode:"filter" where:{id:[...]}`.
+
 ## When to pick
 
 - Compliance and audit runs: every record is checked against every rule scoped to its model. Failures land in `metadata.rules[<name>].failed_ids` so the LLM can `analysis_query mode:"filter" where:{id:[...]}` straight to them.

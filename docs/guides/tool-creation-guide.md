@@ -103,6 +103,50 @@ Tools receive services via dependency injection through `ToolRegistry` (see [Too
 
 See the [Service Layer Guide](service-layer-guide.md) for full details on both services, resolution chains, adapters, and design boundaries.
 
+### Tool Pipeline
+
+Every tool call passes through the same interceptor pipeline before reaching your `execute()`:
+
+```
+   MCP request: { tool: "create_model", args: {...} }
+                              │
+                              ▼
+       ┌─────────────────────────────────────────────┐
+       │  wrapToolHandler(handler, [interceptors])   │
+       └─────────────────────────────────────────────┘
+                              │
+                              ▼
+       ┌─────────────────────────────────────────────┐
+       │  loggingInterceptor     (start, args)       │  ← before
+       └──────────────────────┬──────────────────────┘
+                              ▼
+       ┌─────────────────────────────────────────────┐
+       │  tracingInterceptor     (span open)         │  ← before
+       └──────────────────────┬──────────────────────┘
+                              ▼
+       ┌─────────────────────────────────────────────┐
+       │  errorInterceptor       (try { ... } catch) │  ← around
+       │   ┌─────────────────────────────────────┐   │
+       │   │  YourTool.execute(args, context)    │   │  ← your code
+       │   │   - input validation                │   │
+       │   │   - service calls (DataLayer)       │   │
+       │   │   - return shaped result            │   │
+       │   └─────────────────────────────────────┘   │
+       │                                             │
+       │   catch → MCP-shaped error response         │
+       └─────────────────────────────────────────────┘
+                              │
+                              ▼  result or error response
+       ┌─────────────────────────────────────────────┐
+       │  tracingInterceptor     (span close)        │  ← after
+       │  loggingInterceptor     (duration, status)  │  ← after
+       └──────────────────────┬──────────────────────┘
+                              ▼
+                       MCP response
+```
+
+Built-in interceptors (`loggingInterceptor`, `tracingInterceptor`, `errorInterceptor`) cover the common cases. Add your own via `ToolRegistry` to insert tenant-scoped header injection, rate limiting, or audit logging — the pipeline is composable and runs in declaration order.
+
 ## Tool Categories
 
 Tools are organized by category which determines authentication requirements:
