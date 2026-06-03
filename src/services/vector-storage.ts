@@ -272,7 +272,10 @@ export type IngestedDataQuery =
       stratifyBy?: string
       where?: Record<string, unknown>
       proximity?: ingestedRecords.ProximityParams
+      stratifiers?: ReadonlyArray<ingestedRecords.GraphStratifierSpec>
     }
+
+export type { GraphStratifierSpec } from './vendor/pgvector/ingested-records.js'
 
 /** Store ingested records for analysis, optionally embedding them. */
 export async function storeIngestedRecords(params: IngestRecordsParams): Promise<number> {
@@ -318,6 +321,20 @@ export async function queryIngestedData(
   if (!pool) return []
 
   return ingestedRecords.queryRecords(pool, analysisId, query)
+}
+
+/** Surface graph dimensions for describe-mode (edge types + embedding coverage). */
+export async function getSessionGraphInfo(
+  analysisId: string
+): Promise<ingestedRecords.SessionGraphInfo> {
+  if (!vendor.isConfigured()) {
+    return { edgeTypes: [], embeddedRecordCount: 0, totalRecordCount: 0 }
+  }
+
+  const pool = vendor.getPool()
+  if (!pool) return { edgeTypes: [], embeddedRecordCount: 0, totalRecordCount: 0 }
+
+  return ingestedRecords.getSessionGraphInfo(pool, analysisId)
 }
 
 /** Describe an analysis session — returns model name and record count */

@@ -1,14 +1,18 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
+import type { GraphStratifierSpec } from '#src/services/vector-storage.js'
 import {
   describeAnalysisSession,
+  ensureRecordEmbeddings,
+  getSessionGraphInfo,
   queryIngestedData,
   recallAnalysisMemories
 } from '#src/services/vector-storage.js'
 
 import type { ToolResult } from '../base-tool.js'
 import { BaseAnalysisTool } from './base-analysis-tool.js'
+import { StratifiersArraySchema, toGraphStratifierSpec } from './stratifier-validator.js'
 
 interface AnalysisMemory {
   finding: string
@@ -114,6 +118,13 @@ Typical reasoning flow:
           'Proximity window for date-based sampling (sample mode). Centers on a date and samples within a time window. ' +
             'Combine with "where" to filter first, then sample around a date. ' +
             'E.g., {"field": "created_at", "origin": "2026-03-15", "window": "7 days", "bucket": "1 day"}'
+        ),
+      stratifiers: StratifiersArraySchema.optional(),
+      sample_model: this.zodEnum(this.getModelNames())
+        .optional()
+        .describe(
+          'Source model for sample-mode stratifiers (required when `stratifiers` uses kind:"concept"). ' +
+            "Defaults to the session's ingested model."
         )
     }
   }
@@ -130,7 +141,9 @@ Typical reasoning flow:
       limit,
       sample_size,
       stratify_by,
-      proximity
+      proximity,
+      stratifiers,
+      sample_model
     } = args as {
       analysis_id: string
       mode: 'describe' | 'semantic' | 'aggregate' | 'filter' | 'sample'
@@ -143,6 +156,12 @@ Typical reasoning flow:
       sample_size?: number
       stratify_by?: string
       proximity?: { field: string; origin: string; window: string; bucket?: string }
+      stratifiers?: Array<
+        | { kind: 'concept'; concept: string }
+        | { kind: 'edge'; edge_type: string; bucket?: 'present' | 'count' }
+        | { kind: 'cluster'; k: number }
+      >
+      sample_model?: string
     }
 
     switch (mode) {
@@ -155,7 +174,15 @@ Typical reasoning flow:
       case 'filter':
         return this._queryFilter(analysis_id, where, limit)
       case 'sample':
-        return this._querySample(analysis_id, sample_size, stratify_by, where, proximity)
+        return this._querySample(
+          analysis_id,
+          sample_size,
+          stratify_by,
+          where,
+          proximity,
+          stratifiers,
+          sample_model
+        )
     }
   }
 
@@ -285,6 +312,59 @@ Typical reasoning flow:
       )
     }
 
+    // Graph dimensions: concepts touching this model, observed edge types,
+    // embedding coverage. Surfaces what graph-aware sampling and the
+    // GraphRAG strategies have to work with.
+    const graphInfo = await getSessionGraphInfo(analysisId)
+    const conceptResolver = this.domainRegistry as
+      | {
+          knowledge?: {
+            getConceptsForModel?: (m: string) => Array<{ name: string; models: string[] }>
+          }
+        }
+      | undefined
+    const concepts = conceptResolver?.knowledge?.getConceptsForModel?.(model) ?? []
+
+    if (concepts.length > 0 || graphInfo.edgeTypes.length > 0 || graphInfo.totalRecordCount > 0) {
+      parts.push('')
+      parts.push('## Graph dimensions available', '')
+
+      if (concepts.length > 0) {
+        parts.push(
+          `Concepts covering \`${model}\`: ` + concepts.map((c) => `\`${c.name}\``).join(', ')
+        )
+      } else {
+        parts.push(`Concepts covering \`${model}\`: (none registered)`)
+      }
+
+      if (graphInfo.edgeTypes.length > 0) {
+        parts.push(
+          `Edge types in this session: ${graphInfo.edgeTypes.map((t) => `\`${t}\``).join(', ')}`
+        )
+      } else {
+        parts.push(`Edge types in this session: (none — re-run analysis_ingest with hop_depth ≥ 0)`)
+      }
+
+      const pct =
+        graphInfo.totalRecordCount > 0
+          ? Math.round((graphInfo.embeddedRecordCount / graphInfo.totalRecordCount) * 100)
+          : 0
+      parts.push(
+        `Embedding coverage: ${graphInfo.embeddedRecordCount}/${graphInfo.totalRecordCount} (${pct}%). ` +
+          (pct === 100
+            ? 'cluster stratifier ready.'
+            : pct === 0
+              ? 'cluster stratifier will trigger back-fill on first use.'
+              : 'partial — cluster stratifier auto-back-fills the rest.')
+      )
+
+      parts.push('')
+      parts.push('### Graph-aware sample stratifiers')
+      parts.push(
+        '`stratifiers: [{kind:"concept", concept:"<name>"}, {kind:"edge", edge_type:"<type>", bucket:"present"|"count"}, {kind:"cluster", k:<2-20>}]` (max 3, composes with `where` / `proximity` / `stratify_by`).'
+      )
+    }
+
     return this.formatResponse(parts.join('\n'))
   }
 
@@ -402,20 +482,60 @@ Typical reasoning flow:
     return this.formatResponse(results as unknown as Record<string, unknown>)
   }
 
-  /** Sample records — supports stratification, pre-filtering, and proximity windowing */
+  /**
+   * Sample records — supports discrete-field stratification, pre-filtering,
+   * proximity windowing, and composable graph stratifiers (concept/edge/cluster).
+   *
+   * When `stratifiers` includes `kind:"cluster"`, embeddings are auto-backfilled
+   * for any records lacking them so the cluster CTE has data to work with.
+   */
   private async _querySample(
     analysisId: string,
     sampleSize?: number,
     stratifyBy?: string,
     where?: Record<string, unknown>,
-    proximity?: { field: string; origin: string; window: string; bucket?: string }
+    proximity?: { field: string; origin: string; window: string; bucket?: string },
+    stratifiers?: Array<
+      | { kind: 'concept'; concept: string }
+      | { kind: 'edge'; edge_type: string; bucket?: 'present' | 'count' }
+      | { kind: 'cluster'; k: number }
+    >,
+    sampleModel?: string
   ): Promise<ToolResult> {
+    let resolvedStratifiers: ReadonlyArray<GraphStratifierSpec> | undefined
+    if (stratifiers && stratifiers.length > 0) {
+      const model = sampleModel ?? (await this._resolveSessionModel(analysisId))
+      if (!model) {
+        return this._textError(
+          'Could not resolve source model for sample stratifiers. Pass `sample_model` explicitly or ingest data first.'
+        )
+      }
+
+      try {
+        resolvedStratifiers = stratifiers.map((s) =>
+          toGraphStratifierSpec(
+            s as Parameters<typeof toGraphStratifierSpec>[0],
+            this.domainRegistry,
+            model
+          )
+        )
+      } catch (err) {
+        return this._textError((err as Error).message)
+      }
+
+      // Auto-backfill embeddings when a cluster stratifier is requested.
+      if (resolvedStratifiers.some((s) => s.kind === 'cluster')) {
+        await ensureRecordEmbeddings(analysisId, model)
+      }
+    }
+
     const results = await queryIngestedData(analysisId, {
       mode: 'sample',
       sampleSize,
       stratifyBy,
       where,
-      proximity
+      proximity,
+      stratifiers: resolvedStratifiers
     })
 
     if (results.length === 0) {
@@ -425,5 +545,14 @@ Typical reasoning flow:
     }
 
     return this.formatResponse(results as unknown as Record<string, unknown>)
+  }
+
+  private async _resolveSessionModel(analysisId: string): Promise<string | undefined> {
+    const session = await describeAnalysisSession(analysisId)
+    return session?.model
+  }
+
+  private _textError(text: string): ToolResult {
+    return { content: [{ type: 'text', text }], isError: true }
   }
 }

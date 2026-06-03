@@ -10,6 +10,19 @@
 
 import type { Pool } from 'pg'
 
+import {
+  buildClusterStratifier,
+  buildConceptStratifier,
+  buildEdgeStratifier,
+  type ParamRef,
+  type StratifierFragment
+} from '#src/core/graph-stratifiers.js'
+
+export type GraphStratifierSpec =
+  | { kind: 'concept'; concept: string; targetModels: ReadonlyArray<string> }
+  | { kind: 'edge'; edge_type: string; bucket?: 'present' | 'count' }
+  | { kind: 'cluster'; k: number }
+
 export interface RecordEmbedding {
   /** Index into the `records` array this embedding corresponds to. */
   recordIndex: number
@@ -55,6 +68,12 @@ export interface SampleQuery {
   stratifyBy?: string
   where?: Record<string, unknown>
   proximity?: ProximityParams
+  /**
+   * Graph-aware partition dimensions composed with `where` / `proximity`
+   * / `stratifyBy`. Up to 3 to bound the cross-product. See
+   * {@link GraphStratifierSpec} for the discriminated union.
+   */
+  stratifiers?: ReadonlyArray<GraphStratifierSpec>
 }
 
 export type IngestedQuery = AggregateQuery | FilterQuery | SampleQuery
@@ -381,8 +400,8 @@ async function querySample(
 ): Promise<Record<string, unknown>[]> {
   const sampleSize = Math.min(query.sampleSize || 5, 50)
 
-  // Delegate to proximity-aware path when where or proximity are provided
-  if (query.where || query.proximity) {
+  // Delegate to proximity-aware path when where, proximity, or graph stratifiers are provided
+  if (query.where || query.proximity || (query.stratifiers && query.stratifiers.length > 0)) {
     return querySampleFiltered(pool, analysisId, sampleSize, query)
   }
 
@@ -403,15 +422,20 @@ async function querySample(
 }
 
 /**
- * Pre-filtered sample with optional proximity windowing and bucket stratification.
+ * Pre-filtered sample with proximity windowing, discrete-field stratification,
+ * and composable graph stratifiers.
  *
  * Builds a `filtered` CTE from the base conditions + where clauses + proximity
- * date window, then applies stratification on top (by date bucket, discrete field,
- * or both).
+ * date window, then layers additional CTEs (one per graph stratifier) that
+ * compute partition values for each filtered record. The final PARTITION BY
+ * is the Cartesian product of all enabled partition expressions; the
+ * `CEIL(sampleSize / num_groups)` budget allocation handles any group count
+ * via `COUNT(DISTINCT ROW(...))`.
  *
- * Proximity uses PostgreSQL date_bin() to create origin-anchored time buckets,
- * then applies the same ROW_NUMBER() OVER (PARTITION BY) budget allocation as
- * querySampleStratified.
+ * Graph stratifiers:
+ *   - { kind: 'concept', concept, targetModels } — binary participation flag
+ *   - { kind: 'edge', edge_type, bucket } — edge presence or degree bucket
+ *   - { kind: 'cluster', k } — anchor-nearest semantic cluster id
  */
 async function querySampleFiltered(
   pool: Pool,
@@ -423,14 +447,12 @@ async function querySampleFiltered(
   const params: unknown[] = [analysisId]
   let paramIdx = 2
 
-  // Apply where conditions
   if (query.where) {
     const where = buildWhereConditions(query.where, params, paramIdx)
     baseConditions.push(...where.conditions)
     paramIdx = where.paramIdx
   }
 
-  // Apply proximity date window
   if (query.proximity) {
     const safeField = sanitizeFieldName(query.proximity.field)
     const validWindow = validateInterval(query.proximity.window)
@@ -449,16 +471,49 @@ async function querySampleFiltered(
   }
 
   const filteredCte = `filtered AS (
-    SELECT data FROM ingested_records
+    SELECT id, data, embedding FROM ingested_records
     WHERE ${baseConditions.join(' AND ')}
   )`
 
-  // Determine stratification strategy
-  const hasBucket = query.proximity?.bucket
-  const hasStratify = query.stratifyBy
+  // Build the partition tuple — built-in (bucket + stratifyBy) + graph stratifiers
+  const partitionParts: string[] = []
+  const extraCtes: Array<{ name: string; body: string }> = []
+  const joins: string[] = []
 
-  if (!hasBucket && !hasStratify) {
-    // Simple filtered random sample
+  // 1. Temporal bucket (existing)
+  if (query.proximity?.bucket) {
+    const safeField = sanitizeFieldName(query.proximity.field)
+    const validBucket = validateInterval(query.proximity.bucket)
+    const binExpr = `date_bin('${validBucket}'::interval, (filtered.data->>'${safeField}')::timestamptz, $${paramIdx}::timestamptz)`
+    params.push(query.proximity.origin)
+    paramIdx++
+    partitionParts.push(binExpr)
+  }
+
+  // 2. Discrete-field stratifier (existing)
+  if (query.stratifyBy) {
+    const safeStratify = sanitizeFieldName(query.stratifyBy)
+    partitionParts.push(`filtered.data->>'${safeStratify}'`)
+  }
+
+  // 3. Graph stratifiers (new): concept, edge, cluster — composable
+  if (query.stratifiers && query.stratifiers.length > 0) {
+    if (query.stratifiers.length > 3) {
+      throw new Error('At most 3 graph stratifiers can be combined per query.')
+    }
+    const ref: ParamRef = { next: paramIdx, params }
+    for (const spec of query.stratifiers) {
+      const frag = _materializeStratifier(spec, ref)
+      if (frag.extraCte) extraCtes.push(frag.extraCte)
+      if (frag.cte) extraCtes.push(frag.cte)
+      if (frag.join) joins.push(frag.join)
+      partitionParts.push(frag.partitionExpr)
+    }
+    paramIdx = ref.next
+  }
+
+  // No partitioning at all — simple filtered random sample
+  if (partitionParts.length === 0) {
     params.push(sampleSize)
     const result = await pool.query(
       `WITH ${filteredCte}
@@ -470,51 +525,32 @@ async function querySampleFiltered(
     return (result.rows as IngestedRow[]).map((row) => row.data)
   }
 
-  // Build PARTITION BY expression for stratification
-  const partitionParts: string[] = []
-
-  if (hasBucket) {
-    const safeField = sanitizeFieldName(query.proximity!.field)
-    const validBucket = validateInterval(query.proximity!.bucket!)
-
-    // date_bin(bucket_interval, timestamp, origin) — origin-anchored buckets
-    const binExpr = `date_bin('${validBucket}'::interval, (data->>'${safeField}')::timestamptz, $${paramIdx}::timestamptz)`
-    params.push(query.proximity!.origin)
-    paramIdx++
-
-    partitionParts.push(binExpr)
-  }
-
-  if (hasStratify) {
-    const safeStratify = sanitizeFieldName(query.stratifyBy!)
-    partitionParts.push(`data->>'${safeStratify}'`)
-  }
-
-  const partitionBy = partitionParts.join(', ')
-
-  // Build the count expression to match the partition
-  // We need DISTINCT on the same composite key
+  // Assemble the multi-CTE query
+  const ctes = [filteredCte, ...extraCtes.map((c) => `${c.name} AS (${c.body})`)]
+  const joinClause = joins.join(' ')
+  const partitionTuple = partitionParts.join(', ')
   const countExpr =
     partitionParts.length === 1
       ? `COUNT(DISTINCT ${partitionParts[0]}) AS num_groups`
       : `COUNT(DISTINCT ROW(${partitionParts.join(', ')})) AS num_groups`
 
+  ctes.push(`ranked AS (
+    SELECT filtered.data,
+      ROW_NUMBER() OVER (
+        PARTITION BY ${partitionTuple} ORDER BY RANDOM()
+      ) AS rn
+    FROM filtered ${joinClause}
+  )`)
+  ctes.push(`group_count AS (
+    SELECT ${countExpr}
+    FROM filtered ${joinClause}
+  )`)
+
   params.push(sampleSize)
   const sampleParamIdx = paramIdx
 
   const result = await pool.query(
-    `WITH ${filteredCte},
-     ranked AS (
-       SELECT data,
-         ROW_NUMBER() OVER (
-           PARTITION BY ${partitionBy} ORDER BY RANDOM()
-         ) AS rn
-       FROM filtered
-     ),
-     group_count AS (
-       SELECT ${countExpr}
-       FROM filtered
-     )
+    `WITH ${ctes.join(',\n')}
      SELECT ranked.data
      FROM ranked, group_count
      WHERE ranked.rn <= GREATEST(1, CEIL($${sampleParamIdx}::numeric / GREATEST(1, group_count.num_groups)))
@@ -524,6 +560,33 @@ async function querySampleFiltered(
   )
 
   return (result.rows as IngestedRow[]).map((row) => row.data)
+}
+
+/**
+ * Dispatch a GraphStratifierSpec to the matching pure builder. The cluster
+ * builder produces two CTEs (anchors + assign); we flatten that into one
+ * fragment list by prepending the anchors CTE.
+ */
+function _materializeStratifier(
+  spec: GraphStratifierSpec,
+  ref: ParamRef
+): StratifierFragment & { extraCte?: { name: string; body: string } } {
+  switch (spec.kind) {
+    case 'concept':
+      return buildConceptStratifier({ concept: spec.concept, targetModels: spec.targetModels }, ref)
+    case 'edge':
+      return buildEdgeStratifier({ edge_type: spec.edge_type, bucket: spec.bucket }, ref)
+    case 'cluster': {
+      const { fragments, anchorsCte } = buildClusterStratifier({ k: spec.k }, ref)
+      // Caller needs the anchors CTE before the assign CTE; surface both by
+      // chaining: replace the single .cte with a combined body that defines
+      // anchors as a sibling CTE through a CROSS APPLY-style join.
+      // PostgreSQL doesn't allow that, so we inline anchors as a separate CTE
+      // via the extraCte slot. The caller wraps both into the WITH list.
+      // For simplicity here, we widen the fragment with an extraCte field.
+      return { ...fragments, extraCte: anchorsCte }
+    }
+  }
 }
 
 /**
@@ -587,6 +650,50 @@ async function querySampleStratified(
   )
 
   return (result.rows as IngestedRow[]).map((row) => row.data)
+}
+
+export interface SessionGraphInfo {
+  edgeTypes: string[]
+  embeddedRecordCount: number
+  totalRecordCount: number
+}
+
+/**
+ * Surface graph dimensions for `analysis_query mode:"describe"`: which edge
+ * types are present in the session, and how many records have embeddings.
+ */
+export async function getSessionGraphInfo(
+  pool: Pool,
+  analysisId: string
+): Promise<SessionGraphInfo> {
+  const [edgeRows, countRow] = await Promise.all([
+    pool.query(
+      `SELECT DISTINCT edge_type FROM ingested_edges
+       WHERE analysis_id = $1
+         AND (expires_at IS NULL OR expires_at > NOW())
+       ORDER BY edge_type`,
+      [analysisId]
+    ),
+    pool.query(
+      `SELECT
+         COUNT(*)::integer AS total,
+         COUNT(embedding)::integer AS embedded
+       FROM ingested_records
+       WHERE analysis_id = $1
+         AND (expires_at IS NULL OR expires_at > NOW())`,
+      [analysisId]
+    )
+  ])
+
+  const counts = (countRow.rows[0] as { total: number; embedded: number } | undefined) ?? {
+    total: 0,
+    embedded: 0
+  }
+  return {
+    edgeTypes: (edgeRows.rows as Array<{ edge_type: string }>).map((r) => r.edge_type),
+    embeddedRecordCount: counts.embedded,
+    totalRecordCount: counts.total
+  }
 }
 
 /** Describe an analysis session — returns model name and record count */
