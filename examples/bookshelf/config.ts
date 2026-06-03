@@ -3,11 +3,19 @@ import { dirname, resolve } from 'node:path'
 
 import { createInMemoryDataLayer, loadFixturesFromJson } from '@mcp-rune/mcp-rune/core'
 import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
+import {
+  DomainKnowledge,
+  DomainRegistry,
+  RuleSet,
+  WorkflowRegistry
+} from '@mcp-rune/mcp-rune/domain'
 import { BasePromptRegistry, STRATEGY_TOOL_CLASSES } from '@mcp-rune/mcp-rune/prompts'
 import { createServer } from '@mcp-rune/mcp-rune/server'
 import { DATA_TOOL_CLASSES, ToolRegistry } from '@mcp-rune/mcp-rune/tools'
 import type { ApiClient, StubFixtures } from '@mcp-rune/mcp-rune/core'
 
+import { BOOKSHELF_CONCEPTS } from './domain/concepts.js'
+import { BOOKSHELF_RULES } from './domain/rules.js'
 import { generateBookFixtures, generateGraphFixtures } from './fixtures/generate-books.js'
 import { Author } from './models/author.js'
 import { Book } from './models/book.js'
@@ -95,12 +103,24 @@ const stubApiClient = new Proxy({} as ApiClient, {
   }
 })
 
+// Domain registry: cross-entity concepts + business rules drive the
+// GraphRAG summary strategies (concept-touch, rule-violation). The
+// bookshelf ships a `reading-pipeline` concept (book ↔ genre), a
+// `catalogue` concept (book × author × genre), and two rules: every
+// book must have an author, and every completed book must have a rating.
+const domainRegistry = new DomainRegistry({
+  knowledge: new DomainKnowledge({ concepts: BOOKSHELF_CONCEPTS }),
+  rules: new RuleSet(BOOKSHELF_RULES),
+  workflows: new WorkflowRegistry()
+})
+
 const toolRegistry = new ToolRegistry({
   toolClasses: { ...DATA_TOOL_CLASSES, ...STRATEGY_TOOL_CLASSES },
   models: MODEL_CLASSES,
   serverContext: { name: 'Bookshelf' },
   namespace: 'bookshelf',
   promptRegistry,
+  domainRegistry,
   createApiClient: () => stubApiClient,
   dataLayer
 })

@@ -206,6 +206,12 @@ export function generateGraphFixtures(bookCount = 500, seed = 0xc0de): StubFixtu
     if (author_id) {
       base.author = (author[author_id] as { name: string }).name
     }
+    // Strip rating off ~15% of completed books so rule-violation surfaces
+    // a real workflow gap on the bookshelf demo. Other statuses keep
+    // their rating untouched.
+    if (base.status === 'completed' && rng() < 0.15) {
+      delete base.rating
+    }
     book[String(i)] = base
   }
 

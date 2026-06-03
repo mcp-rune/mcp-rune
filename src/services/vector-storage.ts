@@ -461,6 +461,21 @@ export async function getEdgesFrom(
   return ingestedEdges.getEdgesFrom(pool, analysisId, srcModel, srcId)
 }
 
+/** Bulk-load record embeddings keyed by record_id for the given records. */
+export async function getEmbeddingsForRecords(
+  analysisId: string,
+  model: string,
+  recordIds: ReadonlyArray<string>
+): Promise<Map<string, Float32Array>> {
+  if (!vendor.isConfigured()) return new Map()
+  if (recordIds.length === 0) return new Map()
+
+  const pool = vendor.getPool()
+  if (!pool) return new Map()
+
+  return ingestedRecords.getEmbeddingsForRecords(pool, analysisId, model, recordIds)
+}
+
 /** Bulk-load edges for many source records of a model. */
 export async function getEdgesForSources(
   analysisId: string,

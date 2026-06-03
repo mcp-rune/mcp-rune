@@ -265,6 +265,53 @@ export async function storeRecords(pool: Pool, params: IngestParams): Promise<nu
 }
 
 /**
+ * Bulk-load record embeddings for a set of source records — used by the
+ * `semantic-cluster` summary strategy's `requires: ['embeddings']` dispatcher.
+ * Returns a Map keyed by record_id with Float32Array(384) values.
+ */
+export async function getEmbeddingsForRecords(
+  pool: Pool,
+  analysisId: string,
+  model: string,
+  recordIds: ReadonlyArray<string>
+): Promise<Map<string, Float32Array>> {
+  if (recordIds.length === 0) return new Map()
+  const result = await pool.query(
+    `SELECT record_id, embedding
+     FROM ingested_records
+     WHERE analysis_id = $1 AND model = $2
+       AND record_id = ANY($3::text[])
+       AND embedding IS NOT NULL
+       AND (expires_at IS NULL OR expires_at > NOW())`,
+    [analysisId, model, recordIds as string[]]
+  )
+  const map = new Map<string, Float32Array>()
+  for (const row of result.rows as Array<{ record_id: string; embedding: unknown }>) {
+    const vector = parsePgVector(row.embedding)
+    if (vector) map.set(row.record_id, vector)
+  }
+  return map
+}
+
+/** Parse a pgvector value (returned as a string by node-postgres) into Float32Array. */
+function parsePgVector(value: unknown): Float32Array | null {
+  if (value instanceof Float32Array) return value
+  if (typeof value === 'string') {
+    const trimmed = value.replace(/^\[|\]$/g, '')
+    const parts = trimmed.split(',')
+    const out = new Float32Array(parts.length)
+    for (let i = 0; i < parts.length; i++) out[i] = Number.parseFloat(parts[i]!)
+    return out
+  }
+  if (Array.isArray(value)) {
+    const out = new Float32Array(value.length)
+    for (let i = 0; i < value.length; i++) out[i] = Number(value[i])
+    return out
+  }
+  return null
+}
+
+/**
  * Fetch records whose `embedding` is NULL — used by ensureRecordEmbeddings
  * back-fill (e.g., when a `cluster` stratifier is requested on a session
  * that was ingested with `embed_records: false`).

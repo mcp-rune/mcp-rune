@@ -48,9 +48,39 @@ export interface SummaryInput {
    * strategies that declare `requires: ['embeddings', ...]`.
    */
   embeddings?: ReadonlyMap<string, Float32Array>
+  /**
+   * Domain registry exposing concepts, business rules, and workflows.
+   * Populated only for strategies that declare
+   * `requires: ['domainRegistry', ...]`. Typed loosely so this module
+   * has no dependency on `src/mcp/domain/*`.
+   */
+  domainRegistry?: SummaryDomainRegistry
 }
 
-export type SummaryRequirement = 'edges' | 'embeddings'
+export interface SummaryConcept {
+  readonly name: string
+  readonly title?: string
+  readonly description?: string
+  readonly models: ReadonlyArray<string>
+}
+
+export interface SummaryRule {
+  readonly name: string
+  readonly description?: string
+  readonly scope: ReadonlyArray<string>
+  readonly severity?: 'error' | 'warning' | 'info'
+  evaluate(
+    data: Record<string, unknown>,
+    context?: Record<string, unknown>
+  ): { passed: boolean; message?: string } | Promise<{ passed: boolean; message?: string }>
+}
+
+export interface SummaryDomainRegistry {
+  knowledge?: { getConceptsForModel?: (model: string) => ReadonlyArray<SummaryConcept> }
+  rules?: { getRulesForModel?: (model: string) => ReadonlyArray<SummaryRule> }
+}
+
+export type SummaryRequirement = 'edges' | 'embeddings' | 'domainRegistry'
 
 export interface SummaryOutput {
   /** Text embedded and stored as the memory row's `finding`. */
