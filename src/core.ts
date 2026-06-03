@@ -57,3 +57,8 @@ export {
   validateRequired,
   validateUrl
 } from './core/validators.js'
+export type {
+  AssociationConfig,
+  BelongsToAssociation,
+  HasManyAssociation
+} from './mcp/api-conventions/base-convention.js'

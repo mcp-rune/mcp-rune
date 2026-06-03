@@ -3,15 +3,19 @@ import { z } from 'zod'
 
 import type { SearchService } from '#src/api-extensions/search/index.js'
 import { createSearchService, getSearchConfig } from '#src/api-extensions/search/index.js'
+import { extractEdgesFromRecord, type HopFollow } from '#src/core/edge-extraction.js'
 import { pickFields } from '#src/core/helpers.js'
-import type { SummaryInput } from '#src/core/summary-strategies/index.js'
+import { expandHops } from '#src/core/multi-hop-fetch.js'
+import type { SummaryEdge, SummaryInput } from '#src/core/summary-strategies/index.js'
 import { defaultSummaryStrategyRegistry } from '#src/core/summary-strategies/index.js'
 import { defaultConvention } from '#src/mcp/api-conventions/index.js'
 import { buildCollectionPath } from '#src/mcp/services/compound-id.js'
 import {
+  getEdgesForSources,
   getIngestedRecordCount,
   getIngestedRecordIds,
   storeAnalysisMemory,
+  storeIngestedEdges,
   storeIngestedRecords
 } from '#src/services/vector-storage.js'
 
@@ -28,6 +32,17 @@ const MAX_NESTED_BATCH = 25
 
 /** Max concurrent nested resource fetches */
 const MAX_NESTED_CONCURRENCY = 5
+
+/** Max hop depth allowed for multi-hop graph expansion. */
+const MAX_HOP_DEPTH = 3
+
+interface IngestPipelineOptions {
+  embedRecords: boolean
+  embedFields?: string[]
+  hopDepth: number
+  hopFollow: HopFollow
+  hopModels?: string[]
+}
 
 /**
  * Ingest model records into offline storage for large-scale analysis.
@@ -146,6 +161,44 @@ When NOT to use: For quick lookups of specific records by ID or small result set
           'Run multiple summary strategies per page; each produces a separate page_summary:<strategy> memory. ' +
             'Mutually exclusive with `summary_strategy`. Order is preserved. Strategies whose `appliesTo` ' +
             'returns false for a given page are silently skipped.'
+        ),
+
+      embed_records: z
+        .boolean()
+        .optional()
+        .describe(
+          'Embed each ingested record (384-dim MiniLM) so cluster stratification and semantic-cluster ' +
+            'summaries work without a back-fill round-trip. Default: true. Set false for large datasets ' +
+            'where ingest latency matters; back-fill happens lazily when needed.'
+        ),
+      embed_fields: z
+        .array(z.string())
+        .optional()
+        .describe(
+          'Restrict embedding text to these fields. Omit to use all string-valued attributes (excluding id/*_id).'
+        ),
+      hop_depth: z
+        .number()
+        .int()
+        .min(0)
+        .max(MAX_HOP_DEPTH)
+        .optional()
+        .describe(
+          `Follow declared associations this many hops deep, ingesting related records into the same analysis session. ` +
+            `Default 0 (extract edges only from root records, no follow-up fetches). Max ${MAX_HOP_DEPTH}.`
+        ),
+      hop_follow: z
+        .enum(['declared', 'declared+fk', 'none'])
+        .optional()
+        .describe(
+          'What counts as an edge to follow. "declared" (default): only belongsTo/hasMany declared on the model. ' +
+            '"declared+fk": also follow undeclared *_id fields. "none": no edges, even at depth 0.'
+        ),
+      hop_models: z
+        .array(z.string())
+        .optional()
+        .describe(
+          'Whitelist of destination models to traverse into. Omit to follow all declared associations.'
         )
     }
   }
@@ -172,7 +225,12 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         parent_ids,
         child_resource,
         summary_strategy,
-        summary_strategies
+        summary_strategies,
+        embed_records = true,
+        embed_fields,
+        hop_depth = 0,
+        hop_follow = 'declared',
+        hop_models
       } = args as {
         model?: string
         analysis_id: string
@@ -188,6 +246,19 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         child_resource?: string
         summary_strategy?: string
         summary_strategies?: string[]
+        embed_records?: boolean
+        embed_fields?: string[]
+        hop_depth?: number
+        hop_follow?: HopFollow
+        hop_models?: string[]
+      }
+
+      const pipeline: IngestPipelineOptions = {
+        embedRecords: embed_records,
+        embedFields: embed_fields,
+        hopDepth: hop_depth,
+        hopFollow: hop_follow,
+        hopModels: hop_models
       }
 
       let strategies: string[]
@@ -280,7 +351,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
           fields,
           options,
           resume,
-          strategies
+          strategies,
+          pipeline
         )
       } else {
         return await this._ingestPage(
@@ -294,7 +366,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
           per_page,
           fields,
           options,
-          strategies
+          strategies,
+          pipeline
         )
       }
     } catch (error) {
@@ -314,7 +387,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     perPage: number,
     fields: string[] | undefined,
     apiOptions: Record<string, unknown>,
-    strategies: ReadonlyArray<string>
+    strategies: ReadonlyArray<string>,
+    pipeline: IngestPipelineOptions
   ): Promise<ToolResult> {
     let rawRecords: Record<string, unknown>[]
     let totalPages: number | null
@@ -373,12 +447,23 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       ? (pickFields(flatRecords, effectiveFields) as Record<string, unknown>[])
       : flatRecords
 
-    // Store records
-    const stored = await storeIngestedRecords({
+    // Store records (+ embeddings if enabled) and persist edges
+    const stored = await this._storeRecordsAndEdges(
       analysisId,
       model,
-      records: records.map((r) => ({ id: r.id as string, data: r }))
-    })
+      modelConfig,
+      records,
+      pipeline
+    )
+
+    // Expand graph via declared associations (when hop_depth > 0)
+    const hopStats = await this._expandAndPersistHops(
+      dataLayer,
+      analysisId,
+      model,
+      records,
+      pipeline
+    )
 
     // Store page summary as analysis memory (one per strategy)
     await this._runStrategies(strategies, {
@@ -394,7 +479,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     return this.formatResponse(
       `Stored ${stored} record(s)${fieldsNote} (page ${page}/${totalPages ?? '?'}).` +
         `\nAnalysis: ${analysisId}` +
-        `\nModel: ${model}`,
+        `\nModel: ${model}` +
+        this._formatHopSummary(hopStats),
       { meta: { context: { consumed: true } } }
     )
   }
@@ -411,12 +497,18 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     fields: string[] | undefined,
     apiOptions: Record<string, unknown>,
     resume = false,
-    strategies: ReadonlyArray<string> = ['distribution']
+    strategies: ReadonlyArray<string> = ['distribution'],
+    pipeline: IngestPipelineOptions = {
+      embedRecords: true,
+      hopDepth: 0,
+      hopFollow: 'declared'
+    }
   ): Promise<ToolResult> {
     let currentPage = 1
     let totalStored = 0
     let totalPages: number | null = null
     let resumedFrom: number | null = null
+    const hopTotals: Map<string, number> = new Map()
 
     // Resume: skip already-stored pages
     if (resume) {
@@ -492,13 +584,27 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         ? (pickFields(flatRecords, effectiveFields) as Record<string, unknown>[])
         : flatRecords
 
-      // Store records
-      const stored = await storeIngestedRecords({
+      // Store records (+ embeddings if enabled) and persist edges
+      const stored = await this._storeRecordsAndEdges(
         analysisId,
         model,
-        records: records.map((r) => ({ id: r.id as string, data: r }))
-      })
+        modelConfig,
+        records,
+        pipeline
+      )
       totalStored += stored
+
+      // Expand graph via declared associations (when hop_depth > 0)
+      const hopStats = await this._expandAndPersistHops(
+        dataLayer,
+        analysisId,
+        model,
+        records,
+        pipeline
+      )
+      for (const [m, n] of Object.entries(hopStats)) {
+        hopTotals.set(m, (hopTotals.get(m) ?? 0) + n)
+      }
 
       // Store page summary (one memory per strategy)
       await this._runStrategies(strategies, {
@@ -532,11 +638,15 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       pagesIngested >= MAX_INGEST_PAGES ? ` (capped at ${MAX_INGEST_PAGES} pages)` : ''
     const resumeNote = resumedFrom !== null ? `\nResumed from page ${resumedFrom}.` : ''
 
+    const hopTotalsObj: Record<string, number> = {}
+    for (const [m, n] of hopTotals) hopTotalsObj[m] = n
+
     return this.formatResponse(
       `Stored ${totalStored} record(s)${fieldsNote} across ${pagesIngested} page(s)${capNote}.` +
         resumeNote +
         `\nAnalysis: ${analysisId}` +
-        `\nModel: ${model}`,
+        `\nModel: ${model}` +
+        this._formatHopSummary(hopTotalsObj),
       { meta: { context: { consumed: true } } }
     )
   }
@@ -841,28 +951,154 @@ When NOT to use: For quick lookups of specific records by ID or small result set
   }
 
   /**
+   * Store a page of records (optionally embedded) and persist the edges
+   * extracted from them. Returns the number of records actually stored.
+   */
+  private async _storeRecordsAndEdges(
+    analysisId: string,
+    model: string,
+    modelConfig: ModelConfig,
+    records: ReadonlyArray<Record<string, unknown>>,
+    pipeline: IngestPipelineOptions
+  ): Promise<number> {
+    const stored = await storeIngestedRecords({
+      analysisId,
+      model,
+      records: records.map((r) => ({ id: r.id as string, data: r })),
+      embed: pipeline.embedRecords
+        ? pipeline.embedFields
+          ? { fields: pipeline.embedFields }
+          : true
+        : undefined
+    })
+
+    if (pipeline.hopFollow !== 'none') {
+      const edges = records.flatMap((r) =>
+        extractEdgesFromRecord(r, modelConfig.associations, model, {
+          hopFollow: pipeline.hopFollow
+        })
+      )
+      if (edges.length > 0) {
+        await storeIngestedEdges({ analysisId, edges, hopDepth: 0 })
+      }
+    }
+
+    return stored
+  }
+
+  /**
+   * BFS-expand declared associations from the just-stored page of records,
+   * persisting records and edges at each hop. Returns counts per destination
+   * model so the caller can summarize.
+   */
+  private async _expandAndPersistHops(
+    dataLayer: DataLayer,
+    analysisId: string,
+    rootModel: string,
+    rootRecords: ReadonlyArray<Record<string, unknown>>,
+    pipeline: IngestPipelineOptions
+  ): Promise<Record<string, number>> {
+    const stats: Record<string, number> = {}
+    if (pipeline.hopDepth <= 0) return stats
+    if (pipeline.hopFollow === 'none') return stats
+
+    const modelConfigs: Record<string, ModelConfig> = {}
+    for (const name of Object.keys(this.models)) {
+      const cfg = this.getModelConfig(name)
+      if (cfg) modelConfigs[name] = cfg
+    }
+
+    const generator = expandHops(dataLayer, this.models, modelConfigs, rootModel, rootRecords, {
+      maxDepth: pipeline.hopDepth,
+      hopFollow: pipeline.hopFollow,
+      modelWhitelist: pipeline.hopModels
+    })
+
+    for await (const batch of generator) {
+      const dstConfig = modelConfigs[batch.model]
+      if (!dstConfig) continue
+
+      await this._storeRecordsAndEdges(analysisId, batch.model, dstConfig, batch.records, pipeline)
+      stats[batch.model] = (stats[batch.model] ?? 0) + batch.records.length
+    }
+
+    return stats
+  }
+
+  /** Render a one-line summary of hop expansion for the tool response. */
+  private _formatHopSummary(hopStats: Record<string, number>): string {
+    const entries = Object.entries(hopStats)
+    if (entries.length === 0) return ''
+    const parts = entries.map(([model, count]) => `${count} ${model}`)
+    return `\nHopped: ${parts.join(', ')}`
+  }
+
+  /**
    * Run the named strategies against a page of records. Each strategy
    * produces one analysis_memories row with category page_summary:<strategy>;
    * strategies whose `appliesTo` returns false are silently skipped.
+   *
+   * Strategies that declare `requires: [...]` get auxiliary slices
+   * (edges, embeddings) lazy-loaded once per page before invocation.
    */
   private async _runStrategies(
     strategyNames: ReadonlyArray<string>,
     input: SummaryInput
   ): Promise<void> {
     const registry = this.summaryStrategies ?? defaultSummaryStrategyRegistry()
+
+    const needs = this._collectRequirements(strategyNames, registry)
+    const enriched: SummaryInput = needs.edges
+      ? { ...input, edges: await this._loadEdgesForPage(input) }
+      : input
+
     for (const name of strategyNames) {
       const strategy = registry.get(name)
       if (!strategy) {
         throw new Error(`Unknown summary strategy: "${name}"`)
       }
-      if (strategy.appliesTo && !strategy.appliesTo(input)) continue
-      const output = await strategy.generate(input)
+      if (strategy.appliesTo && !strategy.appliesTo(enriched)) continue
+      const output = await strategy.generate(enriched)
       await storeAnalysisMemory({
-        analysisId: input.analysisId,
+        analysisId: enriched.analysisId,
         finding: output.finding,
         category: output.category ?? `page_summary:${strategy.name}`,
         metadata: { ...output.metadata, strategy: strategy.name }
       })
     }
+  }
+
+  /** Union of `requires` arrays across the strategies the caller asked for. */
+  private _collectRequirements(
+    strategyNames: ReadonlyArray<string>,
+    registry: ReturnType<typeof defaultSummaryStrategyRegistry>
+  ): { edges: boolean; embeddings: boolean } {
+    let edges = false
+    let embeddings = false
+    for (const name of strategyNames) {
+      const strategy = registry.get(name)
+      const requires = strategy?.requires ?? []
+      for (const r of requires) {
+        if (r === 'edges') edges = true
+        if (r === 'embeddings') embeddings = true
+      }
+    }
+    return { edges, embeddings }
+  }
+
+  /** Bulk-load outgoing edges for the records on this page. */
+  private async _loadEdgesForPage(input: SummaryInput): Promise<ReadonlyArray<SummaryEdge>> {
+    const srcIds: string[] = []
+    for (const r of input.records) {
+      if (r.id != null) srcIds.push(String(r.id))
+    }
+    if (srcIds.length === 0) return []
+    const rows = await getEdgesForSources(input.analysisId, input.model, srcIds)
+    return rows.map((r) => ({
+      src_id: r.src_id,
+      dst_model: r.dst_model,
+      dst_id: r.dst_id,
+      edge_type: r.edge_type
+    }))
   }
 }

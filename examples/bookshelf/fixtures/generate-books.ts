@@ -157,3 +157,57 @@ export function generateBookFixtures(count: number, seed = 0xb00c): StubFixtures
   }
   return { book }
 }
+
+/**
+ * Generate a graph-shaped fixture: separate `author`, `genre`, and `book`
+ * collections with proper FK relationships. Each book has both `author_id`
+ * and `genre_id`. Used by analysis_ingest with `hop_depth: 1` so the
+ * multi-hop fetcher pulls authors + genres into the same session.
+ *
+ * Exercises:
+ *   - declared belongsTo edges (book → author, book → genre)
+ *   - record embeddings (text fields per record)
+ *   - relationship-coverage (~5% of books deliberately lack author_id to
+ *     produce a coverage gap)
+ */
+export function generateGraphFixtures(bookCount = 500, seed = 0xc0de): StubFixtures {
+  const rng = makeRng(seed)
+
+  const genre: Record<string, Record<string, unknown>> = {}
+  for (let i = 0; i < GENRES.length; i++) {
+    const id = GENRES[i]!
+    genre[id] = {
+      id,
+      name: id.replace('g-', '').replace(/^./, (c) => c.toUpperCase()),
+      slug: id.replace('g-', ''),
+      description: `Books in the ${id.replace('g-', '')} space.`
+    }
+  }
+
+  const author: Record<string, Record<string, unknown>> = {}
+  for (let i = 0; i < AUTHORS.length; i++) {
+    const id = `a-${i + 1}`
+    author[id] = {
+      id,
+      name: AUTHORS[i],
+      nationality: pick(rng, ['American', 'British', 'Canadian', 'German', 'Dutch']),
+      birth_year: 1940 + Math.floor(rng() * 50)
+    }
+  }
+  const authorIds = Object.keys(author)
+
+  const book: Record<string, Record<string, unknown>> = {}
+  for (let i = 1; i <= bookCount; i++) {
+    const base = generateBook(rng, i)
+    const author_id = rng() > 0.05 ? pick(rng, authorIds) : null
+    base.author_id = author_id
+    // Keep the existing `author` denormalized name for backwards compat
+    // (some quickstarts and the existing strategies expect it).
+    if (author_id) {
+      base.author = (author[author_id] as { name: string }).name
+    }
+    book[String(i)] = base
+  }
+
+  return { book, author, genre }
+}

@@ -1,9 +1,16 @@
 import { BaseModel } from '@mcp-rune/mcp-rune/core'
-import type { AttributeDefinition } from '@mcp-rune/mcp-rune/core'
+import type { AttributeDefinition, AssociationConfig } from '@mcp-rune/mcp-rune/core'
 
 export class Book extends BaseModel {
   static override description = 'A book in the library'
   static override api = { endpoint: 'books' }
+
+  static override associations: AssociationConfig = {
+    belongsTo: {
+      author: { target_model: 'author' },
+      genre: { target_model: 'genre' }
+    }
+  }
 
   static override attributes: Record<string, AttributeDefinition> = {
     title: {
@@ -14,8 +21,7 @@ export class Book extends BaseModel {
     },
     author: {
       type: 'string',
-      required: true,
-      description: 'Author name',
+      description: 'Author name (denormalized; canonical is author_id)',
       examples: ['Robert C. Martin', 'Kent Beck']
     },
     status: {

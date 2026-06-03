@@ -9,6 +9,13 @@
  * pivot between strategies without re-fetching from the source API.
  */
 
+export interface SummaryEdge {
+  src_id: string
+  dst_model: string
+  dst_id: string
+  edge_type: string
+}
+
 export interface SummaryInput {
   /** Analysis session id; passed through to the persisted memory row. */
   analysisId: string
@@ -31,7 +38,19 @@ export interface SummaryInput {
   fields?: ReadonlyArray<string>
   /** Per-strategy options forwarded from the tool layer. */
   options?: Readonly<Record<string, unknown>>
+  /**
+   * Edges originating from this page's records. Populated only for strategies
+   * that declare `requires: ['edges', ...]`. May be empty.
+   */
+  edges?: ReadonlyArray<SummaryEdge>
+  /**
+   * Record-id → 384-dim embedding map for this page. Populated only for
+   * strategies that declare `requires: ['embeddings', ...]`.
+   */
+  embeddings?: ReadonlyMap<string, Float32Array>
 }
+
+export type SummaryRequirement = 'edges' | 'embeddings'
 
 export interface SummaryOutput {
   /** Text embedded and stored as the memory row's `finding`. */
@@ -58,6 +77,11 @@ export interface SummaryStrategy {
    * description so the model can choose the right strategy.
    */
   readonly description: string
+  /**
+   * Auxiliary data the strategy needs beyond records. The dispatcher
+   * loads each required slice once per page before calling `generate`.
+   */
+  readonly requires?: ReadonlyArray<SummaryRequirement>
   /**
    * Optional pre-check. Returning `false` skips the strategy silently
    * (no memory is stored, no error is raised). Omit to indicate the

@@ -142,5 +142,50 @@ export const migrations: readonly Migration[] = [
         ON ingested_records(analysis_id, model, record_id)
         WHERE record_id IS NOT NULL;
     `
+  },
+  {
+    version: '006',
+    name: 'add_ingested_records_embedding',
+    feature: 'analysis',
+    up: `
+      ALTER TABLE ingested_records
+        ADD COLUMN IF NOT EXISTS embedding vector(384),
+        ADD COLUMN IF NOT EXISTS embedding_text TEXT,
+        ADD COLUMN IF NOT EXISTS embedded_at TIMESTAMPTZ;
+
+      CREATE INDEX IF NOT EXISTS idx_ingested_records_embedding
+        ON ingested_records USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+
+      CREATE INDEX IF NOT EXISTS idx_ingested_records_model
+        ON ingested_records(analysis_id, model);
+    `
+  },
+  {
+    version: '007',
+    name: 'create_ingested_edges',
+    feature: 'analysis',
+    up: `
+      CREATE TABLE IF NOT EXISTS ingested_edges (
+        id BIGSERIAL PRIMARY KEY,
+        analysis_id TEXT NOT NULL,
+        src_model TEXT NOT NULL,
+        src_id TEXT NOT NULL,
+        dst_model TEXT NOT NULL,
+        dst_id TEXT NOT NULL,
+        edge_type TEXT NOT NULL,
+        hop_depth INTEGER NOT NULL DEFAULT 0,
+        discovered_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        expires_at TIMESTAMPTZ
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_ingested_edges_src
+        ON ingested_edges(analysis_id, src_model, src_id);
+      CREATE INDEX IF NOT EXISTS idx_ingested_edges_dst
+        ON ingested_edges(analysis_id, dst_model, dst_id);
+      CREATE INDEX IF NOT EXISTS idx_ingested_edges_expires
+        ON ingested_edges(expires_at) WHERE expires_at IS NOT NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_ingested_edges_unique
+        ON ingested_edges(analysis_id, src_model, src_id, dst_model, dst_id, edge_type);
+    `
   }
 ] as const

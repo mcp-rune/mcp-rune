@@ -1,10 +1,15 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
-import type { SummaryInput, SummaryStrategyRegistry } from '#src/core/summary-strategies/index.js'
+import type {
+  SummaryEdge,
+  SummaryInput,
+  SummaryStrategyRegistry
+} from '#src/core/summary-strategies/index.js'
 import { defaultSummaryStrategyRegistry } from '#src/core/summary-strategies/index.js'
 import {
   describeAnalysisSession,
+  getEdgesForSources,
   queryIngestedData,
   storeAnalysisMemory
 } from '#src/services/vector-storage.js'
@@ -136,23 +141,28 @@ When NOT to use: for the first ingestion of a session — use analysis_ingest, w
             })
 
       const registry = this._registry()
+      const needs = this._collectRequirements(names, registry)
+      const baseInput: SummaryInput = {
+        analysisId: analysis_id,
+        model: resolvedModel,
+        page: 1,
+        totalPages: 1,
+        records,
+        fields: undefined
+      }
+      const enriched: SummaryInput = needs.edges
+        ? { ...baseInput, edges: await this._loadEdgesForPage(baseInput) }
+        : baseInput
+
       const results: string[] = []
       for (const name of names) {
         const s = registry.get(name)
         if (!s) return this._textError(`Unknown summary strategy: "${name}".`)
-        const input: SummaryInput = {
-          analysisId: analysis_id,
-          model: resolvedModel,
-          page: 1,
-          totalPages: 1,
-          records,
-          fields: undefined
-        }
-        if (s.appliesTo && !s.appliesTo(input)) {
+        if (s.appliesTo && !s.appliesTo(enriched)) {
           results.push(`${name}: skipped (appliesTo=false)`)
           continue
         }
-        const output = await s.generate(input)
+        const output = await s.generate(enriched)
         await storeAnalysisMemory({
           analysisId: analysis_id,
           finding: output.finding,
@@ -174,6 +184,37 @@ When NOT to use: for the first ingestion of a session — use analysis_ingest, w
 
   private _registry(): SummaryStrategyRegistry {
     return this.summaryStrategies ?? defaultSummaryStrategyRegistry()
+  }
+
+  private _collectRequirements(
+    strategyNames: ReadonlyArray<string>,
+    registry: SummaryStrategyRegistry
+  ): { edges: boolean; embeddings: boolean } {
+    let edges = false
+    let embeddings = false
+    for (const name of strategyNames) {
+      const strategy = registry.get(name)
+      for (const r of strategy?.requires ?? []) {
+        if (r === 'edges') edges = true
+        if (r === 'embeddings') embeddings = true
+      }
+    }
+    return { edges, embeddings }
+  }
+
+  private async _loadEdgesForPage(input: SummaryInput): Promise<ReadonlyArray<SummaryEdge>> {
+    const srcIds: string[] = []
+    for (const r of input.records) {
+      if (r.id != null) srcIds.push(String(r.id))
+    }
+    if (srcIds.length === 0) return []
+    const rows = await getEdgesForSources(input.analysisId, input.model, srcIds)
+    return rows.map((r) => ({
+      src_id: r.src_id,
+      dst_model: r.dst_model,
+      dst_id: r.dst_id,
+      edge_type: r.edge_type
+    }))
   }
 
   private _availableStrategyNames(): string[] {

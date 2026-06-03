@@ -10,10 +10,21 @@
 
 import type { Pool } from 'pg'
 
+export interface RecordEmbedding {
+  /** Index into the `records` array this embedding corresponds to. */
+  recordIndex: number
+  /** 384-dim MiniLM vector. */
+  vector: Float32Array
+  /** The textification fed to the embedding model — persisted for audit/recall. */
+  text: string
+}
+
 export interface IngestParams {
   analysisId: string
   model: string
   records: Array<{ id?: string; data: Record<string, unknown> }>
+  /** Optional per-record embeddings; when absent, embedding columns stay NULL. */
+  embeddings?: ReadonlyArray<RecordEmbedding>
 }
 
 export interface AggregateQuery {
@@ -179,34 +190,108 @@ function buildWhereConditions(
   return { conditions, paramIdx }
 }
 
-/** Store a batch of ingested records */
+/** Store a batch of ingested records, optionally with per-record embeddings. */
 export async function storeRecords(pool: Pool, params: IngestParams): Promise<number> {
   if (params.records.length === 0) return 0
 
   const expiresAt = new Date(Date.now() + retentionDays * 86_400_000)
+
+  const embeddingsByIndex: Map<number, RecordEmbedding> = params.embeddings
+    ? new Map(params.embeddings.map((e) => [e.recordIndex, e]))
+    : new Map()
 
   // Build a multi-row INSERT for efficiency
   const values: unknown[] = []
   const placeholders: string[] = []
   let paramIdx = 1
 
-  for (const record of params.records) {
+  for (let i = 0; i < params.records.length; i++) {
+    const record = params.records[i]!
     const recordId = record.id || (record.data.id as string) || null
+    const embedding = embeddingsByIndex.get(i)
+    const vectorStr = embedding ? `[${Array.from(embedding.vector).join(',')}]` : null
+    const embeddingText = embedding ? embedding.text : null
+    const embeddedAt = embedding ? new Date() : null
+
     placeholders.push(
-      `($${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++})`
+      `($${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++})`
     )
-    values.push(params.analysisId, params.model, recordId, JSON.stringify(record.data), expiresAt)
+    values.push(
+      params.analysisId,
+      params.model,
+      recordId,
+      JSON.stringify(record.data),
+      expiresAt,
+      vectorStr,
+      embeddingText,
+      embeddedAt
+    )
   }
 
   await pool.query(
-    `INSERT INTO ingested_records (analysis_id, model, record_id, data, expires_at)
+    `INSERT INTO ingested_records
+       (analysis_id, model, record_id, data, expires_at, embedding, embedding_text, embedded_at)
      VALUES ${placeholders.join(', ')}
      ON CONFLICT (analysis_id, model, record_id) WHERE record_id IS NOT NULL
-     DO UPDATE SET data = EXCLUDED.data, expires_at = EXCLUDED.expires_at`,
+     DO UPDATE SET
+       data = EXCLUDED.data,
+       expires_at = EXCLUDED.expires_at,
+       embedding = COALESCE(EXCLUDED.embedding, ingested_records.embedding),
+       embedding_text = COALESCE(EXCLUDED.embedding_text, ingested_records.embedding_text),
+       embedded_at = COALESCE(EXCLUDED.embedded_at, ingested_records.embedded_at)`,
     values
   )
 
   return params.records.length
+}
+
+/**
+ * Fetch records whose `embedding` is NULL — used by ensureRecordEmbeddings
+ * back-fill (e.g., when a `cluster` stratifier is requested on a session
+ * that was ingested with `embed_records: false`).
+ */
+export async function getRecordsWithoutEmbeddings(
+  pool: Pool,
+  analysisId: string,
+  model: string,
+  limit = 500
+): Promise<Array<{ recordId: string; data: Record<string, unknown> }>> {
+  const result = await pool.query(
+    `SELECT record_id, data FROM ingested_records
+     WHERE analysis_id = $1 AND model = $2
+       AND embedding IS NULL
+       AND record_id IS NOT NULL
+       AND (expires_at IS NULL OR expires_at > NOW())
+     LIMIT $3`,
+    [analysisId, model, limit]
+  )
+  return (result.rows as Array<{ record_id: string; data: Record<string, unknown> }>).map((r) => ({
+    recordId: r.record_id,
+    data: r.data
+  }))
+}
+
+/** Back-fill embeddings for a set of already-stored record_ids. */
+export async function updateRecordEmbeddings(
+  pool: Pool,
+  analysisId: string,
+  model: string,
+  updates: ReadonlyArray<{ recordId: string; vector: Float32Array; text: string }>
+): Promise<number> {
+  if (updates.length === 0) return 0
+  const embeddedAt = new Date()
+  let updated = 0
+  for (const u of updates) {
+    const vectorStr = `[${Array.from(u.vector).join(',')}]`
+    const result = await pool.query(
+      `UPDATE ingested_records
+       SET embedding = $4, embedding_text = $5, embedded_at = $6
+       WHERE analysis_id = $1 AND model = $2 AND record_id = $3`,
+      [analysisId, model, u.recordId, vectorStr, u.text, embeddedAt]
+    )
+    updated += result.rowCount ?? 0
+  }
+  return updated
 }
 
 /** Query ingested records — aggregate, filter, or sample */
