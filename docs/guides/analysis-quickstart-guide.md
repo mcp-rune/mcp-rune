@@ -1,3 +1,10 @@
+---
+series:
+  name: Quickstart
+  part: 2
+  total: 2
+---
+
 # Analysis Quickstart
 
 Part 2 of the [Quickstart](./quickstart-guide.md). Once the bookshelf is

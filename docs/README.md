@@ -378,6 +378,38 @@ Shiki. Open an issue if you need first-class CJS support.
 
 ---
 
+## Optional frontmatter
+
+A guide can declare a YAML frontmatter block at the top of the file. Two
+optional keys are read by the site today; both default to absent.
+
+```yaml
+---
+extension:
+  kind: config | hook | strategy | plugin | override | registry | hub
+  what: Custom actions on a model API
+series:
+  name: Quickstart
+  part: 1
+  total: 2
+---
+```
+
+- **`extension`** — flags the guide as documenting an extension point. The
+  site renders a blue plug chip next to it on the hub and in the sidebar.
+  `kind` picks the micro-label; `what` is a concrete one-line description of
+  the surface a deployer implements (a plugin, hook, strategy, override).
+- **`series`** — links the guide into a multi-part tutorial. The site renders
+  a `Tutorial · {part}/{total}` chip on the hub row so readers can find the
+  next part. Used today for the two-part Quickstart (`quickstart-guide.md`
+  and `analysis-quickstart-guide.md`).
+
+Both fields are decorative for `mcp-rune` itself — neither the dualize tool
+nor the test suite reads them. They exist as a contract with
+mcp-rune-site's content collection (`src/content.config.ts`).
+
+---
+
 ## How the site renders pairs
 
 [mcp-rune-site](https://github.com/mcp-rune/mcp-rune-site)'s remark

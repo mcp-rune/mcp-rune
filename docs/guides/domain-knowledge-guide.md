@@ -1,7 +1,7 @@
 ---
 extension:
   kind: registry
-  what: Register concepts · rules · workflows
+  what: Register concepts · rules · workflows · diagrams
 ---
 
 # Domain Intelligence Framework — Contributor Guide
