@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.70.0] - 2026-06-03
+
+> Documentation only. Phase 4 of the GraphRAG augmentation series closes the loop: the four-phase code rollout (v0.67.0 / v0.68.0 / v0.69.0) shipped the storage foundation, the composable graph stratifiers, and the GraphRAG-aware summary strategies; this release teaches a reader how to use every piece. Nine per-strategy deep-dive guides land under `docs/guides/summary-strategies/` — one file each for the five existing built-ins and the four new GraphRAG-aware strategies — covering the algorithm, the inputs each strategy consumes, the exact output shape (real bookshelf output), edge cases, and a copy-pasteable bookshelf recipe. The Summary Strategies catalog page now links to those guides and surfaces the `requires` contract for the GraphRAG strategies. The Analysis Quickstart grows a second half: section 5.5 switches the reader from the `large` dataset to the new `graph` dataset and walks each of the four GraphRAG strategies end-to-end with a real semantic-recall recipe per strategy; section 5.6 introduces the composable `stratifiers` parameter on `analysis_query mode:"sample"`. The bookshelf README gains a `BOOKSHELF_DATASET` switch table and a "Graph dataset" subsection explaining what the fixture deliberately leaves broken so the GraphRAG strategies have real signal.
+
+### Added
+
+- **`docs/guides/summary-strategies/` directory** with nine per-strategy guides, each ~150–250 lines following the same shape (Purpose · When to pick · Algorithm · Inputs consumed · Output shape · Edge cases · Bookshelf example · See also):
+  - `distribution.md`, `coverage.md`, `anomaly.md`, `temporal.md`, `entity-extraction.md` — the existing five built-ins.
+  - `relationship-coverage.md`, `concept-touch.md`, `rule-violation.md`, `semantic-cluster.md` — the four GraphRAG-aware strategies.
+- **`docs/guides/analysis-quickstart-guide.md`** — new sections **5.5 Switch to the graph dataset for the GraphRAG strategies** (a fresh ingest with `hop_depth: 1` + `embed_records: true` + all four GraphRAG strategies; one recall recipe per strategy with the expected finding text) and **5.6 Graph-aware sampling with composable stratifiers** (a three-stratifier sample combining `concept` + `edge` + `cluster` against `where: { status: "completed" }`).
+- **`examples/bookshelf/README.md` "Dataset switch — `BOOKSHELF_DATASET`" subsection** — a table of all four dataset modes (`unset` / `large` / `json` / `graph`) and a "Graph dataset" callout naming the intentional gaps the fixture bakes in (~5% missing author, ~15% missing rating on completed) so the GraphRAG strategies surface real signal.
+
+### Changed
+
+- **`docs/guides/summary-strategies.md`** — the single-row "Built-ins" catalog table is replaced by two tables (field-level / GraphRAG-aware), each linking to its per-strategy deep-dive. The header text now names nine strategies and points out the `requires` declarations the dispatcher honors. The strategies-to-pick guidance and the authoring walkthrough are unchanged.
+- **`docs/guides/analysis-quickstart-guide.md`** — header line updated from "five built-in summary strategies" to "all nine built-in summary strategies"; "Where to go next" section adds a pointer to the per-strategy guides and to the Domain Knowledge Guide.
+
+[0.70.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.69.0...v0.70.0
+
 ## [0.69.0] - 2026-06-03
 
 > Non-breaking. Phase 3 of the GraphRAG augmentation series. The Phase 1 release (v0.67.0) put records, embeddings, and edges into the analysis session; the Phase 2 release (v0.68.0) taught `analysis_query mode:"sample"` to compose them. This release ships the summary strategies that read from those same dimensions: `concept-touch` reports per-concept coverage % (which records participate in each `DomainConcept`); `rule-violation` evaluates every `BusinessRule` whose scope includes the model and counts failures per rule + severity; `semantic-cluster` does client-side anchor-nearest clustering over a page's embeddings and surfaces cluster sizes, representative records, and intra-cluster spread. The dispatcher (in `analysis_ingest`'s `_runStrategies` and the matching path in `analysis_summarize`) lazy-loads each auxiliary slice exactly once per page based on each strategy's `requires` declaration. The bookshelf example grows a `DomainRegistry` with two concepts (`reading-pipeline`, `catalogue`) and two business rules (`completed-books-need-rating`, `books-need-author`), and the graph fixture deliberately leaves ~15% of completed books without a `rating` so `rule-violation` finds real signal end-to-end against `InMemoryDataLayer`.
