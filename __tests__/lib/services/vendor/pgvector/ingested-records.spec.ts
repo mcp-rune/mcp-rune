@@ -416,4 +416,88 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
       expect(expiresAt.getTime()).toBe(Date.now() + 7 * 86_400_000)
     })
   })
+
+  describe('queryRecords — sample mode with graph stratifiers', () => {
+    it('emits a concept-membership CTE and partition expression', async () => {
+      mockPool.query.mockResolvedValueOnce({ rows: [{ data: { id: '1' } }] })
+      await queryRecords(mockPool as any, 'test-analysis', {
+        mode: 'sample',
+        sampleSize: 10,
+        stratifiers: [{ kind: 'concept', concept: 'reading_pipeline', targetModels: ['genre'] }]
+      })
+      const sql = mockPool.query.mock.calls[1][0] as string
+      expect(sql).toContain('concept_reading_pipeline AS')
+      expect(sql).toContain('e.dst_model = ANY')
+      expect(sql).toContain('PARTITION BY concept_reading_pipeline.concept_flag')
+      expect(sql).toContain('LEFT JOIN concept_reading_pipeline')
+    })
+
+    it('emits an edge-count CTE with the 4-bucket degree expression', async () => {
+      mockPool.query.mockResolvedValueOnce({ rows: [] })
+      await queryRecords(mockPool as any, 'test-analysis', {
+        mode: 'sample',
+        sampleSize: 6,
+        stratifiers: [{ kind: 'edge', edge_type: 'belongsTo:author', bucket: 'count' }]
+      })
+      const sql = mockPool.query.mock.calls[1][0] as string
+      expect(sql).toContain('edge_belongsTo_author AS')
+      expect(sql).toContain("THEN '2-5'")
+      expect(sql).toContain("ELSE '6+'")
+    })
+
+    it('emits anchor + assign CTEs for cluster and binds k as a parameter', async () => {
+      mockPool.query.mockResolvedValueOnce({ rows: [] })
+      await queryRecords(mockPool as any, 'test-analysis', {
+        mode: 'sample',
+        sampleSize: 9,
+        stratifiers: [{ kind: 'cluster', k: 4 }]
+      })
+      const sql = mockPool.query.mock.calls[1][0] as string
+      expect(sql).toContain('cluster_anchors AS')
+      expect(sql).toContain('cluster_assign AS')
+      expect(sql).toContain('embedding <=> a.embedding')
+      expect(sql).toContain('PARTITION BY cluster_assign.cluster_id')
+      const params = mockPool.query.mock.calls[1][1] as unknown[]
+      expect(params).toContain(4)
+    })
+
+    it('composes concept + edge + cluster into a multi-CTE WITH list and ROW(...) partition', async () => {
+      mockPool.query.mockResolvedValueOnce({ rows: [] })
+      await queryRecords(mockPool as any, 'test-analysis', {
+        mode: 'sample',
+        sampleSize: 12,
+        where: { status: 'completed' },
+        stratifiers: [
+          { kind: 'concept', concept: 'reading_pipeline', targetModels: ['genre'] },
+          { kind: 'edge', edge_type: 'belongsTo:author' },
+          { kind: 'cluster', k: 3 }
+        ]
+      })
+      const sql = mockPool.query.mock.calls[1][0] as string
+      // All three CTEs present
+      expect(sql).toContain('concept_reading_pipeline AS')
+      expect(sql).toContain('edge_belongsTo_author AS')
+      expect(sql).toContain('cluster_anchors AS')
+      expect(sql).toContain('cluster_assign AS')
+      // Composite partition uses ROW(...)
+      expect(sql).toContain('COUNT(DISTINCT ROW(')
+      // where condition still applied
+      expect(sql).toContain('data @>')
+    })
+
+    it('rejects more than 3 stratifiers', async () => {
+      await expect(
+        queryRecords(mockPool as any, 'test-analysis', {
+          mode: 'sample',
+          sampleSize: 5,
+          stratifiers: [
+            { kind: 'edge', edge_type: 'a' },
+            { kind: 'edge', edge_type: 'b' },
+            { kind: 'edge', edge_type: 'c' },
+            { kind: 'edge', edge_type: 'd' }
+          ]
+        })
+      ).rejects.toThrow(/At most 3/)
+    })
+  })
 })

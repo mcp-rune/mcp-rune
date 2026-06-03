@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.68.0] - 2026-06-03
+
+> Non-breaking. Phase 2 of the GraphRAG augmentation series. The Phase 1 release (v0.67.0) put records, embeddings, and edges into the analysis session; this release lets `analysis_query mode:"sample"` actually use them. Three new stratifier kinds — `concept`, `edge`, `cluster` — compose with the existing `where` / `proximity` / `stratify_by` partitioning to produce samples balanced across the dimensions that matter for graph-aware analysis. A "Graph dimensions available" section lands in `mode:"describe"` so the LLM can discover which concepts cover the model, which edge types exist in the session, and whether embeddings are present, then pick a meaningful `stratifiers` combo. When a `cluster` stratifier is requested against a session ingested with `embed_records: false`, embeddings auto-backfill on the spot — no manual re-ingest required.
+
+### Added
+
+- **`analysis_query mode:"sample"` `stratifiers` parameter** — array of up to 3 graph stratifiers that compose with `where` / `proximity` / `stratify_by`:
+  - `{ kind: "concept", concept: <name> }` — binary participation flag against a `DomainConcept`'s target models. Validated against the server's `DomainRegistry`; unknown concept names return a clean MCP error.
+  - `{ kind: "edge", edge_type: <type>, bucket?: "present" | "count" }` — partition by edge presence (binary) or degree bucket (`'0' | '1' | '2-5' | '6+'`).
+  - `{ kind: "cluster", k: 2..20 }` — anchor-nearest semantic cluster via `embedding <=> anchor.embedding`. Auto-backfills embeddings before sampling when the session was ingested without them.
+- **`sample_model` parameter** on `analysis_query mode:"sample"` — source model for concept resolution. Defaults to the session's ingested model when omitted.
+- **"Graph dimensions available" section** in `analysis_query mode:"describe"` — lists registered concepts covering the model, distinct edge types observed in the session, and embedding coverage percentage. Surfaces a one-line `stratifiers` syntax example so the LLM can copy a working shape.
+- **`src/core/graph-stratifiers.ts`** _(new)_ — pure CTE builders `buildConceptStratifier`, `buildEdgeStratifier`, `buildClusterStratifier`. Each returns `{ cte, partitionExpr, join }` and threads a shared `ParamRef` for parameter index management. Pure: no I/O, no SQL execution.
+- **`src/mcp/tools/analysis/stratifier-validator.ts`** _(new)_ — Zod `StratifiersArraySchema` discriminated union + `resolveConceptForStratifier(registry, concept, sourceModel)` + `toGraphStratifierSpec()` resolver. Concept names are validated against the live registry before SQL is generated, so the failure mode is a polite MCP error not a SQL surprise.
+- **`getSessionGraphInfo(analysisId)`** facade in `src/services/vector-storage.ts` — returns `{ edgeTypes, embeddedRecordCount, totalRecordCount }` in one round-trip via `Promise.all`. Used by describe-mode enrichment.
+- **`SampleQuery.stratifiers` field** in `src/services/vendor/pgvector/ingested-records.ts` + matching propagation through `IngestedDataQuery` in `src/services/vector-storage.ts`. New `GraphStratifierSpec` type exported.
+- **25 new specs**: `__tests__/lib/core/graph-stratifiers.spec.ts` (8), `__tests__/lib/mcp/tools/analysis/stratifier-validator.spec.ts` (12), plus 5 composition cases added to `__tests__/lib/services/vendor/pgvector/ingested-records.spec.ts` covering concept/edge/cluster CTE emission and three-stratifier composition.
+
+### Changed
+
+- **`querySampleFiltered` refactored** in `src/services/vendor/pgvector/ingested-records.ts` — the existing single-CTE shape was generalized into a multi-CTE assembler that composes the temporal-bucket, discrete-field, and graph stratifier expressions through one shared `partitionParts` list. The `CEIL(sampleSize / num_groups)` budget allocation switches between `COUNT(DISTINCT field)` and `COUNT(DISTINCT ROW(...))` based on partition arity. The `filtered` CTE now exposes `id` and `embedding` columns (previously only `data`) so the graph CTEs can join.
+
+[0.68.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.67.0...v0.68.0
+
 ## [0.67.0] - 2026-06-03
 
 > Non-breaking. Phase 1 of the GraphRAG augmentation series for the `analysis_*` tool family. Before this release, ingested records were a flat single-model bag: stratified sampling could partition by one discrete field; summaries operated on a single model in isolation; `belongsTo`/`hasMany` associations declared on models were never followed during ingest. This release lays the storage foundation that subsequent phases build on. Records now optionally carry a 384-dim MiniLM embedding (so semantic clustering becomes possible without a back-fill round-trip); a new `ingested_edges` table persists relationship edges extracted from declared associations (so per-edge-type rollups run as indexed joins instead of JSONB scans); `analysis_ingest` grows hop-expansion parameters that BFS-walk declared associations and pull related models into the same analysis session. A first GraphRAG-aware summary strategy — `relationship-coverage` — ships alongside, reporting per-edge-type coverage % / mean degree / gap-records. The bookshelf example gets `author` and `genre` models with proper FKs (`BOOKSHELF_DATASET=graph`) so every new capability is Quickstart-runnable against `InMemoryDataLayer`.
