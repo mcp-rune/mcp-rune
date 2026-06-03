@@ -11,7 +11,11 @@ export type {
   PaginationParams
 } from './core/data-layer.js'
 export type { InMemoryDataLayerOptions, StubFixtures, StubRecord } from './core/data-layer-stub.js'
-export { createInMemoryDataLayer, InMemoryDataLayer } from './core/data-layer-stub.js'
+export {
+  createInMemoryDataLayer,
+  InMemoryDataLayer,
+  loadFixturesFromJson
+} from './core/data-layer-stub.js'
 export type { ModelWithDerivedAttrs } from './core/derived-fields.js'
 export { resolveDerivedFields } from './core/derived-fields.js'
 export { boolEnv, intEnv, optionalEnv, requireEnv } from './core/env.js'

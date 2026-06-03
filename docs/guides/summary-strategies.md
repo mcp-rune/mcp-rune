@@ -116,7 +116,7 @@ Each strategy's `description` is what the LLM sees when picking — they're tune
 
 ## Choosing a strategy at call time
 
-Two LLM-facing surfaces let the model pick.
+Two LLM-facing surfaces let the model pick. For a worked Inspector recipe per built-in strategy against a 5,000-record dataset, see the [Analysis Quickstart](./analysis-quickstart-guide.md).
 
 ### At ingest time
 

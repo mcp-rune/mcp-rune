@@ -4,7 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [0.65.0] - 2026-06-03
+## [0.66.0] - 2026-06-03
+
+> Non-breaking. Makes the five built-in summary strategies (`distribution`, `coverage`, `anomaly`, `temporal`, `entity-extraction`) demonstrable from the Quickstart without abandoning the in-memory adapter. Two surfaces become Quickstart-usable for the first time: `analysis_ingest` now works against `InMemoryDataLayer` (the stub's `dispatch` was previously a no-op, so `analysis_ingest` ingested zero rows), and a `loadFixturesFromJson` helper lets demos seed thousands of records from a JSON file. The bookshelf example grows a `BOOKSHELF_DATASET` env switch (3 books → 5,000 books) with a deterministic generator designed to give every strategy real signal — coverage gaps, page-count outliers, a 60-day temporal gap, a stable `genre_id` foreign key. A new **Analysis Quickstart** guide walks each strategy in isolation via `analysis_summarize`, then all five at once via `summary_strategies` on `analysis_ingest`, then semantic recall by category.
+
+### Added
+
+- **`loadFixturesFromJson(path)`** in `@mcp-rune/mcp-rune/core` — synchronous JSON-file fixture loader for `InMemoryDataLayer`. Accepts both `{ <model>: { <id>: record } }` (object-keyed) and `{ <model>: [record, …] }` (array, auto-keyed by `record.id`); raises clear errors on missing file, invalid JSON, wrong top-level shape, and array entries lacking `id`.
+- **Functional `dispatch('GET', endpoint, …)`** on `InMemoryDataLayer` — returns the JSON:API envelope (`{ data, meta }`) the default convention expects. Resolves the model from `modelConfig.api.endpoint`, paginates via the existing `list()`, emits `meta.{page, per_page, total, total_pages}`. Non-GET methods and unknown endpoints still return `{}` (writes belong to typed CRUD). This unlocks `analysis_ingest` against the in-memory adapter — the tool already routed through `dataLayer.dispatch` for the unfiltered list path.
+- **New guide [`docs/guides/analysis-quickstart-guide.md`](docs/guides/analysis-quickstart-guide.md)** — Part 2 of the Quickstart. One-block `docker-compose` for `pgvector/pgvector:pg17`, migrations + `initVectorStorage`, then five Inspector recipes (one per built-in strategy) using `analysis_summarize` against the same `analysis_id`, an all-strategies-in-one-call demo via `summary_strategies`, and semantic recall by `category: page_summary:<strategy>`. Registered in the Section V sidebar.
+- **Bookshelf large-dataset support** — `examples/bookshelf/fixtures/generate-books.ts` (deterministic 5,000-book generator with deliberately varied shape so each strategy has signal: ~25% missing `rating`, ~40% missing `notes`, ~1% page-count outliers, 24-month temporal spread with a 60-day gap, `genre_id` foreign key over 6 genres) and `examples/bookshelf/fixtures/books.5000.json` (the generator's output, checked in as a worked example of `loadFixturesFromJson`).
+- **`BOOKSHELF_DATASET` env switch** in `examples/bookshelf/config.ts` — `unset` → 3-book starter fixtures; `large` → procedurally generated 5,000 books; `json` → same dataset loaded from disk via `loadFixturesFromJson`.
+- **Spec coverage** in `__tests__/lib/core/data-layer-stub.spec.ts` — seven new specs covering `loadFixturesFromJson` (both shapes, missing-id error, missing-file error, wrong top-level) and `dispatch` (GET round-trips through the convention envelope; unknown endpoints / non-GET → `{}`).
+
+### Changed
+
+- **`docs/guides/quickstart-guide.md`** — new "Load a bigger dataset" section between "Try a tool" and "Connect to Claude Desktop" documents the `BOOKSHELF_DATASET` switch and `loadFixturesFromJson`. "Next" links lead with the new Analysis Quickstart.
+- **`docs/guides/analysis-memories-guide.md`** — end-to-end workflow now leads with a multi-strategy ingest call (`summary_strategies: ["distribution","anomaly","temporal"]`) and adds a new step `5b. Re-summarize with new lenses` that demonstrates `analysis_summarize` with `strategies: ["coverage","entity-extraction"]` on already-ingested rows. Top-of-page cross-link to the new guide.
+- **`docs/guides/summary-strategies.md`** — one-line pointer in "Choosing a strategy at call time" to the new Analysis Quickstart for worked Inspector recipes.
 
 > Breaking. Completes the projection-layer migration started in v0.64.0. The two remaining apps that composed `SearchService` directly — `pick_model_app` and `multi_pick_model_app` — now consume only the `DataLayer` interface. `searchClient` is removed from the app handler context, so the projection-layer rule is now enforced by absence: no app can violate it because the seam doesn't expose `SearchService`. To support the migration, `DataLayer` gains two new methods: `lookupNormalized` (single-model typeahead) and `groupSearchNormalized` (multi-model typeahead across a configured group). `SearchEnabledDataLayer` implements both. Custom `DataLayer` adapters must implement them too — delegating to `listNormalized` and throwing respectively is the simplest implementation, mirroring how the in-memory stub does it.
 >
@@ -432,6 +449,7 @@ import { ModelService, EndpointResolver } from '@mcp-rune/mcp-rune/model-service
 
 The `/lib/*` catch-all subpath remains, so the old `/lib/mcp/services/index.js` form is not broken — just no longer the recommended path.
 
+[0.66.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.65.0...v0.66.0
 [0.65.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.64.0...v0.65.0
 [0.64.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.63.0...v0.64.0
 [0.63.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.62.0...v0.63.0

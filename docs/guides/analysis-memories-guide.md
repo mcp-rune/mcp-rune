@@ -4,6 +4,8 @@ A six-tool feature for running LLM-driven qualitative analysis over large, pagin
 
 The LLM downloads records once into offline storage, stores its own qualitative findings as semantic embeddings, then queries both layers — by meaning, by aggregate, by filter, by stratified sample — until it has enough material to synthesise a final answer.
 
+> Want a hands-on tour? The [Analysis Quickstart](./analysis-quickstart-guide.md) walks each summary strategy through Inspector against a 5,000-book in-memory dataset.
+
 ## Table of Contents
 
 - [Data flow](#data-flow)
@@ -432,7 +434,7 @@ Reads as: _"From deals over $10k that closed in the 60 days around March 15, giv
 
 A realistic session: an LLM auditing the `book` model in an example bookshelf server. The user asks "_what's the state of our library — any quality issues across the collection?_"
 
-**1. Ingest** the dataset once, paginated up to the cap:
+**1. Ingest** the dataset once, paginated up to the cap, with three lenses on every page:
 
 ```jsonc
 analysis_ingest({
@@ -440,12 +442,13 @@ analysis_ingest({
   model: "book",
   ingest_all: true,
   per_page: 50,
-  fields: ["id", "title", "author", "status", "rating", "updated_at"]
+  fields: ["id", "title", "author", "status", "rating", "updated_at"],
+  summary_strategies: ["distribution", "anomaly", "temporal"]
 })
 // → "Stored 312 record(s) (6 fields per record) across 7 page(s). Analysis: library-audit-2026-05"
 ```
 
-Seven `page_summary:distribution` findings are stored automatically alongside the raw rows — each with field distributions and date ranges for that page (or substitute `summary_strategy: "anomaly"` / `summary_strategies: ["distribution", "anomaly"]` for a different lens).
+Up to twenty-one findings are stored automatically alongside the raw rows — three per page, one per strategy that passes its `appliesTo` check (`temporal` needs ≥1 ISO-date field; `anomaly` needs ≥4 records per page). Categories are `page_summary:distribution`, `page_summary:anomaly`, `page_summary:temporal`. Drop `summary_strategies` for the `distribution`-only default.
 
 **2. Discover** the shape before querying:
 
@@ -486,6 +489,20 @@ analysis_query({
   stratify_by: "status"
 })
 // → 3 of each status, so the LLM doesn't see only the majority class
+```
+
+**5b. Re-summarize with new lenses** — no refetch:
+
+```jsonc
+analysis_summarize({
+  analysis_id: "library-audit-2026-05",
+  strategies: ["coverage", "entity-extraction"],
+  max_records: 1000
+})
+// → adds page_summary:coverage and page_summary:entity-extraction
+//   memories drawn from already-ingested rows. metadata.source
+//   marks them as "analysis_summarize" so they're distinguishable
+//   from per-page ingest summaries.
 ```
 
 **6. Store findings** as the LLM forms them:
