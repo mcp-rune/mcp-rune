@@ -20,13 +20,20 @@
  * storeOperation({ toolName: 'create_model', toolArgs: { model: 'deal', attributes: { ... } } })
  */
 
+import type { Edge } from '#src/core/edge-extraction.js'
+import { buildEmbeddingText } from '#src/core/edge-extraction.js'
+
 // Vendor implementation - change this import to switch vendors
 import { embed, embedBatch } from './embeddings.js'
 import { adaptToolOutput } from './tool-output-adapters.js'
 import * as analysisMemories from './vendor/pgvector/analysis-memories.js'
 import * as vendor from './vendor/pgvector/index.js'
+import * as ingestedEdges from './vendor/pgvector/ingested-edges.js'
 import * as ingestedRecords from './vendor/pgvector/ingested-records.js'
 import * as operations from './vendor/pgvector/tool-memories.js'
+
+/** Batch size for record embedding during ingest. */
+const EMBED_BATCH_SIZE = 64
 
 export interface VectorStorageOptions {
   serviceName?: string
@@ -247,6 +254,13 @@ export interface IngestRecordsParams {
   analysisId: string
   model: string
   records: Array<{ id?: string; data: Record<string, unknown> }>
+  /**
+   * Opt-in record embeddings. `true` embeds all string-valued attributes;
+   * an object form restricts to specific fields. When omitted, the embedding
+   * columns stay NULL and a later cluster-stratifier triggers back-fill via
+   * ensureRecordEmbeddings.
+   */
+  embed?: boolean | { fields?: string[] }
 }
 
 export type IngestedDataQuery =
@@ -260,14 +274,37 @@ export type IngestedDataQuery =
       proximity?: ingestedRecords.ProximityParams
     }
 
-/** Store ingested records for analysis */
+/** Store ingested records for analysis, optionally embedding them. */
 export async function storeIngestedRecords(params: IngestRecordsParams): Promise<number> {
   if (!vendor.isConfigured()) return 0
 
   const pool = vendor.getPool()
   if (!pool) return 0
 
-  return ingestedRecords.storeRecords(pool, params)
+  let embeddings: ingestedRecords.RecordEmbedding[] | undefined
+  if (params.embed) {
+    const fields = typeof params.embed === 'object' ? params.embed.fields : undefined
+    embeddings = await _embedRecordBatch(params.records, fields)
+  }
+
+  return ingestedRecords.storeRecords(pool, { ...params, embeddings })
+}
+
+/** Embed a batch of records for ingest using buildEmbeddingText + embedBatch. */
+async function _embedRecordBatch(
+  records: ReadonlyArray<{ data: Record<string, unknown> }>,
+  fields?: string[]
+): Promise<ingestedRecords.RecordEmbedding[]> {
+  const texts: string[] = records.map((r) => buildEmbeddingText(r.data, { fields }))
+  const out: ingestedRecords.RecordEmbedding[] = []
+  for (let start = 0; start < texts.length; start += EMBED_BATCH_SIZE) {
+    const slice = texts.slice(start, start + EMBED_BATCH_SIZE)
+    const vectors = await embedBatch(slice)
+    for (let j = 0; j < vectors.length; j++) {
+      out.push({ recordIndex: start + j, vector: vectors[j]!, text: slice[j]! })
+    }
+  }
+  return out
 }
 
 /** Query ingested records (aggregate, filter, or sample) */
@@ -374,6 +411,107 @@ export async function clearIngestedRecords(analysisId: string): Promise<number> 
   if (!pool) return 0
 
   return ingestedRecords.clearRecords(pool, analysisId)
+}
+
+export interface StoreEdgesParams {
+  analysisId: string
+  edges: ReadonlyArray<Edge>
+  hopDepth?: number
+}
+
+/** Persist a batch of relationship edges discovered during ingest. */
+export async function storeIngestedEdges(params: StoreEdgesParams): Promise<number> {
+  if (!vendor.isConfigured()) return 0
+  if (params.edges.length === 0) return 0
+
+  const pool = vendor.getPool()
+  if (!pool) return 0
+
+  return ingestedEdges.storeEdges(pool, params)
+}
+
+/** Edges originating from a specific record within a session. */
+export async function getEdgesFrom(
+  analysisId: string,
+  srcModel: string,
+  srcId: string
+): Promise<ingestedEdges.EdgeRow[]> {
+  if (!vendor.isConfigured()) return []
+
+  const pool = vendor.getPool()
+  if (!pool) return []
+
+  return ingestedEdges.getEdgesFrom(pool, analysisId, srcModel, srcId)
+}
+
+/** Bulk-load edges for many source records of a model. */
+export async function getEdgesForSources(
+  analysisId: string,
+  srcModel: string,
+  srcIds: ReadonlyArray<string>
+): Promise<ingestedEdges.EdgeRow[]> {
+  if (!vendor.isConfigured()) return []
+  if (srcIds.length === 0) return []
+
+  const pool = vendor.getPool()
+  if (!pool) return []
+
+  return ingestedEdges.getEdgesForSources(pool, analysisId, srcModel, srcIds)
+}
+
+/** Clear edges by analysis ID. Symmetric with clearIngestedRecords. */
+export async function clearIngestedEdges(analysisId: string): Promise<number> {
+  if (!vendor.isConfigured()) return 0
+
+  const pool = vendor.getPool()
+  if (!pool) return 0
+
+  return ingestedEdges.clearEdges(pool, analysisId)
+}
+
+export interface EnsureEmbeddingsOptions {
+  fields?: string[]
+  /** Cap per call. Default 500. */
+  limit?: number
+}
+
+/**
+ * Back-fill embeddings for records that were ingested without them.
+ *
+ * Invoked by analysis_query when a cluster stratifier is requested on a
+ * session that has unembedded records, and by semantic-cluster summary
+ * strategy from analysis_summarize.
+ */
+export async function ensureRecordEmbeddings(
+  analysisId: string,
+  model: string,
+  options: EnsureEmbeddingsOptions = {}
+): Promise<number> {
+  if (!vendor.isConfigured()) return 0
+
+  const pool = vendor.getPool()
+  if (!pool) return 0
+
+  const limit = options.limit ?? 500
+  const pending = await ingestedRecords.getRecordsWithoutEmbeddings(pool, analysisId, model, limit)
+  if (pending.length === 0) return 0
+
+  const texts = pending.map((p) => buildEmbeddingText(p.data, { fields: options.fields }))
+  const updates: Array<{ recordId: string; vector: Float32Array; text: string }> = []
+
+  for (let start = 0; start < texts.length; start += EMBED_BATCH_SIZE) {
+    const slice = texts.slice(start, start + EMBED_BATCH_SIZE)
+    const vectors = await embedBatch(slice)
+    for (let j = 0; j < vectors.length; j++) {
+      updates.push({
+        recordId: pending[start + j]!.recordId,
+        vector: vectors[j]!,
+        text: slice[j]!
+      })
+    }
+  }
+
+  return ingestedRecords.updateRecordEmbeddings(pool, analysisId, model, updates)
 }
 
 /** Clear analysis memories by analysis ID */

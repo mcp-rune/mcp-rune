@@ -12,15 +12,23 @@ import { coverageStrategy } from './coverage.js'
 import { distributionStrategy } from './distribution.js'
 import { entityExtractionStrategy } from './entity-extraction.js'
 import { SummaryStrategyRegistry } from './registry.js'
+import { relationshipCoverageStrategy } from './relationship-coverage.js'
 import { temporalStrategy } from './temporal.js'
 import type { SummaryStrategy } from './types.js'
 
-export type { SummaryInput, SummaryOutput, SummaryStrategy } from './types.js'
+export type {
+  SummaryEdge,
+  SummaryInput,
+  SummaryOutput,
+  SummaryRequirement,
+  SummaryStrategy
+} from './types.js'
 export {
   anomalyStrategy,
   coverageStrategy,
   distributionStrategy,
   entityExtractionStrategy,
+  relationshipCoverageStrategy,
   SummaryStrategyRegistry,
   temporalStrategy
 }
@@ -30,7 +38,8 @@ export const BUILT_IN_SUMMARY_STRATEGIES: ReadonlyArray<SummaryStrategy> = Objec
   coverageStrategy,
   anomalyStrategy,
   temporalStrategy,
-  entityExtractionStrategy
+  entityExtractionStrategy,
+  relationshipCoverageStrategy
 ])
 
 let _defaultRegistry: SummaryStrategyRegistry | undefined

@@ -16,11 +16,13 @@ vi.mock('#src/services/vector-storage.js', () => ({
   ),
   clearAnalysisMemories: vi.fn(() => Promise.resolve(3)),
   clearIngestedRecords: vi.fn(() => Promise.resolve(10)),
+  clearIngestedEdges: vi.fn(() => Promise.resolve(7)),
   queryIngestedData: vi.fn(() => Promise.resolve([]))
 }))
 
 import {
   clearAnalysisMemories,
+  clearIngestedEdges,
   clearIngestedRecords,
   queryIngestedData,
   recallAnalysisMemories,
@@ -578,14 +580,16 @@ describe('Analysis Memory Tools', () => {
       expect(AnalysisClearTool.requiresAuth).toBe(false)
     })
 
-    it('should cascade-clear both analysis memories and ingested records', async () => {
+    it('should cascade-clear analysis memories, ingested records, and edges', async () => {
       const result = await tool.execute({
         analysis_id: 'audit-2024'
       })
 
       expect(clearAnalysisMemories).toHaveBeenCalledWith('audit-2024')
       expect(clearIngestedRecords).toHaveBeenCalledWith('audit-2024')
+      expect(clearIngestedEdges).toHaveBeenCalledWith('audit-2024')
       expect(result.content[0].text).toContain('10 ingested record(s)')
+      expect(result.content[0].text).toContain('7 edge(s)')
       expect(result.content[0].text).toContain('3 finding(s)')
       expect(result.content[0].text).toContain('audit-2024')
     })

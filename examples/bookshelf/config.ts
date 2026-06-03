@@ -8,11 +8,13 @@ import { createServer } from '@mcp-rune/mcp-rune/server'
 import { DATA_TOOL_CLASSES, ToolRegistry } from '@mcp-rune/mcp-rune/tools'
 import type { ApiClient, StubFixtures } from '@mcp-rune/mcp-rune/core'
 
-import { generateBookFixtures } from './fixtures/generate-books.js'
+import { generateBookFixtures, generateGraphFixtures } from './fixtures/generate-books.js'
+import { Author } from './models/author.js'
 import { Book } from './models/book.js'
+import { Genre } from './models/genre.js'
 import { BookPrompt } from './prompts/book-prompt.js'
 
-const MODEL_CLASSES = { book: Book }
+const MODEL_CLASSES = { book: Book, author: Author, genre: Genre }
 
 const promptRegistry = new BasePromptRegistry()
 promptRegistry.register('book', BookPrompt, {
@@ -33,6 +35,9 @@ promptRegistry.register('book', BookPrompt, {
 //   "json"   → the same 5,000-book dataset loaded from
 //              fixtures/books.5000.json, demonstrating
 //              `loadFixturesFromJson`.
+//   "graph"  → 500 books + author + genre collections with proper FKs
+//              (author_id, genre_id). Exercises analysis_ingest hop_depth
+//              + record embeddings + relationship-coverage strategy.
 //
 // To wire a real backend, replace `createInMemoryDataLayer` with the
 // default ModelService + ApiClient path — see
@@ -64,6 +69,7 @@ const STARTER_FIXTURES: StubFixtures = {
 function resolveFixtures(): StubFixtures {
   const mode = (process.env.BOOKSHELF_DATASET ?? '').toLowerCase()
   if (mode === 'large') return generateBookFixtures(5000)
+  if (mode === 'graph') return generateGraphFixtures(500)
   if (mode === 'json') {
     const here = dirname(fileURLToPath(import.meta.url))
     return loadFixturesFromJson(resolve(here, 'fixtures/books.5000.json'))
