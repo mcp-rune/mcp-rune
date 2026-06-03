@@ -28,6 +28,8 @@
  * convention-free so the seam is the only thing under test.
  */
 
+import { readFileSync } from 'node:fs'
+
 import { EndpointResolver } from '#src/mcp/services/endpoint-resolver.js'
 
 import type { ApiClient, RequestOptions } from './api-client.js'
@@ -240,13 +242,36 @@ export class InMemoryDataLayer implements DataLayer {
   }
 
   /**
-   * Raw URL dispatch is not meaningful for an in-memory adapter. The
-   * stub treats it as a no-op that returns `{}` so tests can pass it
-   * around without crashing, but any test that actually relies on
-   * dispatch semantics should use the default `ModelService` adapter.
+   * Read-side dispatch is implemented so `analysis_ingest` (which uses
+   * `dispatch('GET', endpoint, …, { page, per_page })` for unfiltered
+   * pagination) works against the stub. The returned envelope mirrors
+   * what the default JSON:API convention expects from a real backend:
+   * `{ data: [...records], meta: { page, per_page, total, total_pages } }`.
+   *
+   * Writes (POST/PATCH/PUT/DELETE) and unknown URLs fall through to `{}`.
+   * The typed `create`/`update`/`delete` methods are the canonical write
+   * path; tests that need to exercise non-CRUD verbs should use the
+   * default `ModelService` adapter.
    */
-  async dispatch(): Promise<Record<string, unknown>> {
-    return {}
+  async dispatch(
+    method: string,
+    url: string,
+    _payload?: Record<string, unknown>,
+    params?: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    if (method?.toUpperCase() !== 'GET') return {}
+
+    const modelName = this._modelByEndpoint(url)
+    if (!modelName) return {}
+
+    const page = Number(params?.page ?? 1) || 1
+    const perPage = Number(params?.per_page ?? params?.perPage ?? 20) || 20
+    const result = await this.listNormalized(modelName, undefined, { page, perPage })
+
+    return {
+      data: result.records,
+      meta: result.pagination
+    }
   }
 
   /**
@@ -286,6 +311,14 @@ export class InMemoryDataLayer implements DataLayer {
       this._store.set(model, bucket)
     }
     return bucket
+  }
+
+  /** Resolve a model name from its `api.endpoint`, for `dispatch('GET', url, …)`. */
+  private _modelByEndpoint(endpoint: string): string | null {
+    for (const [name, cfg] of Object.entries(this.models)) {
+      if (cfg.api?.endpoint === endpoint) return name
+    }
+    return null
   }
 
   private _requireModel(model: string): ModelConfig {
@@ -338,4 +371,71 @@ export function createInMemoryDataLayer(
   options: Omit<InMemoryDataLayerOptions, 'models'> = {}
 ): (ctx: { apiClient?: ApiClient; models: ModelsRegistry }) => DataLayer {
   return (ctx) => new InMemoryDataLayer({ models: ctx.models, ...options })
+}
+
+/**
+ * Read a JSON file into the `StubFixtures` shape used by
+ * `createInMemoryDataLayer({ fixtures })`. Two input shapes are accepted:
+ *
+ *   1. Object-keyed: `{ <model>: { <id>: record, … } }` — returned as-is.
+ *   2. Array-keyed:  `{ <model>: [record, …] }` — each `record.id` becomes
+ *      the inner key. Throws if any record is missing `id`.
+ *
+ * Designed for demo datasets (e.g. a checked-in `books.5000.json`) where
+ * hand-writing the nested object is awkward. The framework reads the
+ * file synchronously and does no validation beyond shape — record fields
+ * are passed through opaquely.
+ */
+export function loadFixturesFromJson(path: string): StubFixtures {
+  let raw: string
+  try {
+    raw = readFileSync(path, 'utf8')
+  } catch (err) {
+    throw new Error(`loadFixturesFromJson: cannot read ${path}: ${(err as Error).message}`, {
+      cause: err
+    })
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch (err) {
+    throw new Error(`loadFixturesFromJson: invalid JSON in ${path}: ${(err as Error).message}`, {
+      cause: err
+    })
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(
+      `loadFixturesFromJson: expected top-level object keyed by model name in ${path}`
+    )
+  }
+
+  const fixtures: StubFixtures = {}
+  for (const [model, value] of Object.entries(parsed as Record<string, unknown>)) {
+    if (Array.isArray(value)) {
+      const bucket: Record<string, StubRecord> = {}
+      for (const [i, record] of value.entries()) {
+        if (!record || typeof record !== 'object') {
+          throw new Error(`loadFixturesFromJson: ${path} → ${model}[${i}] is not an object`)
+        }
+        const id = (record as StubRecord).id
+        if (id === undefined || id === null) {
+          throw new Error(
+            `loadFixturesFromJson: ${path} → ${model}[${i}] is missing required \`id\` field`
+          )
+        }
+        bucket[String(id)] = record as StubRecord
+      }
+      fixtures[model] = bucket
+    } else if (value && typeof value === 'object') {
+      fixtures[model] = value as Record<string, StubRecord>
+    } else {
+      throw new Error(
+        `loadFixturesFromJson: ${path} → ${model} must be an object or array of records`
+      )
+    }
+  }
+
+  return fixtures
 }

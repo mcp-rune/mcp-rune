@@ -45,6 +45,44 @@ The first three tools are derived directly from the model definition in
 adapter wired in `examples/bookshelf/config.ts` — the same code path that
 hits HTTP in production, just with a different `DataLayer` factory.
 
+## Load a bigger dataset
+
+Three books makes the loop legible but doesn't show what the framework
+does once a real dataset arrives. The bookshelf example takes a
+`BOOKSHELF_DATASET` env var that swaps the seed fixtures for a
+**5,000-book** corpus designed to give every built-in summary strategy
+(`distribution`, `coverage`, `anomaly`, `temporal`, `entity-extraction`)
+something meaningful to say:
+
+```bash
+# Procedurally generated, deterministic — same output every run.
+BOOKSHELF_DATASET=large npx tsx server.ts
+
+# Same dataset, but loaded from fixtures/books.5000.json via the
+# framework's loadFixturesFromJson helper.
+BOOKSHELF_DATASET=json npx tsx server.ts
+```
+
+Inside the Inspector, paginate through the new corpus:
+
+```jsonc
+find_records({ model: "book", page: 1, per_page: 50 })
+// → 50 records out of 5000 total · 100 pages
+```
+
+The records carry deliberately varied shape — most books have a
+`rating`, ~25% don't (for `coverage`); ~1% carry a wildly high `pages`
+count (for `anomaly`); `created_at` and `updated_at` span ~24 months
+with a 60-day gap (for `temporal`); each book has a `genre_id` foreign
+key (for `entity-extraction`). The generator lives at
+[`examples/bookshelf/fixtures/generate-books.ts`](https://github.com/mcp-rune/mcp-rune/blob/main/examples/bookshelf/fixtures/generate-books.ts);
+`books.5000.json` next to it is just `generateBookFixtures(5000)`
+serialized.
+
+Want to load your own data? `loadFixturesFromJson(path)` accepts both
+`{ <model>: { <id>: record } }` and `{ <model>: [record, …] }` (auto-keyed
+by `record.id`).
+
 ## Connect to Claude Desktop
 
 To talk to the same server from Claude Desktop, drop this block into
@@ -97,6 +135,10 @@ apps don't change. See
 
 ## Next
 
+- [Analysis Quickstart](./analysis-quickstart-guide.md) — Part 2: bring up
+  pgvector with one `docker compose` block, point the bookshelf at the
+  5,000-book dataset, and exercise every summary strategy through
+  `analysis_ingest` + `analysis_summarize`.
 - [Project structure](./project-structure-guide.md) — where models, prompts,
   tools, apps, and the domain registry live in a generated mcp-rune project.
 - [Prompt creation](./prompt-creation-guide.md) — the DSL that turns model
