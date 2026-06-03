@@ -12,6 +12,7 @@ import { defaultConvention } from '#src/mcp/api-conventions/index.js'
 import { buildCollectionPath } from '#src/mcp/services/compound-id.js'
 import {
   getEdgesForSources,
+  getEmbeddingsForRecords,
   getIngestedRecordCount,
   getIngestedRecordIds,
   storeAnalysisMemory,
@@ -1048,9 +1049,19 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     const registry = this.summaryStrategies ?? defaultSummaryStrategyRegistry()
 
     const needs = this._collectRequirements(strategyNames, registry)
-    const enriched: SummaryInput = needs.edges
-      ? { ...input, edges: await this._loadEdgesForPage(input) }
-      : input
+    let enriched: SummaryInput = input
+    if (needs.edges) {
+      enriched = { ...enriched, edges: await this._loadEdgesForPage(enriched) }
+    }
+    if (needs.embeddings) {
+      enriched = { ...enriched, embeddings: await this._loadEmbeddingsForPage(enriched) }
+    }
+    if (needs.domainRegistry && this.domainRegistry) {
+      enriched = {
+        ...enriched,
+        domainRegistry: this.domainRegistry as SummaryInput['domainRegistry']
+      }
+    }
 
     for (const name of strategyNames) {
       const strategy = registry.get(name)
@@ -1072,18 +1083,20 @@ When NOT to use: For quick lookups of specific records by ID or small result set
   private _collectRequirements(
     strategyNames: ReadonlyArray<string>,
     registry: ReturnType<typeof defaultSummaryStrategyRegistry>
-  ): { edges: boolean; embeddings: boolean } {
+  ): { edges: boolean; embeddings: boolean; domainRegistry: boolean } {
     let edges = false
     let embeddings = false
+    let domainRegistry = false
     for (const name of strategyNames) {
       const strategy = registry.get(name)
       const requires = strategy?.requires ?? []
       for (const r of requires) {
         if (r === 'edges') edges = true
-        if (r === 'embeddings') embeddings = true
+        else if (r === 'embeddings') embeddings = true
+        else if (r === 'domainRegistry') domainRegistry = true
       }
     }
-    return { edges, embeddings }
+    return { edges, embeddings, domainRegistry }
   }
 
   /** Bulk-load outgoing edges for the records on this page. */
@@ -1100,5 +1113,17 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       dst_id: r.dst_id,
       edge_type: r.edge_type
     }))
+  }
+
+  /** Bulk-load record embeddings for this page (record_id → Float32Array). */
+  private async _loadEmbeddingsForPage(
+    input: SummaryInput
+  ): Promise<ReadonlyMap<string, Float32Array>> {
+    const ids: string[] = []
+    for (const r of input.records) {
+      if (r.id != null) ids.push(String(r.id))
+    }
+    if (ids.length === 0) return new Map()
+    return getEmbeddingsForRecords(input.analysisId, input.model, ids)
   }
 }

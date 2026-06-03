@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.69.0] - 2026-06-03
+
+> Non-breaking. Phase 3 of the GraphRAG augmentation series. The Phase 1 release (v0.67.0) put records, embeddings, and edges into the analysis session; the Phase 2 release (v0.68.0) taught `analysis_query mode:"sample"` to compose them. This release ships the summary strategies that read from those same dimensions: `concept-touch` reports per-concept coverage % (which records participate in each `DomainConcept`); `rule-violation` evaluates every `BusinessRule` whose scope includes the model and counts failures per rule + severity; `semantic-cluster` does client-side anchor-nearest clustering over a page's embeddings and surfaces cluster sizes, representative records, and intra-cluster spread. The dispatcher (in `analysis_ingest`'s `_runStrategies` and the matching path in `analysis_summarize`) lazy-loads each auxiliary slice exactly once per page based on each strategy's `requires` declaration. The bookshelf example grows a `DomainRegistry` with two concepts (`reading-pipeline`, `catalogue`) and two business rules (`completed-books-need-rating`, `books-need-author`), and the graph fixture deliberately leaves ~15% of completed books without a `rating` so `rule-violation` finds real signal end-to-end against `InMemoryDataLayer`.
+
+### Added
+
+- **`concept-touch` summary strategy** (`src/core/summary-strategies/concept-touch.ts`) — `requires: ['edges', 'domainRegistry']`. For each `DomainConcept` covering the model: count records with ≥1 edge to each of the concept's _other_ models; report touched/total + per-target-model breakdown + first 10 gap IDs.
+- **`rule-violation` summary strategy** (`src/core/summary-strategies/rule-violation.ts`) — `requires: ['domainRegistry']`. Iterates every `BusinessRule` whose `scope` includes the model; reports pass/fail counts, severity, first 10 failed IDs, and up to 3 example failure messages per rule.
+- **`semantic-cluster` summary strategy** (`src/core/summary-strategies/semantic-cluster.ts`) — `requires: ['embeddings']`. Client-side anchor-nearest clustering over the page's Float32Array embeddings (`k` from `options.k`, default 5). Reports per-cluster size, representative record, mean intra-cluster cosine distance.
+- **`SummaryInput.domainRegistry`** and a structural `SummaryDomainRegistry` interface, plus `'domainRegistry'` added to the `SummaryRequirement` union. Existing strategies are untouched.
+- **`getEmbeddingsForRecords(analysisId, model, recordIds)`** vendor function + facade. Returns a `Map<string, Float32Array>` keyed by record_id; parses pgvector's text serialization on the way out.
+- **Bookshelf domain registry**: `examples/bookshelf/domain/concepts.ts` and `examples/bookshelf/domain/rules.ts`, wired into `examples/bookshelf/config.ts` via a `DomainRegistry({knowledge, rules, workflows})` instance threaded through `ToolRegistry`.
+- **16 new specs** covering `appliesTo` gates, metadata shape, and edge cases.
+
+### Changed
+
+- **`_runStrategies` dispatcher** in `analysis-ingest-tool.ts` and `analysis-summarize-tool.ts` — extended to lazy-load embeddings and pass `this.domainRegistry`. `_collectRequirements` returns `{ edges, embeddings, domainRegistry }`. Each slice loads at most once per page.
+- **Bookshelf graph fixture** in `examples/bookshelf/fixtures/generate-books.ts` — strips `rating` off ~15% of `completed` books so the `rule-violation` strategy reports real workflow gaps.
+
+[0.69.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.68.0...v0.69.0
+
 ## [0.68.0] - 2026-06-03
 
 > Non-breaking. Phase 2 of the GraphRAG augmentation series. The Phase 1 release (v0.67.0) put records, embeddings, and edges into the analysis session; this release lets `analysis_query mode:"sample"` actually use them. Three new stratifier kinds — `concept`, `edge`, `cluster` — compose with the existing `where` / `proximity` / `stratify_by` partitioning to produce samples balanced across the dimensions that matter for graph-aware analysis. A "Graph dimensions available" section lands in `mode:"describe"` so the LLM can discover which concepts cover the model, which edge types exist in the session, and whether embeddings are present, then pick a meaningful `stratifiers` combo. When a `cluster` stratifier is requested against a session ingested with `embed_records: false`, embeddings auto-backfill on the spot — no manual re-ingest required.

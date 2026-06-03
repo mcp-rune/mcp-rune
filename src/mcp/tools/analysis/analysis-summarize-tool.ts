@@ -10,6 +10,7 @@ import { defaultSummaryStrategyRegistry } from '#src/core/summary-strategies/ind
 import {
   describeAnalysisSession,
   getEdgesForSources,
+  getEmbeddingsForRecords,
   queryIngestedData,
   storeAnalysisMemory
 } from '#src/services/vector-storage.js'
@@ -150,9 +151,19 @@ When NOT to use: for the first ingestion of a session — use analysis_ingest, w
         records,
         fields: undefined
       }
-      const enriched: SummaryInput = needs.edges
-        ? { ...baseInput, edges: await this._loadEdgesForPage(baseInput) }
-        : baseInput
+      let enriched: SummaryInput = baseInput
+      if (needs.edges) {
+        enriched = { ...enriched, edges: await this._loadEdgesForPage(enriched) }
+      }
+      if (needs.embeddings) {
+        enriched = { ...enriched, embeddings: await this._loadEmbeddingsForPage(enriched) }
+      }
+      if (needs.domainRegistry && this.domainRegistry) {
+        enriched = {
+          ...enriched,
+          domainRegistry: this.domainRegistry as SummaryInput['domainRegistry']
+        }
+      }
 
       const results: string[] = []
       for (const name of names) {
@@ -189,17 +200,30 @@ When NOT to use: for the first ingestion of a session — use analysis_ingest, w
   private _collectRequirements(
     strategyNames: ReadonlyArray<string>,
     registry: SummaryStrategyRegistry
-  ): { edges: boolean; embeddings: boolean } {
+  ): { edges: boolean; embeddings: boolean; domainRegistry: boolean } {
     let edges = false
     let embeddings = false
+    let domainRegistry = false
     for (const name of strategyNames) {
       const strategy = registry.get(name)
       for (const r of strategy?.requires ?? []) {
         if (r === 'edges') edges = true
-        if (r === 'embeddings') embeddings = true
+        else if (r === 'embeddings') embeddings = true
+        else if (r === 'domainRegistry') domainRegistry = true
       }
     }
-    return { edges, embeddings }
+    return { edges, embeddings, domainRegistry }
+  }
+
+  private async _loadEmbeddingsForPage(
+    input: SummaryInput
+  ): Promise<ReadonlyMap<string, Float32Array>> {
+    const ids: string[] = []
+    for (const r of input.records) {
+      if (r.id != null) ids.push(String(r.id))
+    }
+    if (ids.length === 0) return new Map()
+    return getEmbeddingsForRecords(input.analysisId, input.model, ids)
   }
 
   private async _loadEdgesForPage(input: SummaryInput): Promise<ReadonlyArray<SummaryEdge>> {
