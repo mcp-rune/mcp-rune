@@ -24,7 +24,7 @@
 // See docs/README.md for the full convention reference.
 
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs'
-import { join, dirname, resolve } from 'node:path'
+import { basename, join, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 
@@ -306,13 +306,13 @@ function hasPairedPrev(blocks, i) {
 // ── Guide processing ───────────────────────────────────────────────
 
 function listGuides() {
-  return readdirSync(GUIDES_DIR)
-    .filter((f) => f.endsWith('.md'))
+  return readdirSync(GUIDES_DIR, { recursive: true })
+    .filter((f) => f.endsWith('.md') && basename(f) !== 'index.md')
     .sort()
 }
 
 function guideSlug(filename) {
-  return filename.replace(/\.md$/, '')
+  return basename(filename).replace(/\.md$/, '')
 }
 
 function processGuide(filename) {
