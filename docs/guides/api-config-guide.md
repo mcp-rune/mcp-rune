@@ -54,6 +54,8 @@ This guide covers the `static api` configuration on models and the services that
 
 `EndpointResolver` walks a five-step chain to produce the URL for any `(model, action)` pair. First match wins:
 
+<!-- illustration: api-config#chain -->
+
 ```
    Resolve endpoint for (model, action)
                  │

@@ -1,0 +1,10 @@
+<div class="tree"><span class="g"></span><span class="dir">your-server/                          </span><span class="cm">(you write this)</span>
+<span class="g">    │</span>
+<span class="g">    ├─ </span><span class="dir">models/                         </span><span class="cm">Model definitions (attributesConfig)</span>
+<span class="g">    ├─ </span><span class="dir">prompts/                        </span><span class="cm">Prompt classes (fieldGroups + strategy)</span>
+<span class="g">    ├─ </span><span class="dir">tools/                          </span><span class="cm">Custom tools (extend BaseTool)</span>
+<span class="g">    ├─ </span><span class="dir">domain/                         </span><span class="cm">Workflows, rules, knowledge</span>
+<span class="g">    └─ </span><span class="dir">servers/</span>
+<span class="g">        ├─ </span><span class="file">local.ts                    </span><span class="cm">StdioServer entry point</span>
+<span class="g">        └─ </span><span class="file">remote.ts                   </span><span class="cm">HttpServer entry point</span>
+</div>

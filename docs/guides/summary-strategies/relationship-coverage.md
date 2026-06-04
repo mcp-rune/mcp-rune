@@ -8,6 +8,8 @@ This is the edge-table-driven counterpart to `entity-extraction`: that strategy 
 
 At a glance — what the strategy reads, what it computes, what it writes:
 
+<!-- illustration: summary-strategies#relationship-coverage -->
+
 ```
 ┌────────────────────┐    ┌────────────────────┐    ┌────────────────────┐
 │       INPUT        │    │     ALGORITHM      │    │       OUTPUT       │

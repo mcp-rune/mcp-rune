@@ -12,6 +12,8 @@ This guide covers the configuration knobs, the validation flow, and the `Statefu
 
 The walk is per-section, not per-field:
 
+<!-- illustration: stateful-strategies#progression -->
+
 ```
    get_prompt_guide
         │

@@ -61,6 +61,8 @@ Supporting classes:
 
 ## Architecture
 
+<!-- illustration: service-layer#funnel -->
+
 ```
 ┌─────────────────────────────────────────────────┐
 │  MCP Tool Layer                                  │
@@ -96,6 +98,8 @@ Supporting classes:
 ### Resolution Chain
 
 A real call traces the chain end-to-end:
+
+<!-- illustration: service-layer#chain -->
 
 ```
    ModelService.findById('book', 42)

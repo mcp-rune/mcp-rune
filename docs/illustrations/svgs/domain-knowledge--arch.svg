@@ -1,0 +1,23 @@
+<div class="tree"><span class="g"></span><span class="dir">lib/mcp/domain/                      </span><span class="cm"># Framework classes (shared)</span>
+<span class="g">├── </span><span class="file">knowledge.js                     </span><span class="cm"># DomainConcept + DomainKnowledge</span>
+<span class="g">├── </span><span class="file">business-rules.js                </span><span class="cm"># BusinessRule + RuleSet</span>
+<span class="g">├── </span><span class="file">workflows.js                     </span><span class="cm"># WorkflowStep + WorkflowDefinition + WorkflowRegistry</span>
+<span class="g">└── </span><span class="file">registry.js                      </span><span class="cm"># DomainRegistry (aggregates all of the above)</span>
+
+<span class="g"></span><span class="dir">lib/mcp/tools/domain/                </span><span class="cm"># Domain tools (shared)</span>
+<span class="g">├── </span><span class="file">base-domain-tool.js              </span><span class="cm"># BaseDomainTool (DOMAIN category, no auth)</span>
+<span class="g">├── </span><span class="file">get-domain-context-tool.js       </span><span class="cm"># Retrieves composed context for a model/concept</span>
+<span class="g">├── </span><span class="file">check-business-rules-tool.js     </span><span class="cm"># Validates data against business rules</span>
+<span class="g">├── </span><span class="file">suggest-workflow-tool.js         </span><span class="cm"># Returns a workflow roadmap + first step</span>
+<span class="g">└── </span><span class="file">get-workflow-step-tool.js        </span><span class="cm"># Returns detail for a specific workflow step</span>
+
+<span class="g"></span><span class="dir">src/&lt;server&gt;/domain/                 </span><span class="cm"># Server-specific domain data</span>
+<span class="g">├── </span><span class="file">registry.js                      </span><span class="cm"># Factory: createXxxDomainRegistry()</span>
+<span class="g">├── </span><span class="dir">knowledge/</span>
+<span class="g">│   └── </span><span class="file">concepts.js                  </span><span class="cm"># DomainConcept instances</span>
+<span class="g">├── </span><span class="dir">rules/</span>
+<span class="g">│   ├── </span><span class="file">&lt;domain&gt;-rules.js            </span><span class="cm"># BusinessRule instances</span>
+<span class="g">│   └── </span><span class="file">mutability-rules.js          </span><span class="cm"># Auto-generated from model metadata</span>
+<span class="g">└── </span><span class="dir">workflows/</span>
+<span class="g">    └── </span><span class="file">&lt;workflow-category&gt;.js       </span><span class="cm"># WorkflowDefinition instances</span>
+</div>

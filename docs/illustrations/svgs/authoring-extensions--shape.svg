@@ -1,0 +1,7 @@
+<div class="tree"><span class="g"></span><span class="dir">your-extension/</span>
+<span class="g">├── </span><span class="file">types.ts         </span><span class="cm">(1) Config type the extension consumes</span>
+<span class="g">├── </span><span class="file">capabilities.ts  </span><span class="cm">(2) Typed helper + (3) typed reader</span>
+<span class="g">├── </span><span class="file">factory.ts       </span><span class="cm">(4) Service factory (only if you contribute a service)</span>
+<span class="g">├── </span><span class="file">extension.ts     </span><span class="cm">(5) MCP tools + the searchExtension()-style factory</span>
+<span class="g">└── </span><span class="file">index.ts             </span><span class="cm">Public re-exports — one stable import path</span>
+</div>

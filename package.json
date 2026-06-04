@@ -1,6 +1,6 @@
 {
   "name": "@mcp-rune/mcp-rune",
-  "version": "0.70.1",
+  "version": "0.72.0",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "restricted"
@@ -123,6 +123,8 @@
     "docs:dualize": "node docs/scripts/dualize.mjs",
     "docs:check": "node docs/scripts/dualize.mjs --check",
     "docs:check-placeholders": "node docs/scripts/dualize.mjs --report-placeholders",
+    "illustrations:build": "node docs/illustrations/scripts/build-illustrations.mjs",
+    "illustrations:check": "node docs/illustrations/scripts/check-illustrations.mjs",
     "prepublishOnly": "npm run build:full",
     "prepare": "husky"
   },

@@ -17,6 +17,8 @@ This guide covers writing one, plugging it in, and testing it.
 
 The lifecycle is per-request — never reuse a client across users:
 
+<!-- illustration: api-client#lifecycle -->
+
 ```
    ┌─────────────────┐                ┌─────────────────┐
    │  Incoming MCP   │                │  OAuthService   │

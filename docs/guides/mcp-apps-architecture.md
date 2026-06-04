@@ -31,6 +31,8 @@ The tool declares its UI resource via `_meta.ui.resourceUri`. When the LLM calls
 
 ### High-Level Flow
 
+<!-- illustration: mcp-apps-architecture#layered -->
+
 ```
 ┌─ MCP Client (Claude Desktop / COC) ─────────────────┐
 │                                                       │
@@ -656,6 +658,8 @@ function getHtml() {
 ---
 
 ## 8. File Structure
+
+<!-- illustration: mcp-apps-architecture#tree -->
 
 ```
 src/mcp/apps/

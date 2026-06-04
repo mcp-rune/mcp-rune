@@ -21,6 +21,8 @@ Tools are the primary way MCP servers expose functionality to AI agents. Each to
 
 Tools follow a two-layer architecture: **generic tools** in mcp-rune for cross-server reuse, and **server-specific tools** in your server's `tools/` directory.
 
+<!-- illustration: tool-creation#tree -->
+
 ```
 mcp-rune/src/mcp/tools/
 ├── base-tool.ts              # BaseTool — root base class (with serverContext)
@@ -44,6 +46,8 @@ your-server/tools/
 ```
 
 ### Inheritance Chain
+
+<!-- illustration: tool-creation#inherit -->
 
 ```
 BaseTool (mcp-rune)
@@ -72,6 +76,8 @@ Tools delegate data operations to two services:
 
 - **`ModelService`** — CRUD operations (create, find, update, delete). Composes `EndpointResolver` + `Convention` + `ApiClient`.
 - **`SearchService`** — search, lookup, and listing. Composes `SearchAdapter` + `Convention` + `ApiClient`.
+
+<!-- illustration: tool-creation#service -->
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -106,6 +112,8 @@ See the [Service Layer Guide](service-layer-guide.md) for full details on both s
 ### Tool Pipeline
 
 Every tool call passes through the same interceptor pipeline before reaching your `execute()`:
+
+<!-- illustration: tool-creation#pipeline -->
 
 ```
    MCP request: { tool: "create_model", args: {...} }

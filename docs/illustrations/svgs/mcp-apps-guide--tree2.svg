@@ -1,0 +1,48 @@
+<div class="tree"><span class="g"></span><span class="dir">src/mcp/apps/</span>
+<span class="g">├── </span><span class="dir">new-model-app/              </span><span class="cm"># Create-record form</span>
+<span class="g">│   ├── </span><span class="file">index.ts                </span><span class="cm"># Factory + handleToolCall (server)</span>
+<span class="g">│   └── </span><span class="dir">ui/                     </span><span class="cm"># Thin shim → shared/model-form/main.js</span>
+<span class="g">│       ├── </span><span class="file">index.html</span>
+<span class="g">│       └── </span><span class="file">app.js</span>
+<span class="g">├── </span><span class="dir">edit-model-app/             </span><span class="cm"># Edit-record form (mirrors new-model-app)</span>
+<span class="g">│   ├── </span><span class="file">index.ts</span>
+<span class="g">│   └── </span><span class="dir">ui/</span>
+<span class="g">├── </span><span class="dir">find-model-app/             </span><span class="cm"># Browseable table — query + filter popover + selection</span>
+<span class="g">│   ├── </span><span class="file">index.ts</span>
+<span class="g">│   └── </span><span class="dir">ui/</span>
+<span class="g">├── </span><span class="dir">show-model-app/             </span><span class="cm"># Record detail view</span>
+<span class="g">│   ├── </span><span class="file">index.ts</span>
+<span class="g">│   └── </span><span class="dir">ui/</span>
+<span class="g">├── </span><span class="dir">view-selection-app/         </span><span class="cm"># Inspect + manage the in-session selection store</span>
+<span class="g">│   ├── </span><span class="file">index.ts</span>
+<span class="g">│   └── </span><span class="dir">ui/</span>
+<span class="g">├── </span><span class="dir">pick-model-app/             </span><span class="cm"># Type-ahead picker (single-model or group)</span>
+<span class="g">│   ├── </span><span class="file">index.ts</span>
+<span class="g">│   └── </span><span class="dir">ui/</span>
+<span class="g">├── </span><span class="dir">multi-pick-model-app/       </span><span class="cm"># Browse-and-select picker for small/medium sets</span>
+<span class="g">│   ├── </span><span class="file">index.ts</span>
+<span class="g">│   └── </span><span class="dir">ui/</span>
+<span class="g">├── </span><span class="dir">lib/                        </span><span class="cm"># Shared server-side helpers</span>
+<span class="g">│   ├── </span><span class="file">form-schema.ts          </span><span class="cm"># generateFormSchema() — pure function</span>
+<span class="g">│   ├── </span><span class="file">list-schema.ts          </span><span class="cm"># generateListSchema() — list/table schema</span>
+<span class="g">│   ├── </span><span class="file">detail-schema.ts        </span><span class="cm"># generateDetailSchema() — record detail schema</span>
+<span class="g">│   ├── </span><span class="file">form-app-helpers.ts     </span><span class="cm"># Shared helpers for new/edit form factories</span>
+<span class="g">│   ├── </span><span class="file">selection-store.ts      </span><span class="cm"># SelectionStore — session-scoped Map</span>
+<span class="g">│   ├── </span><span class="file">selection-tools.ts      </span><span class="cm"># createSelectionTools() — per-app selection</span>
+<span class="g">│   ├── </span><span class="file">registry.ts             </span><span class="cm"># AppRegistry + createAppRegistry</span>
+<span class="g">│   └── </span><span class="file">…                       </span><span class="cm"># types, helpers, formatters, etc.</span>
+<span class="g">├── </span><span class="dir">shared/                     </span><span class="cm"># Shared client-side JS/CSS for ui/ folders</span>
+<span class="g">│   ├── </span><span class="file">base.css, app-init.js, helpers.js, formatters.{js,runtime.js}, …</span>
+<span class="g">│   └── </span><span class="dir">model-form/             </span><span class="cm"># Shared form UI consumed by new + edit</span>
+<span class="g">│       ├── </span><span class="file">main.js             </span><span class="cm"># initModelFormApp() — bulk of form code</span>
+<span class="g">│       └── </span><span class="file">styles.css</span>
+<span class="g">├── </span><span class="file">vite.config.js              </span><span class="cm"># Build config (multi-target single-file HTML)</span>
+<span class="g">└── </span><span class="dir">dist/                       </span><span class="cm"># Built outputs (one HTML per app)</span>
+<span class="g">    ├── </span><span class="file">new-model-app.html</span>
+<span class="g">    ├── </span><span class="file">edit-model-app.html</span>
+<span class="g">    ├── </span><span class="file">find-model-app.html</span>
+<span class="g">    ├── </span><span class="file">show-model-app.html</span>
+<span class="g">    ├── </span><span class="file">view-selection-app.html</span>
+<span class="g">    ├── </span><span class="file">pick-model-app.html</span>
+<span class="g">    └── </span><span class="file">multi-pick-model-app.html</span>
+</div>

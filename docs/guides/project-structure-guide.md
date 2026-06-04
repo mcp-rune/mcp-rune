@@ -6,6 +6,8 @@ An mcp-rune project has two halves: **your server** (the models, prompts, tools,
 
 A typical mcp-rune project looks like this:
 
+<!-- illustration: project-structure#server -->
+
 ```
 your-server/                          (you write this)
     │
@@ -29,6 +31,8 @@ What lives where:
 ## The framework
 
 The published `mcp-rune` package is organized by capability:
+
+<!-- illustration: project-structure#framework -->
 
 ```
 mcp-rune/                                  (the framework)
@@ -59,6 +63,8 @@ These are exposed as subpath exports — `mcp-rune/core`, `mcp-rune/server`, `mc
 ## Example: the bookshelf
 
 The reference example (see the [Quickstart guide](./quickstart-guide.md) to run it) keeps the structure minimal:
+
+<!-- illustration: project-structure#bookshelf -->
 
 ```
 bookshelf/

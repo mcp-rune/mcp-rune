@@ -1,0 +1,9 @@
+<div class="tree"><span class="g"></span><span class="dir">src/&lt;server&gt;/domain/</span>
+<span class="g">├── </span><span class="file">registry.js</span>
+<span class="g">├── </span><span class="dir">knowledge/</span>
+<span class="g">│   └── </span><span class="file">concepts.js</span>
+<span class="g">├── </span><span class="dir">rules/</span>
+<span class="g">│   └── </span><span class="file">&lt;domain&gt;-rules.js</span>
+<span class="g">└── </span><span class="dir">workflows/</span>
+<span class="g">    └── </span><span class="file">&lt;category&gt;.js</span>
+</div>

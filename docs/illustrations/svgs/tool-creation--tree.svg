@@ -1,0 +1,20 @@
+<div class="tree"><span class="g"></span><span class="dir">mcp-rune/src/mcp/tools/</span>
+<span class="g">├── </span><span class="file">base-tool.ts              </span><span class="cm"># BaseTool — root base class (with serverContext)</span>
+<span class="g">├── </span><span class="file">save-model-base-tool.ts   </span><span class="cm"># SaveModelBaseTool — base for create/update tools</span>
+<span class="g">├── </span><span class="file">tool-registry.ts          </span><span class="cm"># ToolRegistry — convention-based tool registration</span>
+<span class="g">├── </span><span class="file">tool-pipeline.ts          </span><span class="cm"># ToolInterceptor + wrapToolHandler</span>
+<span class="g">├── </span><span class="file">interceptors.ts           </span><span class="cm"># Built-in interceptors (logging, tracing, error-catch)</span>
+<span class="g">├── </span><span class="file">validators.ts             </span><span class="cm"># Generic model validators</span>
+<span class="g">├── </span><span class="file">categories.ts             </span><span class="cm"># Tool category definitions</span>
+<span class="g">└── </span><span class="dir">data/                     </span><span class="cm"># Generic CRUD tools (reusable across servers)</span>
+<span class="g">    ├── </span><span class="file">list-models-tool.ts</span>
+<span class="g">    ├── </span><span class="file">find-records-tool.ts</span>
+<span class="g">    ├── </span><span class="file">create-model-tool.ts</span>
+<span class="g">    ├── </span><span class="file">update-model-tool.ts</span>
+<span class="g">    └── </span><span class="file">delete-model-tool.ts</span>
+
+<span class="g"></span><span class="dir">your-server/tools/</span>
+<span class="g">├── </span><span class="file">base-tool.js              </span><span class="cm"># ServerBaseTool — extends mcp-rune BaseTool</span>
+<span class="g">├── </span><span class="file">registry.js               </span><span class="cm"># Factory using mcp-rune ToolRegistry</span>
+<span class="g">└── </span><span class="file">{custom}-tool.js          </span><span class="cm"># Server-specific tools only</span>
+</div>

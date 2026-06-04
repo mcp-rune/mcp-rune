@@ -1,0 +1,9 @@
+<div class="tree"><span class="g"></span><span class="dir">bookshelf/</span>
+<span class="g">├── </span><span class="dir">models/</span>
+<span class="g">│   └── </span><span class="file">book.ts             </span><span class="cm">Model definition (attributes, types, validation)</span>
+<span class="g">├── </span><span class="dir">prompts/</span>
+<span class="g">│   └── </span><span class="file">book-prompt.ts      </span><span class="cm">Prompt with hybrid strategy and field groups</span>
+<span class="g">├── </span><span class="file">config.ts               </span><span class="cm">Server wiring (tool + prompt registries)</span>
+<span class="g">├── </span><span class="file">server.ts               </span><span class="cm">StdioServer entry point</span>
+<span class="g">└── </span><span class="file">tsconfig.json</span>
+</div>

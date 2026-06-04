@@ -10,6 +10,8 @@ MCP Apps are interactive HTML user interfaces that render inside MCP clients (Cl
 
 ## Architecture Overview
 
+<!-- illustration: mcp-apps-guide#overview -->
+
 ```
 ┌─ MCP Client (Claude Desktop, COC) ──────────┐
 │                                               │
@@ -96,6 +98,8 @@ The `@modelcontextprotocol/ext-apps` `App` class provides bidirectional communic
 Instead of building a custom HTML form for each model, we use a **schema-driven generic form** that renders any model's form dynamically.
 
 ### Data Flow
+
+<!-- illustration: mcp-apps-guide#dataflow -->
 
 ```
 ┌─ MCP Server ──────────────────────────────────────────────┐
@@ -402,6 +406,8 @@ npm run build:engineer:apps
 That's it. The generic form app handles the rest — fieldsets, validation, submission, theming.
 
 ## File Structure
+
+<!-- illustration: mcp-apps-guide#tree2 -->
 
 ```
 src/mcp/apps/
@@ -939,6 +945,8 @@ MCP Apps that display record lists (`find_model_app`, `pick_model_app`, `multi_p
 
 ### Architecture
 
+<!-- illustration: mcp-apps-guide#selection -->
+
 ```
 ┌─ MCP App (iframe) ─────────────────────────────────────┐
 │                                                         │
@@ -982,6 +990,8 @@ MCP Apps that display record lists (`find_model_app`, `pick_model_app`, `multi_p
 ```
 
 ### Selection Flow
+
+<!-- illustration: mcp-apps-guide#selflow -->
 
 ```
 User selects records in UI

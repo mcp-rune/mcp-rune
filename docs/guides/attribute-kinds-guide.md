@@ -12,6 +12,8 @@ API value  ⇄  internal value  ⇄  HTML <input> value
 
 A concrete walk-through — an ISBN attribute declared as `string:isbn` — makes the boundaries obvious:
 
+<!-- illustration: attribute-kinds#hub -->
+
 ```
    API JSON                                       HTML form input
    { isbn: "9780132350884" }                      <input value="9780132350884">

@@ -1,0 +1,6 @@
+<div class="tree"><span class="g"></span><span class="dir">src/api-extensions/bulk-actions/</span>
+<span class="g">├── </span><span class="file">types.ts</span>
+<span class="g">├── </span><span class="file">capabilities.ts</span>
+<span class="g">├── </span><span class="file">extension.ts</span>
+<span class="g">└── </span><span class="file">index.ts</span>
+</div>

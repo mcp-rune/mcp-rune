@@ -18,6 +18,8 @@ It is the model-layer parallel of [`HttpExtension`](./extensions.md) and follows
 
 Six pieces work together. Author-facing pieces are on the left; framework-facing pieces are on the right.
 
+<!-- illustration: api-extensions#wire -->
+
 ```
        ┌──────────────────────────────────────────────────────────────┐
        │                          your extension                      │

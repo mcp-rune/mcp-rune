@@ -15,6 +15,8 @@ The seam exists for two reasons:
 
 At a glance, the seam and what sits above and below it:
 
+<!-- illustration: data-layer#seam -->
+
 ```
    ┌────────────────────────────────────────────────────┐
    │   Projection layer                                 │

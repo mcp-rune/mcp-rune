@@ -89,6 +89,8 @@ Every field is optional except `name` and `description`. What you populate deter
 
 The three categories form a simple decision tree:
 
+<!-- illustration: custom-app#decide -->
+
 ```
                     What does your app need?
                             │
@@ -128,6 +130,8 @@ The shipped apps are almost all category three. `show-model-app`, for instance: 
 ## Anatomy of a Framework App
 
 Take `show-model-app`:
+
+<!-- illustration: custom-app#anatomy -->
 
 ```
 src/mcp/apps/

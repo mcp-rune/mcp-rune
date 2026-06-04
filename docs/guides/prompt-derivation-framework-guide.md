@@ -16,6 +16,8 @@ A 5-layer architecture for generating prompt documentation from model and prompt
 
 ## Architecture Overview
 
+<!-- illustration: prompt-derivation-framework#layers -->
+
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │ Layer 5: BEHAVIORAL — generateStatefulGuidanceInstructions()    │

@@ -17,6 +17,8 @@ the box.
 
 The Rails analogy: one declaration, one fan-out.
 
+<!-- illustration: quickstart#fan -->
+
 ```
        What you write                  What the framework derives
    ┌──────────────────┐             ┌──────────────────────────┐

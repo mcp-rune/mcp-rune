@@ -20,6 +20,8 @@ This guide walks through the interface, the Center-of-Control implementation, an
 
 The lifecycle is two phases — once at boot, then per tool call:
 
+<!-- illustration: tool-flow-extension#flow -->
+
 ```
    Boot                                Per tool call
    ─────                                ─────────────

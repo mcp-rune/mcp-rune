@@ -1,0 +1,49 @@
+<div class="tree"><span class="g"></span><span class="dir">src/mcp/apps/</span>
+<span class="g">├── </span><span class="dir">lib/                               </span><span class="cm"># Shared server-side helpers</span>
+<span class="g">│   ├── </span><span class="file">form-schema.ts                 </span><span class="cm"># generateFormSchema() — pure function</span>
+<span class="g">│   ├── </span><span class="file">list-schema.ts                 </span><span class="cm"># generateListSchema() — pure function</span>
+<span class="g">│   ├── </span><span class="file">detail-schema.ts               </span><span class="cm"># generateDetailSchema() — pure function</span>
+<span class="g">│   ├── </span><span class="file">form-app-helpers.ts            </span><span class="cm"># Shared form-app server helpers</span>
+<span class="g">│   ├── </span><span class="file">registry.ts                    </span><span class="cm"># AppRegistry + createAppRegistry()</span>
+<span class="g">│   └── </span><span class="file">…                              </span><span class="cm"># types, formatters, stores, etc.</span>
+<span class="g">│</span>
+<span class="g">├── </span><span class="dir">new-model-app/                     </span><span class="cm"># New-record form</span>
+<span class="g">│   ├── </span><span class="file">index.ts                       </span><span class="cm"># Server factory</span>
+<span class="g">│   └── </span><span class="dir">ui/                            </span><span class="cm"># Iframe entry</span>
+<span class="g">│       ├── </span><span class="file">index.html</span>
+<span class="g">│       ├── </span><span class="file">app.js                     </span><span class="cm"># Thin shim → shared/model-form/main.js</span>
+<span class="g">│       └── </span><span class="file">(no per-app CSS — shared)</span>
+<span class="g">│</span>
+<span class="g">├── </span><span class="dir">edit-model-app/                    </span><span class="cm"># Edit-record form</span>
+<span class="g">│   ├── </span><span class="file">index.ts</span>
+<span class="g">│   └── </span><span class="dir">ui/                            </span><span class="cm"># Thin shim → shared/model-form/main.js</span>
+<span class="g">│</span>
+<span class="g">├── </span><span class="dir">find-model-app/                    </span><span class="cm"># Browseable table + query + filter popover</span>
+<span class="g">│   ├── </span><span class="file">index.ts</span>
+<span class="g">│   └── </span><span class="dir">ui/</span>
+<span class="g">│</span>
+<span class="g">├── </span><span class="dir">show-model-app/                    </span><span class="cm"># Record detail</span>
+<span class="g">│   ├── </span><span class="file">index.ts</span>
+<span class="g">│   └── </span><span class="dir">ui/</span>
+<span class="g">│</span>
+<span class="g">├── </span><span class="dir">view-selection-app/                </span><span class="cm"># Inspect + manage the selection store</span>
+<span class="g">│   ├── </span><span class="file">index.ts</span>
+<span class="g">│   └── </span><span class="dir">ui/</span>
+<span class="g">│</span>
+<span class="g">├── </span><span class="dir">shared/                            </span><span class="cm"># Cross-app iframe code</span>
+<span class="g">│   ├── </span><span class="file">app-init.js</span>
+<span class="g">│   ├── </span><span class="file">base.css</span>
+<span class="g">│   ├── </span><span class="file">helpers.js</span>
+<span class="g">│   ├── </span><span class="file">formatters.js / .runtime.js</span>
+<span class="g">│   └── </span><span class="dir">model-form/                    </span><span class="cm"># Shared form UI consumed by new + edit</span>
+<span class="g">│       ├── </span><span class="file">main.js                    </span><span class="cm"># initModelFormApp() — bulk of form code</span>
+<span class="g">│       └── </span><span class="file">styles.css</span>
+<span class="g">│</span>
+<span class="g">├── </span><span class="file">vite.config.js                     </span><span class="cm"># Multi-target build config</span>
+<span class="g">└── </span><span class="dir">dist/                              </span><span class="cm"># Built single-file HTML (git-tracked)</span>
+<span class="g">    ├── </span><span class="file">new-model-app.html</span>
+<span class="g">    ├── </span><span class="file">edit-model-app.html</span>
+<span class="g">    ├── </span><span class="file">find-model-app.html</span>
+<span class="g">    ├── </span><span class="file">show-model-app.html</span>
+<span class="g">    └── </span><span class="file">view-selection-app.html</span>
+</div>

@@ -15,6 +15,8 @@ This guide focuses on the **`ApiExtension`** because it has more moving parts (c
 
 Look at how the built-in `custom-actions` and `search` extensions are organized — both follow the same five-piece shape:
 
+<!-- illustration: authoring-extensions#shape -->
+
 ```
 your-extension/
 ├── types.ts         (1) Config type the extension consumes
@@ -64,6 +66,8 @@ We'll build an extension that adds a `bulk_update_records` MCP tool — taking a
 - Optional `ModelService` mixin: `bulkUpdate(model, ids, attributes)`
 
 ### 1. Create the directory
+
+<!-- illustration: authoring-extensions#bulk -->
 
 ```
 src/api-extensions/bulk-actions/

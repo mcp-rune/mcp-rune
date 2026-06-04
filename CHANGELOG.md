@@ -4,6 +4,57 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.72.0] - 2026-06-04
+
+> Docs-only. Completes the illustration substitution gallery scaffolded in v0.71.0 / v0.71.1. Ports the remaining 29 pilot pages into authoring modules under `docs/illustrations/pages/`, generates the 76 corresponding SVG artifacts under `docs/illustrations/svgs/`, and threads 56 `<!-- illustration: id -->` markers across 38 guide markdown files so every diagram that has a polished version is now wired up for the site to render. The ASCII fences are untouched — they stay authoritative for every off-site reader (terminal, nvim, GitHub). The build pipeline now writes svg filenames in kebab-case so markers read naturally in markdown (`<!-- illustration: summary-strategies#rule-violation -->`) while page modules keep camelCase exports per JS convention; the mapping is mechanical (`ruleViolation` → `rule-violation`).
+
+### Added
+
+- **29 new page modules under `docs/illustrations/pages/`** — one per remaining pilot illustration page. Each module imports the `illus.mjs` DSL and composes its figures inside named `buildXxxFigure()` functions, exporting each figure by short id. Multi-figure pages export multiple named ids (e.g. `service-layer.mjs` exports `funnel` and `chain`); single-figure pages also `export default` so the short marker form resolves. Files: `analysis-memories`, `api-client`, `api-config`, `api-convention`, `api-extensions`, `attribute-kinds`, `authoring-extensions`, `custom-app`, `data-layer`, `domain-knowledge`, `extensibility-overview`, `extension-recipes`, `mcp-apps-architecture`, `mcp-apps-guide`, `model-form-customization`, `oauth2-discovery-flow`, `project-structure`, `prompt-creation`, `prompt-derivation-framework`, `search-adapter`, `search-filter-integration`, `sections-groups`, `service-layer`, `stateful-strategies`, `summary-strategies`, `tool-creation`, `tool-flow-extension`, `transient-context-protocol`, `workflow-creation`.
+- **76 new SVG artifacts under `docs/illustrations/svgs/`** (plus the 2 from v0.71.0 for `quickstart` = 78 total / 77 unique figures). Includes the family-split overview and 9 per-strategy diagrams for `summary-strategies`, the layered + tree pair for `mcp-apps-architecture`, the 5 form-layout previews for `model-form-customization`, the tree + inheritance + service + pipeline quartet for `tool-creation`, and the 5-figure `mcp-apps-guide` set covering protocol overview, dataflow, tree, selection store, and selection flow.
+- **56 `<!-- illustration: <id> -->` markers across 38 guide files** (19 single-figure guides + 10 summary-strategies-family files + 9 multi-figure guides). Every marker resolves to an existing svg artifact; verified by both the local resolver pass and the build's drift check.
+
+### Changed
+
+- **`docs/illustrations/scripts/build-illustrations.mjs`** — output filenames are now kebab-case (`<slug>--<kebab>.svg`) rather than verbatim camelCase. So an export `ruleViolation` becomes `summary-strategies--rule-violation.svg` on disk, which lines up with the natural form an author writes in a marker. Conversion is `name.replace(/[A-Z]/g, ch => '-' + ch.toLowerCase())`; idempotent for already-lowercase exports.
+- **`docs/illustrations/scripts/check-illustrations.mjs`** — mirrors the same kebab-case conversion so the drift check still byte-matches the committed artifacts.
+
+### Notes
+
+- A handful of pilot hex values had no exact `colors.*` token and were mapped to the nearest existing token (e.g. `#c9b8ff` → `colors.accentSoft`, `#8c8c9a` → `colors.inkMuted`). The visual drift is sub-pixel; flagging here so future contributors know these substitutions exist and can add new tokens if precise reproduction matters.
+- The `model-form-customization` page emits 4 form-mockup figures as raw HTML (matching the pilot's reliance on `ds.css` form classes) rather than SVG. The build writes them with a `.svg` extension and the remark plugin treats the content as raw HTML when inlining; they render correctly only once the corresponding form styles are added to the site's `illustrations.css`. Tracked as a site-side follow-up.
+
+[0.72.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.71.1...v0.72.0
+
+## [0.71.1] - 2026-06-04
+
+> Docs-only. Refines the illustration rendering contract introduced in v0.71.0 after seeing the first live render. The earlier shape kept a collapsed `<details><summary>ASCII</summary>…</details>` toggle below each rendered figure as a copy-paste + screen-reader fallback; in practice it was visual noise. The SVG's `aria-label` already covers screen-reader access, and the source `.md` keeps the ASCII verbatim for everyone reading off-site. This release re-documents the rendering contract as "SVG-only on the site" and adds a new design-rationale bullet explaining the choice, so future contributors don't reinstate the `<details>` wrapper. No changes to `illus.mjs`, the page modules, the built svgs, or the build scripts.
+
+### Changed
+
+- **`docs/illustrations/README.md` — "How a guide picks up its illustration" section** now states that the rendered output is the SVG figure only, with the original ASCII fence dropped. The previous wording implied the ASCII was preserved inside a `<details>`.
+- **`docs/illustrations/README.md` — "Site-side integration" subsection** mirrors the same change: the remark plugin replaces the marker + fence pair with `<figure>` wrapping just the SVG, not `<figure>` + `<details>`.
+- **`docs/illustrations/README.md` — "Design rationale" section** gains a new bullet: "Why the ASCII is dropped from the rendered site output (no `<details>` fallback)?" — pins the reasoning so the choice survives a future contributor's "I want screen-readers to have the ASCII too" instinct.
+
+[0.71.1]: https://github.com/mcp-rune/mcp-rune/compare/v0.71.0...v0.71.1
+
+## [0.71.0] - 2026-06-04
+
+> Docs-only. Lands the framework-side of the build-time ASCII → SVG illustration substitution pipeline that mcp-rune-site consumes to render polished diagrams in place of guide ASCII fences at site-build time. The ASCII stays authoritative for every reader who is not on the public site (terminal, nvim, GitHub, the framework's own readers); the site picks up a matching SVG only when both an `<!-- illustration: id -->` marker is present in the markdown and a corresponding `docs/illustrations/svgs/<id>.svg` exists in this repo. Missing svgs, malformed markers, or absent markers all soft-fall back to the original ASCII — the site build never errors over an illustration. The companion PR in `mcp-rune-site` adds the remark plugin that consumes these artifacts.
+
+### Added
+
+- **`docs/illustrations/illus.mjs`** — a small SVG DSL exposed as an ES module. Descriptive exports (`colors`, `text`, `rect`, `line`, `arrowRight`, `arrowDown`, `band`, `panel`, `verticalConnector`, `svg`, `colorizeTree`) compose figure bodies as plain strings; no DOM, no runtime dependency. One file owns every colour, font, and primitive helper, so a single tweak in `colors` restyles every illustration.
+- **`docs/illustrations/pages/<slug>.mjs`** authoring layer — one ES module per guide, each exporting one or more named figures composed from `illus.mjs`. The first port ships as `pages/quickstart.mjs` (the model → derivation fan-out diagram), used as the canonical example of the named-function authoring pattern documented in the README.
+- **`docs/illustrations/svgs/<slug>--<fig>.svg`** built artifacts — what `mcp-rune-site` actually consumes via the submodule. Committed alongside their authoring source so PR diffs show both the input change and the resulting SVG.
+- **`docs/illustrations/scripts/build-illustrations.mjs`** — pure-Node builder. Imports every `pages/*.mjs` via `import()`, writes each export's `svg` field to `svgs/`. No `jsdom`, no headless browser, no Astro — runs in under a second for the whole gallery.
+- **`docs/illustrations/scripts/check-illustrations.mjs`** — drift check. Rebuilds into a tmp directory and byte-compares against the committed `svgs/`. Non-zero exit means someone edited a page module without rebuilding. The companion `mcp-rune-site` sync script invokes this so a stale SVG can never reach the public site.
+- **`docs/illustrations/README.md`** — the canonical home for the iterate / add / restyle workflows, the full primitives table, the nine visual archetypes (layered, fan-out, funnel, chain, pipeline, tree, lifecycle, escalation, mapping), three AI-assistant prompt templates (update / add / restyle), an explicit "what NOT to ask for" list (raw `<svg>`, hex colours, IIFE wrappers, single-letter identifiers, removing the ASCII fence, ad-hoc archetypes), and a "Design rationale" section that pins the load-bearing decisions (marker-based matching, `.mjs` source → `.svg` artifact, no `jsdom`, descriptive identifier API, ASCII stays in markdown, soft-failure model).
+- **`<!-- illustration: quickstart#fan -->` marker** in `docs/guides/quickstart-guide.md` immediately above the existing fan-out ASCII fence. The marker is an HTML comment, invisible in GitHub / nvim / terminal renderings, so the guide reads identically off-site.
+- **`illustrations:build` and `illustrations:check` npm scripts** in `package.json` mirroring the existing `docs:dualize` / `docs:check` pair.
+
+[0.71.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.70.1...v0.71.0
+
 ## [0.70.1] - 2026-06-03
 
 > Documentation only. README freshness pass + ASCII-graph coverage across the guide corpus, prepping the docs for a downstream illustration pass on `mcp-rune-site`. The README had drifted as v0.67–v0.70 added GraphRAG: the Documentation table covered 13 of 31 guides, Analysis & GraphRAG had no top-level Feature subsection, and a few hard facts had gone stale (test count, app factory count, two misnamed app rows). Twenty-two guides also lacked a well-explained ASCII visualization of their core concept — a gating requirement before Claude Design can produce site illustrations. This release reconciles the README, expands the Documentation table to all 31 guides grouped into six topical sections, promotes Analysis & Summary Strategies and Extensibility as Features subsections, and adds or enhances one ASCII diagram per guide that needed one. The nine summary-strategy sub-guides share a uniform `input → algorithm → output` three-panel template so the downstream illustration pass renders as a coherent series. Every new diagram is introduced by a sentence above and anchored by a sentence below, matching the readability bar required for downstream illustration work.

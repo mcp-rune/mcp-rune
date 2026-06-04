@@ -23,6 +23,8 @@ The seam isolates that idiosyncrasy. Tools, prompts, apps, and the form-app ifra
 
 The same `belongsTo` and `hasMany` declarations produce different wire payloads depending on which convention is active:
 
+<!-- illustration: api-convention#conv -->
+
 ```
                   Internal record
               ┌────────────────────────┐

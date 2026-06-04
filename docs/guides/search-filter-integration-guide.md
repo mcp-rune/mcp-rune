@@ -61,6 +61,8 @@ Add an `extensions['search']` slice to the model class via the typed `searchConf
 
 Five filter types cover the common cases. The model's declaration is what the LLM sees in `get_filters_guide`; the same key flows through the search adapter and lands as a Rails params row:
 
+<!-- illustration: search-filter-integration#filters -->
+
 ```
    Model declaration                MCP wire shape                Rails receives
    ─────────────────                ──────────────                ──────────────
