@@ -40,9 +40,10 @@ fenced block:
 The marker id is `<slug>` (or `<slug>#<fig>` when a page exports more than
 one figure). The site's remark plugin
 (`mcp-rune-site/src/lib/remark-illustrations.mjs`) resolves the marker to
-`svgs/<slug>--<fig>.svg` and inlines that file inside a `<figure>` wrapper,
-with the original ASCII tucked into a collapsible `<details>` so
-screen-readers and copy-paste still work.
+`svgs/<slug>--<fig>.svg` and inlines that file inside a `<figure>` wrapper.
+The original ASCII fence is dropped from the rendered output — the SVG's
+`aria-label` covers screen-readers, and the source `.md` keeps the ASCII
+unchanged for everyone reading off-site.
 
 HTML comments are invisible in every Markdown reader that matters (GitHub,
 nvim preview, terminal cats), so adding the marker does not pollute the
@@ -279,8 +280,8 @@ rebuilding." Run in CI and as part of the site's
   finds `<!-- illustration: id -->` comments adjacent to fenced code
   blocks, reads the matching file from
   `vendor/mcp-rune/docs/illustrations/svgs/`, and replaces the pair with
-  a single `<figure>` html node wrapping the SVG and a `<details>` of
-  the original ASCII.
+  a single `<figure>` html node wrapping just the SVG. The original
+  ASCII fence is dropped from the rendered output.
 - `astro.config.mjs` — registers the plugin alongside `remarkCodePairs`.
 - `src/styles/illustrations.css` — figure / details styling (small
   subset extracted from this directory's design tokens; the
@@ -315,6 +316,13 @@ Revisit them before changing them.
   every reader who is not on the public site: terminal, nvim, GitHub,
   the framework's own readers. Removing it would degrade the off-site
   reading experience to "go look at our website."
+- **Why the ASCII is dropped from the rendered site output (no
+  `<details>` fallback)?** The earlier design kept a collapsed
+  "ASCII" toggle below each figure as a copy-paste + screen-reader
+  affordance. In practice it was visual noise — the SVG's
+  `aria-label` already describes the diagram for screen-readers, and
+  the source `.md` keeps the ASCII for anyone reading off-site. The
+  site renders the SVG only, no toggle.
 - **Why soft-failure (warn, never error)?** The illustration is an
   enhancement, not a requirement. A missing or broken illustration must
   never block a guide from rendering.

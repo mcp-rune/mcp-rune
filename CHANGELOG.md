@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.71.1] - 2026-06-04
+
+> Docs-only. Refines the illustration rendering contract introduced in v0.71.0 after seeing the first live render. The earlier shape kept a collapsed `<details><summary>ASCII</summary>…</details>` toggle below each rendered figure as a copy-paste + screen-reader fallback; in practice it was visual noise. The SVG's `aria-label` already covers screen-reader access, and the source `.md` keeps the ASCII verbatim for everyone reading off-site. This release re-documents the rendering contract as "SVG-only on the site" and adds a new design-rationale bullet explaining the choice, so future contributors don't reinstate the `<details>` wrapper. No changes to `illus.mjs`, the page modules, the built svgs, or the build scripts.
+
+### Changed
+
+- **`docs/illustrations/README.md` — "How a guide picks up its illustration" section** now states that the rendered output is the SVG figure only, with the original ASCII fence dropped. The previous wording implied the ASCII was preserved inside a `<details>`.
+- **`docs/illustrations/README.md` — "Site-side integration" subsection** mirrors the same change: the remark plugin replaces the marker + fence pair with `<figure>` wrapping just the SVG, not `<figure>` + `<details>`.
+- **`docs/illustrations/README.md` — "Design rationale" section** gains a new bullet: "Why the ASCII is dropped from the rendered site output (no `<details>` fallback)?" — pins the reasoning so the choice survives a future contributor's "I want screen-readers to have the ASCII too" instinct.
+
+[0.71.1]: https://github.com/mcp-rune/mcp-rune/compare/v0.71.0...v0.71.1
+
 ## [0.71.0] - 2026-06-04
 
 > Docs-only. Lands the framework-side of the build-time ASCII → SVG illustration substitution pipeline that mcp-rune-site consumes to render polished diagrams in place of guide ASCII fences at site-build time. The ASCII stays authoritative for every reader who is not on the public site (terminal, nvim, GitHub, the framework's own readers); the site picks up a matching SVG only when both an `<!-- illustration: id -->` marker is present in the markdown and a corresponding `docs/illustrations/svgs/<id>.svg` exists in this repo. Missing svgs, malformed markers, or absent markers all soft-fall back to the original ASCII — the site build never errors over an illustration. The companion PR in `mcp-rune-site` adds the remark plugin that consumes these artifacts.
