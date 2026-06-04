@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.73.2] - 2026-06-05
+
+> Reverts the CLI scaffolding added in 0.73.1. The scaffolder belongs in its own package (`@mcp-rune/create`) — bundling `commander`, prompt libs, and template files into `@mcp-rune/mcp-rune` made every runtime consumer pay scaffold-time weight, and the standard ecosystem pattern (create-vite/vite, create-next-app/next) keeps the scaffolder separate. All CLI work continues at [github.com/mcp-rune/mcp-rune-cli](https://github.com/mcp-rune/mcp-rune-cli), where `rune new`, `rune add model`, `rune doctor`, and `rune db up` already live and `rune inspect` has been ported (mcp-rune-cli v0.2.0).
+
+### Removed
+
+- **`bin/mcp-rune.js` CLI entry, `src/cli/`, and the `commander` dependency** — reverts `30eec61`. Replacement: `npx @mcp-rune/create` (binary: `rune`) from [mcp-rune-cli](https://github.com/mcp-rune/mcp-rune-cli). The `inspect` command introduced in 0.73.1 is now `rune inspect` there.
+
+[0.73.2]: https://github.com/mcp-rune/mcp-rune/compare/v0.73.1...v0.73.2
+
 ## [0.73.1] - 2026-06-05
 
 > README polish + CLI scaffolding. The 0.73.0 README rewrite synthesized with a parallel local rewrite into the best-of-both: keeps the "10 lines → full server" hero from 0.73.0, restores the rune metaphor, the framework-vs-wrapper comparison matrix, the dual-transport / extension-shapes / backend-seams flagging, and adds an ASCII GraphRAG pipeline diagram. Lands at ~150 lines (vs 78). Also introduces a `mcp-rune` CLI bin with an `inspect` subcommand.
