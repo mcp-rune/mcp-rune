@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **11 sectioned subdirectories under `docs/guides/`** (`00-about/` through `10-reference/`), each with a non-routable `index.md` containing the section blurb and a reading-order list — for someone browsing the repo on GitHub. Section names match the website IA exactly: about · getting-started · prompt-dsl · tools-and-services · apps-search-forms · retrieval-graphrag · auth-and-transport · domain-intelligence · adapters · extensions · reference.
 - **5 new guides** absorbing the deep-reference content moved out of the README: `00-about/philosophy.md` (rune-naming worldview + architecture + 7 design principles), `00-about/why-mcp-rune.md` (comparison matrix + vs alternatives), `06-auth-and-transport/transport.md` (StdioServer / HttpServer + the five observability primitives), `10-reference/database-reference.md` (PG tables + migration runner + full env-var reference), `10-reference/subpath-imports.md` (every subpath the package exposes + per-subpath concern map).
+- **`05-retrieval-graphrag/retrieval-graphrag.md` — Section V opener** framing how vectors, edges, and the `DomainRegistry` combine into GraphRAG. Includes the four-stage `ingest → index → query → answer` pipeline diagram, the three-indexes table, the five query modes, the nine summary strategies, and the six `analysis_*` tools. Linked first in the section index and registered on the site as the `retrieval-graphrag` slug.
 - **`DEVELOPMENT.md`** at repo root — dev setup, prerequisites, build commands, Claude Desktop wiring, and tech stack, moved out of the README.
 
 ### Changed
@@ -22,7 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Notes
 
-- **Coordinated `mcp-rune-site` update required.** The site reads guides via the `vendor/mcp-rune` git submodule. After this lands: bump the submodule to the merge commit, then in the site repo update `src/content.config.ts` (glob `['**/*.md', '!**/index.md']`) and `src/data/guides.ts` (every `file:` field updated to the new nested path; orphan `retrieval-graphrag` entry removed). All slugs preserved → no URL breaks.
+- **Coordinated `mcp-rune-site` update required.** The site reads guides via the `vendor/mcp-rune` git submodule. After this lands: bump the submodule to the merge commit, then in the site repo update `src/content.config.ts` (glob `['**/*.md', '!**/index.md']`) and `src/data/guides.ts` (every `file:` field updated to the new nested path, including the `retrieval-graphrag` slug now pointing at `05-retrieval-graphrag/retrieval-graphrag.md`). All slugs preserved → no URL breaks.
 - `CHANGELOG.md` historical references to the old flat guide paths intentionally not swept — they describe what was true at the time of each prior release ([feedback_no_back_compat](#)).
 
 [0.73.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.72.0...v0.73.0
