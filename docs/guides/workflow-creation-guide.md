@@ -34,6 +34,8 @@ The LLM receives the workflow via `suggest_workflow` (roadmap + first step), the
 
 A workflow is an ordered chain of typed steps. The five step types compose into linear flows, parallel branches, decisions, and loops:
 
+<!-- illustration: workflow-creation#wf -->
+
 ```
    suggest_workflow(name) ──▶ roadmap + step 1
                                        │

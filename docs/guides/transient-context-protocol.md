@@ -19,6 +19,8 @@ Lean mode stores data server-side and returns only a summary. Transient context 
 
 ## Protocol Overview
 
+<!-- illustration: transient-context-protocol#life -->
+
 ```
 get_workflow_step → _meta.contextHints (registers transient/consumer pairs)
        ↓

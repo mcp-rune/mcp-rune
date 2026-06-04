@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.72.0] - 2026-06-04
+
+> Docs-only. Completes the illustration substitution gallery scaffolded in v0.71.0 / v0.71.1. Ports the remaining 29 pilot pages into authoring modules under `docs/illustrations/pages/`, generates the 76 corresponding SVG artifacts under `docs/illustrations/svgs/`, and threads 56 `<!-- illustration: id -->` markers across 38 guide markdown files so every diagram that has a polished version is now wired up for the site to render. The ASCII fences are untouched — they stay authoritative for every off-site reader (terminal, nvim, GitHub). The build pipeline now writes svg filenames in kebab-case so markers read naturally in markdown (`<!-- illustration: summary-strategies#rule-violation -->`) while page modules keep camelCase exports per JS convention; the mapping is mechanical (`ruleViolation` → `rule-violation`).
+
+### Added
+
+- **29 new page modules under `docs/illustrations/pages/`** — one per remaining pilot illustration page. Each module imports the `illus.mjs` DSL and composes its figures inside named `buildXxxFigure()` functions, exporting each figure by short id. Multi-figure pages export multiple named ids (e.g. `service-layer.mjs` exports `funnel` and `chain`); single-figure pages also `export default` so the short marker form resolves. Files: `analysis-memories`, `api-client`, `api-config`, `api-convention`, `api-extensions`, `attribute-kinds`, `authoring-extensions`, `custom-app`, `data-layer`, `domain-knowledge`, `extensibility-overview`, `extension-recipes`, `mcp-apps-architecture`, `mcp-apps-guide`, `model-form-customization`, `oauth2-discovery-flow`, `project-structure`, `prompt-creation`, `prompt-derivation-framework`, `search-adapter`, `search-filter-integration`, `sections-groups`, `service-layer`, `stateful-strategies`, `summary-strategies`, `tool-creation`, `tool-flow-extension`, `transient-context-protocol`, `workflow-creation`.
+- **76 new SVG artifacts under `docs/illustrations/svgs/`** (plus the 2 from v0.71.0 for `quickstart` = 78 total / 77 unique figures). Includes the family-split overview and 9 per-strategy diagrams for `summary-strategies`, the layered + tree pair for `mcp-apps-architecture`, the 5 form-layout previews for `model-form-customization`, the tree + inheritance + service + pipeline quartet for `tool-creation`, and the 5-figure `mcp-apps-guide` set covering protocol overview, dataflow, tree, selection store, and selection flow.
+- **56 `<!-- illustration: <id> -->` markers across 38 guide files** (19 single-figure guides + 10 summary-strategies-family files + 9 multi-figure guides). Every marker resolves to an existing svg artifact; verified by both the local resolver pass and the build's drift check.
+
+### Changed
+
+- **`docs/illustrations/scripts/build-illustrations.mjs`** — output filenames are now kebab-case (`<slug>--<kebab>.svg`) rather than verbatim camelCase. So an export `ruleViolation` becomes `summary-strategies--rule-violation.svg` on disk, which lines up with the natural form an author writes in a marker. Conversion is `name.replace(/[A-Z]/g, ch => '-' + ch.toLowerCase())`; idempotent for already-lowercase exports.
+- **`docs/illustrations/scripts/check-illustrations.mjs`** — mirrors the same kebab-case conversion so the drift check still byte-matches the committed artifacts.
+
+### Notes
+
+- A handful of pilot hex values had no exact `colors.*` token and were mapped to the nearest existing token (e.g. `#c9b8ff` → `colors.accentSoft`, `#8c8c9a` → `colors.inkMuted`). The visual drift is sub-pixel; flagging here so future contributors know these substitutions exist and can add new tokens if precise reproduction matters.
+- The `model-form-customization` page emits 4 form-mockup figures as raw HTML (matching the pilot's reliance on `ds.css` form classes) rather than SVG. The build writes them with a `.svg` extension and the remark plugin treats the content as raw HTML when inlining; they render correctly only once the corresponding form styles are added to the site's `illustrations.css`. Tracked as a site-side follow-up.
+
+[0.72.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.71.1...v0.72.0
+
 ## [0.71.1] - 2026-06-04
 
 > Docs-only. Refines the illustration rendering contract introduced in v0.71.0 after seeing the first live render. The earlier shape kept a collapsed `<details><summary>ASCII</summary>…</details>` toggle below each rendered figure as a copy-paste + screen-reader fallback; in practice it was visual noise. The SVG's `aria-label` already covers screen-reader access, and the source `.md` keeps the ASCII verbatim for everyone reading off-site. This release re-documents the rendering contract as "SVG-only on the site" and adds a new design-rationale bullet explaining the choice, so future contributors don't reinstate the `<details>` wrapper. No changes to `illus.mjs`, the page modules, the built svgs, or the build scripts.

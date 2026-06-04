@@ -22,6 +22,8 @@ For the broader analysis-tool family, see [Analysis Memories Guide](./analysis-m
 
 The nine built-ins split into two families based on what extra data the dispatcher loads for them:
 
+<!-- illustration: summary-strategies#families -->
+
 ```
        ┌──────────────────────────────────────────────────────┐
        │              9 SUMMARY STRATEGIES                    │

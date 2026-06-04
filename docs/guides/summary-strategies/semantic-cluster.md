@@ -8,6 +8,8 @@ Complementary to the SQL `cluster` stratifier (see [analysis-quickstart](../anal
 
 At a glance — what the strategy reads, what it computes, what it writes:
 
+<!-- illustration: summary-strategies#semantic-cluster -->
+
 ```
 ┌────────────────────┐    ┌────────────────────┐    ┌────────────────────┐
 │       INPUT        │    │     ALGORITHM      │    │       OUTPUT       │

@@ -64,6 +64,8 @@ Flat. That's the contract you usually want to break.
 
 The three hooks are concentric scopes — pick the **narrowest** one that does the job:
 
+<!-- illustration: search-adapter#scope -->
+
 ```
    SearchService.search()
             │

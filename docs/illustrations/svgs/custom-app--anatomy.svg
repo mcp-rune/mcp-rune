@@ -1,0 +1,10 @@
+<div class="tree"><span class="g"></span><span class="dir">src/mcp/apps/</span>
+<span class="g">├── </span><span class="dir">show-model-app/</span>
+<span class="g">│   ├── </span><span class="file">index.ts              </span><span class="cm">← server-side AppDefinition factory + handleToolCall</span>
+<span class="g">│   └── </span><span class="dir">ui/                   </span><span class="cm">← iframe source (HTML + app.js + styles)</span>
+<span class="g">│       ├── </span><span class="file">app.js</span>
+<span class="g">│       ├── </span><span class="file">index.html</span>
+<span class="g">│       └── </span><span class="file">styles.css</span>
+<span class="g">└── </span><span class="dir">dist/</span>
+<span class="g">    └── </span><span class="file">show-model-app.html   </span><span class="cm">← single-file iframe bundle (Vite output)</span>
+</div>

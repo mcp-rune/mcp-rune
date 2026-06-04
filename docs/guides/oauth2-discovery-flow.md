@@ -26,6 +26,8 @@ The MCP server never issues tokens itself (except via the M2M `/mcp/m2m/token` c
 
 ## End-to-End Discovery Flow
 
+<!-- illustration: oauth2-discovery-flow#flow -->
+
 ```
 Client                                    MCP Server                         Auth Server
 ──────                                    ──────────                         ───────────

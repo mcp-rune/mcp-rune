@@ -24,6 +24,8 @@ This guide explains how to extend the domain intelligence layer with new concept
 
 ## Architecture Overview
 
+<!-- illustration: domain-knowledge#arch -->
+
 ```
 lib/mcp/domain/                      # Framework classes (shared)
 ├── knowledge.js                     # DomainConcept + DomainKnowledge
@@ -1052,6 +1054,8 @@ The tool is stateless. The LLM (or a coordinating agent) drives progression by c
 If your server doesn't have domain intelligence yet, follow these steps:
 
 ### 1. Create the domain directory structure
+
+<!-- illustration: domain-knowledge#setup -->
 
 ```
 src/<server>/domain/

@@ -12,6 +12,8 @@ The generic model-form MCP app renders forms dynamically from schema. This guide
 
 All fields render in a **horizontal layout** by default: right-aligned label on the left, input on the right, using CSS grid.
 
+<!-- illustration: model-form-customization#default-layout -->
+
 ```
 ┌─────────────────────────────────────────────────┐
 │  ┌─ Fieldset ────────────────────────────────┐  │
@@ -29,6 +31,8 @@ The grid uses `minmax(100px, 25%)` for labels and `1fr` for inputs. Labels are r
 ### Stacked Variant
 
 Field types with inline option labels — `checkbox_group`, `multiselect`, and `checkbox` — automatically use a stacked layout (label above, options below). This is applied via `field--stacked` CSS class based on field type.
+
+<!-- illustration: model-form-customization#stacked -->
 
 ```
 ┌────────────────────────────────────────────┐
@@ -79,6 +83,8 @@ static fieldGroups = {
 Unknown layout types fall back to default rendering (forward-compatible).
 
 ## How Layout Flows: End-to-End
+
+<!-- illustration: model-form-customization#flow -->
 
 ```
 Prompt fieldGroups          form-schema.js             Client app.js            CSS
@@ -186,6 +192,8 @@ No schema changes needed — `buildGroupLayouts()` already passes through any la
 
 The Activity prompt's `classification` group uses `layout: { type: 'row' }` to render theme and category selects side by side:
 
+<!-- illustration: model-form-customization#row -->
+
 ```
 ┌─ Classification ──────────────────────────────┐
 │  ┌─ Theme ──────────┐  ┌─ Category ─────────┐ │
@@ -199,6 +207,8 @@ Note that fields inside a `row` layout use stacked (label-above) positioning, si
 ### Default Rendering (No Layout)
 
 Most field groups render with the default horizontal layout:
+
+<!-- illustration: model-form-customization#basic -->
 
 ```
 ┌─ Basic Information ────────────────────────────┐

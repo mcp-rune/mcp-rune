@@ -8,6 +8,8 @@ The `finding` text is embedded as an `analysis_memories` row, so a later `analys
 
 At a glance — what the strategy reads, what it computes, what it writes:
 
+<!-- illustration: summary-strategies#rule-violation -->
+
 ```
 ┌────────────────────┐    ┌────────────────────┐    ┌────────────────────┐
 │       INPUT        │    │     ALGORITHM      │    │       OUTPUT       │

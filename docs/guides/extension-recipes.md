@@ -10,6 +10,8 @@ Start here. mcp-rune ships three extension surfaces (`HttpExtension`, `ApiExtens
 
 This page is that map. Each recipe is organized by deployer intent, not by extension type. Pick the entry that matches what you're trying to do, copy the example, then follow the link for the full reference.
 
+<!-- illustration: extension-recipes#recipes -->
+
 ```
    I want to...
         │

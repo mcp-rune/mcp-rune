@@ -27,6 +27,8 @@ If you genuinely need a new seam (response middleware, telemetry hooks, etc.), f
 
 The extensibility surface is organized in three tiers — pick the tier that matches the layer your concern lives at:
 
+<!-- illustration: extensibility-overview#tiers -->
+
 ```
    ┌────────────────────────────────────────────────────────────┐
    │  Tier 3 — HTTP & Transport                                 │

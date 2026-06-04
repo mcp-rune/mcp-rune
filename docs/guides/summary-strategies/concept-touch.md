@@ -8,6 +8,8 @@ This is the **domain-aware** counterpart to `relationship-coverage`. The latter 
 
 At a glance — what the strategy reads, what it computes, what it writes:
 
+<!-- illustration: summary-strategies#concept-touch -->
+
 ```
 ┌────────────────────┐    ┌────────────────────┐    ┌────────────────────┐
 │       INPUT        │    │     ALGORITHM      │    │       OUTPUT       │

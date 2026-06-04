@@ -29,6 +29,8 @@ The LLM downloads records once into offline storage, stores its own qualitative 
 
 Two tables back the feature. Only one of them stores vectors — the other is plain JSONB. The six tools are stitched together by **the LLM**, which drives the loop: ingest once, then read → reason → store (and optionally `analysis_summarize` to re-summarize without re-fetching), optionally act, then clear when done.
 
+<!-- illustration: analysis-memories#life -->
+
 ```
 ═══════════════════════════════════════════════════════════════════════════════
   SESSION LIFECYCLE  ·  the LLM is the loop driver

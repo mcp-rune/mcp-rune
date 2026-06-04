@@ -4,6 +4,8 @@ Time-bucketed counts over the first ISO-date field on the page, with **gap detec
 
 At a glance — what the strategy reads, what it computes, what it writes:
 
+<!-- illustration: summary-strategies#temporal -->
+
 ```
 ┌────────────────────┐    ┌────────────────────┐    ┌────────────────────┐
 │       INPUT        │    │     ALGORITHM      │    │       OUTPUT       │

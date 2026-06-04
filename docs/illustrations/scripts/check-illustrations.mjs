@@ -14,6 +14,11 @@ import { tmpdir } from 'node:os'
 const PAGES_DIR = new URL('../pages/', import.meta.url)
 const SVGS_DIR = new URL('../svgs/', import.meta.url)
 
+/** Convert a camelCase identifier to kebab-case. Mirrors build-illustrations.mjs. */
+function camelToKebab(name) {
+  return name.replace(/[A-Z]/g, (ch) => `-${ch.toLowerCase()}`)
+}
+
 async function buildInto(targetDir) {
   await mkdir(targetDir, { recursive: true })
   const entries = await readdir(PAGES_DIR)
@@ -27,7 +32,7 @@ async function buildInto(targetDir) {
       ([, value]) => value && typeof value === 'object' && 'svg' in value
     )
     for (const [exportName, figure] of figures) {
-      const fileSlug = exportName === 'default' ? slug : `${slug}--${exportName}`
+      const fileSlug = exportName === 'default' ? slug : `${slug}--${camelToKebab(exportName)}`
       await writeFile(join(targetDir, `${fileSlug}.svg`), figure.svg, 'utf8')
     }
   }

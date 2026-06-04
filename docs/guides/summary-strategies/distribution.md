@@ -6,6 +6,8 @@ If you don't ask for a strategy by name, this is what `analysis_ingest` runs.
 
 At a glance — what the strategy reads, what it computes, what it writes:
 
+<!-- illustration: summary-strategies#distribution -->
+
 ```
 ┌────────────────────┐    ┌────────────────────┐    ┌────────────────────┐
 │       INPUT        │    │     ALGORITHM      │    │       OUTPUT       │

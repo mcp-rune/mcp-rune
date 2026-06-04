@@ -13,6 +13,8 @@ This guide is the reference for how the two work together. For the strategy that
 
 The relationship is one-section-to-many-groups, with fields mapped at the group level:
 
+<!-- illustration: sections-groups#map -->
+
 ```
    SECTIONS (user-facing flow)            FIELD GROUPS (validation)
    ─────────────────────────              ──────────────────────────

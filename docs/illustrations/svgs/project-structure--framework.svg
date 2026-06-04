@@ -1,0 +1,20 @@
+<div class="tree"><span class="g"></span><span class="dir">mcp-rune/                                  </span><span class="cm">(the framework)</span>
+<span class="g">    │</span>
+<span class="g">    ├─ </span><span class="file">core                                </span><span class="cm">BaseModel, ApiClient, helpers, validators,</span>
+<span class="g">    │                                      </span><span class="cm">derived-fields</span>
+<span class="g">    ├─ </span><span class="file">server                              </span><span class="cm">StdioServer, HttpServer, createServer</span>
+<span class="g">    ├─ </span><span class="file">tools                               </span><span class="cm">BaseTool, CRUD tools, categories</span>
+<span class="g">    ├─ </span><span class="file">mcp/services                        </span><span class="cm">ModelService, EndpointResolver</span>
+<span class="g">    ├─ </span><span class="file">prompts                             </span><span class="cm">BasePrompt, strategies, pipeline</span>
+<span class="g">    ├─ </span><span class="file">apps                                </span><span class="cm">AppRegistry, generic app factories</span>
+<span class="g">    ├─ </span><span class="file">domain                              </span><span class="cm">Workflows, knowledge, business rules</span>
+<span class="g">    ├─ </span><span class="file">extensions                          </span><span class="cm">HttpExtension framework</span>
+<span class="g">    │   └─ </span><span class="file">cimd                            </span><span class="cm">Built-in HTTP extension (CIMD)</span>
+<span class="g">    ├─ </span><span class="file">api-extensions                      </span><span class="cm">ApiExtension framework</span>
+<span class="g">    │   ├─ </span><span class="file">custom-actions                  </span><span class="cm">Built-in: non-CRUD verbs on models</span>
+<span class="g">    │   └─ </span><span class="file">search                          </span><span class="cm">Built-in: SearchService, adapters,</span>
+<span class="g">    │                                      </span><span class="cm">search_records + get_filters_guide tools</span>
+<span class="g">    ├─ </span><span class="file">oauth2                              </span><span class="cm">OAuthService, token store</span>
+<span class="g">    ├─ </span><span class="file">services                            </span><span class="cm">Logger, tracing, error tracking</span>
+<span class="g">    └─ </span><span class="file">db                                  </span><span class="cm">PostgreSQL client</span>
+</div>

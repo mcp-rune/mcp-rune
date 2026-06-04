@@ -35,6 +35,8 @@ Prompts guide LLM interactions for creating/updating models. They define:
 
 The three strategies are an escalation: as form complexity grows, the framework adds more LLM-facing tools so the agent can validate in smaller bites.
 
+<!-- illustration: prompt-creation#strat -->
+
 ```
    ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
    │    STATELESS     │  │      HYBRID      │  │     STATEFUL     │
