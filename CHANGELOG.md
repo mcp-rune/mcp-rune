@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.73.0] - 2026-06-04
+
+> Docs-only. Two parallel cleanups: the `docs/guides/` source tree is restructured into 11 sectioned subdirectories matching the website IA (no `-guide` suffixes, no flat alphabetical chaos), and the README is slimmed from 1,180 → 78 lines into a Vite/Hono-style npm landing page that earns the click to mcp-rune.dev. All website slugs preserved — no URL breaks, no redirects needed.
+
+### Added
+
+- **11 sectioned subdirectories under `docs/guides/`** (`00-about/` through `10-reference/`), each with a non-routable `index.md` containing the section blurb and a reading-order list — for someone browsing the repo on GitHub. Section names match the website IA exactly: about · getting-started · prompt-dsl · tools-and-services · apps-search-forms · retrieval-graphrag · auth-and-transport · domain-intelligence · adapters · extensions · reference.
+- **5 new guides** absorbing the deep-reference content moved out of the README: `00-about/philosophy.md` (rune-naming worldview + architecture + 7 design principles), `00-about/why-mcp-rune.md` (comparison matrix + vs alternatives), `06-auth-and-transport/transport.md` (StdioServer / HttpServer + the five observability primitives), `10-reference/database-reference.md` (PG tables + migration runner + full env-var reference), `10-reference/subpath-imports.md` (every subpath the package exposes + per-subpath concern map).
+- **`DEVELOPMENT.md`** at repo root — dev setup, prerequisites, build commands, Claude Desktop wiring, and tech stack, moved out of the README.
+
+### Changed
+
+- **`docs/guides/` layout** — every guide renamed `{slug}.md` (drops the `-guide` suffix universally; matches the convention used by Vite, Vitest, Hono, tRPC, Starlight, Next.js docs). 213 internal cross-links rewritten across 40 files; escape links to `../../src/` and `../../CHANGELOG.md` gain one extra `../` since files are now one level deeper. `summary-strategies/` subdir moves under `05-retrieval-graphrag/` and keeps its non-routable status. Routing is registry-driven, so `mcp-rune.dev/docs/quickstart`, `/docs/oauth2-discovery`, every URL continues to resolve.
+- **`README.md`** — rewritten 1,180 → 78 lines. Drops the banner, the kitchen-sink TOC, every per-feature H3 subsection, the OAuth RFC compliance table, the env-var reference, the subpath imports registry, the dev setup, and the tech stack (all now live in `docs/guides/` or `DEVELOPMENT.md`). Adds: a "What you get from 10 lines" hero that juxtaposes a 10-line model definition with a 6-row table of derived surfaces (8 tools · 7 apps · prompts · GraphRAG · OAuth · auto-docs), a dedicated GraphRAG callout pulling the analysis layer to hero-level prominence, and a prominent docs CTA above the fold.
+- **`docs/scripts/dualize.mjs`** — `listGuides()` now walks `docs/guides/` recursively and skips `index.md` files. `guideSlug(filename)` uses the file's basename so nested paths produce clean slugs. Behaviour for existing flat-layout guides is unchanged.
+
+### Notes
+
+- **Coordinated `mcp-rune-site` update required.** The site reads guides via the `vendor/mcp-rune` git submodule. After this lands: bump the submodule to the merge commit, then in the site repo update `src/content.config.ts` (glob `['**/*.md', '!**/index.md']`) and `src/data/guides.ts` (every `file:` field updated to the new nested path; orphan `retrieval-graphrag` entry removed). All slugs preserved → no URL breaks.
+- `CHANGELOG.md` historical references to the old flat guide paths intentionally not swept — they describe what was true at the time of each prior release ([feedback_no_back_compat](#)).
+
+[0.73.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.72.0...v0.73.0
+
 ## [0.72.0] - 2026-06-04
 
 > Docs-only. Completes the illustration substitution gallery scaffolded in v0.71.0 / v0.71.1. Ports the remaining 29 pilot pages into authoring modules under `docs/illustrations/pages/`, generates the 76 corresponding SVG artifacts under `docs/illustrations/svgs/`, and threads 56 `<!-- illustration: id -->` markers across 38 guide markdown files so every diagram that has a polished version is now wired up for the site to render. The ASCII fences are untouched — they stay authoritative for every off-site reader (terminal, nvim, GitHub). The build pipeline now writes svg filenames in kebab-case so markers read naturally in markdown (`<!-- illustration: summary-strategies#rule-violation -->`) while page modules keep camelCase exports per JS convention; the mapping is mechanical (`ruleViolation` → `rule-violation`).
