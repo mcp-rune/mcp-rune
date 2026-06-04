@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.73.1] - 2026-06-05
+
+> README polish + CLI scaffolding. The 0.73.0 README rewrite synthesized with a parallel local rewrite into the best-of-both: keeps the "10 lines → full server" hero from 0.73.0, restores the rune metaphor, the framework-vs-wrapper comparison matrix, the dual-transport / extension-shapes / backend-seams flagging, and adds an ASCII GraphRAG pipeline diagram. Lands at ~150 lines (vs 78). Also introduces a `mcp-rune` CLI bin with an `inspect` subcommand.
+
+### Added
+
+- **`bin/mcp-rune.js` CLI entry** — commander-based, with `inspect` as the first subcommand. Wired into the published `bin` field so consumers can run `npx mcp-rune inspect`. Implementation in `src/cli/index.ts` + `src/cli/inspect.ts`, tests in `__tests__/lib/cli/inspect.spec.ts`. New runtime dep: `commander ^14.0.3`.
+- **`README.md` feature surface table** — 12-row matrix flagging every unique capability: polymorphic CRUD + bulk, Prompt DSL, MCP Apps, Domain intelligence, Multi-step workflows, GraphRAG analysis, OAuth 2.1 + PKCE, dual transport, four backend seams, three extension shapes, observability, transient context protocol.
+- **`README.md` GraphRAG pipeline ASCII diagram** — the four-stage `ingest → index → query → answer` visual lifted from `05-retrieval-graphrag/retrieval-graphrag.md` so the analysis story is legible from the landing page without a click-through.
+- **`README.md` comparison matrix** — 12 rows × 3 columns (Protocol Wrappers / API Converters / mcp-rune) honestly mapping where mcp-rune stops being substitutable.
+
+### Changed
+
+- **`README.md`** rewritten 78 → ~150 lines, merging the 0.73.0 npm-landing-page rewrite with a parallel local rewrite ("Astro-style framework landing card", commit `518d506`, never pushed). Kept from 0.73.0: the "10 lines → full server" hero with code + 6-row surface table, the "Why this works" framework-vs-wrapper argument, the GraphRAG callout. Restored from `518d506`: the rune metaphor paragraph ("Inscribe small. Cast large."), the feature-surface table, the comparison matrix, the tech stack callout. New: the GraphRAG ASCII pipeline diagram, expanded docs-section pointers grouped by reader intent.
+
+[0.73.1]: https://github.com/mcp-rune/mcp-rune/compare/v0.73.0...v0.73.1
+
 ## [0.73.0] - 2026-06-04
 
 > Docs-only. Two parallel cleanups: the `docs/guides/` source tree is restructured into 11 sectioned subdirectories matching the website IA (no `-guide` suffixes, no flat alphabetical chaos), and the README is slimmed from 1,180 → 78 lines into a Vite/Hono-style npm landing page that earns the click to mcp-rune.dev. All website slugs preserved — no URL breaks, no redirects needed.
