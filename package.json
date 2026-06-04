@@ -9,9 +9,6 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "bin": {
-    "mcp-rune": "./bin/mcp-rune.js"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -95,7 +92,6 @@
     "#src/*": "./dist/*"
   },
   "files": [
-    "bin/",
     "dist/",
     "src/mcp/apps/shared/",
     "docs/",
@@ -162,7 +158,6 @@
     "@opentelemetry/sdk-node": "^0.218.0",
     "@sentry/node": "^10.36.0",
     "axios": "^1.13.6",
-    "commander": "^14.0.3",
     "cors": "^2.8.5",
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
