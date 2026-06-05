@@ -1,3 +1,5 @@
+import type { DomainRegistry } from '#src/mcp/domain/registry.js'
+
 import type { ToolAnnotations, ToolSuccessResponse } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
 
@@ -25,8 +27,8 @@ export class BaseDomainTool extends BaseTool {
     openWorldHint: false
   }
 
-  /** Require domain registry to be configured */
-  requireDomainRegistry(): void {
+  /** Require domain registry to be configured. Asserts non-null for callers. */
+  requireDomainRegistry(): asserts this is { domainRegistry: DomainRegistry } {
     if (!this.domainRegistry) {
       throw new Error('No domain registry configured for this server.')
     }

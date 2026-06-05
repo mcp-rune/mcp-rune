@@ -84,13 +84,13 @@ Available workflows include troubleshooting guides, configuration walkthroughs, 
       tag?: string
     }
 
-    const registry = this.domainRegistry as Record<string, unknown>
+    const registry = this.domainRegistry
 
     // Exact workflow lookup
     if (workflow) {
-      const w = (registry.getWorkflow as (name: string) => WorkflowDefinition | null)(workflow)
+      const w = registry.getWorkflow(workflow) as unknown as WorkflowDefinition | undefined
       if (!w) {
-        const all = (registry.workflows as WorkflowsRegistry).getAllWorkflows()
+        const all = (registry.workflows as unknown as WorkflowsRegistry).getAllWorkflows()
         const names = all.map((wf) => `\`${wf.name}\``).join(', ')
         return this.formatResponse(`Workflow "${workflow}" not found. Available: ${names}`)
       }
@@ -99,7 +99,7 @@ Available workflows include troubleshooting guides, configuration walkthroughs, 
 
     // Tag filtering
     if (tag) {
-      const results = (registry.getWorkflowsByTag as (t: string) => WorkflowDefinition[])(tag)
+      const results = registry.getWorkflowsByTag(tag) as unknown as WorkflowDefinition[]
       if (results.length === 0) {
         return this.formatResponse(`No workflows found with tag "${tag}".`)
       }
@@ -116,9 +116,7 @@ Available workflows include troubleshooting guides, configuration walkthroughs, 
 
     // Goal search
     if (goal) {
-      const results = await (
-        registry.suggestWorkflow as (g: string) => Promise<WorkflowDefinition[]>
-      )(goal)
+      const results = (await registry.suggestWorkflow(goal)) as unknown as WorkflowDefinition[]
       if (results.length === 0) {
         return this.formatResponse(this._formatNoResults(goal))
       }
@@ -134,7 +132,7 @@ Available workflows include troubleshooting guides, configuration walkthroughs, 
     }
 
     // No params -- list all
-    const all = (registry.workflows as WorkflowsRegistry).getAllWorkflows()
+    const all = (registry.workflows as unknown as WorkflowsRegistry).getAllWorkflows()
     if (all.length === 0) {
       return this.formatResponse('No workflows defined.')
     }
@@ -200,8 +198,8 @@ Available workflows include troubleshooting guides, configuration walkthroughs, 
   }
 
   private _formatNoResults(goal: string): string {
-    const registry = this.domainRegistry as Record<string, unknown>
-    const all = (registry.workflows as WorkflowsRegistry).getAllWorkflows()
+    this.requireDomainRegistry()
+    const all = (this.domainRegistry.workflows as unknown as WorkflowsRegistry).getAllWorkflows()
     const lines = [`No workflows found matching "${goal}".`, '']
     if (all.length > 0) {
       lines.push('Available workflows:')

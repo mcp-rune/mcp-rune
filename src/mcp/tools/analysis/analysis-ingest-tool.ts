@@ -380,7 +380,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
   private async _ingestPage(
     dataLayer: DataLayer,
     model: string,
-    ModelClass: Record<string, unknown>,
+    ModelClass: ModelConfig,
     modelConfig: ModelConfig,
     analysisId: string,
     filters: Record<string, unknown> | undefined,
@@ -490,7 +490,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
   private async _ingestAllPages(
     dataLayer: DataLayer,
     model: string,
-    ModelClass: Record<string, unknown>,
+    ModelClass: ModelConfig,
     modelConfig: ModelConfig,
     analysisId: string,
     filters: Record<string, unknown> | undefined,

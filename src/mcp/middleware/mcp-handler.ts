@@ -39,7 +39,7 @@ export interface McpHandlerConfig {
   createMcpServer: (options: {
     sessionId: string
     transport: string
-    getAccessToken: () => Promise<string | null | undefined>
+    getAccessToken: () => Promise<string>
   }) => McpServer
 }
 
@@ -109,9 +109,26 @@ async function handlePost(
 
       // OAuth mode: read live from the session map so token refreshes are picked up.
       // Token mode: always return the static token.
-      const getAccessToken = isOAuthMode
-        ? async () => sessionManager.get(newSessionId)?.accessToken
-        : async () => staticAccessToken
+      // Both modes throw a typed runtime error rather than handing back null —
+      // tools downstream can assume `Promise<string>`, matching the public contract.
+      const getAccessToken: () => Promise<string> = isOAuthMode
+        ? async () => {
+            const token = sessionManager.get(newSessionId)?.accessToken
+            if (!token) {
+              throw new Error(
+                'Session is not authenticated. The bearer token is missing or has been revoked.'
+              )
+            }
+            return token
+          }
+        : async () => {
+            if (!staticAccessToken) {
+              throw new Error(
+                'HttpServer is in token mode but no static access token is configured.'
+              )
+            }
+            return staticAccessToken
+          }
 
       const mcpServer = createMcpServer({
         sessionId: newSessionId,

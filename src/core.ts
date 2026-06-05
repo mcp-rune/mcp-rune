@@ -1,6 +1,11 @@
 // mcp-rune/core — config, env, helpers, validators, base model, api-client primitive
 export type { ApiClient, RequestOptions, SearchApiClient } from './core/api-client.js'
-export type { AttributeDefinition } from './core/base-model.js'
+export type {
+  ApiConfig,
+  AttributeDefinition,
+  EndpointOverrides,
+  ModelData
+} from './core/base-model.js'
 export { BaseModel } from './core/base-model.js'
 export { loadConfig } from './core/config.js'
 export type {

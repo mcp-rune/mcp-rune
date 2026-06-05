@@ -93,7 +93,6 @@ Call this FIRST when asked to review, analyze, or explain rights, deals, rules, 
   override async execute(args: Record<string, unknown>): Promise<ToolResult> {
     this.requireDomainRegistry()
     const { model, concept } = args as { model?: string; concept?: string }
-    const registry = this.domainRegistry as Record<string, unknown>
 
     if (!model && !concept) {
       return this.formatResponse(this._formatOverview())
@@ -103,19 +102,17 @@ Call this FIRST when asked to review, analyze, or explain rights, deals, rules, 
 
     // Model context
     if (model) {
-      const context = (registry.getContextForModel as (m: string) => ModelContext)(model)
+      const context = this.domainRegistry.getContextForModel(model) as unknown as ModelContext
       parts.push(this._formatModelContext(context))
     }
 
     // Concept lookup or search
     if (concept) {
-      const exact = (registry.getConcept as (c: string) => Concept | null)(concept)
+      const exact = this.domainRegistry.getConcept(concept) as unknown as Concept | undefined
       if (exact) {
         parts.push(this._formatConcept(exact))
       } else {
-        const results = await (registry.searchConcepts as (q: string) => Promise<Concept[]>)(
-          concept
-        )
+        const results = (await this.domainRegistry.searchConcepts(concept)) as unknown as Concept[]
         if (results.length > 0) {
           parts.push(this._formatConceptSearch(concept, results))
         } else {
@@ -128,9 +125,13 @@ Call this FIRST when asked to review, analyze, or explain rights, deals, rules, 
   }
 
   private _formatOverview(): string {
-    const registry = this.domainRegistry as Record<string, unknown>
-    const knowledge = registry.knowledge as { getAllConcepts: () => Concept[] }
-    const workflows = registry.workflows as { getAllWorkflows: () => WorkflowRef[] }
+    this.requireDomainRegistry()
+    const knowledge = this.domainRegistry.knowledge as unknown as {
+      getAllConcepts: () => Concept[]
+    }
+    const workflows = this.domainRegistry.workflows as unknown as {
+      getAllWorkflows: () => WorkflowRef[]
+    }
     const concepts = knowledge.getAllConcepts()
     const allWorkflows = workflows.getAllWorkflows()
 

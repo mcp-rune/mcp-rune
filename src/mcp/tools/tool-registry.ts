@@ -346,7 +346,7 @@ export class ToolRegistry {
   registerTools(
     mcpServer: McpServer,
     options: {
-      getAccessToken: () => Promise<string | null | undefined>
+      getAccessToken: () => Promise<string>
       logContext?: Record<string, unknown>
     }
   ): void {
@@ -449,7 +449,7 @@ export class ToolRegistry {
   /** Create a tool instance with a DataLayer constructed from the session's access token. */
   private async _createAuthenticatedInstance(
     ToolCls: ToolClass,
-    getAccessToken: () => Promise<string | null | undefined>
+    getAccessToken: () => Promise<string>
   ): Promise<BaseTool> {
     const token = await getAccessToken()
     if (!token) {

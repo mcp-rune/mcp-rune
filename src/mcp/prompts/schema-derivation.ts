@@ -12,6 +12,7 @@
  * - Memoization ensures static schemas are computed only once
  */
 
+import type { AttributeDefinition } from '#src/core/base-model.js'
 import { getKind } from '#src/core/kind-metadata.js'
 
 import type {
@@ -25,26 +26,18 @@ import type { FieldGroup, PromptFieldDefinition } from './base-prompt.js'
 // Types
 // ---------------------------------------------------------------------------
 
-interface AttributeConfig {
-  type?: string
-  description?: string
-  examples?: string[]
-  default?: unknown
-  validation?: Record<string, unknown>
-  enumValues?: string[]
-  format?: string
-  completion?: Record<string, unknown>
-  prompt_visible?: boolean
-  [key: string]: unknown
-}
-
 interface AssociationsConfig {
   belongsTo?: Record<string, BelongsToAssociation>
   [key: string]: unknown
 }
 
+/**
+ * Structural view of a model configuration as consumed by schema derivation.
+ * Aligned with `typeof BaseModel` so both inline configs and class
+ * constructors are accepted without a cast — `derivePromptSchema(Book, …)`.
+ */
 interface ModelConfig {
-  attributes?: Record<string, AttributeConfig>
+  attributes?: Record<string, AttributeDefinition>
   required?: string[]
   associations?: AssociationsConfig
   api?: {
@@ -52,7 +45,6 @@ interface ModelConfig {
     convention?: BaseConvention
     [key: string]: unknown
   }
-  [key: string]: unknown
 }
 
 interface DeriveFieldOptions {
@@ -196,7 +188,7 @@ export function deriveFieldDefinitions(
     }
 
     // Get attribute configuration
-    const attrConfig = (modelConfig.attributes || {})[attrName] || {}
+    const attrConfig: Partial<AttributeDefinition> = (modelConfig.attributes || {})[attrName] ?? {}
 
     // Skip if promptOnly=true and field is marked as not visible
     if (promptOnly && attrConfig.prompt_visible === false) {
@@ -362,7 +354,7 @@ export function derivePromptSchema(
  */
 export function enhanceModelConfig(
   modelConfig: ModelConfig,
-  promptMetadata: Record<string, Partial<AttributeConfig>>
+  promptMetadata: Record<string, Partial<AttributeDefinition>>
 ): ModelConfig {
   const enhanced = { ...modelConfig }
 
@@ -373,7 +365,7 @@ export function enhanceModelConfig(
     enhanced.attributes![field] = {
       ...(enhanced.attributes![field] || {}),
       ...metadata
-    }
+    } as AttributeDefinition
   }
 
   return enhanced

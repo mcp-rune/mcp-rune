@@ -321,7 +321,7 @@ function buildField(
     if (assoc) {
       field.association = { endpoint: pluralize(assoc.target_model), labelField: 'name' }
     }
-  } else if (attr.type === 'enum' || (attr.enumValues && attr.type !== 'array')) {
+  } else if (attr.type === 'enum' || attr.enumValues) {
     if (!Array.isArray(attr.enumValues) || attr.enumValues.length === 0) {
       // Belt-and-braces: validateRegistries() should have caught this at
       // boot. Anything reaching here bypassed the boot validator (custom

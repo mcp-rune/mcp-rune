@@ -1,6 +1,6 @@
 {
   "name": "@mcp-rune/mcp-rune",
-  "version": "0.73.2",
+  "version": "0.73.3",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "restricted"
@@ -37,6 +37,10 @@
     "./domain": {
       "types": "./dist/domain.d.ts",
       "import": "./dist/domain.js"
+    },
+    "./api-conventions": {
+      "types": "./dist/api-conventions.d.ts",
+      "import": "./dist/api-conventions.js"
     },
     "./oauth2": {
       "types": "./dist/oauth2.d.ts",

@@ -64,22 +64,14 @@ Accepts both proposed data (pre-submission) and existing entity data (post-fetch
       context?: Record<string, unknown>
     }
 
-    const registry = this.domainRegistry as Record<string, unknown>
-
     // Check if there are rules for this model
-    const ruleDescriptions = (registry.describeRules as (m: string) => unknown[])(model)
+    const ruleDescriptions = this.domainRegistry.describeRules(model)
     if (ruleDescriptions.length === 0) {
       return this.formatResponse(`No business rules defined for model "${model}".`)
     }
 
     // Evaluate rules
-    const result = (
-      registry.checkRules as (
-        m: string,
-        d: Record<string, unknown>,
-        c: Record<string, unknown>
-      ) => CheckResult
-    )(model, data, context ?? {})
+    const result = this.domainRegistry.checkRules(model, data, context ?? {}) as CheckResult
 
     return this.formatResponse(this._formatResult(model, result))
   }

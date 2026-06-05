@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.73.3] - 2026-06-05
+
+> Public type-surface hardening so `mcp-rune-cli` and `mcp-rune-examples` templates can compile against the published types. No runtime behavior changes for existing servers; consumers gain stricter, more accurate types.
+
+### Added
+
+- **`./api-conventions` package subpath export** — `BaseConvention`, `AssociationConfig`, `BelongsToAssociation`, `HasManyAssociation`, `FieldDefinition`, `NormalizedListResponse`, `PaginationInfo`, `ErrorResponse`, `defaultConvention`, `jsonApiConvention`. Conventions were previously re-exported from `/prompts`, which both shadowed the prompts barrel with unrelated types and gave consumers no canonical home for the names.
+- **Public type re-exports from `/prompts`** — `Section`, `FieldGroup`, `PromptFieldDefinition`, `StrategyType`, `PromptContent`, `PromptClassLike`, `CompletionConfig`, `FieldValidation`, `FormSchemaFieldDefinition`, `AttributeRow`, `OptionRow`. Subclasses now have a canonical place to import the types they `override`.
+- **`BasePrompt.promptContent` instance member** — declared as `get promptContent(): string` with an empty default. Subclasses can legally `override get promptContent()` (TS4113 previously blocked it).
+- **`ApiConfig`, `EndpointOverrides`, `ModelData` re-exported from `/core`** so models can be authored without reaching into `/lib/*`.
+
+### Changed
+
+- **`getAccessToken` tightened to `() => Promise<string>`** on `server-factory`, `http-server`, `mcp-handler`, `tool-registry`, and `apps/lib/registry`. The HTTP middleware now throws a clear runtime error when the token store hands back `null`/`undefined`, instead of pushing optionality into the public contract that every tool author has to handle.
+- **Dedupe `AppRegistry` / `DomainRegistry` / `ToolRegistry`** — the server factory imports the canonical class types from `apps/lib/registry`, `domain/registry`, and `tools/tool-registry`. The duplicate structural interfaces inside `server-factory.ts` and `base-tool.ts` are removed, eliminating the `'AppRegistry is not assignable to AppRegistry'` cross-module errors consumers were hitting.
+- **`ModelConfig` aligned with `typeof BaseModel`** — `Record<string, typeof MyModel>` is now assignable to `ModelsRegistry` without a cast, which matches what every integrator actually writes. `attributes` is typed `Record<string, AttributeDefinition>`; `api` uses the canonical `ApiConfig`; `required`/`singularName` are recognized as part of the contract.
+- **`AppAttributeDefinition` is now an alias of `AttributeDefinition`**, and `AppModelClass` mirrors `BaseModel`'s static surface. The two divergent attribute interfaces are gone.
+- **`AttributeDefinition.examples` typed as `string[]`** (was `unknown[]`). Reflects actual usage and removes downstream casts in templates.
+- **`ApiConfig.endpoint` is now required.** Every model needs one; the optional shape was masking missing-endpoint bugs at call sites that assumed a string.
+- **`DomainRegistry` interface dropped from `base-tool.ts`** in favour of importing the class. Domain tools now call `this.domainRegistry.checkRules(...)` / `describeRules(...)` directly instead of `(this.domainRegistry as Record<string, unknown>).checkRules(...)` casts.
+
+[0.73.3]: https://github.com/mcp-rune/mcp-rune/compare/v0.73.2...v0.73.3
+
 ## [0.73.2] - 2026-06-05
 
 > Reverts the CLI scaffolding added in 0.73.1. The scaffolder belongs in its own package (`@mcp-rune/create`) — bundling `commander`, prompt libs, and template files into `@mcp-rune/mcp-rune` made every runtime consumer pay scaffold-time weight, and the standard ecosystem pattern (create-vite/vite, create-next-app/next) keeps the scaffolder separate. All CLI work continues at [github.com/mcp-rune/mcp-rune-cli](https://github.com/mcp-rune/mcp-rune-cli), where `rune new`, `rune add model`, `rune doctor`, and `rune db up` already live and `rune inspect` has been ported (mcp-rune-cli v0.2.0).

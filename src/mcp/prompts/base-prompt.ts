@@ -169,6 +169,22 @@ export interface OptionRow {
 
 export class BasePrompt {
   /**
+   * Assembled prompt content. Subclasses override with a getter that builds
+   * the prompt using `PromptContentGenerator` (see strategies guide).
+   * Returns an empty string by default so the base class can be instantiated
+   * for inspection without throwing.
+   */
+  get promptContent(): string {
+    return ''
+  }
+
+  /**
+   * Optional per-instance description shown in `prompts/get` responses.
+   * Subclasses may override; falls back to the registry entry's description.
+   */
+  description?: string
+
+  /**
    * Strategy type for this prompt.
    * Override in subclasses: 'stateless', 'hybrid', or 'stateful'.
    */

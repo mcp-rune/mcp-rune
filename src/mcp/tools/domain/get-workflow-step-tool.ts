@@ -58,10 +58,11 @@ export class GetWorkflowStepTool extends BaseDomainTool {
       step: number
     }
 
-    const registry = this.domainRegistry as Record<string, unknown>
-    const w = (registry.getWorkflow as (name: string) => WorkflowDefinition | null)(workflowName)
+    const w = this.domainRegistry.getWorkflow(workflowName) as unknown as
+      | WorkflowDefinition
+      | undefined
     if (!w) {
-      const all = (registry.workflows as WorkflowsRegistry).getAllWorkflows()
+      const all = (this.domainRegistry.workflows as unknown as WorkflowsRegistry).getAllWorkflows()
       const names = all.map((wf) => `\`${wf.name}\``).join(', ')
       return this.formatResponse(`Workflow "${workflowName}" not found. Available: ${names}`)
     }

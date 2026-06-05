@@ -279,7 +279,7 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
     validIndices: number[]
   } {
     const isNestedOnly = modelConfig.api?.standalone === false
-    const requiredFields = ((modelConfig as Record<string, unknown>).required as string[]) ?? []
+    const requiredFields = modelConfig.required ?? []
     const results = new Array<BulkResult>(records.length)
     const endpoints = new Array<string>(records.length)
     const cleanRecords = new Array<Record<string, unknown>>(records.length)
