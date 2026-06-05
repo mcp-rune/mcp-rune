@@ -16,8 +16,8 @@ import type { AttributeDefinition } from '#src/core/base-model.js'
 import { getKind } from '#src/core/kind-metadata.js'
 
 import type {
+  AssociationConfig,
   BaseConvention,
-  BelongsToAssociation,
   FieldDefinition
 } from '../api-conventions/base-convention.js'
 import type { FieldGroup, PromptFieldDefinition } from './base-prompt.js'
@@ -25,11 +25,6 @@ import type { FieldGroup, PromptFieldDefinition } from './base-prompt.js'
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-interface AssociationsConfig {
-  belongsTo?: Record<string, BelongsToAssociation>
-  [key: string]: unknown
-}
 
 /**
  * Structural view of a model configuration as consumed by schema derivation.
@@ -39,11 +34,10 @@ interface AssociationsConfig {
 interface ModelConfig {
   attributes?: Record<string, AttributeDefinition>
   required?: string[]
-  associations?: AssociationsConfig
+  associations?: AssociationConfig
   api?: {
     endpoint?: string
     convention?: BaseConvention
-    [key: string]: unknown
   }
 }
 
@@ -265,7 +259,7 @@ export function deriveFieldDefinitions(
  */
 function addAssociationFields(
   fieldDefinitions: Record<string, PromptFieldDefinition>,
-  associations: AssociationsConfig,
+  associations: AssociationConfig,
   options: {
     overrides: Record<string, Partial<PromptFieldDefinition>>
     exclude: string[]
