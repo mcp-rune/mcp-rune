@@ -13,6 +13,18 @@
   <a href="https://discord.gg/fxM2yndabX"><img src="https://img.shields.io/badge/discord-join-5865F2?logo=discord&logoColor=white" alt="Join the Discord" /></a>
 </p>
 
+<h3 align="center">
+  <a href="https://mcp-rune.dev"><code>mcp-rune.dev</code></a>
+</h3>
+
+<p align="center">
+  <a href="https://mcp-rune.dev/docs">Documentation</a> ·
+  <a href="https://mcp-rune.dev/docs/quickstart">Quickstart</a> ·
+  <a href="https://github.com/mcp-rune/mcp-rune/tree/master/examples">Examples</a> ·
+  <a href="https://discord.gg/fxM2yndabX">Discord</a> ·
+  <a href="https://github.com/mcp-rune/mcp-rune">GitHub</a>
+</p>
+
 <p align="center">
   <strong>mcp-rune</strong> is a model-driven framework for building <a href="https://modelcontextprotocol.io">Model Context Protocol</a> servers.<br />
   Define your models once — it derives the prompts, tools, apps and docs an agent needs, then<br />
