@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.73.8] - 2026-06-05
+
+> Adds the remaining `BaseTool`-related types to the `/tools` barrel so consumers can type their own `ToolRegistry`-style wrappers without reaching into `lib/*`.
+
+### Added
+
+- **`ServerContext`, `ToolDependencies`, `ToolLogger` exported from `/tools`** — the public types every `BaseTool` subclass and registry wrapper needs. Templates and integrators previously had to import these via `@mcp-rune/mcp-rune/lib/mcp/tools/base-tool` or redeclare them locally.
+
+[0.73.8]: https://github.com/mcp-rune/mcp-rune/compare/v0.73.7...v0.73.8
+
 ## [0.73.7] - 2026-06-05
 
 > Exposes `ConfigSchema` / `ConfigDescriptor` / `Config` from `@mcp-rune/mcp-rune/core` so scaffolded configuration files can `satisfies ConfigSchema` and get the literal-narrowing they need on `type: 'boolean' | 'integer' | …` fields.
