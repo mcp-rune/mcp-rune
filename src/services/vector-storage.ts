@@ -20,6 +20,8 @@
  * storeOperation({ toolName: 'create_model', toolArgs: { model: 'deal', attributes: { ... } } })
  */
 
+import type { Pool } from 'pg'
+
 import type { Edge } from '#src/core/edge-extraction.js'
 import { buildEmbeddingText } from '#src/core/edge-extraction.js'
 
@@ -36,6 +38,13 @@ import * as operations from './vendor/pgvector/tool-memories.js'
 const EMBED_BATCH_SIZE = 64
 
 export interface VectorStorageOptions {
+  /**
+   * Optional Postgres pool injected at startup. Without one, vector storage
+   * stays disabled and every vector-storage call becomes a no-op. The same
+   * pool used by the integrator's database layer should be passed in so
+   * connection limits and lifecycle are shared.
+   */
+  pool?: Pool
   serviceName?: string
   version?: string
   /** Retention for tool_memories (operations feature). Default 30 days. */
