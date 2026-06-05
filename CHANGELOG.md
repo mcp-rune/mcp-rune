@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.73.4] - 2026-06-05
+
+> Restores the `pool` field on `VectorStorageOptions` so the advanced CLI scaffold can wire its own Postgres pool into vector storage — `vendor.initialize(options)` already reads `options.pool`, the public type just didn't expose it.
+
+### Added
+
+- **`VectorStorageOptions.pool?: Pool`** — public type-level acknowledgement of the field that `vendor.initialize` (which `initVectorStorage` forwards to) was already consuming. Without this, scaffolded `vectorStorage.initVectorStorage({ pool, ... })` calls were a TS excess-property error even though the runtime accepted it.
+
+[0.73.4]: https://github.com/mcp-rune/mcp-rune/compare/v0.73.3...v0.73.4
+
 ## [0.73.3] - 2026-06-05
 
 > Public type-surface hardening so `mcp-rune-cli` and `mcp-rune-examples` templates can compile against the published types. No runtime behavior changes for existing servers; consumers gain stricter, more accurate types.
