@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.73.5] - 2026-06-05
+
+> Removes the residual local `AssociationsConfig` index signature that still blocked `derivePromptSchema(typeof MyModel)` calls. Schema derivation now uses the canonical `AssociationConfig` type from `/api-conventions`.
+
+### Changed
+
+- **`derivePromptSchema` parameter type** — internal `AssociationsConfig` (with a `[key: string]: unknown` index signature) replaced with the public `AssociationConfig`. Templates passing `typeof MyModel.associations` (typed `AssociationConfig`, no index signature) into `derivePromptSchema` no longer hit `'string' index signature is missing in type 'AssociationConfig'`.
+
+[0.73.5]: https://github.com/mcp-rune/mcp-rune/compare/v0.73.4...v0.73.5
+
 ## [0.73.4] - 2026-06-05
 
 > Restores the `pool` field on `VectorStorageOptions` so the advanced CLI scaffold can wire its own Postgres pool into vector storage — `vendor.initialize(options)` already reads `options.pool`, the public type just didn't expose it.

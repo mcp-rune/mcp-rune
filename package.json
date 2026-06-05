@@ -1,6 +1,6 @@
 {
   "name": "@mcp-rune/mcp-rune",
-  "version": "0.73.4",
+  "version": "0.73.5",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "restricted"
