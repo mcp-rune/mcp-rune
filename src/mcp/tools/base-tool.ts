@@ -3,14 +3,17 @@ import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 export type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 import type { RequestOptions } from '#src/core/api-client.js'
+import type { ApiConfig, AttributeDefinition } from '#src/core/base-model.js'
 import type { DataLayer } from '#src/core/data-layer.js'
 import type { SummaryStrategyRegistry } from '#src/core/summary-strategies/index.js'
 import { storeOperation } from '#src/services/vector-storage.js'
 
-import type { AssociationConfig, BaseConvention } from '../api-conventions/base-convention.js'
+import type { AssociationConfig } from '../api-conventions/base-convention.js'
 import { defaultConvention } from '../api-conventions/index.js'
+import type { DomainRegistry } from '../domain/registry.js'
 import type { PromptRegistry } from '../prompts/prompt-registry.js'
 
+export type { DomainRegistry } from '../domain/registry.js'
 export type { PromptRegistry } from '../prompts/prompt-registry.js'
 
 // ============================================================================
@@ -34,11 +37,6 @@ export interface ServerContext {
   sessionId?: string
 }
 
-/** Domain intelligence registry */
-export interface DomainRegistry {
-  [key: string]: unknown
-}
-
 /** Filter schema entry used by validators */
 export interface FilterSchema {
   type: string
@@ -47,30 +45,16 @@ export interface FilterSchema {
   [key: string]: unknown
 }
 
-/** Model configuration as stored in the models registry */
+/**
+ * Model configuration as stored in the models registry. Aligned with the
+ * static shape of `BaseModel` so `typeof MyModel` (a `BaseModel` subclass)
+ * is directly assignable to `ModelConfig` without an explicit cast — this
+ * is what every integrator does in practice.
+ */
 export interface ModelConfig {
-  attributes?: Record<string, unknown>
+  attributes?: Record<string, AttributeDefinition>
   description?: string
-  api: {
-    /** Base API path for this model (e.g., 'books', 'activities'). */
-    endpoint: string
-    convention?: BaseConvention
-    readOnly?: boolean
-    /** Parent model name(s) for nested resources. */
-    parent?: string | string[]
-    /** Whether the model has a standalone (non-nested) endpoint. Default: true. */
-    standalone?: boolean
-    /** API namespace prefix (e.g., 'api/v1'). Overrides server-wide default. */
-    namespace?: string
-    /** Per-action endpoint overrides for non-standard API paths. */
-    endpoints?: {
-      collection?: string
-      record?: string
-      create?: string
-      update?: string
-      delete?: string
-    }
-  }
+  api: ApiConfig
   associations?: AssociationConfig & {
     custom?: Record<string, Record<string, unknown>>
   }
@@ -80,7 +64,12 @@ export interface ModelConfig {
    * See `docs/guides/api-extensions.md`.
    */
   extensions?: Record<string, unknown>
-  [key: string]: unknown
+  /** Optional override of the singular form used in API payloads. */
+  modelName?: string
+  /** Names of required attributes — `BaseModel` derives this from `attributes`. */
+  required?: readonly string[]
+  /** Singular form of the model name used in API payloads — `BaseModel` derives. */
+  singularName?: string
 }
 
 /** Models registry: model name to model config */

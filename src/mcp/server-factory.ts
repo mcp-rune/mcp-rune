@@ -18,7 +18,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
-import type { AppDefinition } from '#src/mcp/apps/lib/registry.js'
+import type { AppDefinition, AppRegistry } from '#src/mcp/apps/lib/registry.js'
 import { SelectionStore } from '#src/mcp/apps/lib/selection-store.js'
 import type {
   ContextKey,
@@ -27,6 +27,7 @@ import type {
   ToolFlowExtensionMap
 } from '#src/mcp/extensions/tool-flow.js'
 import type { PromptRegistry } from '#src/mcp/prompts/prompt-registry.js'
+import type { ToolRegistry } from '#src/mcp/tools/tool-registry.js'
 import { setMcpClientContext } from '#src/services/error-tracking.js'
 import * as logger from '#src/services/logger.js'
 import { setSessionContext } from '#src/services/tracing.js'
@@ -44,35 +45,6 @@ try {
   logger.warn('Some request schemas not available in SDK', { service: 'mcp-server' })
 }
 
-/** Minimal interface for the tool registry */
-interface ToolRegistry {
-  serverContext: Record<string, unknown>
-  registerTools(
-    mcpServer: McpServer,
-    options: {
-      getAccessToken: () => Promise<string | null | undefined>
-      logContext: Record<string, unknown>
-    }
-  ): void
-}
-
-/** Minimal interface for the app registry */
-interface AppRegistry {
-  getToolNames(): string[]
-  registerApp(app: AppDefinition): unknown
-  getApp(toolName: string): AppDefinition | undefined
-  setFormSubmitMode(mode: 'direct' | 'collect'): void
-  registerTools(
-    mcpServer: McpServer,
-    options: {
-      getAccessToken: () => Promise<string | null | undefined>
-      selectionStore: SelectionStore
-      extraContext?: Record<string, unknown>
-    }
-  ): void
-  registerResources(mcpServer: McpServer): void
-}
-
 interface CreateServerConfig {
   name: string
   version: string
@@ -87,7 +59,7 @@ interface CreateServerConfig {
    * `docs/guides/extensions.md`.
    */
   toolFlowExtensions?: ToolFlowExtensionMap
-  getAccessToken: () => Promise<string | null | undefined>
+  getAccessToken: () => Promise<string>
 }
 
 /** Create an McpServer with standard handler registration */

@@ -6,6 +6,7 @@
  * layer does not know about.
  */
 
+import type { ApiConfig, AttributeDefinition } from '#src/core/base-model.js'
 import type { DataLayer } from '#src/core/data-layer.js'
 import type { AssociationConfig, BaseConvention } from '#src/mcp/api-conventions/base-convention.js'
 
@@ -17,40 +18,22 @@ export type { ApiClient } from '#src/core/api-client.js'
 export type { DataLayer } from '#src/core/data-layer.js'
 
 /**
- * Extended attribute definition used in app schema generators.
- * Adds display-layer properties not present in the core AttributeDefinition.
+ * Attribute definition as seen by MCP Apps. Alias of the canonical
+ * `AttributeDefinition` so app schema generators and the model layer share
+ * one shape — any field that needs to be visible to apps belongs on
+ * `AttributeDefinition`.
  */
-export interface AppAttributeDefinition {
-  type?: string
-  required?: boolean
-  default?: unknown
-  description?: string
-  enumValues?: string[]
-  format?: string
-  examples?: unknown[]
-  items?: { type: string }
-  label?: string
-  validation?: Record<string, unknown>
-  readOnly?: boolean
-  /** Whether the field appears in prompts (defaults to true) */
-  prompt_visible?: boolean
-  /** Whether the field appears in list views (defaults to true) */
-  list_visible?: boolean
-  /** Derived field configuration */
-  derived?: { from: string; field: string }
-  /** Conditional visibility rules */
-  visibleWhen?: Record<string, unknown>
-  [key: string]: unknown
-}
+export type AppAttributeDefinition = AttributeDefinition
 
 /**
- * Model class interface as seen by MCP Apps.
- * Extends the static shape of BaseModel with app-specific metadata.
+ * Model class interface as seen by MCP Apps. Aligned with the static shape
+ * of `BaseModel` so that `typeof MyModel` (a `BaseModel` subclass) is
+ * directly assignable without an explicit cast.
  */
 export interface AppModelClass {
   new (data?: Record<string, unknown>): AppModelInstance
   singularName: string
-  attributes: Record<string, AppAttributeDefinition>
+  attributes: Record<string, AttributeDefinition>
   associations?: AssociationConfig
   /**
    * Opt-in extension configs, keyed by extension name. Apps read search
@@ -58,17 +41,9 @@ export interface AppModelClass {
    * no direct `.search.*` access.
    */
   extensions?: Record<string, unknown>
-  api: {
-    endpoint: string
-    convention?: BaseConvention
-    readOnly?: boolean
-    parent?: string | string[]
-    standalone?: boolean
-    [key: string]: unknown
-  }
+  api: ApiConfig & { convention?: BaseConvention }
   defaultColumns?: string[]
   description?: string
-  [key: string]: unknown
 }
 
 export interface AppModelInstance {

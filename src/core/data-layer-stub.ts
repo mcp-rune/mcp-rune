@@ -342,7 +342,7 @@ export class InMemoryDataLayer implements DataLayer {
     modelConfig: ModelConfig,
     attributes: Record<string, unknown>
   ): void {
-    const required = (modelConfig as Record<string, unknown>).required as string[] | undefined
+    const required = modelConfig.required
     if (!required?.length) return
     const missing = required.filter((field) => attributes[field] === undefined)
     if (missing.length) {
@@ -352,10 +352,7 @@ export class InMemoryDataLayer implements DataLayer {
 
   private _singularName(modelConfig: ModelConfig): string {
     const endpoint = modelConfig.api?.endpoint ?? ''
-    return (
-      ((modelConfig as Record<string, unknown>).singularName as string | undefined) ??
-      endpoint.replace(/s$/, '')
-    )
+    return modelConfig.singularName ?? endpoint.replace(/s$/, '')
   }
 }
 

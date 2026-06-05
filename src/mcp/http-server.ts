@@ -49,7 +49,7 @@ interface McpConfig {
   createServer: (options: {
     sessionId: string
     transport: string
-    getAccessToken: () => Promise<string | null | undefined>
+    getAccessToken: () => Promise<string>
   }) => McpServer
   promptRegistry?: Pick<PromptRegistry, 'getStats'>
 }

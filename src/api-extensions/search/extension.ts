@@ -341,14 +341,14 @@ Call get_filters_guide first to learn available filters for the target model.`
   }
 
   private _buildSchema(ModelClass: ModelConfig): Record<string, unknown> {
-    const attrs = (ModelClass.attributes ?? {}) as Record<string, Record<string, unknown>>
+    const attrs = ModelClass.attributes ?? {}
     const columns = Object.entries(attrs)
       .filter(([, config]) => config.prompt_visible !== false)
       .slice(0, 10)
       .map(([name, config]) => ({
         key: name,
-        label: (config.label as string) || name,
-        type: (config.type as string) || 'string'
+        label: config.label ?? name,
+        type: config.type ?? 'string'
       }))
 
     return {

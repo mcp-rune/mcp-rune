@@ -38,6 +38,10 @@
       "types": "./dist/domain.d.ts",
       "import": "./dist/domain.js"
     },
+    "./api-conventions": {
+      "types": "./dist/api-conventions.d.ts",
+      "import": "./dist/api-conventions.js"
+    },
     "./oauth2": {
       "types": "./dist/oauth2.d.ts",
       "import": "./dist/oauth2.js"

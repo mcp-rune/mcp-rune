@@ -39,9 +39,7 @@ For listing the actual records of a model, use find_model_app (visual table) or 
 
     const modelList = Object.entries(this.models).map(([modelName, config]) => {
       const attrs = config.attributes ?? {}
-      const enumFields = Object.keys(attrs).filter(
-        (k) => (attrs[k] as Record<string, unknown>)?.enumValues
-      )
+      const enumFields = Object.keys(attrs).filter((k) => attrs[k]?.enumValues?.length)
       const searchCfg = getSearchConfig(config)
       const filters = searchCfg?.filters
 
@@ -59,7 +57,7 @@ For listing the actual records of a model, use find_model_app (visual table) or 
         endpoint: config.api.endpoint,
         description: config.description,
         attributes: Object.keys(attrs),
-        required_attributes: (config as Record<string, unknown>).required,
+        required_attributes: config.required,
         read_only: config.api?.readOnly ?? false,
         parent: config.api?.parent ?? undefined,
         standalone: config.api?.standalone === false ? false : undefined,

@@ -206,7 +206,7 @@ Typical reasoning flow:
     ]
 
     if (modelConfig?.attributes) {
-      const attrs = modelConfig.attributes as Record<string, Record<string, unknown>>
+      const attrs = modelConfig.attributes
       parts.push('## Available Fields', '')
       parts.push('| Field | Type | Description |')
       parts.push('|-------|------|-------------|')
@@ -216,22 +216,22 @@ Typical reasoning flow:
       const enumFields: string[] = []
 
       for (const [name, config] of Object.entries(attrs)) {
-        const type = (config.type as string) || 'unknown'
-        const desc = (config.description as string) || ''
+        const type = config.type ?? 'unknown'
+        const desc = config.description ?? ''
         let details = desc
 
         if (type === 'enum' && config.enumValues) {
-          const values = (config.enumValues as string[]).map((v) => `\`${v}\``).join(', ')
+          const values = config.enumValues.map((v) => `\`${v}\``).join(', ')
           details += ` Values: ${values}`
           enumFields.push(name)
         }
 
         parts.push(`| \`${name}\` | ${type} | ${details} |`)
 
-        if (type === 'integer' || type === 'number' || type === 'float') {
+        if (type === 'integer') {
           numericFields.push(name)
         }
-        if (type === 'datetime' || type === 'date') {
+        if (type === 'datetime') {
           dateFields.push(name)
         }
       }

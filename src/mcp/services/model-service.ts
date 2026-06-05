@@ -119,7 +119,7 @@ export class ModelService implements DataLayer {
     const modelConfig = this._validateWritable(model)
 
     // Validate required fields
-    const requiredFields = ((modelConfig as Record<string, unknown>).required as string[]) ?? []
+    const requiredFields = modelConfig.required ?? []
     const missingFields = requiredFields.filter((field: string) => attributes[field] === undefined)
     if (missingFields.length > 0) {
       throw new MissingRequiredFieldsError(missingFields)

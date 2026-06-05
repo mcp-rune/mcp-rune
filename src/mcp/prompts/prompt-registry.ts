@@ -163,13 +163,16 @@ export class BasePromptRegistry implements PromptRegistry {
     if (!entry) {
       throw new Error(`Prompt "${name}" not found in registry.`)
     }
-    const instance = new entry.promptClass() as {
-      promptContent?: unknown[]
-      description?: string
-    }
+    const instance = new entry.promptClass()
+    const content = instance.promptContent
     return {
       description: instance.description ?? entry.description ?? '',
-      messages: Array.isArray(instance.promptContent) ? instance.promptContent : []
+      messages:
+        typeof content === 'string'
+          ? [{ role: 'user', content: { type: 'text', text: content } }]
+          : Array.isArray(content)
+            ? content
+            : []
     }
   }
 

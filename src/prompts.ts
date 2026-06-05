@@ -1,19 +1,18 @@
 // mcp-rune/prompts — base prompt, strategies, pipeline, strategy tools
 export type {
-  AssociationConfig,
-  BelongsToAssociation,
+  AttributeRow,
   CompletionConfig,
-  ErrorResponse,
-  FieldDefinition,
-  HasManyAssociation,
-  NormalizedListResponse,
-  PaginationInfo
-} from './mcp/api-conventions/index.js'
-export {
-  BaseConvention,
-  defaultConvention,
-  jsonApiConvention
-} from './mcp/api-conventions/index.js'
+  FieldGroup,
+  FieldValidation,
+  FormSchemaFieldDefinition,
+  OptionRow,
+  PromptClassLike,
+  PromptContent,
+  PromptFieldDefinition,
+  FormSchema as PromptFormSchema,
+  Section,
+  StrategyType
+} from './mcp/prompts/base-prompt.js'
 export { BasePrompt } from './mcp/prompts/base-prompt.js'
 export { createPromptCache } from './mcp/prompts/prompt-cache.js'
 export { PromptContentGenerator } from './mcp/prompts/prompt-content-generator.js'

@@ -23,12 +23,23 @@ export interface AttributeDefinition {
   createDefault?: boolean
   description?: string
   enumValues?: string[]
+  enumDescriptions?: Record<string, string>
   format?: string
-  examples?: unknown[]
+  examples?: string[]
   items?: { type: string }
   label?: string
   validation?: Record<string, unknown>
   readOnly?: boolean
+  /** Whether the field appears in prompts (defaults to true). Read by schema-derivation. */
+  prompt_visible?: boolean
+  /** Whether the field appears in list views (defaults to true). */
+  list_visible?: boolean
+  /** Derived field configuration; resolved before display. */
+  derived?: { from: string; field: string }
+  /** Conditional visibility rules — opaque key/value pairs evaluated by the form runtime. */
+  visibleWhen?: Record<string, unknown>
+  /** Per-attribute completion config consumed by the MCP `complete` handler. */
+  completion?: { enabled?: boolean; [key: string]: unknown }
 }
 
 /** Per-action endpoint overrides for models with non-standard API paths. */
@@ -45,7 +56,7 @@ export interface EndpointOverrides {
 
 export interface ApiConfig {
   /** Base API path for this model (e.g., 'books', 'activities'). */
-  endpoint?: string
+  endpoint: string
   convention?: BaseConvention
   readOnly?: boolean
   /** Parent model name(s) for nested resources. */
