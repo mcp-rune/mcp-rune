@@ -7,6 +7,7 @@ export type {
   ModelData
 } from './core/base-model.js'
 export { BaseModel } from './core/base-model.js'
+export type { Config, ConfigDescriptor, ConfigSchema } from './core/config.js'
 export { loadConfig } from './core/config.js'
 export type {
   DataLayer,

@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.73.7] - 2026-06-05
+
+> Exposes `ConfigSchema` / `ConfigDescriptor` / `Config` from `@mcp-rune/mcp-rune/core` so scaffolded configuration files can `satisfies ConfigSchema` and get the literal-narrowing they need on `type: 'boolean' | 'integer' | …` fields.
+
+### Added
+
+- **`ConfigSchema`, `ConfigDescriptor`, `Config` type exports from `/core`** — necessary for `satisfies ConfigSchema` to typecheck on a literal schema, which is what the advanced CLI scaffold and most integrators write.
+
+[0.73.7]: https://github.com/mcp-rune/mcp-rune/compare/v0.73.6...v0.73.7
+
 ## [0.73.6] - 2026-06-05
 
 > Two boundary fixes so `BasePromptRegistry` can be passed directly to `createPromptCache` and `StartupTracker` can accept the namespace-style `logger` from `@mcp-rune/mcp-rune/services`. Both were blocking the advanced CLI scaffold from compiling against the published types.
