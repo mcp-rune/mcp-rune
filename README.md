@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://mcp-rune.dev">
-    <img src="https://raw.githubusercontent.com/mcp-rune/mcp-rune/master/docs/assets/readme-banner.svg" alt="mcp-rune — derive an MCP server from your schema" width="100%" />
+    <img src="docs/assets/readme-banner.svg" alt="mcp-rune — derive an MCP server from your schema" width="100%" />
   </a>
 </p>
 
