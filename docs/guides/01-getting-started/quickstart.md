@@ -7,13 +7,13 @@ series:
 
 # Quickstart
 
-Get a real MCP server running in under ten minutes. mcp-rune ships an example
-server (the _bookshelf_) that exposes the full framework surface — tools,
-prompts, validation, interactive apps, and documentation — all generated
-from a single 30-line model definition. No database, no API backend, no
-auth setup required: the example is wired to an **in-memory `DataLayer`
-adapter** that ships with the framework, so every CRUD tool works out of
-the box.
+Get a real MCP server running in under ten minutes. The [`bookshelf`
+example](https://github.com/mcp-rune/examples/tree/main/bookshelf) exposes the
+full framework surface — tools, prompts, validation, interactive apps, and
+documentation — all generated from a single 30-line model definition. No
+database, no API backend, no auth setup required: the example is wired to an
+**in-memory `DataLayer` adapter** that ships with the framework, so every CRUD
+tool works out of the box.
 
 The Rails analogy: one declaration, one fan-out.
 
@@ -42,14 +42,18 @@ Add a second model and the same eight tools serve it too — that's the
 
 ## Install
 
-Clone the repo and start the bookshelf example through the MCP Inspector:
+Scaffold the bookshelf example via the official CLI and start it through the
+MCP Inspector:
 
 ```bash
-git clone https://github.com/mcp-rune/mcp-rune.git
-cd mcp-rune/examples/bookshelf
-npm install
+npx @mcp-rune/create new my-app --template bookshelf
+cd my-app
 npx @modelcontextprotocol/inspector -- npx tsx server.ts
 ```
+
+The CLI fetches the template from
+[`mcp-rune/examples`](https://github.com/mcp-rune/examples) and runs
+`npm install` for you. To skip the install step, pass `--no-install`.
 
 The Inspector opens in your browser. You're now connected to a working MCP
 server with one model (`Book`), a hybrid prompt strategy, all polymorphic
@@ -73,9 +77,9 @@ Inside the Inspector, call these in order to see the value loop:
    — actually creates a fourth book; `find_records` now returns four.
 
 The first three tools are derived directly from the model definition in
-`examples/bookshelf/models/book.ts`. The last two exercise the in-memory
-adapter wired in `examples/bookshelf/config.ts` — the same code path that
-hits HTTP in production, just with a different `DataLayer` factory.
+`my-app/models/book.ts`. The last two exercise the in-memory adapter wired in
+`my-app/config.ts` — the same code path that hits HTTP in production, just
+with a different `DataLayer` factory.
 
 ## Load a bigger dataset
 
@@ -107,9 +111,9 @@ The records carry deliberately varied shape — most books have a
 count (for `anomaly`); `created_at` and `updated_at` span ~24 months
 with a 60-day gap (for `temporal`); each book has a `genre_id` foreign
 key (for `entity-extraction`). The generator lives at
-[`examples/bookshelf/fixtures/generate-books.ts`](https://github.com/mcp-rune/mcp-rune/blob/main/examples/bookshelf/fixtures/generate-books.ts);
-`books.5000.json` next to it is just `generateBookFixtures(5000)`
-serialized.
+[`bookshelf/fixtures/generate-books.ts`](https://github.com/mcp-rune/examples/blob/main/bookshelf/fixtures/generate-books.ts)
+in the examples repo; `books.5000.json` next to it is just
+`generateBookFixtures(5000)` serialized.
 
 Want to load your own data? `loadFixturesFromJson(path)` accepts both
 `{ <model>: { <id>: record } }` and `{ <model>: [record, …] }` (auto-keyed
@@ -125,19 +129,20 @@ To talk to the same server from Claude Desktop, drop this block into
   "mcpServers": {
     "bookshelf": {
       "command": "npx",
-      "args": ["tsx", "/path/to/mcp-rune/examples/bookshelf/server.ts"]
+      "args": ["tsx", "/abs/path/to/my-app/server.ts"]
     }
   }
 }
 ```
 
-Replace `/path/to/mcp-rune` with the absolute path to your clone. Restart
-Claude Desktop and the `bookshelf` server will appear in the tool picker.
+Replace `/abs/path/to/my-app` with the absolute path to the scaffolded project.
+Restart Claude Desktop and the `bookshelf` server will appear in the tool
+picker.
 
 ## What you got
 
-From `examples/bookshelf/models/book.ts` (a 30-line file), the framework
-registered nine tools — all working immediately, no backend needed:
+From `my-app/models/book.ts` (a 30-line file), the framework registered nine
+tools — all working immediately, no backend needed:
 
 - **Discovery & strategy** — `list_models`, `get_prompt_guide`,
   `validate_form`, `get_form_summary`
@@ -147,8 +152,8 @@ registered nine tools — all working immediately, no backend needed:
 Plus seven interactive MCP apps (`find_model_app`, `show_model_app`,
 `new_model_app`, `edit_model_app`, `pick_model_app`, `multi_pick_model_app`,
 `view_selection_app`) wired via `createDefaultAppRegistry`. The bookshelf
-example's full source is ~150 lines total. See
-[`examples/bookshelf/`](https://github.com/mcp-rune/mcp-rune/tree/main/examples/bookshelf)
+example's full source is ~150 lines total. Browse it at
+[`mcp-rune/examples/bookshelf`](https://github.com/mcp-rune/examples/tree/main/bookshelf)
 for the model, prompt, and server wiring.
 
 ## Going further

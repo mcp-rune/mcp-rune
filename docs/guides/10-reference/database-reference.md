@@ -108,7 +108,7 @@ Colorized console output is auto-detected: on when stderr is a TTY, off when cap
 > **Tip:** For local development, run with verbose output:
 >
 > ```bash
-> LOG_LEVEL=debug npx tsx examples/bookshelf/server.ts
+> LOG_LEVEL=debug npx tsx my-app/server.ts
 > ```
 
 See [Analysis Memories](../05-retrieval-graphrag/analysis-memories.md) for the session lifecycle that uses `analysis_memories` and `ingested_records`, and the [OAuth 2.0 Discovery](../06-auth-and-transport/oauth2-discovery.md) guide for the flow that populates `oauth_sessions`.

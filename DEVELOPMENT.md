@@ -48,27 +48,29 @@ npm run lint
 npm run format
 ```
 
-## Starting servers
+## Testing changes against a real server
+
+Runnable example servers live in their own repo: [`mcp-rune/examples`](https://github.com/mcp-rune/examples). To smoke-test framework changes against the bookshelf example pointed at your local checkout:
 
 ```bash
-# Local development — stdio transport (spawned by Claude Desktop, Cursor, etc.)
-npx tsx examples/bookshelf/server.ts
-
-# Or compile first, then run with Node:
-npm run build
-node dist/examples/bookshelf/server.js
+# In a scratch directory
+npx @mcp-rune/create new my-app --template bookshelf --mcp-rune-local /path/to/mcp-rune
+cd my-app
+npx tsx server.ts
 ```
+
+`--mcp-rune-local` rewrites the `@mcp-rune/mcp-rune` dependency to `file:/path/to/mcp-rune`, so changes you make in `src/` flow through without reinstall.
 
 ## Claude Desktop configuration
 
-Add to your `claude_desktop_config.json`:
+Add the scaffolded server to your `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "bookshelf": {
       "command": "npx",
-      "args": ["tsx", "/path/to/mcp-rune/examples/bookshelf/server.ts"]
+      "args": ["tsx", "/abs/path/to/my-app/server.ts"]
     }
   }
 }

@@ -20,7 +20,7 @@
 <p align="center">
   <a href="https://mcp-rune.dev/docs">Documentation</a> ·
   <a href="https://mcp-rune.dev/docs/quickstart">Quickstart</a> ·
-  <a href="https://github.com/mcp-rune/mcp-rune/tree/master/examples">Examples</a> ·
+  <a href="https://github.com/mcp-rune/examples">Examples</a> ·
   <a href="https://discord.gg/fxM2yndabX">Discord</a> ·
   <a href="https://github.com/mcp-rune/mcp-rune">GitHub</a>
 </p>
@@ -42,7 +42,11 @@ npm install @mcp-rune/mcp-rune
 
 New here? Start with the **[Quickstart](https://mcp-rune.dev/docs/quickstart)** — a real MCP server running in under ten minutes, no database or backend required.
 
-Want to poke at a running example first? **[Open the bookshelf example](https://github.com/mcp-rune/mcp-rune/tree/master/examples/bookshelf)** — one 30-line model, a complete server.
+Want to poke at a running example first? Scaffold the **[bookshelf example](https://github.com/mcp-rune/examples/tree/main/bookshelf)** with one command — a 30-line model, a complete server:
+
+```bash
+npx @mcp-rune/create new my-app --template bookshelf
+```
 
 ## A taste
 

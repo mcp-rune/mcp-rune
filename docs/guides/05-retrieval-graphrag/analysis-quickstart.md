@@ -21,7 +21,7 @@ and teardown.
 ## Prerequisites
 
 - Part 1 of the [Quickstart](../01-getting-started/quickstart.md) running locally
-  (i.e. the `bookshelf` example clones and starts).
+  (i.e. the `bookshelf` example is scaffolded as `my-app` and starts).
 - Docker (for one container) and a free port on `5432`.
 
 The analysis tools (`analysis_ingest`, `analysis_summarize`,
@@ -32,7 +32,7 @@ up in `tools/list` — that's by design (see
 
 ## 1. Start pgvector
 
-Drop this `docker-compose.yml` next to `examples/bookshelf/server.ts`
+Drop this `docker-compose.yml` next to `my-app/server.ts`
 and run `docker compose up -d`:
 
 ```yaml
@@ -69,7 +69,7 @@ JSONB).
 
 ## 2. Wire vector storage into the bookshelf
 
-Open `examples/bookshelf/server.ts` and add the storage init before
+Open `my-app/server.ts` and add the storage init before
 `createServer` is called:
 
 ```ts file=src/pool.ts
