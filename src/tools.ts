@@ -11,9 +11,12 @@ export {
 export type {
   ModelConfig,
   ModelsRegistry,
+  ServerContext,
   ToolAnnotations,
+  ToolDependencies,
   ToolErrorResponse,
   ToolHandlerExtra,
+  ToolLogger,
   ToolResponseContent,
   ToolResult,
   ToolSuccessResponse
