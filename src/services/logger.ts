@@ -328,22 +328,32 @@ export function setApp(name: string): void {
 }
 
 /**
- * Create a child logger with default metadata
+ * A logger shape compatible with `StartupTracker` and other framework
+ * consumers. Recursive — `child(meta)` returns another `ChildLogger`.
  */
-export function child(defaultMeta: LogMeta = {}): {
+export interface ChildLogger {
   info: (message: string, meta?: LogMeta) => void
   warn: (message: string, meta?: LogMeta) => void
   error: (message: string, meta?: LogMeta) => void
   debug: (message: string, meta?: LogMeta) => void
-} {
+  child: (meta: LogMeta) => ChildLogger
+}
+
+/**
+ * Create a child logger with default metadata
+ */
+export function child(defaultMeta: LogMeta = {}): ChildLogger {
   const childLogger = logger.child(defaultMeta)
 
-  return {
-    info: (message: string, meta: LogMeta = {}) => childLogger.info(message, meta),
-    warn: (message: string, meta: LogMeta = {}) => childLogger.warn(message, meta),
-    error: (message: string, meta: LogMeta = {}) => childLogger.error(message, meta),
-    debug: (message: string, meta: LogMeta = {}) => childLogger.debug(message, meta)
-  }
+  const wrap = (cl: typeof childLogger): ChildLogger => ({
+    info: (message: string, meta: LogMeta = {}) => cl.info(message, meta),
+    warn: (message: string, meta: LogMeta = {}) => cl.warn(message, meta),
+    error: (message: string, meta: LogMeta = {}) => cl.error(message, meta),
+    debug: (message: string, meta: LogMeta = {}) => cl.debug(message, meta),
+    child: (meta: LogMeta) => wrap(cl.child(meta))
+  })
+
+  return wrap(childLogger)
 }
 
 /**

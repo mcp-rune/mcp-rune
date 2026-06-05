@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.73.6] - 2026-06-05
+
+> Two boundary fixes so `BasePromptRegistry` can be passed directly to `createPromptCache` and `StartupTracker` can accept the namespace-style `logger` from `@mcp-rune/mcp-rune/services`. Both were blocking the advanced CLI scaffold from compiling against the published types.
+
+### Added
+
+- **`BasePromptRegistry` now implements every optional `PromptRegistry` method** with sensible defaults: `getRequiredPrompts`, `getPromptRequiredModels`, `getPromptMap`, `getToolDocDescriptionList`, `getRequiredPromptRestrictions`, `getBulkRecommendedPrompts`, `getBulkRecommendations`, and `getFormSchema`. This makes `createPromptCache(basePromptRegistry)` type-check, so scaffolds no longer need a hand-rolled custom registry.
+- **`ChildLogger` interface exported from `@mcp-rune/mcp-rune/services`** — the recursive `child(meta)` return type that `StartupTracker` requires.
+
+### Changed
+
+- **`logger.child(meta)` now returns a recursive `ChildLogger`** with its own `child(meta)` method, satisfying the `Logger` interface that `StartupTracker` and other consumers expect. The previous return type omitted `child`, so passing `import { logger } from '@mcp-rune/mcp-rune/services'` to `new StartupTracker(logger)` failed type-check even though the runtime worked.
+
+[0.73.6]: https://github.com/mcp-rune/mcp-rune/compare/v0.73.5...v0.73.6
+
 ## [0.73.5] - 2026-06-05
 
 > Removes the residual local `AssociationsConfig` index signature that still blocked `derivePromptSchema(typeof MyModel)` calls. Schema derivation now uses the canonical `AssociationConfig` type from `/api-conventions`.

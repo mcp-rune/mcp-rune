@@ -197,4 +197,73 @@ export class BasePromptRegistry implements PromptRegistry {
   ownerOf(name: string): string | undefined {
     return this._owners.get(name)
   }
+
+  // ===========================================================================
+  // Optional PromptRegistry methods — implemented with sensible defaults so
+  // BasePromptRegistry can be passed directly to `createPromptCache` and other
+  // consumers that previously required a hand-rolled custom registry.
+  // ===========================================================================
+
+  getRequiredPrompts(): Array<[string, RegistryEntry]> {
+    return [...this._entries.entries()].filter(([, entry]) => entry.required === true)
+  }
+
+  getPromptRequiredModels(): string[] {
+    return this.getRequiredPrompts()
+      .map(([, entry]) => entry.model)
+      .filter((m): m is string => typeof m === 'string')
+  }
+
+  getPromptMap(): Record<string, string> {
+    const map: Record<string, string> = {}
+    for (const [name, entry] of this._entries) {
+      if (entry.model !== undefined) map[entry.model] = name
+    }
+    return map
+  }
+
+  getToolDocDescriptionList(): string {
+    return [...this._entries.entries()]
+      .map(([name, entry]) => `- "${name}" - ${entry.description ?? ''}`)
+      .join('\n')
+  }
+
+  getRequiredPromptRestrictions(): string | null {
+    const required = this.getRequiredPrompts()
+    if (required.length === 0) return null
+    return required
+      .map(
+        ([name, entry]) =>
+          `- "${entry.model ?? name}" - First call get_prompt_guide(guide_name: "${name}")`
+      )
+      .join('\n')
+  }
+
+  getBulkRecommendedPrompts(): Array<[string, RegistryEntry]> {
+    // Default implementation: no prompts marked as bulk-recommended. Subclasses
+    // override to surface model-specific bulk-creation patterns.
+    return []
+  }
+
+  getBulkRecommendations(): string | null {
+    return null
+  }
+
+  getFormSchema(name: string): Record<string, unknown> {
+    const entry = this._entries.get(name)
+    if (!entry) {
+      throw new Error(`Unknown prompt: ${name}`)
+    }
+    const promptClass = entry.promptClass as PromptClass & {
+      toFormSchema?: () => Record<string, unknown>
+    }
+    if (typeof promptClass.toFormSchema !== 'function') {
+      throw new Error(
+        `Prompt "${name}" does not implement toFormSchema(). Override BasePromptRegistry.getFormSchema to provide one.`
+      )
+    }
+    const schema = promptClass.toFormSchema() as unknown as Record<string, unknown>
+    if (entry.model !== undefined) schema.modelName = entry.model
+    return schema
+  }
 }
