@@ -9,7 +9,7 @@
  * factory, …) addressable. Use `exclude` to opt individual apps out.
  */
 
-import type { SearchAdapter, SearchGroup } from '#src/api-extensions/search/index.js'
+import type { SearchAdapter, SearchGroup } from '#src/mcp/data-layer/api-extensions/search/index.js'
 import type { DataLayerFactory } from '#src/mcp/data-layer/data-layer.js'
 
 import { createEditModelApp } from '../edit-model-app/index.js'

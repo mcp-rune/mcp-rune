@@ -1,10 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { createSearchService } from '#src/mcp/data-layer/api-extensions/search/factory.js'
+import { SearchAdapter } from '#src/mcp/data-layer/api-extensions/search/search-adapter.js'
+import { SearchService } from '#src/mcp/data-layer/api-extensions/search/search-service.js'
 import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
-
-import { createSearchService } from '../../../../src/api-extensions/search/factory.js'
-import { SearchAdapter } from '../../../../src/api-extensions/search/search-adapter.js'
-import { SearchService } from '../../../../src/api-extensions/search/search-service.js'
 
 const stubApiClient = () => ({
   get: vi.fn().mockResolvedValue({}),

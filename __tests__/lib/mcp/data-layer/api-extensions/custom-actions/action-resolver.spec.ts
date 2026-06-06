@@ -4,9 +4,10 @@ import {
   ActionResolver,
   customActionsConfig,
   UnknownActionError
-} from '../../../../src/api-extensions/custom-actions.js'
-import { EndpointResolver } from '../../../../src/mcp/data-layer/model-service/endpoint-resolver.js'
-import type { ModelConfig } from '../../../../src/mcp/tools/base-tool.js'
+} from '#src/mcp/data-layer/api-extensions/custom-actions/custom-actions.js'
+
+import { EndpointResolver } from '../../../../../../src/mcp/data-layer/model-service/endpoint-resolver.js'
+import type { ModelConfig } from '../../../../../../src/mcp/tools/base-tool.js'
 
 describe('api-extensions/custom-actions — ActionResolver', () => {
   function makeActionConfig(

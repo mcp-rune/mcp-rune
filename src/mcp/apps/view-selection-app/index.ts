@@ -22,7 +22,6 @@ import path from 'node:path'
 
 import { z } from 'zod'
 
-import { getSearchConfig } from '#src/api-extensions/search/index.js'
 import { appResponseMeta, formatAppSummary } from '#src/mcp/apps/lib/format-summary.js'
 import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
 import {
@@ -35,6 +34,7 @@ import {
   createSelectionTools,
   createSharedSelectionTools
 } from '#src/mcp/apps/lib/selection-tools.js'
+import { getSearchConfig } from '#src/mcp/data-layer/api-extensions/search/index.js'
 import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 import { resolveDerivedFields } from '#src/mcp/models/derived-fields.js'
 import * as logger from '#src/services/logger.js'

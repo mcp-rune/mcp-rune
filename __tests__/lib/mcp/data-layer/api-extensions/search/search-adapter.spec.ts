@@ -1,4 +1,4 @@
-import { SearchAdapter } from '../../../../src/api-extensions/search/search-adapter.js'
+import { SearchAdapter } from '#src/mcp/data-layer/api-extensions/search/search-adapter.js'
 
 describe('SearchAdapter', () => {
   const adapter = new SearchAdapter()

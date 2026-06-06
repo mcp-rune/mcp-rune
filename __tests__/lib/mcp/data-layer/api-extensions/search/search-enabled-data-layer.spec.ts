@@ -1,4 +1,4 @@
-import { SearchEnabledDataLayer } from '../../../../src/api-extensions/search/search-enabled-data-layer.js'
+import { SearchEnabledDataLayer } from '#src/mcp/data-layer/api-extensions/search/search-enabled-data-layer.js'
 
 class FakeModel {
   static api = { endpoint: 'books' }

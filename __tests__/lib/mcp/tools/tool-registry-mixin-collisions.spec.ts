@@ -10,7 +10,8 @@
 
 import { describe, expect, it, vi } from 'vitest'
 
-import type { ApiExtension } from '../../../../src/mcp/api-extensions/types.js'
+import type { ApiExtension } from '#src/mcp/data-layer/api-extensions/types.js'
+
 import { ToolRegistry } from '../../../../src/mcp/tools/tool-registry.js'
 
 vi.mock('#src/services/logger.js', () => ({

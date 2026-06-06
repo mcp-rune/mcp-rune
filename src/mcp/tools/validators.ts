@@ -6,7 +6,7 @@
 import { normalizeObjectSchema } from '@modelcontextprotocol/sdk/server/zod-compat.js'
 import { toJsonSchemaCompat } from '@modelcontextprotocol/sdk/server/zod-json-schema-compat.js'
 
-import { getSearchConfig } from '#src/api-extensions/search/index.js'
+import { getSearchConfig } from '#src/mcp/data-layer/api-extensions/search/index.js'
 
 import type { ModelsRegistry } from './base-tool.js'
 

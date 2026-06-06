@@ -6,8 +6,9 @@ import {
   getQueryableModelNames,
   getSearchableModelNames,
   getSearchConfig
-} from '../../../../src/api-extensions/search/capabilities.js'
-import type { ModelConfig } from '../../../../src/mcp/tools/base-tool.js'
+} from '#src/mcp/data-layer/api-extensions/search/capabilities.js'
+
+import type { ModelConfig } from '../../../../../../src/mcp/tools/base-tool.js'
 
 // Use a permissive type — ModelConfig no longer carries `search` directly.
 const withSearch = (search: Record<string, unknown> | null): ModelConfig =>

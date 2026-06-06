@@ -42,7 +42,7 @@ import type {
   ApiExtensionContext,
   ApiExtensionMap,
   ModelServiceMixin
-} from '#src/mcp/api-extensions/types.js'
+} from '#src/mcp/data-layer/api-extensions/types.js'
 import type { DataLayer, DataLayerFactory } from '#src/mcp/data-layer/data-layer.js'
 import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
 import {

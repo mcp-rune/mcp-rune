@@ -7,20 +7,21 @@
  */
 import { describe, expect, it, vi } from 'vitest'
 
-import type { ActionServiceMethods } from '../../../../src/api-extensions/custom-actions.js'
+import type { ActionServiceMethods } from '#src/mcp/data-layer/api-extensions/custom-actions/custom-actions.js'
 import {
   customActionsConfig,
   customActionsExtension,
   UnknownActionError
-} from '../../../../src/api-extensions/custom-actions.js'
-import type { ApiClient } from '../../../../src/core/api-client.js'
-import type { ModelServiceMixin } from '../../../../src/mcp/api-extensions/types.js'
-import { jsonApiConvention } from '../../../../src/mcp/data-layer/api-conventions/index.js'
+} from '#src/mcp/data-layer/api-extensions/custom-actions/custom-actions.js'
+import type { ModelServiceMixin } from '#src/mcp/data-layer/api-extensions/types.js'
+
+import type { ApiClient } from '../../../../../../src/core/api-client.js'
+import { jsonApiConvention } from '../../../../../../src/mcp/data-layer/api-conventions/index.js'
 import {
   ModelService,
   UnknownModelError
-} from '../../../../src/mcp/data-layer/model-service/model-service.js'
-import type { ModelConfig } from '../../../../src/mcp/tools/base-tool.js'
+} from '../../../../../../src/mcp/data-layer/model-service/model-service.js'
+import type { ModelConfig } from '../../../../../../src/mcp/tools/base-tool.js'
 
 function captureActionMixin(): ModelServiceMixin {
   let captured: ModelServiceMixin | undefined

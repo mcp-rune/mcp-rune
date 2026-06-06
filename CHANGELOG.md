@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.76.0] - 2026-06-06
+
+> **BREAKING.** Unifies the `ApiExtension` contract and its implementations under one folder, `src/mcp/data-layer/api-extensions/`. Previously the contract lived in `src/mcp/api-extensions/` and the implementations (`custom-actions`, `search`) lived in top-level `src/api-extensions/` — the opposite of every other extension surface in the repo. After this PR, the `ApiExtension` framework lives where it logically belongs: as part of the data layer it decorates. Part 3 of 5 in #218.
+
+### Changed
+
+- **`@mcp-rune/mcp-rune/api-extensions/custom-actions` now resolves to `dist/mcp/data-layer/api-extensions/custom-actions/custom-actions.js`** — public entry-point name unchanged, internal path moved.
+- **`@mcp-rune/mcp-rune/api-extensions/search` now resolves to `dist/mcp/data-layer/api-extensions/search/index.js`** — public entry-point name unchanged, internal path moved.
+- **`#src/api-extensions/*` and `#src/mcp/api-extensions/*` paths moved** — anyone reaching into `/lib/*` for these files must update to `/lib/mcp/data-layer/api-extensions/...`.
+- **Top-level `src/api-extensions/` folder deleted** — its contents now live under `src/mcp/data-layer/api-extensions/`.
+
+[0.76.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.75.0...v0.76.0
+
 ## [0.75.0] - 2026-06-06
 
 > **BREAKING.** Consolidates the `DataLayer` seam, its in-memory stub, the default `ModelService` adapter, and the `api-conventions` that wrap each model's response shape into one folder, `src/mcp/data-layer/`. Previously the interface lived in `src/core/`, its stub sat next to it, the production adapter sat in `src/mcp/services/`, and the conventions lived in `src/mcp/api-conventions/` — no single folder owned "data access" end-to-end. Also fixes a layering inversion where `core/data-layer.ts` imported `NormalizedListResponse` from `api-extensions/search/types.ts`. Part 2 of 5 in #218.

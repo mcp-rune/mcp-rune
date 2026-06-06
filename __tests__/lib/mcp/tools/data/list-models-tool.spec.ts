@@ -1,4 +1,5 @@
-import { customActionsConfig } from '../../../../../src/api-extensions/custom-actions.js'
+import { customActionsConfig } from '#src/mcp/data-layer/api-extensions/custom-actions/custom-actions.js'
+
 import { ListModelsTool } from '../../../../../src/mcp/tools/data/list-models-tool.js'
 
 describe('lib/mcp/tools/data/list-models-tool', () => {

@@ -45,7 +45,7 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
-import type { ApiExtension, ModelServiceMixin } from '#src/mcp/api-extensions/types.js'
+import type { ApiExtension, ModelServiceMixin } from '#src/mcp/data-layer/api-extensions/types.js'
 import type { EndpointResolver } from '#src/mcp/data-layer/model-service/endpoint-resolver.js'
 import type { ModelRequestOptions } from '#src/mcp/data-layer/model-service/model-service.js'
 import { UnknownModelError } from '#src/mcp/data-layer/model-service/model-service.js'

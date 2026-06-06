@@ -4,10 +4,11 @@ import {
   customActionsConfig,
   customActionsExtension,
   ModelActionTool
-} from '../../../../src/api-extensions/custom-actions.js'
-import type { ApiClient } from '../../../../src/core/api-client.js'
-import type { ModelServiceMixin } from '../../../../src/mcp/api-extensions/types.js'
-import { ModelService } from '../../../../src/mcp/data-layer/model-service/model-service.js'
+} from '#src/mcp/data-layer/api-extensions/custom-actions/custom-actions.js'
+import type { ModelServiceMixin } from '#src/mcp/data-layer/api-extensions/types.js'
+
+import type { ApiClient } from '../../../../../../src/core/api-client.js'
+import { ModelService } from '../../../../../../src/mcp/data-layer/model-service/model-service.js'
 
 /**
  * Captures the mixin contributed by `customActionsExtension()` by invoking
