@@ -15,8 +15,8 @@ import { App } from '@modelcontextprotocol/ext-apps'
 import { humanize } from '../../shared/helpers.js'
 import { initApp, showStatus, clearStatus } from '../../shared/app-init.js'
 import { renderFilterChips } from '../../shared/filter-chips.js'
-import { renderCellValue } from '../../shared/formatters.js'
-import '../../shared/formatters.runtime.js'
+import { renderCellValue } from '../../shared/kind-renderers.js'
+import '../../shared/kind-renderers.runtime.js'
 
 let currentModel = null
 let currentSchema = null

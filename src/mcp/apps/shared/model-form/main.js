@@ -10,8 +10,8 @@
 import { App } from '@modelcontextprotocol/ext-apps'
 
 import { initApp, showStatus, clearStatus } from '../app-init.js'
-import { getFormatter } from '../formatters.js'
-import '../formatters.runtime.js'
+import { getKindRenderer } from '../kind-renderers.js'
+import '../kind-renderers.runtime.js'
 import { humanize } from '../helpers.js'
 
 /**
@@ -241,7 +241,7 @@ export async function initModelFormApp() {
         // schema generator and this switch is visible in devtools. validateRegistries
         // catches every model-driven case at boot; this warning fires only when
         // the server emits a field.type the client doesn't recognise — i.e. when
-        // someone added a new kind in kind-metadata.ts but forgot to wire it here.
+        // someone added a new kind in src/mcp/models/kinds/ but forgot to wire it here.
         console.warn(
           `[mcp-rune] Unknown field.type "${field.type}" for field "${field.name}". ` +
             `Rendering as <input type="text">. Add a case to renderField() in shared/model-form/main.js.`
@@ -615,12 +615,12 @@ export async function initModelFormApp() {
           const val = el.value.trim()
           if (val === '') break
 
-          // Route through the bidirectional formatter when the field's
+          // Route through the bidirectional kind descriptor when the field's
           // model kind is known. Falls back to the legacy number/text coercion
           // when the schema didn't propagate `kind` (e.g. association selects).
           if (field.kind) {
-            const fmt = getFormatter(field.kind, field.format)
-            data[field.name] = fmt.serialize(fmt.fromInput(val))
+            const k = getKindRenderer(field.kind, field.format)
+            data[field.name] = k.serialize(k.fromInput(val))
           } else if (field.type === 'number' || field.type === 'select') {
             const num = Number(val)
             data[field.name] = !isNaN(num) && val !== '' ? num : val
@@ -659,14 +659,14 @@ export async function initModelFormApp() {
       const field = fieldByName.get(key)
 
       // Handle regular inputs and selects, routing API value through the
-      // bidirectional formatter so kinds like `datetime` / `date` / `time`
+      // bidirectional kind descriptor so kinds like `datetime` / `date` / `time`
       // land in the right HTML <input> shape.
       const input = document.getElementById(key)
       if (!input) continue
 
       if (field?.kind) {
-        const fmt = getFormatter(field.kind, field.format)
-        input.value = fmt.toInput(fmt.parse(val))
+        const k = getKindRenderer(field.kind, field.format)
+        input.value = k.toInput(k.parse(val))
       } else {
         input.value = val
       }

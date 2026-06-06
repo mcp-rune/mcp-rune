@@ -14,7 +14,7 @@
  * strategies stay in sync automatically.
  */
 
-import { getKind } from '#src/mcp/models/kind-metadata.js'
+import { getKind } from '#src/mcp/models/kinds/index.js'
 
 import type { PromptFieldDefinition } from '../base-prompt.js'
 
@@ -65,8 +65,9 @@ export class BaseStrategy {
     }
 
     // Kind-aware type/format checks (integer, boolean, date, datetime, uuid,
-    // email, url, json, time, decimal, rating, array) come from kind-metadata
-    // so the rules stay aligned with what the formatter rendered to the user.
+    // email, url, json, time, decimal, rating, array) come from
+    // src/mcp/models/kinds/ so the rules stay aligned with what the renderer
+    // showed to the user.
     const kindError = getKind(def.type, def.format).validate(value, {
       format: def.format,
       enumValues: def.enumValues

@@ -2,7 +2,7 @@
  * Bundle-coverage smoke test.
  *
  * The server-side form schema (`buildField` in `form-schema.ts` + every kind
- * registered in `kind-metadata.ts` via `registerKind(_, { htmlInputType })`)
+ * registered in `src/mcp/models/kinds/` via `registerKind(_, { htmlInputType })`)
  * emits a closed set of `field.type` values. Each form-app bundle has a
  * `switch (field.type)` arm for each one — and *must* keep matching, or new
  * types silently degrade to `<input type="text">` (the `default:` arm).
@@ -17,12 +17,14 @@
  * differences.
  */
 
+import '../../../../src/mcp/models/kinds/index.js'
+
 import fs from 'node:fs'
 import path from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { KIND_REGISTRY } from '../../../../src/mcp/models/kind-metadata.js'
+import { KIND_REGISTRY } from '../../../../src/mcp/models/kinds/registry.js'
 
 const REPO_ROOT = path.resolve(__dirname, '../../../..')
 const BUNDLE_PATHS = {
@@ -36,7 +38,7 @@ const BUNDLE_PATHS = {
 const HARDCODED_EMIT_TYPES = ['select', 'number', 'multiselect', 'checkbox_group'] as const
 
 // Field types that `buildField` can emit via `getKind(...).htmlInputType` —
-// derived dynamically so adding a new registered kind to kind-metadata.ts
+// derived dynamically so adding a new registered kind to src/mcp/models/kinds/
 // auto-extends the coverage requirement. Filters out kind:format narrowings.
 function htmlInputTypesFromRegistry(): string[] {
   const seen = new Set<string>()
@@ -82,7 +84,7 @@ describe('bundle coverage', () => {
           it(`handles "${fieldType}"`, () => {
             if (bundleHandlesCase(source, fieldType)) return
             throw new Error(
-              `field.type "${fieldType}" is emitted by the server (kind-metadata.ts or form-schema.ts) ` +
+              `field.type "${fieldType}" is emitted by the server (src/mcp/models/kinds/ or form-schema.ts) ` +
                 `but has no \`case "${fieldType}":\` arm in the bundled ${appName}.html. ` +
                 `It will silently fall back to <input type="text">. Add a case to renderField() ` +
                 `in src/mcp/apps/shared/model-form/main.js and rebuild.`

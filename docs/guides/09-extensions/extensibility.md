@@ -42,7 +42,7 @@ The extensibility surface is organized in three tiers — pick the tier that mat
    ├────────────────────────────────────────────────────────────┤
    │  Tier 1 — Core Adapters                                    │
    │  DataLayer · ApiClient · BaseConvention · SearchRequestShaper    │
-   │  Kinds (KindDescriptor / FormatterDescriptor)              │
+   │  Kinds (KindDescriptor + KindRenderHint)                   │
    │  (data path: HTTP → normalize → CRUD → projection)         │
    └────────────────────────────────────────────────────────────┘
                               │
@@ -60,13 +60,13 @@ Tier 1 is where the wire-format and HTTP plumbing lives — swap it when the bac
 
 The data path: HTTP transport → response normalization → model-aware CRUD → projection layer. Each step is a swappable seam.
 
-| Surface                                              | What it owns                                                                                                                                    | Guide                                                     |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| **`ApiClient`**                                      | HTTP verbs (`get/post/put/patch/delete`) against URLs. Auth header injection, transport choice (axios, fetch, gRPC bridge).                     | [Custom API Client](../08-adapters/api-client.md)         |
-| **`BaseConvention`**                                 | Wire-format specifics: request payload wrapping, association resolution, list normalization, error parsing. The HAL/JSON:API/your-flavor logic. | [Custom API Convention](../08-adapters/api-convention.md) |
-| **`DataLayer`**                                      | Model-aware CRUD over the API client + convention combo. The seam every tool, prompt, and app talks to.                                         | [DataLayer](../08-adapters/data-layer.md)                 |
-| **`SearchRequestShaper`**                            | Filter shaping: turn `filters: { author_id: 7 }` into Ransack `q[author_id_eq]=7` or Elasticsearch `term: { author_id: 7 }`.                    | [Custom Search Adapter](../08-adapters/search-adapter.md) |
-| **Kinds (`KindDescriptor` + `FormatterDescriptor`)** | Attribute taxonomy: parse/serialize/toInput/fromInput/describe/validate. Drives forms, prompts, summaries, and display.                         | [Attribute Kinds](../02-prompt-dsl/attribute-kinds.md)    |
+| Surface                                         | What it owns                                                                                                                                                 | Guide                                                     |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| **`ApiClient`**                                 | HTTP verbs (`get/post/put/patch/delete`) against URLs. Auth header injection, transport choice (axios, fetch, gRPC bridge).                                  | [Custom API Client](../08-adapters/api-client.md)         |
+| **`BaseConvention`**                            | Wire-format specifics: request payload wrapping, association resolution, list normalization, error parsing. The HAL/JSON:API/your-flavor logic.              | [Custom API Convention](../08-adapters/api-convention.md) |
+| **`DataLayer`**                                 | Model-aware CRUD over the API client + convention combo. The seam every tool, prompt, and app talks to.                                                      | [DataLayer](../08-adapters/data-layer.md)                 |
+| **`SearchRequestShaper`**                       | Filter shaping: turn `filters: { author_id: 7 }` into Ransack `q[author_id_eq]=7` or Elasticsearch `term: { author_id: 7 }`.                                 | [Custom Search Adapter](../08-adapters/search-adapter.md) |
+| **Kinds (`KindDescriptor` + `KindRenderHint`)** | Attribute taxonomy: parse/serialize/toInput/fromInput/describe/validate. Drives forms, prompts, summaries, and display. Extend via `AppRegistry({ kinds })`. | [Attribute Kinds](../02-prompt-dsl/attribute-kinds.md)    |
 
 The composition (top to bottom): `DataLayer ← ModelService ← (ApiClient, BaseConvention)`. For text search and typeahead, the `search` extension ships a `SearchEnabledDataLayer` decorator that composes a `SearchService` and implements `searchNormalized` / `lookupNormalized` / `groupSearchNormalized` on the `DataLayer` interface — `AppRegistry` wraps the factory output automatically. Kinds are orthogonal — they describe attribute values, not transport.
 
@@ -105,8 +105,8 @@ The quick map below is the same table cross-referenced by the cookbook — read 
 
 | What you want                                                      | Pick                                                                                                                                                                      |
 | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "Add an ISBN attribute kind"                                       | [Attribute Kinds](../02-prompt-dsl/attribute-kinds.md) — declare `'string:isbn'` in `AppRegistry.formatters`.                                                             |
-| "Render `boolean` as a toggle instead of a checkbox"               | [Attribute Kinds](../02-prompt-dsl/attribute-kinds.md) — DOM-only `registerFormatter` override.                                                                           |
+| "Add an ISBN attribute kind"                                       | [Attribute Kinds](../02-prompt-dsl/attribute-kinds.md) — declare `'string:isbn'` in `AppRegistry({ kinds })`.                                                             |
+| "Render `boolean` as a toggle instead of a checkbox"               | [Attribute Kinds](../02-prompt-dsl/attribute-kinds.md) — DOM-only `registerKindRenderer` override.                                                                        |
 | "My API isn't JSON:API"                                            | [Custom API Convention](../08-adapters/api-convention.md) · [recipe](./extension-recipes.md#swap-the-response-parsing-convention-for-one-model).                          |
 | "My API takes filters as Rails Ransack `q[field_eq]`"              | [Custom Search Adapter](../08-adapters/search-adapter.md).                                                                                                                |
 | "I need request signing / mTLS / per-tenant routing on every call" | [Custom API Client](../08-adapters/api-client.md).                                                                                                                        |

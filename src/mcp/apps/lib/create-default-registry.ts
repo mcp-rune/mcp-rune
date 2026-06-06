@@ -5,7 +5,7 @@
  * edit-model-app, multi-pick-model-app, show-model-app) was previously
  * instantiated by hand at integration time. `createDefaultAppRegistry`
  * collapses that boilerplate into a single call while keeping every
- * `AppRegistry` option (theme, formatters, search adapter, DataLayer
+ * `AppRegistry` option (theme, kinds, search adapter, DataLayer
  * factory, …) addressable. Use `exclude` to opt individual apps out.
  */
 
@@ -22,7 +22,7 @@ import { createNewModelApp } from '../new-model-app/index.js'
 import { createPickModelApp } from '../pick-model-app/index.js'
 import { createShowModelApp } from '../show-model-app/index.js'
 import { createViewSelectionApp } from '../view-selection-app/index.js'
-import type { AppDefinition, FormatterDescriptor, ThemeOverrides } from './registry.js'
+import type { AppDefinition, KindExtension, ThemeOverrides } from './registry.js'
 import { AppRegistry } from './registry.js'
 import type { ApiClient, AppModelClass } from './types.js'
 
@@ -54,7 +54,7 @@ export interface DefaultAppRegistryOptions {
   defaultShaper?: SearchRequestShaper
   headerIcon?: string
   themeOverrides?: ThemeOverrides
-  formatters?: Record<string, FormatterDescriptor>
+  kinds?: Record<string, KindExtension>
 }
 
 /**
@@ -82,7 +82,7 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
     defaultShaper,
     headerIcon,
     themeOverrides,
-    formatters
+    kinds
   } = opts
 
   const excludedSet = new Set<DefaultAppName>(exclude)
@@ -145,6 +145,6 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
     ...(defaultShaper && { defaultShaper }),
     ...(headerIcon !== undefined && { headerIcon }),
     ...(themeOverrides && { themeOverrides }),
-    ...(formatters && { formatters })
+    ...(kinds && { kinds })
   })
 }

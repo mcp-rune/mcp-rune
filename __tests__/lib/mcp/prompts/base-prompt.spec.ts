@@ -417,7 +417,7 @@ describe('Summary Generation', () => {
 
       expect(summary).toContain('**Identification:**')
       expect(summary).toContain('test-item')
-      // enum values now humanize via kind-metadata describe() — was raw JSON before
+      // enum values now humanize via the kinds describe() — was raw JSON before
       expect(summary).toContain('Basic')
     })
 

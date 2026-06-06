@@ -1,13 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  getKind,
-  KIND_REGISTRY,
-  registerKind,
-  UnknownKindError
-} from '../../../../src/mcp/models/kind-metadata.js'
+import { getKind, registerKind } from '../../../../src/mcp/models/kinds/index.js'
+import { KIND_REGISTRY, UnknownKindError } from '../../../../src/mcp/models/kinds/registry.js'
 
-describe('lib/core/kind-metadata', () => {
+describe('lib/mcp/models/kinds', () => {
   describe('getKind', () => {
     it('throws UnknownKindError when kind is unknown', () => {
       expect(() => getKind('nonexistent')).toThrow(UnknownKindError)

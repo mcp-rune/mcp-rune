@@ -6,8 +6,8 @@ export type { ApiConfig, AttributeDefinition, EndpointOverrides, ModelData } fro
 export { BaseModel } from './base-model.js'
 export type { ModelWithDerivedAttrs } from './derived-fields.js'
 export { resolveDerivedFields } from './derived-fields.js'
-export type { KindDescriptor, KindOpts } from './kind-metadata.js'
-export { getKind, KIND_REGISTRY, registerKind, UnknownKindError } from './kind-metadata.js'
+export type { KindDescriptor, KindOpts, KindRenderHint } from './kinds/index.js'
+export { getKind, registerKind } from './kinds/index.js'
 export {
   validateAssociation,
   validateAttributeDefinition,

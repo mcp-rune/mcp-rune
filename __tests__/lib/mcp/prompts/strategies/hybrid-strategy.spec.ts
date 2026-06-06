@@ -26,7 +26,7 @@ const promptClass = {
 
 describe('lib/mcp/prompts/strategies/hybrid-strategy', () => {
   describe('generateHumanSummary - LLM summary mirrors user-facing render', () => {
-    it('renders booleans as Yes/No (was raw true/false before kind-metadata)', () => {
+    it('renders booleans as Yes/No (was raw true/false before the kinds registry)', () => {
       const out = HybridStrategy.generateHumanSummary(promptClass, {
         title: 'Book',
         is_published: true

@@ -1,6 +1,6 @@
 # Writing a Custom MCP App
 
-mcp-rune ships seven **MCP App tools** — interactive iframe widgets the LLM can summon: `new_model_app`, `edit_model_app`, `find_model_app`, `show_model_app`, `pick_model_app`, `multi_pick_model_app`, `view_selection_app`. They share infrastructure: the kind taxonomy from [`kind-metadata`](../02-prompt-dsl/attribute-kinds.md), the formatter registry from `apps/shared/formatters.ts`, the form-schema generator, the selection store, theming.
+mcp-rune ships seven **MCP App tools** — interactive iframe widgets the LLM can summon: `new_model_app`, `edit_model_app`, `find_model_app`, `show_model_app`, `pick_model_app`, `multi_pick_model_app`, `view_selection_app`. They share infrastructure: the [kind taxonomy](../02-prompt-dsl/attribute-kinds.md) from `src/mcp/models/kinds/`, the renderer registry from `apps/shared/kind-renderers.ts`, the form-schema generator, the selection store, theming.
 
 > **Projection-layer rule.** App handlers consume only the `DataLayer` interface — `context.dataLayer` is the single data-access seam. Handlers never receive `searchClient`, `apiClient`, or any concrete adapter. See [The Projection-Layer Rule](../08-adapters/data-layer.md#the-projection-layer-rule).
 
@@ -189,7 +189,7 @@ export function createShowModelApp(opts) {
 
 The handler fetches data, formats a summary the LLM sees, and ships `_meta` containing the records and schema the iframe will consume.
 
-The iframe (`show-model-app-ui/app.js`) reads the records out of the host message, walks the schema, calls `renderCellValue(value, field)` from `apps/shared/formatters.ts` for each field, and appends nodes to the DOM. Kind-aware rendering, theming, and selection state are inherited automatically.
+The iframe (`show-model-app-ui/app.js`) reads the records out of the host message, walks the schema, calls `renderCellValue(value, field)` from `apps/shared/kind-renderers.ts` for each field, and appends nodes to the DOM. Kind-aware rendering, theming, and selection state are inherited automatically.
 
 ## Single-File Custom App
 
@@ -327,7 +327,7 @@ function loadHtml() {
 
 Use this when your app:
 
-- Imports the framework's `helpers`, `renderCellValue`, or `getFormatter` (so it inherits theming, kind rendering, and overrides).
+- Imports the framework's `helpers`, `renderCellValue`, or `getKindRenderer` (so it inherits theming, kind rendering, and overrides).
 - Needs more than ~200 lines of UI code.
 - Wants to share components across multiple custom apps in your deployment.
 
@@ -338,7 +338,7 @@ The whole point of having a shared kind registry is so custom apps don't reinven
 ```js file=src/payload.js
 // your-server/apps/booking-calendar-ui/app.js
 import { App } from '@modelcontextprotocol/ext-apps'
-import { renderCellValue, getFormatter, helpers } from '@mcp-rune/mcp-rune/apps/formatters'
+import { renderCellValue, getKindRenderer, helpers } from '@mcp-rune/mcp-rune/apps/kind-renderers'
 
 const app = new App({ name: 'Booking Calendar', version: '1.0.0' })
 const tbody = document.querySelector('tbody')
@@ -361,7 +361,7 @@ await app.connect()
 ```ts file=src/payload.ts
 // your-server/apps/booking-calendar-ui/app.js
 import { App } from '@modelcontextprotocol/ext-apps'
-import { renderCellValue, getFormatter, helpers } from '@mcp-rune/mcp-rune/apps/formatters'
+import { renderCellValue, getKindRenderer, helpers } from '@mcp-rune/mcp-rune/apps/kind-renderers'
 
 const app = new App({ name: 'Booking Calendar', version: '1.0.0' })
 const tbody = document.querySelector('tbody')!
@@ -384,12 +384,12 @@ await app.connect()
 That single `renderCellValue` call picks up:
 
 - Built-in kinds with their `format()` renderers.
-- Any deployer-registered overrides via `AppRegistry.formatters` (theming, locale, badges).
+- Any deployer-registered overrides via `AppRegistry({ kinds })` (theming, locale, badges).
 - The `--color-accent` etc. CSS variables from `themeOverrides`.
 
 No re-implementation. If you later add a new kind to your server, your custom app renders it without code changes.
 
-For form-style inputs, use `getFormatter(kind, format).toInput / .fromInput / .parse / .serialize` from the same module — these come from `kind-metadata` and round-trip correctly for every kind.
+For form-style inputs, use `getKindRenderer(kind, format).toInput / .fromInput / .parse / .serialize` from the same module — these come from the shared kinds registry and round-trip correctly for every kind.
 
 ## Wiring Into the Registry
 
@@ -500,7 +500,7 @@ Test the iframe rendering with `happy-dom`:
  * @vitest-environment happy-dom
  */
 import { describe, expect, it } from 'vitest'
-import { renderCellValue } from '@mcp-rune/mcp-rune/apps/formatters'
+import { renderCellValue } from '@mcp-rune/mcp-rune/apps/kind-renderers'
 
 describe('booking-calendar iframe', () => {
   it('renders a booking row through the shared formatter', () => {
@@ -515,7 +515,7 @@ describe('booking-calendar iframe', () => {
  * @vitest-environment happy-dom
  */
 import { describe, expect, it } from 'vitest'
-import { renderCellValue } from '@mcp-rune/mcp-rune/apps/formatters'
+import { renderCellValue } from '@mcp-rune/mcp-rune/apps/kind-renderers'
 describe('booking-calendar iframe', () => {
   it('renders a booking row through the shared formatter', () => {
     const td = renderCellValue('2026-05-12', { kind: 'date' })
@@ -524,26 +524,26 @@ describe('booking-calendar iframe', () => {
 })
 ```
 
-Integration-test the iframe via `injectIntoHead` to confirm theming and formatter overrides reach your HTML:
+Integration-test the iframe via `injectIntoHead` to confirm theming and kind render hints reach your HTML:
 
 ```ts file=src/registry.ts
 import { AppRegistry } from '@mcp-rune/mcp-rune/apps'
 
 const registry = new AppRegistry([createBookingCalendarApp()], {
-  formatters: { date: { display: { locale: 'en-GB' } } }
+  kinds: { date: { render: { locale: 'en-GB' } } }
 })
 const html = registry.injectIntoHead(loadHtml())
-expect(html).toContain('window.__MCP_RUNE_FORMATTERS__')
+expect(html).toContain('window.__MCP_RUNE_KIND_RENDERERS__')
 expect(html).toContain('en-GB')
 ```
 
 ```js file=src/registry.js
 import { AppRegistry } from '@mcp-rune/mcp-rune/apps'
 const registry = new AppRegistry([createBookingCalendarApp()], {
-  formatters: { date: { display: { locale: 'en-GB' } } }
+  kinds: { date: { render: { locale: 'en-GB' } } }
 })
 const html = registry.injectIntoHead(loadHtml())
-expect(html).toContain('window.__MCP_RUNE_FORMATTERS__')
+expect(html).toContain('window.__MCP_RUNE_KIND_RENDERERS__')
 expect(html).toContain('en-GB')
 ```
 

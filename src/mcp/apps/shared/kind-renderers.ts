@@ -1,20 +1,22 @@
 /**
- * DOM-side formatter registry.
+ * Browser DOM rendering for kinds.
  *
- * Kind taxonomy + parse/serialize/toInput/fromInput/describe/validate live in
- * `src/core/kind-metadata.ts` (server- and browser-importable). This module
- * adds the only piece that requires the DOM: `format(value, opts) -> Node`,
- * consumed by find-model-app and show-model-app through `renderCellValue`,
- * and by the form apps' iframes (new-model-app / edit-model-app, via
- * `shared/model-form/main.js`) through `getFormatter`.
+ * The kind taxonomy (parse / serialize / toInput / fromInput / describe /
+ * validate / label / htmlInputType / promptType) lives in
+ * `src/mcp/models/kinds/`. This module is the only place that adds the one
+ * piece those descriptors cannot carry: `render(value, opts) -> Node`.
  *
- * Deployers extend display rendering through the declarative
- * `FormatterDescriptor` channel on `AppRegistry`, which both server and iframe
- * consume — see `formatters.runtime.js` for the descriptor → format mapping.
+ * `getKindRenderer(kind, format)` returns a kind descriptor decorated with a
+ * `render` function. `renderCellValue` is the single consumption point for
+ * list, detail, and search cell rendering. Deployers extend rendering
+ * through the `kinds: { <name>: { render: { … } } }` option on
+ * `AppRegistry`, which the iframe runtime in `kind-renderers.runtime.js`
+ * translates into `registerKindRenderer` calls before the bundled app code
+ * runs.
  */
 
-import type { KindDescriptor, KindOpts } from '#src/mcp/models/kind-metadata.js'
-import { getKind } from '#src/mcp/models/kind-metadata.js'
+import type { KindDescriptor, KindOpts } from '#src/mcp/models/kinds/index.js'
+import { getKind } from '#src/mcp/models/kinds/index.js'
 
 function humanize(str: string): string {
   return str.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
@@ -100,48 +102,48 @@ export const helpers: FormatHelpers = {
   }
 }
 
-export type FormatRenderer = (value: unknown, opts?: FormatOpts) => Node
+export type KindRenderer = (value: unknown, opts?: KindRenderOpts) => Node
 
-export interface FormatOpts extends KindOpts {
+export interface KindRenderOpts extends KindOpts {
   column?: Record<string, unknown>
 }
 
-export interface Formatter extends KindDescriptor {
-  format: FormatRenderer
+export interface KindWithRenderer extends KindDescriptor {
+  render: KindRenderer
 }
 
-const formatRegistry = new Map<string, FormatRenderer>()
+const rendererRegistry = new Map<string, KindRenderer>()
 
-const defaultFormat: FormatRenderer = (v) => helpers.text(v == null ? '' : String(v))
+const defaultRender: KindRenderer = (v) => helpers.text(v == null ? '' : String(v))
 
 function key(kind: string, format?: string): string {
   return format ? `${kind.toLowerCase()}:${format.toLowerCase()}` : kind.toLowerCase()
 }
 
 /**
- * Override the DOM `format` renderer for a kind (optionally narrowed by
- * `format`). Pre-1.0: this only accepts a `format` function. Non-DOM behavior
- * (parse / serialize / describe / validate) belongs in `kind-metadata.ts`
- * descriptors and is sourced from `AppRegistry.formatters`.
+ * Override the DOM `render` function for a kind (optionally narrowed by
+ * `format`). Non-DOM behavior (parse / serialize / describe / validate)
+ * stays in `src/mcp/models/kinds/`; this layer only adds the
+ * `(value, opts) => Node` decoration.
  */
-export function registerFormatter(
+export function registerKindRenderer(
   kind: string,
-  formatter: { format: FormatRenderer },
+  renderer: { render: KindRenderer },
   { format }: { format?: string } = {}
 ): void {
-  if (!formatter || typeof formatter.format !== 'function') {
+  if (!renderer || typeof renderer.render !== 'function') {
     throw new Error(
-      `registerFormatter expects a { format } DOM renderer. Got: ${JSON.stringify(Object.keys(formatter || {}))}`
+      `registerKindRenderer expects a { render } DOM renderer. Got: ${JSON.stringify(Object.keys(renderer || {}))}`
     )
   }
-  formatRegistry.set(key(kind, format), formatter.format)
+  rendererRegistry.set(key(kind, format), renderer.render)
 }
 
-export function getFormatter(kind: string | undefined, format?: string): Formatter {
+export function getKindRenderer(kind: string | undefined, format?: string): KindWithRenderer {
   const descriptor = getKind(kind, format)
   const k = (kind || 'string').toLowerCase()
-  const renderer = formatRegistry.get(key(k, format)) ?? formatRegistry.get(k) ?? defaultFormat
-  return { ...descriptor, format: renderer }
+  const render = rendererRegistry.get(key(k, format)) ?? rendererRegistry.get(k) ?? defaultRender
+  return { ...descriptor, render }
 }
 
 /**
@@ -151,37 +153,37 @@ export function getFormatter(kind: string | undefined, format?: string): Formatt
 export function renderCellValue(
   rawApiValue: unknown,
   column: { kind?: string; type?: string; format?: string; [k: string]: unknown } = {},
-  opts: FormatOpts = {}
+  opts: KindRenderOpts = {}
 ): Node {
   if (rawApiValue === null || rawApiValue === undefined || rawApiValue === '') {
     return helpers.empty()
   }
-  const fmt = getFormatter(column.kind || column.type, column.format)
-  const callOpts: FormatOpts = { column, ...opts }
-  const internal = fmt.parse(rawApiValue, callOpts)
-  return fmt.format(internal, callOpts)
+  const r = getKindRenderer(column.kind || column.type, column.format)
+  const callOpts: KindRenderOpts = { column, ...opts }
+  const internal = r.parse(rawApiValue, callOpts)
+  return r.render(internal, callOpts)
 }
 
-registerFormatter('text', { format: (v) => helpers.text(String(v)) })
+registerKindRenderer('text', { render: (v) => helpers.text(String(v)) })
 
-registerFormatter('integer', { format: (v) => helpers.text(String(v)) })
+registerKindRenderer('integer', { render: (v) => helpers.text(String(v)) })
 
-registerFormatter('decimal', { format: (v) => helpers.text(String(v)) })
+registerKindRenderer('decimal', { render: (v) => helpers.text(String(v)) })
 
-registerFormatter('boolean', { format: (v) => helpers.text(v ? 'Yes' : 'No') })
+registerKindRenderer('boolean', { render: (v) => helpers.text(v ? 'Yes' : 'No') })
 
-registerFormatter('date', {
-  format: (v) => helpers.text(helpers.intlDate(v as Date))
+registerKindRenderer('date', {
+  render: (v) => helpers.text(helpers.intlDate(v as Date))
 })
 
-registerFormatter('datetime', {
-  format: (v) => helpers.text(helpers.intlDateTime(v as Date))
+registerKindRenderer('datetime', {
+  render: (v) => helpers.text(helpers.intlDateTime(v as Date))
 })
 
-registerFormatter('time', { format: (v) => helpers.text(String(v).substring(0, 5)) })
+registerKindRenderer('time', { render: (v) => helpers.text(String(v).substring(0, 5)) })
 
-registerFormatter('enum', {
-  format: (v, opts) => {
+registerKindRenderer('enum', {
+  render: (v, opts) => {
     const column = (opts?.column ?? {}) as {
       enumHints?: Record<string, { icon?: string; className?: string }>
     }
@@ -190,18 +192,18 @@ registerFormatter('enum', {
   }
 })
 
-registerFormatter('array', { format: (v) => helpers.tagList(v as unknown[]) })
+registerKindRenderer('array', { render: (v) => helpers.tagList(v as unknown[]) })
 
-registerFormatter('uuid', {
-  format: (v) => {
+registerKindRenderer('uuid', {
+  render: (v) => {
     const span = helpers.text(String(v))
     span.style.fontFamily = 'var(--font-mono)'
     return span
   }
 })
 
-registerFormatter('json', {
-  format: (v) => {
+registerKindRenderer('json', {
+  render: (v) => {
     const pre = document.createElement('pre')
     pre.style.margin = '0'
     pre.style.fontFamily = 'var(--font-mono)'
@@ -211,8 +213,8 @@ registerFormatter('json', {
   }
 })
 
-registerFormatter('color', {
-  format: (v) => {
+registerKindRenderer('color', {
+  render: (v) => {
     const span = document.createElement('span')
     span.className = 'mr-swatch'
     span.style.display = 'inline-flex'
@@ -231,14 +233,14 @@ registerFormatter('color', {
   }
 })
 
-registerFormatter('email', { format: (v) => helpers.link(`mailto:${v}`, String(v)) })
+registerKindRenderer('email', { render: (v) => helpers.link(`mailto:${v}`, String(v)) })
 
-registerFormatter('url', { format: (v) => helpers.link(String(v)) })
+registerKindRenderer('url', { render: (v) => helpers.link(String(v)) })
 
-registerFormatter('base64', { format: () => helpers.text('(binary)') })
+registerKindRenderer('base64', { render: () => helpers.text('(binary)') })
 
-registerFormatter('rating', {
-  format: (v, opts) => {
+registerKindRenderer('rating', {
+  render: (v, opts) => {
     const column = (opts?.column ?? {}) as { max?: number }
     return helpers.rating(Number(v) || 0, column.max ?? opts?.max ?? 5)
   }
