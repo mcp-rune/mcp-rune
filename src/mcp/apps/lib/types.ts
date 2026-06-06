@@ -6,9 +6,9 @@
  * layer does not know about.
  */
 
-import type { ApiConfig, AttributeDefinition } from '#src/core/base-model.js'
 import type { DataLayer } from '#src/core/data-layer.js'
 import type { AssociationConfig, BaseConvention } from '#src/mcp/api-conventions/base-convention.js'
+import type { ApiConfig, AttributeDefinition } from '#src/mcp/models/base-model.js'
 
 import type { FormDataStore } from './form-data-store.js'
 import type { SelectionStore } from './selection-store.js'

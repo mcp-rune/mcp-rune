@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.74.0] - 2026-06-06
+
+> **BREAKING.** Extracts the model-domain layer out of `src/core/` into its own folder, `src/mcp/models/`. `core/` was being used as a dumping ground for "anything shared between `apps/` and `tools/`," collapsing two distinct meanings of shared: framework primitives (config, env, api-client) vs model-domain primitives (BaseModel, schema validation, kind metadata, summary strategies). The two now live in separate folders with separate public entry points. First of 5 PRs under the [src/ layout refactor (#218)](https://github.com/mcp-rune/mcp-rune/issues/218).
+
+### Changed
+
+- **`BaseModel` and friends moved from `@mcp-rune/mcp-rune/core` to `@mcp-rune/mcp-rune/models`** — consumers importing `BaseModel`, `resolveDerivedFields`, `getKind`/`KIND_REGISTRY`/`registerKind`/`UnknownKindError`, `validateModel`/`validateRequired`/etc., `SchemaValidationError`/`validateRegistries`/`formatReport`, or any summary-strategy export from `/core` must switch to `/models`. Affected symbols: `BaseModel`, `ApiConfig`, `AttributeDefinition`, `EndpointOverrides`, `ModelData`, `ModelWithDerivedAttrs`, `resolveDerivedFields`, `KindDescriptor`, `KindOpts`, `getKind`, `KIND_REGISTRY`, `registerKind`, `UnknownKindError`, `Issue`, `IssueLevel`, `IssueScope`, `RegistriesInput`, `ValidationReport`, `formatReport`, `SchemaValidationError`, `validateAssociation`, `validateAttributeDefinition`, `validateFormClass`, `validateModelClass`, `validatePromptClass`, `validateRegistries`, `validateEnum`, `validateModel`, `validatePositiveInt`, `validateRequired`, `validateUrl`, and every summary-strategy export.
+- **`#src/core/{base-model,derived-fields,kind-metadata,schema-validation,validators,edge-extraction,multi-hop-fetch,graph-stratifiers,summary-strategies}.js` paths moved to `#src/mcp/models/<same-name>.js`** — internal imports updated. Anyone reaching into `/lib/core/*` for these files must update to `/lib/mcp/models/*`.
+
+### Added
+
+- **`@mcp-rune/mcp-rune/models` public entry point** — single barrel for the model-domain layer.
+
+[0.74.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.73.9...v0.74.0
+
 ## [0.73.9] - 2026-06-06
 
 > Strips the site-decoration `extension:` and `series:` YAML frontmatter blocks from the 22 guide markdown files that carried them. Those fields decided how mcp-rune-site rendered each guide (extension-point badges, multi-part tutorial ribbons) and don't belong in the framework repo. The docs site now owns that classification directly in its own guide registry.

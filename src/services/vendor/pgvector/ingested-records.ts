@@ -16,7 +16,7 @@ import {
   buildEdgeStratifier,
   type ParamRef,
   type StratifierFragment
-} from '#src/core/graph-stratifiers.js'
+} from '#src/mcp/models/graph-stratifiers.js'
 
 export type GraphStratifierSpec =
   | { kind: 'concept'; concept: string; targetModels: ReadonlyArray<string> }

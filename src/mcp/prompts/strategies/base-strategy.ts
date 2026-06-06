@@ -14,7 +14,7 @@
  * strategies stay in sync automatically.
  */
 
-import { getKind } from '#src/core/kind-metadata.js'
+import { getKind } from '#src/mcp/models/kind-metadata.js'
 
 import type { PromptFieldDefinition } from '../base-prompt.js'
 

@@ -1,5 +1,8 @@
-import { relationshipCoverageStrategy } from '../../../../src/core/summary-strategies/relationship-coverage.js'
-import type { SummaryEdge, SummaryInput } from '../../../../src/core/summary-strategies/types.js'
+import { relationshipCoverageStrategy } from '../../../../../src/mcp/models/summary-strategies/relationship-coverage.js'
+import type {
+  SummaryEdge,
+  SummaryInput
+} from '../../../../../src/mcp/models/summary-strategies/types.js'
 
 function makeInput(overrides: Partial<SummaryInput>): SummaryInput {
   return {

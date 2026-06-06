@@ -14,9 +14,9 @@
  * See `docs/guides/schema-validation.md` (TODO) for the doctor CLI surface.
  */
 
-import type { AttributeDefinition } from '#src/core/base-model.js'
-import { KIND_REGISTRY } from '#src/core/kind-metadata.js'
 import { closestMatch } from '#src/core/suggestions.js'
+import type { AttributeDefinition } from '#src/mcp/models/base-model.js'
+import { KIND_REGISTRY } from '#src/mcp/models/kind-metadata.js'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 

@@ -14,7 +14,7 @@
  * This is the shared library version. Server-specific BasePrompts should extend this class.
  */
 
-import { getKind } from '#src/core/kind-metadata.js'
+import { getKind } from '#src/mcp/models/kind-metadata.js'
 
 import { generateAttributeReference } from './generators/attribute-reference-generator.js'
 import type { FlowSection } from './generators/flow-diagram-generator.js'

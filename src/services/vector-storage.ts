@@ -22,8 +22,8 @@
 
 import type { Pool } from 'pg'
 
-import type { Edge } from '#src/core/edge-extraction.js'
-import { buildEmbeddingText } from '#src/core/edge-extraction.js'
+import type { Edge } from '#src/mcp/models/edge-extraction.js'
+import { buildEmbeddingText } from '#src/mcp/models/edge-extraction.js'
 
 // Vendor implementation - change this import to switch vendors
 import { embed, embedBatch } from './embeddings.js'

@@ -4,7 +4,7 @@ import {
   validatePositiveInt,
   validateRequired,
   validateUrl
-} from '../../../src/core/validators.js'
+} from '../../../../src/mcp/models/validators.js'
 
 describe('lib/core/validators', () => {
   describe('validateRequired', () => {

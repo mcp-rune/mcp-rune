@@ -21,7 +21,6 @@ import { z } from 'zod'
 
 import { getSearchConfig } from '#src/api-extensions/search/index.js'
 import type { DataLayer } from '#src/core/data-layer.js'
-import { resolveDerivedFields } from '#src/core/derived-fields.js'
 import { appResponseMeta, extractIds, formatAppSummary } from '#src/mcp/apps/lib/format-summary.js'
 import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
 import {
@@ -30,6 +29,7 @@ import {
   getAvailableColumnNames
 } from '#src/mcp/apps/lib/list-schema.js'
 import { createSelectionTools } from '#src/mcp/apps/lib/selection-tools.js'
+import { resolveDerivedFields } from '#src/mcp/models/derived-fields.js'
 import * as logger from '#src/services/logger.js'
 
 import type { AppModelClass, ListSchema, ToolResult } from '../lib/types.js'

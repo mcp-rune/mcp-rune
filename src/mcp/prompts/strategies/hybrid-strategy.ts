@@ -17,7 +17,7 @@
  * Example models: Series, Episode
  */
 
-import { getKind } from '#src/core/kind-metadata.js'
+import { getKind } from '#src/mcp/models/kind-metadata.js'
 import * as logger from '#src/services/logger.js'
 
 import type { FieldGroup, PromptFieldDefinition } from '../base-prompt.js'

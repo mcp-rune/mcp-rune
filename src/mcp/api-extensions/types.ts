@@ -19,7 +19,7 @@
  * See `docs/guides/api-extensions.md` for the authoring guide.
  */
 
-import type { SummaryStrategy } from '#src/core/summary-strategies/index.js'
+import type { SummaryStrategy } from '#src/mcp/models/summary-strategies/index.js'
 import type * as logger from '#src/services/logger.js'
 
 import type { ModelService } from '../services/model-service.js'

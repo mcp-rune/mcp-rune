@@ -5,7 +5,7 @@ import {
   KIND_REGISTRY,
   registerKind,
   UnknownKindError
-} from '../../../src/core/kind-metadata.js'
+} from '../../../../src/mcp/models/kind-metadata.js'
 
 describe('lib/core/kind-metadata', () => {
   describe('getKind', () => {

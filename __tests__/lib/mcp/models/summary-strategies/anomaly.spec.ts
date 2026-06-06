@@ -1,5 +1,5 @@
-import { anomalyStrategy } from '../../../../src/core/summary-strategies/anomaly.js'
-import type { SummaryInput } from '../../../../src/core/summary-strategies/types.js'
+import { anomalyStrategy } from '../../../../../src/mcp/models/summary-strategies/anomaly.js'
+import type { SummaryInput } from '../../../../../src/mcp/models/summary-strategies/types.js'
 
 function makeInput(overrides: Partial<SummaryInput>): SummaryInput {
   return {

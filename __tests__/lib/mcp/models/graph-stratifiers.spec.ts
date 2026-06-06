@@ -3,7 +3,7 @@ import {
   buildConceptStratifier,
   buildEdgeStratifier,
   type ParamRef
-} from '../../../src/core/graph-stratifiers.js'
+} from '../../../../src/mcp/models/graph-stratifiers.js'
 
 function freshRef(startAt = 2): ParamRef {
   return { next: startAt, params: [] }

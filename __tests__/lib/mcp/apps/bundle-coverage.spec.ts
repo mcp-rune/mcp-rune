@@ -22,7 +22,7 @@ import path from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { KIND_REGISTRY } from '../../../../src/core/kind-metadata.js'
+import { KIND_REGISTRY } from '../../../../src/mcp/models/kind-metadata.js'
 
 const REPO_ROOT = path.resolve(__dirname, '../../../..')
 const BUNDLE_PATHS = {
