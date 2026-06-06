@@ -31,8 +31,8 @@
  * `extractEdgesFromRecord` etc. directly.
  */
 
-import type { AssociationConfig } from '#src/mcp/data-layer/api-conventions/base-convention.js'
 import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
+import type { AssociationConfig } from '#src/mcp/models/association-config.js'
 import type { ModelClassLike } from '#src/mcp/schema/types.js'
 import type { ModelsRegistry } from '#src/mcp/tools/base-tool.js'
 

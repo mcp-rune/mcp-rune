@@ -10,7 +10,7 @@
  * work on raw JS classes without a full TS bridge.
  */
 
-import type { AttributeDefinition } from '#src/mcp/models/base-model.js'
+import type { AttributeDefinition } from '#src/mcp/models/attribute-definition.js'
 
 export type IssueLevel = 'error' | 'warning'
 export type IssueScope = 'model' | 'attribute' | 'association' | 'form' | 'prompt'

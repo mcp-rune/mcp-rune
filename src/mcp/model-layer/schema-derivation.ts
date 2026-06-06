@@ -28,14 +28,13 @@
  * Reached through `modelLayer.promptSchema(options)` after PR2.
  */
 
-import type {
-  AssociationConfig,
-  BaseConvention,
-  FieldDefinition
-} from '#src/mcp/data-layer/api-conventions/base-convention.js'
-import type { AttributeDefinition } from '#src/mcp/models/base-model.js'
+import type { BaseConvention } from '#src/mcp/data-layer/api-conventions/base-convention.js'
+import type { AssociationConfig } from '#src/mcp/models/association-config.js'
+import type { AttributeDefinition } from '#src/mcp/models/attribute-definition.js'
 import { getKind } from '#src/mcp/models/kinds/index.js'
 import type { FieldGroup, PromptFieldDefinition } from '#src/mcp/prompts/base-prompt.js'
+
+import type { FieldDefinition } from './field-definition.js'
 
 // ---------------------------------------------------------------------------
 // Types

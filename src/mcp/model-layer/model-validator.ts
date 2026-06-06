@@ -24,7 +24,7 @@
 import '#src/mcp/models/kinds/index.js'
 
 import { closestMatch } from '#src/core/suggestions.js'
-import type { AttributeDefinition } from '#src/mcp/models/base-model.js'
+import type { AttributeDefinition } from '#src/mcp/models/attribute-definition.js'
 import { KIND_REGISTRY } from '#src/mcp/models/kinds/registry.js'
 import type { Issue, ModelClassLike } from '#src/mcp/schema/types.js'
 

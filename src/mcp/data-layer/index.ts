@@ -2,11 +2,6 @@
 // stub, the default ModelService adapter, and the api-conventions that wrap
 // each model's response shape.
 
-export type {
-  AssociationConfig,
-  BelongsToAssociation,
-  HasManyAssociation
-} from './api-conventions/base-convention.js'
 export { BaseConvention, defaultConvention, jsonApiConvention } from './api-conventions/index.js'
 export type {
   DataLayer,

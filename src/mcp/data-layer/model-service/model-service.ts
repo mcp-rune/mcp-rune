@@ -15,9 +15,10 @@
 import type { ApiClient, RequestOptions } from '#src/core/api-client.js'
 import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 import type { NormalizedListResponse } from '#src/mcp/data-layer/types.js'
+import type { AssociationConfig } from '#src/mcp/models/association-config.js'
 
 import type { ModelConfig, ModelsRegistry, ToolLogger } from '../../tools/base-tool.js'
-import type { AssociationConfig, BaseConvention } from '../api-conventions/base-convention.js'
+import type { BaseConvention } from '../api-conventions/base-convention.js'
 import { defaultConvention } from '../api-conventions/index.js'
 import type { CrudAction, EndpointResolverConfig } from './endpoint-resolver.js'
 import { EndpointResolver, MissingParentError } from './endpoint-resolver.js'

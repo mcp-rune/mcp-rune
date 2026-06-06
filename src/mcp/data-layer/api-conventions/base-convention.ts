@@ -13,52 +13,13 @@
  *   - cleanResponse: strip protocol metadata from API responses (e.g., _links for HAL)
  */
 
-export interface CompletionConfig {
-  enabled: boolean
-  provider?: string
-  target_model?: string
-  search_fields?: string[]
-  display_template?: string
-  value_field?: string
-}
-
-export interface FieldDefinition {
-  name: string
-  type: string
-  required: boolean
-  description: string
-  examples?: unknown[]
-  items?: { type: string }
-  completion?: CompletionConfig
-  enumValues?: string[]
-  format?: string
-  default?: unknown
-  label?: string
-  validation?: Record<string, unknown>
-}
-
-export interface BelongsToAssociation {
-  target_model: string
-  required?: boolean
-  description?: string
-  endpoint?: string
-  autocomplete?: boolean
-}
-
-export interface HasManyAssociation {
-  target_model: string
-  required?: boolean
-  many: true
-  description?: string
-  autocomplete?: boolean
-}
-
-export interface AssociationConfig {
-  belongsTo?: Record<string, BelongsToAssociation>
-  hasMany?: Record<string, HasManyAssociation>
-}
-
 import type { NormalizedListResponse } from '#src/mcp/data-layer/types.js'
+import type { FieldDefinition } from '#src/mcp/model-layer/field-definition.js'
+import type {
+  AssociationConfig,
+  BelongsToAssociation,
+  HasManyAssociation
+} from '#src/mcp/models/association-config.js'
 export type { NormalizedListResponse, PaginationInfo } from '#src/mcp/data-layer/types.js'
 
 /** HTTP error response shape passed to convention error parsing */
