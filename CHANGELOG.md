@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.83.0] - 2026-06-06
+
+> **BREAKING.** Slims `BasePrompt` to its definitional core (the four static config maps plus the four production-used statics) and extracts the type vocabulary that describes a prompt into its own module. The rendering-helper statics that previously lived on the class were unreachable from any non-test code in the framework or its downstream consumers; they are deleted rather than kept around as a deprecated surface. `PromptContentGenerator` is unchanged and remains the canonical way to assemble a prompt's content from its config.
+
+### Added
+
+- **`src/mcp/prompts/prompt-definitions.ts`** — new module holding the prompt type vocabulary: `StrategyType`, `Section`, `FieldGroup`, `FieldValidation`, `PromptFieldDefinition`, `PromptContent`, `FormSchemaFieldDefinition`, `FormSchema`, `PromptClassLike`. Mirrors the role of `src/mcp/models/attribute-definition.ts` for models. `@mcp-rune/mcp-rune/prompts` continues to re-export these types from the same public names.
+
+### Changed
+
+- **`src/mcp/prompts/base-prompt.ts` reduced from ~600 lines to ~170** — keeps the four static config maps (`strategy`, `sections`, `fieldGroups`, `fieldDefinitions`) and the statics consumed by the strategies, registry, and downstream prompt subclasses: `getDefaults`, `getStrategyIntro`, `getSectionForGroup`, `generateTechnicalSummary`, `toFormSchema`. The type definitions move to `prompt-definitions.ts` and are re-imported here.
+- **All internal type imports re-routed** — strategies, generators, `PromptContentGenerator`, `prompt-registry.ts`, `model-layer/schema-derivation.ts`, and `apps/lib/{form-schema,detail-schema}.ts` now import the prompt types from `prompt-definitions.js`. Only the `BasePrompt` class itself is imported from `base-prompt.js`.
+
+### Removed
+
+- **Rendering-wrapper statics on `BasePrompt`** — `generateFlowDiagram(sections)`, `generateFlowDiagramFromConfig`, `getFlowDiagram`, `generateSectionDocumentation`, `generateStatefulGuidanceInstructions`, `generateAttributeReferenceFromConfig`, `generateFieldGroupsList`, `generateSummaryTemplate`, `generateEnumTable`, `generateHumanReadableSummary`, `_renderExtractionExamples`. All rendering is reached through `PromptContentGenerator` and the pure functions in `src/mcp/prompts/generators/`.
+- **Generic markdown helpers on `BasePrompt`** — `generateAttributeTable`, `generateOptionsTable`, `generateToolExample`, `generateValidationReminder`, `generateBulkGuidance`. These were untyped table formatters with no consumer outside the test suite.
+- **Field-introspection wrappers on `BasePrompt`** — `getSectionFields`, `getGroupFields`, `getSectionFieldNames`, `getSectionNumber`. Generators read the underlying `sections` / `fieldGroups` maps directly.
+- **`AttributeRow` and `OptionRow` types** — their only consumers (`generateAttributeTable` / `generateOptionsTable`) are gone.
+
+[0.83.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.82.0...v0.83.0
+
 ## [0.82.0] - 2026-06-06
 
 > **BREAKING.** Centralises the interfaces that define a model — `AttributeDefinition`, `AssociationConfig` (with its `BelongsToAssociation` / `HasManyAssociation` variants), `ApiConfig`, and the new symmetric `AttributesConfig` — in `src/mcp/models/`, so every other layer (`data-layer`, `model-layer`, `analysis-layer`, `prompts`, `apps`, `tools`) consumes a single source of truth. Previously `base-model.ts` imported `AssociationConfig` from the data layer, the duplicate `CompletionConfig` lived in both `base-convention.ts` and `base-prompt.ts`, and `FieldDefinition` (the resolved-schema output) sat inside `base-convention.ts` while being primarily consumed by `model-layer/schema-derivation.ts`. This release relocates each interface to its canonical home and deletes the duplicates with no back-compat shims.

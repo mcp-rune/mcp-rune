@@ -6,7 +6,7 @@
  * Pure function -- no dependency on BasePrompt or PromptContentGenerator.
  */
 
-import type { PromptClassLike } from '../base-prompt.js'
+import type { PromptClassLike } from '../prompt-definitions.js'
 
 export interface GuidanceContext {
   promptClass: PromptClassLike

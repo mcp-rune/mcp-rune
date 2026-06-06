@@ -24,7 +24,7 @@
 
 import * as logger from '#src/runtime/logger.js'
 
-import type { FieldGroup, PromptFieldDefinition, Section } from '../base-prompt.js'
+import type { FieldGroup, PromptFieldDefinition, Section } from '../prompt-definitions.js'
 import { BaseStrategy } from './base-strategy.js'
 import type { SummaryResult, ValidationResult } from './hybrid-strategy.js'
 import { HybridStrategy } from './hybrid-strategy.js'

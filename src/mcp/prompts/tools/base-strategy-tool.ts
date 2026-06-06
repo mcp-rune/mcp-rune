@@ -12,7 +12,7 @@
 import type { ToolAnnotations, ToolResult } from '#src/mcp/tools/base-tool.js'
 import { BaseTool } from '#src/mcp/tools/base-tool.js'
 
-import type { PromptClassLike, StrategyType } from '../base-prompt.js'
+import type { PromptClassLike, StrategyType } from '../prompt-definitions.js'
 import type { BaseStrategy } from '../strategies/base-strategy.js'
 import { getStrategy } from '../strategies/index.js'
 

@@ -7,22 +7,20 @@ export {
   getSchemaCacheStats
 } from './mcp/model-layer/schema-derivation.js'
 export type { CompletionConfig } from './mcp/models/attribute-definition.js'
+export { BasePrompt } from './mcp/prompts/base-prompt.js'
+export { createPromptCache } from './mcp/prompts/prompt-cache.js'
+export { PromptContentGenerator } from './mcp/prompts/prompt-content-generator.js'
 export type {
-  AttributeRow,
   FieldGroup,
   FieldValidation,
   FormSchemaFieldDefinition,
-  OptionRow,
   PromptClassLike,
   PromptContent,
   PromptFieldDefinition,
   FormSchema as PromptFormSchema,
   Section,
   StrategyType
-} from './mcp/prompts/base-prompt.js'
-export { BasePrompt } from './mcp/prompts/base-prompt.js'
-export { createPromptCache } from './mcp/prompts/prompt-cache.js'
-export { PromptContentGenerator } from './mcp/prompts/prompt-content-generator.js'
+} from './mcp/prompts/prompt-definitions.js'
 export {
   BasePromptRegistry,
   type PromptClass,
