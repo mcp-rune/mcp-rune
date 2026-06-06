@@ -34,6 +34,13 @@ import type { ModelsRegistry } from '#src/mcp/tools/base-tool.js'
 
 import { resolveDerivedFields as resolveDerivedFieldsImpl } from './derived-fields.js'
 import { collectValidFieldNames } from './field-names.js'
+import {
+  type DerivedSchema,
+  derivePromptSchema as derivePromptSchemaImpl,
+  type DeriveSchemaOptions,
+  type ModelConfig as SchemaModelConfig
+} from './schema-derivation.js'
+import { validateRequired, type ValidationResult } from './validators.js'
 
 export interface ModelLayer {
   /** The Model class this layer is bound to. */
@@ -61,6 +68,21 @@ export interface ModelLayer {
    *     and `<target_model>_links` for each `hasMany` association.
    */
   validFieldNames(): Set<string>
+
+  /**
+   * Derive the prompt schema (field definitions + groups) for the bound
+   * model. Wraps `derivePromptSchema` — internally memoized, so repeated
+   * calls with the same options are cheap.
+   */
+  promptSchema(options?: DeriveSchemaOptions): DerivedSchema
+
+  /**
+   * Check that every required attribute on the bound model is present in
+   * `params`. Returns `{ valid, missing: string[] }`. Required fields come
+   * from the model's `static required` (`BaseModel` derives this from
+   * `attributes`).
+   */
+  checkRequired(params: Record<string, unknown>): ValidationResult
 }
 
 /**
@@ -84,6 +106,16 @@ export function createModelLayer(model: ModelClassLike): ModelLayer {
     },
     validFieldNames() {
       return collectValidFieldNames(model)
+    },
+    promptSchema(options) {
+      // ModelClassLike is the loose schema-validator type; the bound model is
+      // really a ModelConfig from the registry. Cast at the layer boundary so
+      // schema derivation sees the fields it needs (associations, required).
+      return derivePromptSchemaImpl(model as unknown as SchemaModelConfig, options)
+    },
+    checkRequired(params) {
+      const required = (model as ModelClassLike & { required?: readonly string[] }).required ?? []
+      return validateRequired(params, [...required])
     }
   }
 }

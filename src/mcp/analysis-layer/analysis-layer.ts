@@ -36,9 +36,15 @@ import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 import type { ModelClassLike } from '#src/mcp/schema/types.js'
 import type { ModelsRegistry } from '#src/mcp/tools/base-tool.js'
 
-import { type Edge, extractEdgesFromRecord, type ExtractOptions } from './edge-extraction.js'
+import {
+  buildEmbeddingText as buildEmbeddingTextImpl,
+  type Edge,
+  type EmbeddingTextOptions,
+  extractEdgesFromRecord,
+  type ExtractOptions
+} from './edge-extraction.js'
 
-export type { Edge, ExtractOptions }
+export type { Edge, EmbeddingTextOptions, ExtractOptions }
 
 export interface AnalysisLayer {
   /** The Model class this layer is bound to. */
@@ -54,6 +60,14 @@ export interface AnalysisLayer {
    * `<singular>_ids`.
    */
   extractEdges(record: Record<string, unknown>, options?: ExtractOptions): Edge[]
+
+  /**
+   * Deterministically textify a record for embedding: concatenates
+   * `<field>: <value>` for each string-valued attribute, sorted by field
+   * name, with `id` and `*_id` fields skipped. Truncates at
+   * `options.maxLength` (default 512).
+   */
+  buildEmbeddingText(record: Record<string, unknown>, options?: EmbeddingTextOptions): string
 }
 
 export interface AnalysisLayerContext {
@@ -89,6 +103,9 @@ export function createAnalysisLayer(ctx: AnalysisLayerContext): AnalysisLayer {
         ctx.modelName,
         options
       )
+    },
+    buildEmbeddingText(record, options) {
+      return buildEmbeddingTextImpl(record, options)
     }
   }
 }
