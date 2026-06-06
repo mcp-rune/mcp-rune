@@ -1,5 +1,8 @@
-import { buildEmbeddingText, extractEdgesFromRecord } from '../../../src/core/edge-extraction.js'
-import type { AssociationConfig } from '../../../src/mcp/api-conventions/base-convention.js'
+import type { AssociationConfig } from '../../../../src/mcp/api-conventions/base-convention.js'
+import {
+  buildEmbeddingText,
+  extractEdgesFromRecord
+} from '../../../../src/mcp/models/edge-extraction.js'
 
 describe('lib/core/edge-extraction', () => {
   describe('extractEdgesFromRecord', () => {

@@ -1,5 +1,8 @@
-import { conceptTouchStrategy } from '../../../../src/core/summary-strategies/concept-touch.js'
-import type { SummaryEdge, SummaryInput } from '../../../../src/core/summary-strategies/types.js'
+import { conceptTouchStrategy } from '../../../../../src/mcp/models/summary-strategies/concept-touch.js'
+import type {
+  SummaryEdge,
+  SummaryInput
+} from '../../../../../src/mcp/models/summary-strategies/types.js'
 
 const registryWithReading = {
   knowledge: {

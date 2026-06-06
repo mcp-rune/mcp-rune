@@ -1,10 +1,10 @@
-import { distributionStrategy } from '../../../../src/core/summary-strategies/distribution.js'
+import { distributionStrategy } from '../../../../../src/mcp/models/summary-strategies/distribution.js'
 import {
   BUILT_IN_SUMMARY_STRATEGIES,
   defaultSummaryStrategyRegistry,
   SummaryStrategyRegistry
-} from '../../../../src/core/summary-strategies/index.js'
-import type { SummaryStrategy } from '../../../../src/core/summary-strategies/types.js'
+} from '../../../../../src/mcp/models/summary-strategies/index.js'
+import type { SummaryStrategy } from '../../../../../src/mcp/models/summary-strategies/types.js'
 
 const stubStrategy = (name: string, description = 'stub'): SummaryStrategy => ({
   name,

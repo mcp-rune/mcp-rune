@@ -1,5 +1,5 @@
-import { semanticClusterStrategy } from '../../../../src/core/summary-strategies/semantic-cluster.js'
-import type { SummaryInput } from '../../../../src/core/summary-strategies/types.js'
+import { semanticClusterStrategy } from '../../../../../src/mcp/models/summary-strategies/semantic-cluster.js'
+import type { SummaryInput } from '../../../../../src/mcp/models/summary-strategies/types.js'
 
 function unitVec(angle: number): Float32Array {
   const v = new Float32Array(384)

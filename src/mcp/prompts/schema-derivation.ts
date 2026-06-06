@@ -12,8 +12,8 @@
  * - Memoization ensures static schemas are computed only once
  */
 
-import type { AttributeDefinition } from '#src/core/base-model.js'
-import { getKind } from '#src/core/kind-metadata.js'
+import type { AttributeDefinition } from '#src/mcp/models/base-model.js'
+import { getKind } from '#src/mcp/models/kind-metadata.js'
 
 import type {
   AssociationConfig,

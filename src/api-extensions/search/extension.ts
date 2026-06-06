@@ -14,9 +14,9 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
-import { resolveDerivedFields } from '#src/core/derived-fields.js'
 import { pickFields } from '#src/core/helpers.js'
 import type { ApiExtension } from '#src/mcp/api-extensions/types.js'
+import { resolveDerivedFields } from '#src/mcp/models/derived-fields.js'
 import type { ModelConfig, ToolAnnotations, ToolResult } from '#src/mcp/tools/base-tool.js'
 import { BaseTool } from '#src/mcp/tools/base-tool.js'
 import type { FilterSchema } from '#src/mcp/tools/validators.js'

@@ -3,12 +3,12 @@ import { z } from 'zod'
 
 import type { SearchService } from '#src/api-extensions/search/index.js'
 import { createSearchService, getSearchConfig } from '#src/api-extensions/search/index.js'
-import { extractEdgesFromRecord, type HopFollow } from '#src/core/edge-extraction.js'
 import { pickFields } from '#src/core/helpers.js'
-import { expandHops } from '#src/core/multi-hop-fetch.js'
-import type { SummaryEdge, SummaryInput } from '#src/core/summary-strategies/index.js'
-import { defaultSummaryStrategyRegistry } from '#src/core/summary-strategies/index.js'
 import { defaultConvention } from '#src/mcp/api-conventions/index.js'
+import { extractEdgesFromRecord, type HopFollow } from '#src/mcp/models/edge-extraction.js'
+import { expandHops } from '#src/mcp/models/multi-hop-fetch.js'
+import type { SummaryEdge, SummaryInput } from '#src/mcp/models/summary-strategies/index.js'
+import { defaultSummaryStrategyRegistry } from '#src/mcp/models/summary-strategies/index.js'
 import { buildCollectionPath } from '#src/mcp/services/compound-id.js'
 import {
   getEdgesForSources,

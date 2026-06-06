@@ -13,8 +13,8 @@
  * consume — see `formatters.runtime.js` for the descriptor → format mapping.
  */
 
-import type { KindDescriptor, KindOpts } from '#src/core/kind-metadata.js'
-import { getKind } from '#src/core/kind-metadata.js'
+import type { KindDescriptor, KindOpts } from '#src/mcp/models/kind-metadata.js'
+import { getKind } from '#src/mcp/models/kind-metadata.js'
 
 function humanize(str: string): string {
   return str.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())

@@ -9,7 +9,7 @@
 
 import type { Pool } from 'pg'
 
-import type { Edge } from '#src/core/edge-extraction.js'
+import type { Edge } from '#src/mcp/models/edge-extraction.js'
 
 export interface StoreEdgesParams {
   analysisId: string

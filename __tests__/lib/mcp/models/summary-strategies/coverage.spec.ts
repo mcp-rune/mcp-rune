@@ -1,5 +1,5 @@
-import { coverageStrategy } from '../../../../src/core/summary-strategies/coverage.js'
-import type { SummaryInput } from '../../../../src/core/summary-strategies/types.js'
+import { coverageStrategy } from '../../../../../src/mcp/models/summary-strategies/coverage.js'
+import type { SummaryInput } from '../../../../../src/mcp/models/summary-strategies/types.js'
 
 function makeInput(overrides: Partial<SummaryInput>): SummaryInput {
   return {

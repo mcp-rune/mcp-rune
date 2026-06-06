@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { getKind, UnknownKindError } from '../../../src/core/kind-metadata.js'
+import { closestMatch, levenshtein } from '../../../../src/core/suggestions.js'
+import { getKind, UnknownKindError } from '../../../../src/mcp/models/kind-metadata.js'
 import {
   formatReport,
   SchemaValidationError,
@@ -9,8 +10,7 @@ import {
   validateFormClass,
   validatePromptClass,
   validateRegistries
-} from '../../../src/core/schema-validation.js'
-import { closestMatch, levenshtein } from '../../../src/core/suggestions.js'
+} from '../../../../src/mcp/models/schema-validation.js'
 
 // ─── suggestions ───────────────────────────────────────────────────────────
 

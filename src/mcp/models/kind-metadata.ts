@@ -81,7 +81,7 @@ export function registerKind(
  *
  * If nothing resolves, `getKind` throws `UnknownKindError`. Servers should
  * call `validateRegistries({ models, forms, prompts })` from
- * `#src/core/schema-validation.js` at boot — that catches every model-driven
+ * `#src/mcp/models/schema-validation.js` at boot — that catches every model-driven
  * call site first. The throw exists to make any code path that bypasses the
  * boot validator (custom apps, tests with hand-built attribute configs) fail
  * loudly instead of degrading to a silent text input.

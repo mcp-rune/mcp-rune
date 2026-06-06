@@ -1,5 +1,5 @@
-import { ruleViolationStrategy } from '../../../../src/core/summary-strategies/rule-violation.js'
-import type { SummaryInput } from '../../../../src/core/summary-strategies/types.js'
+import { ruleViolationStrategy } from '../../../../../src/mcp/models/summary-strategies/rule-violation.js'
+import type { SummaryInput } from '../../../../../src/mcp/models/summary-strategies/types.js'
 
 const completedNeedRating = {
   name: 'completed-books-need-rating',

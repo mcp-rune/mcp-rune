@@ -1,6 +1,6 @@
 {
   "name": "@mcp-rune/mcp-rune",
-  "version": "0.73.9",
+  "version": "0.74.0",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "restricted"
@@ -29,6 +29,10 @@
     "./apps": {
       "types": "./dist/apps.d.ts",
       "import": "./dist/apps.js"
+    },
+    "./models": {
+      "types": "./dist/models.d.ts",
+      "import": "./dist/models.js"
     },
     "./apps/formatters": {
       "types": "./dist/mcp/apps/shared/formatters.d.ts",

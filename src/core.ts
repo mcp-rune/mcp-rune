@@ -1,12 +1,6 @@
-// mcp-rune/core — config, env, helpers, validators, base model, api-client primitive
+// mcp-rune/core — framework primitives: config, env, helpers, api-client,
+// data-layer seam. Model-domain primitives live under `./models` (was here).
 export type { ApiClient, RequestOptions, SearchApiClient } from './core/api-client.js'
-export type {
-  ApiConfig,
-  AttributeDefinition,
-  EndpointOverrides,
-  ModelData
-} from './core/base-model.js'
-export { BaseModel } from './core/base-model.js'
 export type { Config, ConfigDescriptor, ConfigSchema } from './core/config.js'
 export { loadConfig } from './core/config.js'
 export type {
@@ -22,8 +16,6 @@ export {
   InMemoryDataLayer,
   loadFixturesFromJson
 } from './core/data-layer-stub.js'
-export type { ModelWithDerivedAttrs } from './core/derived-fields.js'
-export { resolveDerivedFields } from './core/derived-fields.js'
 export { boolEnv, intEnv, optionalEnv, requireEnv } from './core/env.js'
 export { hintForError } from './core/error-hints.js'
 export {
@@ -34,35 +26,9 @@ export {
   sanitizeResponseData,
   truncateString
 } from './core/helpers.js'
-export type { KindDescriptor, KindOpts } from './core/kind-metadata.js'
-export { getKind, KIND_REGISTRY, registerKind, UnknownKindError } from './core/kind-metadata.js'
 export { readPackageInfo } from './core/package-info.js'
-export type {
-  Issue,
-  IssueLevel,
-  IssueScope,
-  RegistriesInput,
-  ValidationReport
-} from './core/schema-validation.js'
-export {
-  formatReport,
-  SchemaValidationError,
-  validateAssociation,
-  validateAttributeDefinition,
-  validateFormClass,
-  validateModelClass,
-  validatePromptClass,
-  validateRegistries
-} from './core/schema-validation.js'
 export { StartupTracker } from './core/startup-tracker.js'
 export { closestMatch, levenshtein } from './core/suggestions.js'
-export {
-  validateEnum,
-  validateModel,
-  validatePositiveInt,
-  validateRequired,
-  validateUrl
-} from './core/validators.js'
 export type {
   AssociationConfig,
   BelongsToAssociation,
