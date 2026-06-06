@@ -46,7 +46,7 @@ import type { FieldGroup, PromptFieldDefinition } from '#src/mcp/prompts/base-pr
  * Aligned with `typeof BaseModel` so both inline configs and class
  * constructors are accepted without a cast — `derivePromptSchema(Book, …)`.
  */
-interface ModelConfig {
+export interface ModelConfig {
   attributes?: Record<string, AttributeDefinition>
   required?: string[]
   associations?: AssociationConfig
@@ -64,14 +64,14 @@ interface DeriveFieldOptions {
   apiConvention?: BaseConvention
 }
 
-interface DeriveSchemaOptions extends DeriveFieldOptions {
+export interface DeriveSchemaOptions extends DeriveFieldOptions {
   fieldOverrides?: Record<string, Partial<PromptFieldDefinition>>
   promptFields?: Record<string, PromptFieldDefinition>
   fieldGroups?: Record<string, FieldGroup>
   excludeFields?: string[]
 }
 
-interface DerivedSchema {
+export interface DerivedSchema {
   fieldDefinitions: Record<string, PromptFieldDefinition>
   fieldGroups: Record<string, FieldGroup>
 }
