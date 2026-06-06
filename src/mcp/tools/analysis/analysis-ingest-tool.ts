@@ -6,7 +6,6 @@ import type { HopFollow } from '#src/mcp/analysis-layer/edge-extraction.js'
 import { expandHops } from '#src/mcp/analysis-layer/multi-hop-fetch.js'
 import type { SummaryEdge, SummaryInput } from '#src/mcp/analysis-layer/summary-strategies/index.js'
 import { defaultSummaryStrategyRegistry } from '#src/mcp/analysis-layer/summary-strategies/index.js'
-import { defaultConvention } from '#src/mcp/data-layer/api-conventions/index.js'
 import type { SearchService } from '#src/mcp/data-layer/api-extensions/search/index.js'
 import {
   createSearchService,
@@ -398,7 +397,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     let totalPages: number | null
 
     // Resolve convention for extraction and flattening
-    const convention = modelConfig.api?.convention ?? defaultConvention
+    const convention = modelConfig.api?.convention ?? dataLayer.defaultConvention
 
     // Use SearchService if model supports query search and filters provided
     const hasFullText = getSearchConfig(modelConfig)?.query
@@ -525,7 +524,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     }
 
     // Resolve convention once for all pages
-    const convention = modelConfig.api?.convention ?? defaultConvention
+    const convention = modelConfig.api?.convention ?? dataLayer.defaultConvention
 
     // Use SearchService if model supports query search and filters provided
     const hasFullText = getSearchConfig(modelConfig)?.query
@@ -735,7 +734,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     // Resolve convention from child model (preferred) or parent model
     const childConfig = this.models[childModelName]
     const convention =
-      childConfig?.api?.convention ?? parentConfig.api?.convention ?? defaultConvention
+      childConfig?.api?.convention ?? parentConfig.api?.convention ?? dataLayer.defaultConvention
 
     const tasks = parentIds.map((parentId) => async () => {
       try {

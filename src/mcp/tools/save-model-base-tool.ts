@@ -74,7 +74,8 @@ export class SaveModelBaseTool extends BaseTool {
       return this.dataLayer.buildPayload(model, modelConfig, attrs)
     }
 
-    const convention = modelConfig?.api?.convention ?? defaultConvention
+    const convention =
+      modelConfig?.api?.convention ?? this.dataLayer?.defaultConvention ?? defaultConvention
     let finalAttrs = attrs
     if (modelConfig?.associations?.belongsTo) {
       finalAttrs = convention.resolveAssociationValues(

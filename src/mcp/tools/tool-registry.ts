@@ -48,7 +48,7 @@ import type {
   ApiExtensionMap,
   ModelServiceMixin
 } from '#src/mcp/data-layer/api-extensions/types.js'
-import type { DataLayer, DataLayerFactory } from '#src/mcp/data-layer/data-layer.js'
+import type { BaseConvention, DataLayer, DataLayerFactory } from '#src/mcp/data-layer/data-layer.js'
 import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
 import {
   createModelLayerFactory,
@@ -165,6 +165,16 @@ export interface ToolRegistryConfig {
   namespace?: string
 
   /**
+   * Server-wide wire-format default forwarded into
+   * `DataLayerFactoryContext.defaultConvention`. The default adapter
+   * (`ModelService`) applies it to any model that does not declare
+   * `api.convention`. Falls back to `jsonApiConvention` when omitted.
+   * Custom `dataLayer` factories may honor or ignore this (same contract
+   * as `namespace`).
+   */
+  defaultConvention?: BaseConvention
+
+  /**
    * Whether vector storage (pgvector) is available. Tools with
    * `static requiresVectorStorage = true` are skipped when false.
    *
@@ -214,6 +224,7 @@ export class ToolRegistry {
   private _createApiClient: ApiClientFactory | undefined
   private _dataLayerFactory: DataLayerFactory
   private _namespace: string | undefined
+  private _defaultConvention: BaseConvention | undefined
   private _vectorStorageEnabled: boolean
   private _interceptors: ToolInterceptor[]
   private _enabledTools: Set<string> | null = null
@@ -233,6 +244,7 @@ export class ToolRegistry {
     this._domainRegistry = config.domainRegistry
     this._createApiClient = config.createApiClient
     this._namespace = config.namespace
+    this._defaultConvention = config.defaultConvention
     this._vectorStorageEnabled = config.vectorStorageEnabled ?? false
     this._interceptors = config.interceptors ?? []
     this.serverContext = (config.serverContext as Record<string, unknown>) ?? {}
@@ -253,14 +265,20 @@ export class ToolRegistry {
     const mixins = this._modelServiceMixins
     this._dataLayerFactory =
       config.dataLayer ??
-      (({ apiClient, models, namespace, logger: log }): DataLayer => {
+      (({ apiClient, models, namespace, logger: log, defaultConvention }): DataLayer => {
         if (!apiClient) {
           throw new Error(
             'Default DataLayer factory requires an apiClient. Provide one via createApiClient ' +
               'or supply a custom `dataLayer` factory that does not depend on HTTP.'
           )
         }
-        const service = new ModelService({ apiClient, models, namespace, logger: log })
+        const service = new ModelService({
+          apiClient,
+          models,
+          namespace,
+          defaultConvention,
+          logger: log
+        })
         for (const mixin of mixins) {
           Object.assign(service, mixin(service))
         }
@@ -477,6 +495,7 @@ export class ToolRegistry {
       apiClient,
       models: this._models,
       namespace: this._namespace,
+      defaultConvention: this._defaultConvention,
       logger: this._logger
     })
     const analysisLayer = createAnalysisLayerFactory(this._models, dataLayer)

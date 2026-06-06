@@ -19,7 +19,7 @@ import type { AssociationConfig } from '#src/mcp/models/association-config.js'
 
 import type { ModelConfig, ModelsRegistry, ToolLogger } from '../../tools/base-tool.js'
 import type { BaseConvention } from '../api-conventions/base-convention.js'
-import { defaultConvention } from '../api-conventions/index.js'
+import { defaultConvention, jsonApiConvention } from '../api-conventions/index.js'
 import type { CrudAction, EndpointResolverConfig } from './endpoint-resolver.js'
 import { EndpointResolver, MissingParentError } from './endpoint-resolver.js'
 
@@ -33,6 +33,11 @@ export interface ModelServiceConfig {
   models: ModelsRegistry
   /** Server-wide namespace for endpoint resolution. */
   namespace?: string
+  /**
+   * Server-wide wire-format default applied to models that don't declare
+   * `api.convention`. Falls back to `jsonApiConvention` when omitted.
+   */
+  defaultConvention?: BaseConvention
   /** Custom endpoint resolver (optional — uses default if omitted). */
   endpointResolver?: EndpointResolver
   logger?: ToolLogger
@@ -97,11 +102,13 @@ export class ModelService implements DataLayer {
   private _models: ModelsRegistry
   private _resolver: EndpointResolver
   private _logger?: ToolLogger
+  readonly defaultConvention: BaseConvention
 
   constructor(config: ModelServiceConfig) {
     this._apiClient = config.apiClient
     this._models = config.models
     this._logger = config.logger
+    this.defaultConvention = config.defaultConvention ?? jsonApiConvention
     this._resolver =
       config.endpointResolver ??
       new EndpointResolver(
@@ -433,7 +440,7 @@ export class ModelService implements DataLayer {
 
   /** Get the convention for a model. */
   private _getConvention(modelConfig: ModelConfig): BaseConvention {
-    return modelConfig.api?.convention ?? defaultConvention
+    return modelConfig.api?.convention ?? this.defaultConvention
   }
 
   /**

@@ -25,7 +25,6 @@
  * surface; SearchService only handles the search-specific dispatch paths.
  */
 
-import { defaultConvention } from '#src/mcp/data-layer/api-conventions/index.js'
 import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 
 import { getSearchConfig } from './capabilities.js'
@@ -260,7 +259,7 @@ export class SearchService {
 
     const data = await this._dataLayer.dispatch('GET', ModelClass.api.endpoint, undefined, params)
 
-    const convention = ModelClass.api?.convention ?? defaultConvention
+    const convention = ModelClass.api?.convention ?? this._dataLayer.defaultConvention
     return convention.normalizeListResponse(data, { page, perPage }) as SearchResult
   }
 

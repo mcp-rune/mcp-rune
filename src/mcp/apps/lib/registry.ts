@@ -29,7 +29,7 @@ import {
   createSearchService,
   SearchEnabledDataLayer
 } from '#src/mcp/data-layer/api-extensions/search/index.js'
-import type { DataLayer, DataLayerFactory } from '#src/mcp/data-layer/data-layer.js'
+import type { BaseConvention, DataLayer, DataLayerFactory } from '#src/mcp/data-layer/data-layer.js'
 import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
 import {
   createModelLayerFactory,
@@ -124,6 +124,15 @@ interface RegistryOptions {
    * default `ModelService`.
    */
   dataLayer?: DataLayerFactory
+  /**
+   * Server-wide wire-format default forwarded into
+   * `DataLayerFactoryContext.defaultConvention`. Mirrors the option on
+   * `ToolRegistry`; the default `ModelService` adapter applies it to any
+   * model that does not declare `api.convention`. Falls back to
+   * `jsonApiConvention` when omitted. Custom `dataLayer` factories may
+   * honor or ignore this.
+   */
+  defaultConvention?: BaseConvention
   searchGroups?: Record<string, SearchGroup>
   defaultShaper?: SearchRequestShaper
   /**
@@ -167,6 +176,7 @@ export class AppRegistry {
   private _createApiClient?: (token: string, options: { apiUrl: string }) => ApiClient
   private _models: ModelsRegistry
   private _dataLayerFactory: DataLayerFactory
+  private _defaultConvention: BaseConvention | undefined
   private _modelLayer: ModelLayerFactory
   private _searchGroups: Record<string, SearchGroup>
   private _defaultShaper?: SearchRequestShaper
@@ -182,6 +192,7 @@ export class AppRegistry {
       createApiClient,
       models,
       dataLayer,
+      defaultConvention,
       searchGroups = {},
       defaultShaper,
       headerIcon,
@@ -192,6 +203,7 @@ export class AppRegistry {
     this._apiUrl = apiUrl
     this._createApiClient = createApiClient
     this._models = models ?? {}
+    this._defaultConvention = defaultConvention
     this._searchGroups = searchGroups
     this._defaultShaper = defaultShaper
     this._headerIcon = headerIcon
@@ -218,8 +230,13 @@ export class AppRegistry {
     const modelsRef = this._models
     this._dataLayerFactory =
       dataLayer ??
-      (({ apiClient, models: m, logger: log }): DataLayer =>
-        new ModelService({ apiClient: apiClient!, models: m ?? modelsRef, logger: log }))
+      (({ apiClient, models: m, logger: log, defaultConvention: dc }): DataLayer =>
+        new ModelService({
+          apiClient: apiClient!,
+          models: m ?? modelsRef,
+          defaultConvention: dc,
+          logger: log
+        }))
 
     // Per-model-bound ModelLayer factory. Stateless w.r.t. auth and shared
     // across every app invocation — the AnalysisLayer counterpart is built
@@ -328,6 +345,7 @@ export class AppRegistry {
               const baseDataLayer = this._dataLayerFactory({
                 apiClient,
                 models: this._models,
+                defaultConvention: this._defaultConvention,
                 logger
               })
               const searchService = createSearchService(baseDataLayer, {

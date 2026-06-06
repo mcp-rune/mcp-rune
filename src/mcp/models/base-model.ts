@@ -9,8 +9,6 @@
  * 2. Instantiated with record data: new BookModel(record).displayValue
  */
 
-import { jsonApiConvention } from '#src/mcp/data-layer/api-conventions/index.js'
-
 import type { ApiConfig } from './api-config.js'
 import type { AssociationConfig } from './association-config.js'
 import type { AttributesConfig } from './attribute-definition.js'
@@ -27,7 +25,7 @@ export class BaseModel {
   static modelName?: string
   static attributes: AttributesConfig = {}
   static description: string = ''
-  static api: ApiConfig = { endpoint: '', convention: jsonApiConvention }
+  static api: ApiConfig = { endpoint: '' }
   static associations: AssociationConfig = {}
   /**
    * Opt-in extension configs, keyed by extension name.

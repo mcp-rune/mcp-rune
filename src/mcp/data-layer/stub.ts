@@ -33,7 +33,9 @@ import { readFileSync } from 'node:fs'
 import { EndpointResolver } from '#src/mcp/data-layer/model-service/endpoint-resolver.js'
 
 import type { ApiClient, RequestOptions } from '../../core/api-client.js'
+import { jsonApiConvention } from './api-conventions/index.js'
 import type {
+  BaseConvention,
   DataLayer,
   ModelConfig,
   ModelRequestOptions,
@@ -57,6 +59,13 @@ export interface InMemoryDataLayerOptions {
   fixtures?: StubFixtures
   /** ID generator. Defaults to a monotonically increasing counter per model. */
   idGenerator?: (model: string) => string | number
+  /**
+   * Wire-format default reported via `defaultConvention`. The stub itself
+   * does not use a convention internally; this only satisfies the
+   * `DataLayer` contract so projection-layer consumers that read
+   * `dataLayer.defaultConvention` see a non-null value.
+   */
+  defaultConvention?: BaseConvention
 }
 
 /**
@@ -67,14 +76,16 @@ export interface InMemoryDataLayerOptions {
 export class InMemoryDataLayer implements DataLayer {
   readonly models: ModelsRegistry
   readonly endpointResolver: EndpointResolver
+  readonly defaultConvention: BaseConvention
 
   private _store: Map<string, Map<string, StubRecord>>
   private _counters: Map<string, number> = new Map()
   private _idGenerator: (model: string) => string | number
 
-  constructor({ models, fixtures = {}, idGenerator }: InMemoryDataLayerOptions) {
+  constructor({ models, fixtures = {}, idGenerator, defaultConvention }: InMemoryDataLayerOptions) {
     this.models = models
     this.endpointResolver = new EndpointResolver()
+    this.defaultConvention = defaultConvention ?? jsonApiConvention
     this._store = new Map()
     for (const [model, recordsByID] of Object.entries(fixtures)) {
       const bucket = new Map<string, StubRecord>()

@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.85.0] - 2026-06-07
+
+> **BREAKING (adapter authors only).** The `DataLayer` interface gains a required `readonly defaultConvention: BaseConvention` property. Any custom adapter implementing `DataLayer` must now expose this field. The bundled adapters (`ModelService`, `InMemoryDataLayer`, `SearchEnabledDataLayer`) are updated. No changes required for code that only _consumes_ a `DataLayer`.
+
+Moves the default wire-format convention from the model layer to the data layer. The model layer is now backend-agnostic — `BaseModel` no longer imports from `data-layer/api-conventions/`. Deployers can override the server-wide default convention via a single config option on `ToolRegistry`/`AppRegistry`, mirroring the existing `namespace` precedent.
+
+### Added
+
+- **`defaultConvention?` config option on `ToolRegistry` and `AppRegistry`.** Forwarded into `DataLayerFactoryContext.defaultConvention` and consumed by the default `ModelService` adapter when a model does not declare `api.convention`. Falls back to `jsonApiConvention` when omitted. Per-model `api.convention` always wins.
+- **`readonly defaultConvention: BaseConvention` on the `DataLayer` interface.** Always non-null. Read by data-layer extensions and projection-layer consumers (`analysis-ingest-tool`, `search-service`) that need a fallback when a model lacks `api.convention`. Replaces direct imports of the module-level `defaultConvention` constant in those call sites.
+- **`AGENTS.md` — "Seams must be self-documenting" section.** Codifies the rule that any deployer-facing knob added to a public seam must be visible end-to-end from the seam file (Registry config → FactoryContext → Adapter constructor → instance field), with `namespace` / `defaultConvention` as the working precedent.
+
+### Changed
+
+- **`BaseModel.api` no longer sets `convention: jsonApiConvention`.** Default is now `{ endpoint: '' }`. The model layer no longer imports from `src/mcp/data-layer/api-conventions/`. Every consumer already used the data-layer fallback, so behavior is unchanged for all existing deployers.
+- **Direct module-level `defaultConvention` reads migrated to `dataLayer.defaultConvention`** in `analysis-ingest-tool.ts` (3 sites) and `search-service.ts`. Unbound-path consumers in `base-tool.ts` and `save-model-base-tool.ts` use `this.dataLayer?.defaultConvention ?? defaultConvention` — they honor a deployer's override when a `DataLayer` is bound and keep the framework baseline for tool-definition introspection paths.
+
+[0.85.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.84.1...v0.85.0
+
 ## [0.84.1] - 2026-06-07
 
 Patch fixing a class-field shadowing bug introduced when `BasePrompt` was slimmed in v0.83.0.
