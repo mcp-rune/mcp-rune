@@ -364,7 +364,7 @@ export class BaseTool {
    * Delegates to convention for error extraction, then joins with semicolons.
    */
   private formatErrorResponse(response: { status?: number; data?: unknown }): string {
-    const convention = defaultConvention
+    const convention = this.dataLayer?.defaultConvention ?? defaultConvention
     const errors = convention.parseErrorResponse(response)
     const message =
       errors.length > 0 ? this.truncateString(errors.join('; '), 5000) : 'Unknown error'

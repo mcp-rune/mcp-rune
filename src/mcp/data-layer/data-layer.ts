@@ -15,6 +15,13 @@
  * surface and slot in via the `dataLayer` factory option on
  * `ToolRegistry` and `AppRegistry`.
  *
+ * Wire-format customization (the common case — keeping the default
+ * adapter but talking to a non-JSON:API backend) does not require a
+ * custom factory. Set `defaultConvention` on `ToolRegistry` or
+ * `AppRegistry`; it is forwarded into `DataLayerFactoryContext` and
+ * consumed by `ModelService`. Per-model `api.convention` always wins
+ * over this server-wide default.
+ *
  * Design constraints:
  *   - Returns raw API responses; no MCP framing here.
  *   - Throws domain errors; tools/apps catch and format for MCP.
@@ -23,6 +30,7 @@
  *     reasonably implement. Escape hatches live behind `dispatch`.
  */
 
+import type { BaseConvention } from '#src/mcp/data-layer/api-conventions/index.js'
 import type { EndpointResolver } from '#src/mcp/data-layer/model-service/endpoint-resolver.js'
 import type {
   ModelRequestOptions,
@@ -37,6 +45,7 @@ import type { ModelConfig, ModelsRegistry, ToolLogger } from '#src/mcp/tools/bas
 import type { ApiClient, RequestOptions } from '../../core/api-client.js'
 
 export type {
+  BaseConvention,
   EndpointResolver,
   ModelConfig,
   ModelRequestOptions,
@@ -195,6 +204,13 @@ export interface DataLayer {
   readonly models: ModelsRegistry
 
   /**
+   * The wire-format default this adapter resolved at construction. Always
+   * non-null. Read by data-layer extensions and projection-layer consumers
+   * that need a fallback when a model lacks `api.convention`.
+   */
+  readonly defaultConvention: BaseConvention
+
+  /**
    * Underlying endpoint resolver.
    *
    * Exposed for ApiExtensions (custom-actions) that compose
@@ -224,6 +240,14 @@ export interface DataLayerFactoryContext {
   apiClient?: ApiClient
   models: ModelsRegistry
   namespace?: string
+  /**
+   * Server-wide wire-format default passed to the default `ModelService`
+   * adapter when a model does not declare `api.convention`. Set via
+   * `ToolRegistry`/`AppRegistry`'s `defaultConvention` config option.
+   * Falls back to `jsonApiConvention` when omitted. Custom `dataLayer`
+   * factories may honor or ignore this (same contract as `namespace`).
+   */
+  defaultConvention?: BaseConvention
   logger?: ToolLogger
 }
 

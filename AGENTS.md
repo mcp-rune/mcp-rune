@@ -41,6 +41,17 @@ The three layers sit at the same depth under `src/mcp/`, separated from the **de
 
 When introducing a new domain seam later (e.g. an auth-layer, a workflow-layer), the same dichotomy applies: a sibling top-level folder for the layer; the declarative side stays in its own folder.
 
+## Seams must be self-documenting
+
+When you add a deployer-facing capability to a public seam (a new `DataLayerFactoryContext` option, a `ToolRegistry`/`AppRegistry` config field, an analogous knob on a future layer), the customization path must be visible _from the seam file itself_, end-to-end. A field added only to an internal config interface, or only to an adapter constructor, is not "exposed" — a reader walking `src/mcp/data-layer/data-layer.ts` (or the equivalent seam file) must be able to see how a deployer would set it without chasing references into private files.
+
+Concrete rules:
+
+- **Trace the path end-to-end before declaring the seam complete.** Every hop must be readable at its file: `Registry config → FactoryContext → Adapter constructor → instance field`.
+- **Mirror an existing precedent.** When extending a seam, match the store-and-forward pattern, JSDoc tone, and field placement of a sibling option (e.g. `namespace` was the template for `defaultConvention`) so a reader pattern-matches one to the other.
+- **Update the file-level doc.** Seam files carry prose at the top describing the customization story; a new knob means a new sentence there, not just a JSDoc on the field.
+- **A "how would someone use this?" question is a real gap, not a documentation request.** If you can't answer it by pointing at the seam file alone, add the missing entry point — don't paper over with an external doc.
+
 ## App tool naming
 
 Naming rules for new MCP tools and apps (the `<ui-verb>_model_app` / action-verb dichotomy) live in the local `tool-naming` skill at `.claude/skills/tool-naming/SKILL.md`. Invoke it explicitly with `/tool-naming` when you're about to name a NEW tool or app. It is opt-in — it does not auto-fire on every tool-touching edit, only when you ask for naming guidance.

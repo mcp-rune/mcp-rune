@@ -27,6 +27,7 @@
 
 import type { ApiClient, RequestOptions } from '#src/core/api-client.js'
 import type {
+  BaseConvention,
   DataLayer,
   EndpointResolver,
   ModelConfig,
@@ -55,6 +56,10 @@ export class SearchEnabledDataLayer implements DataLayer {
 
   get endpointResolver(): EndpointResolver {
     return this._base.endpointResolver
+  }
+
+  get defaultConvention(): BaseConvention {
+    return this._base.defaultConvention
   }
 
   /** Direct access to the wrapped adapter (for tests and inspection). */
