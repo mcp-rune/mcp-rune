@@ -1,12 +1,12 @@
 # Service Layer Guide
 
-This guide covers the two services that sit between MCP tools and the API: `ModelService` for CRUD operations, and `SearchService` for search, lookup, and listing. Both compose lower-level primitives (EndpointResolver, Convention, SearchAdapter) into clean interfaces.
+This guide covers the two services that sit between MCP tools and the API: `ModelService` for CRUD operations, and `SearchService` for search, lookup, and listing. Both compose lower-level primitives (EndpointResolver, Convention, SearchRequestShaper) into clean interfaces.
 
 > **`ModelService` is the default adapter for the `DataLayer` seam introduced in v0.49.0.** The projection layer (tools, prompts, apps) talks to a `DataLayer` interface (`@mcp-rune/mcp-rune/core`); `ModelService implements DataLayer`. Integrators can swap in an alternative adapter — in-memory stub, third-party library wrapper — via the `dataLayer` factory option on `ToolRegistry` and `AppRegistry`. The CRUD surface and method signatures are unchanged; this guide describes the default adapter's behavior. See the changelog entry for v0.49.0 for migration notes (`BaseTool.apiClient` removed; tools now consume `this.dataLayer`).
 >
 > **`ModelService.action()` moved to the [`custom-actions` ApiExtension](../09-extensions/api-extensions.md) in v0.44.0.** It's still callable on the same instance — but only when `customActionsExtension()` is registered on `ToolRegistry`, which contributes it as a mixin. The signature and behavior are unchanged.
 >
-> **`SearchService` moved behind the seam in v0.65.0.** As of v0.65.0, `SearchService` is adapter-internal — composed by [`SearchEnabledDataLayer`](../08-adapters/data-layer.md#adding-search-to-the-default-adapter) and reached through `dataLayer.searchNormalized` / `lookupNormalized` / `groupSearchNormalized`. New apps and tools must consume the `DataLayer` interface (see [The Projection-Layer Rule](../08-adapters/data-layer.md#the-projection-layer-rule)). The `SearchService` API documented below is still callable, but the only first-party callers are the `search_records` and `analysis_ingest` tools that haven't been migrated yet, plus deployer code wiring up `withSearchEnabledDataLayer`. `SearchService`, `SearchAdapter`, and `RailsSearchAdapter` live in `@mcp-rune/mcp-rune/api-extensions/search` (moved there in v0.47.0).
+> **`SearchService` moved behind the seam in v0.65.0.** As of v0.65.0, `SearchService` is adapter-internal — composed by [`SearchEnabledDataLayer`](../08-adapters/data-layer.md#adding-search-to-the-default-adapter) and reached through `dataLayer.searchNormalized` / `lookupNormalized` / `groupSearchNormalized`. New apps and tools must consume the `DataLayer` interface (see [The Projection-Layer Rule](../08-adapters/data-layer.md#the-projection-layer-rule)). The `SearchService` API documented below is still callable, but the only first-party callers are the `search_records` and `analysis_ingest` tools that haven't been migrated yet, plus deployer code wiring up `withSearchEnabledDataLayer`. `SearchService`, `SearchRequestShaper`, and `RailsSearchRequestShaper` live in `@mcp-rune/mcp-rune/api-extensions/search` (moved there in v0.47.0).
 
 ## Table of Contents
 
@@ -41,17 +41,17 @@ This guide covers the two services that sit between MCP tools and the API: `Mode
 
 The service layer provides two focused services that encapsulate all API communication:
 
-| Service             | Purpose                                                                       | Consumers                                                                                                                                                                                                                                     | Composes                                  |
-| ------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| **`ModelService`**  | CRUD operations + custom actions (create, find, list, update, delete, action) | CRUD tools, bulk tools, model_action tool — via `DataLayer.{find,list,…}`                                                                                                                                                                     | EndpointResolver + Convention + ApiClient |
-| **`SearchService`** | Search, lookup, group search, listing                                         | `SearchEnabledDataLayer` (the canonical consumer) wires it behind `dataLayer.searchNormalized` / `lookupNormalized` / `groupSearchNormalized`. The `search_records` and `analysis_ingest` tools still compose it directly for advanced cases. | SearchAdapter + Convention + ApiClient    |
+| Service             | Purpose                                                                       | Consumers                                                                                                                                                                                                                                     | Composes                                     |
+| ------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| **`ModelService`**  | CRUD operations + custom actions (create, find, list, update, delete, action) | CRUD tools, bulk tools, model_action tool — via `DataLayer.{find,list,…}`                                                                                                                                                                     | EndpointResolver + Convention + ApiClient    |
+| **`SearchService`** | Search, lookup, group search, listing                                         | `SearchEnabledDataLayer` (the canonical consumer) wires it behind `dataLayer.searchNormalized` / `lookupNormalized` / `groupSearchNormalized`. The `search_records` and `analysis_ingest` tools still compose it directly for advanced cases. | SearchRequestShaper + Convention + ApiClient |
 
 Both services follow the same pattern: wrap `ApiClient` with domain logic, resolve endpoints from model config, normalize requests/responses, and return clean results. Tools delegate data operations to these services and focus on MCP-specific concerns (input validation, response formatting, vector storage).
 
 Supporting classes:
 
 - **`EndpointResolver`** — layered URL resolution chain for CRUD (inspired by [Ember Data's Adapter pattern](https://guides.emberjs.com/release/models/customizing-adapters/))
-- **`SearchAdapter`** / **`RailsSearchAdapter`** — pluggable request body builders for search endpoints
+- **`SearchRequestShaper`** / **`RailsSearchRequestShaper`** — pluggable request body builders for search endpoints
 
 ## Architecture
 
@@ -70,7 +70,7 @@ Supporting classes:
     └──────┬───┬──────┘  └───────┬────────┘
            │   │                 │
     ┌──────▼┐ ┌▼──────────┐ ┌───▼──────────┐
-    │Endpoint│ │Convention │ │SearchAdapter  │
+    │Endpoint│ │Convention │ │SearchRequestShaper  │
     │Resolver│ │(payload/  │ │(query body   │
     │(URLs)  │ │ response) │ │ building)    │
     └──────┬┘ └─────┬─────┘ └───┬──────────┘
@@ -469,7 +469,10 @@ try {
 The recommended construction site is the shared `createSearchService` factory:
 
 ```ts file=src/services/search-service.ts
-import { createSearchService, RailsSearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
+import {
+  createSearchService,
+  RailsSearchRequestShaper
+} from '@mcp-rune/mcp-rune/api-extensions/search'
 
 const searchService = createSearchService(apiClient, {
   searchGroups: {
@@ -480,12 +483,15 @@ const searchService = createSearchService(apiClient, {
       queryParam: 'q'
     }
   },
-  defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' }) // Optional — server-wide adapter
+  defaultShaper: new RailsSearchRequestShaper({ filtersParam: 'filters' }) // Optional — server-wide adapter
 })
 ```
 
 ```js file=src/services/search-service.js
-import { createSearchService, RailsSearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
+import {
+  createSearchService,
+  RailsSearchRequestShaper
+} from '@mcp-rune/mcp-rune/api-extensions/search'
 const searchService = createSearchService(apiClient, {
   searchGroups: {
     // Optional — named group search endpoints
@@ -495,7 +501,7 @@ const searchService = createSearchService(apiClient, {
       queryParam: 'q'
     }
   },
-  defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' }) // Optional — server-wide adapter
+  defaultShaper: new RailsSearchRequestShaper({ filtersParam: 'filters' }) // Optional — server-wide adapter
 })
 ```
 
@@ -713,28 +719,28 @@ Request bodies are built by pluggable adapters. The adapter is selected at three
 
 1. **Per-model** — `searchCfg.query.adapter` (i.e. the `adapter` field inside `searchConfig({...}).query`)
 2. **Per-group** — `searchGroup.adapter`
-3. **Server-wide** — `defaultAdapter` in the SearchService constructor
+3. **Server-wide** — `defaultShaper` in the SearchService constructor
 
-The base `SearchAdapter` spreads filters flat into the body. For Rails APIs that nest filters, use `RailsSearchAdapter`:
+The base `SearchRequestShaper` spreads filters flat into the body. For Rails APIs that nest filters, use `RailsSearchRequestShaper`:
 
 ```ts file=src/adapter.ts
-import { RailsSearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
+import { RailsSearchRequestShaper } from '@mcp-rune/mcp-rune/api-extensions/search'
 
 // Nests filters under a key + flattens range mappings
-const adapter = new RailsSearchAdapter({ filtersParam: 'filters' })
+const adapter = new RailsSearchRequestShaper({ filtersParam: 'filters' })
 
 // Input:  { duration_minutes: { from: 40, to: 120 } }
 // Output: { filters: { min_duration: 40, max_duration: 120 } }
-//   (via adapterConfig.rangeMappings on the model's search.query)
+//   (via shaperConfig.rangeMappings on the model's search.query)
 ```
 
 ```js file=src/adapter.js
-import { RailsSearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
+import { RailsSearchRequestShaper } from '@mcp-rune/mcp-rune/api-extensions/search'
 // Nests filters under a key + flattens range mappings
-const adapter = new RailsSearchAdapter({ filtersParam: 'filters' })
+const adapter = new RailsSearchRequestShaper({ filtersParam: 'filters' })
 // Input:  { duration_minutes: { from: 40, to: 120 } }
 // Output: { filters: { min_duration: 40, max_duration: 120 } }
-//   (via adapterConfig.rangeMappings on the model's search.query)
+//   (via shaperConfig.rangeMappings on the model's search.query)
 ```
 
 See the [Search & Filter Integration Guide](../04-apps-search-forms/search-filters.md) for the full Rails integration walkthrough.
@@ -775,7 +781,7 @@ interface SearchResult {
 /**
  * The shape SearchService returns: a paginated slice of records plus
  * pagination metadata. Backend-specific shapes are normalized upstream by
- * the SearchAdapter.
+ * the SearchRequestShaper.
  *
  * @typedef {Object} SearchPagination
  * @property {number} page
@@ -801,7 +807,7 @@ Construct both services in your tool registry and pass them as dependencies:
 import { ModelService } from '@mcp-rune/mcp-rune/model-service'
 import {
   createSearchService,
-  RailsSearchAdapter
+  RailsSearchRequestShaper
 } from '@mcp-rune/mcp-rune/api-extensions/search'
 
 async _createAuthenticatedInstance(ToolClass, getAccessToken) {
@@ -817,7 +823,7 @@ async _createAuthenticatedInstance(ToolClass, getAccessToken) {
 
   const searchService = createSearchService(apiClient, {
     searchGroups: this.serverContext.searchGroups,
-    defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
+    defaultShaper: new RailsSearchRequestShaper({ filtersParam: 'filters' })
   })
 
   return new ToolClass({
@@ -835,7 +841,10 @@ async _createAuthenticatedInstance(ToolClass, getAccessToken) {
 
 ```js file=src/token.js
 import { ModelService } from '@mcp-rune/mcp-rune/model-service'
-import { createSearchService, RailsSearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
+import {
+  createSearchService,
+  RailsSearchRequestShaper
+} from '@mcp-rune/mcp-rune/api-extensions/search'
 async
 _createAuthenticatedInstance(ToolClass, getAccessToken)
 {
@@ -849,7 +858,7 @@ _createAuthenticatedInstance(ToolClass, getAccessToken)
   })
   const searchService = createSearchService(apiClient, {
     searchGroups: this.serverContext.searchGroups,
-    defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
+    defaultShaper: new RailsSearchRequestShaper({ filtersParam: 'filters' })
   })
   return new ToolClass({
     apiClient,
@@ -952,7 +961,7 @@ ModelService and SearchService serve different purposes with different resolutio
 | Operations          | CRUD (create, find, list, update, delete) | search, lookup, groupSearch, list             |
 | Input               | Model name + attributes/ID                | ModelClass + query string + filters           |
 | Endpoint resolution | EndpointResolver (5-level layered chain)  | Own 3-tier chain (direct → group → list)      |
-| Request building    | Convention (`buildRequestPayload`)        | SearchAdapter (`buildBody`)                   |
+| Request building    | Convention (`buildRequestPayload`)        | SearchRequestShaper (`buildBody`)             |
 | Response            | Raw API response                          | Normalized `{ records, pagination }`          |
 | Consumers           | CRUD tools                                | Search tool, analysis_ingest, 5 MCP app types |
 

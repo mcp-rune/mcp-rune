@@ -1,7 +1,7 @@
 /**
- * RailsSearchAdapter — Adapter for Rails-convention search endpoints.
+ * RailsSearchRequestShaper — Adapter for Rails-convention search endpoints.
  *
- * Extends the base SearchAdapter with two Rails-specific behaviors:
+ * Extends the base SearchRequestShaper with two Rails-specific behaviors:
  *
  * 1. **filtersParam nesting** — wraps filters under a configurable key
  *    (e.g., `{ filters: { category_id: 4 } }` instead of flat `{ category_id: 4 }`)
@@ -12,16 +12,16 @@
  * ## Configuration
  *
  * `filtersParam` can be set at two levels:
- * - **Server-wide** via the constructor: `new RailsSearchAdapter({ filtersParam: 'filters' })`
- * - **Per-model override** via `search.query.adapterConfig.filtersParam`
+ * - **Server-wide** via the constructor: `new RailsSearchRequestShaper({ filtersParam: 'filters' })`
+ * - **Per-model override** via `search.query.shaperConfig.filtersParam`
  *
- * `rangeMappings` are per-model only, declared in `search.query.adapterConfig.rangeMappings`.
+ * `rangeMappings` are per-model only, declared in `search.query.shaperConfig.rangeMappings`.
  *
- * Per-model `adapterConfig` values take precedence over constructor defaults.
+ * Per-model `shaperConfig` values take precedence over constructor defaults.
  *
  * @example Server setup
- * const adapter = new RailsSearchAdapter({ filtersParam: 'filters' })
- * const client = new SearchService(api, { defaultAdapter: adapter })
+ * const adapter = new RailsSearchRequestShaper({ filtersParam: 'filters' })
+ * const client = new SearchService(api, { defaultShaper: adapter })
  *
  * @example Model config with rangeMappings
  * static search = {
@@ -29,7 +29,7 @@
  *     endpoint: 'activities/search',
  *     method: 'POST',
  *     queryParam: 'q',
- *     adapterConfig: {
+ *     shaperConfig: {
  *       rangeMappings: {
  *         duration_minutes: { from: 'min_duration', to: 'max_duration' },
  *         started_at: { from: 'started_after', to: 'started_before' }
@@ -49,15 +49,15 @@
  * // → POST /activities/search
  */
 
-import { SearchAdapter } from './search-adapter.js'
-import type { Pagination, SearchConfig } from './types.js'
+import type { Pagination, SearchConfig } from '../types.js'
+import { SearchRequestShaper } from './default.js'
 
-export interface RailsAdapterConfig {
+export interface RailsShaperConfig {
   filtersParam?: string
   rangeMappings?: Record<string, { from: string; to: string }>
 }
 
-export class RailsSearchAdapter extends SearchAdapter {
+export class RailsSearchRequestShaper extends SearchRequestShaper {
   private _filtersParam: string | undefined
 
   constructor({ filtersParam }: { filtersParam?: string } = {}) {
@@ -71,9 +71,9 @@ export class RailsSearchAdapter extends SearchAdapter {
     pagination: Pagination,
     searchConfig: SearchConfig
   ): Record<string, unknown> {
-    const adapterConfig = (searchConfig?.query?.adapterConfig || {}) as RailsAdapterConfig
-    const filtersParam = adapterConfig.filtersParam ?? this._filtersParam
-    const rangeMappings = adapterConfig.rangeMappings
+    const shaperConfig = (searchConfig?.query?.shaperConfig || {}) as RailsShaperConfig
+    const filtersParam = shaperConfig.filtersParam ?? this._filtersParam
+    const rangeMappings = shaperConfig.rangeMappings
 
     const adaptedFilters = this._applyRangeMappings(filters, rangeMappings)
 
@@ -94,7 +94,7 @@ export class RailsSearchAdapter extends SearchAdapter {
    */
   private _applyRangeMappings(
     filters: Record<string, unknown> | undefined,
-    rangeMappings: RailsAdapterConfig['rangeMappings']
+    rangeMappings: RailsShaperConfig['rangeMappings']
   ): Record<string, unknown> | undefined {
     if (!filters || !rangeMappings) return filters
 

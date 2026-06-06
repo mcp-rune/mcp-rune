@@ -43,7 +43,7 @@ mcp-rune/                              (the framework)
     ├─ prompts                         BasePrompt, strategies, pipeline
     ├─ apps                            AppRegistry, 7 generic app factories
     ├─ domain                          Workflows, knowledge, business rules
-    ├─ search                          SearchService, SearchAdapter
+    ├─ search                          SearchService, SearchRequestShaper
     ├─ oauth2                          OAuthService, token store
     ├─ services                        Logger, tracing, error tracking
     └─ db                              PostgreSQL client

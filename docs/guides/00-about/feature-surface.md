@@ -17,7 +17,7 @@
 | **GraphRAG analysis**          | Local pgvector embeddings + 9 summary strategies + stratified / proximity sampling                                                                |
 | **OAuth 2.1 + PKCE**           | RFC 6749 · 7591 · 7636 · 8414 · 8707 · 9728 + OIDC Core — spec-grade, no shortcuts                                                                |
 | **Dual transport**             | `StdioServer` (local desktop) and `HttpServer` (multi-user, OAuth-protected) from one factory                                                     |
-| **Four backend seams**         | Custom `DataLayer`, `ApiClient`, `ApiConvention`, and `SearchAdapter` — replace a built-in default without forking                                |
+| **Four backend seams**         | Custom `DataLayer`, `ApiClient`, `ApiConvention`, and `SearchRequestShaper` — replace a built-in default without forking                          |
 | **Three extension shapes**     | `HttpExtension` (routes + middleware), `ApiExtension` (verbs / tools beyond CRUD), `ToolFlowExtension` (tool-surface modifiers + runtime context) |
 | **Observability**              | Structured Winston logs, Langfuse tracing, Sentry error tracking, request-ID correlation across the pipeline                                      |
 | **Transient context protocol** | Server-to-client signal collapsing stale tool results once a follow-up call has consumed them                                                     |

@@ -3,7 +3,7 @@
  *
  * Three sites used to instantiate `SearchService` independently with the
  * same conventional arg-extraction pattern (`searchGroups` and
- * `defaultAdapter` read out of `serverContext`): the search extension's
+ * `defaultShaper` read out of `serverContext`): the search extension's
  * `SearchRecordsTool`, the apps registry, and `analysis-ingest-tool`. They
  * all now route through this factory.
  *
@@ -23,8 +23,8 @@ import type { SearchGroup } from './types.js'
  */
 export interface SearchFactoryContext {
   searchGroups?: Record<string, SearchGroup>
-  defaultAdapter?: ConstructorParameters<typeof SearchService>[1] extends infer T
-    ? T extends { defaultAdapter?: infer A }
+  defaultShaper?: ConstructorParameters<typeof SearchService>[1] extends infer T
+    ? T extends { defaultShaper?: infer A }
       ? A
       : never
     : never
@@ -32,7 +32,7 @@ export interface SearchFactoryContext {
 
 /**
  * Construct a `SearchService` bound to the given `DataLayer`. Pulls
- * `searchGroups` and `defaultAdapter` out of the passed context (typically
+ * `searchGroups` and `defaultShaper` out of the passed context (typically
  * `tool.serverContext` in a tool, or the analogous field in an app).
  */
 export function createSearchService(
@@ -43,6 +43,6 @@ export function createSearchService(
   const searchGroups = ctx.searchGroups ?? {}
   return new SearchService(dataLayer, {
     searchGroups,
-    defaultAdapter: ctx.defaultAdapter
+    defaultShaper: ctx.defaultShaper
   } as ConstructorParameters<typeof SearchService>[1])
 }

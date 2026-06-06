@@ -9,7 +9,10 @@
  * factory, …) addressable. Use `exclude` to opt individual apps out.
  */
 
-import type { SearchAdapter, SearchGroup } from '#src/mcp/data-layer/api-extensions/search/index.js'
+import type {
+  SearchGroup,
+  SearchRequestShaper
+} from '#src/mcp/data-layer/api-extensions/search/index.js'
 import type { DataLayerFactory } from '#src/mcp/data-layer/data-layer.js'
 
 import { createEditModelApp } from '../edit-model-app/index.js'
@@ -48,7 +51,7 @@ export interface DefaultAppRegistryOptions {
   createApiClient?: (token: string, options: { apiUrl: string }) => ApiClient
   dataLayer?: DataLayerFactory
   searchGroups?: Record<string, SearchGroup>
-  defaultAdapter?: SearchAdapter
+  defaultShaper?: SearchRequestShaper
   headerIcon?: string
   themeOverrides?: ThemeOverrides
   formatters?: Record<string, FormatterDescriptor>
@@ -76,7 +79,7 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
     createApiClient,
     dataLayer,
     searchGroups,
-    defaultAdapter,
+    defaultShaper,
     headerIcon,
     themeOverrides,
     formatters
@@ -139,7 +142,7 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
     ...(createApiClient && { createApiClient }),
     ...(dataLayer && { dataLayer }),
     ...(searchGroups && { searchGroups }),
-    ...(defaultAdapter && { defaultAdapter }),
+    ...(defaultShaper && { defaultShaper }),
     ...(headerIcon !== undefined && { headerIcon }),
     ...(themeOverrides && { themeOverrides }),
     ...(formatters && { formatters })

@@ -13,13 +13,13 @@
  * - list()    — paginated GET listing (always available)
  *
  * For both direct and group search endpoints, the request body is built by a
- * SearchAdapter. The adapter can be set at three levels (highest priority first):
+ * SearchRequestShaper. The adapter can be set at three levels (highest priority first):
  * 1. Per-model: `search.query.adapter`
  * 2. Per-group: `searchGroup.adapter`
- * 3. Server-wide: `defaultAdapter` in the SearchService constructor
+ * 3. Server-wide: `defaultShaper` in the SearchService constructor
  *
- * The base SearchAdapter spreads filters flat into the body. For Rails-style
- * nesting (e.g., `{ filters: { ... } }`), use RailsSearchAdapter.
+ * The base SearchRequestShaper spreads filters flat into the body. For Rails-style
+ * nesting (e.g., `{ filters: { ... } }`), use RailsSearchRequestShaper.
  *
  * CRUD operations remain on the typed `DataLayer.find/list/create/update`
  * surface; SearchService only handles the search-specific dispatch paths.
@@ -29,7 +29,7 @@ import { defaultConvention } from '#src/mcp/data-layer/api-conventions/index.js'
 import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 
 import { getSearchConfig } from './capabilities.js'
-import { SearchAdapter } from './search-adapter.js'
+import { SearchRequestShaper } from './request-shapers/default.js'
 import type {
   PaginationInfo,
   SearchConfig,
@@ -41,21 +41,21 @@ import type {
 export class SearchService {
   private _dataLayer: DataLayer
   private _searchGroups: Record<string, SearchGroup>
-  private _defaultAdapter: SearchAdapter
+  private _defaultShaper: SearchRequestShaper
 
   constructor(
     dataLayer: DataLayer,
     {
       searchGroups = {},
-      defaultAdapter = new SearchAdapter()
+      defaultShaper = new SearchRequestShaper()
     }: {
       searchGroups?: Record<string, SearchGroup>
-      defaultAdapter?: SearchAdapter
+      defaultShaper?: SearchRequestShaper
     } = {}
   ) {
     this._dataLayer = dataLayer
     this._searchGroups = searchGroups
-    this._defaultAdapter = defaultAdapter
+    this._defaultShaper = defaultShaper
   }
 
   /**
@@ -220,7 +220,7 @@ export class SearchService {
       )
     }
 
-    const adapter = group.adapter || this._defaultAdapter
+    const adapter = group.shaper || this._defaultShaper
     const body = adapter.buildBody(query, filters, { page, perPage }, {
       query: group
     } as SearchConfig)
@@ -310,7 +310,7 @@ export class SearchService {
     const method = (queryConfig!.method || 'POST').toUpperCase()
 
     if (method === 'POST') {
-      const adapter = (queryConfig!.adapter as SearchAdapter) || this._defaultAdapter
+      const adapter = (queryConfig!.shaper as SearchRequestShaper) || this._defaultShaper
       const { body, queryParams } = adapter.buildRequest(
         query,
         filters,

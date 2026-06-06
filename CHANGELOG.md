@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.77.0] - 2026-06-06
+
+> **BREAKING.** Renames `SearchAdapter` → `SearchRequestShaper` (and `RailsSearchAdapter` → `RailsSearchRequestShaper`) to disambiguate from `DataLayer` adapters. Before this PR, the word "adapter" meant two unrelated things in nearby code: a `DataLayer` implementation, and a request-body shape transformer for the search endpoint. Pure rename — no semantic changes. Part 4 of 5 in #218.
+
+### Changed
+
+- **`SearchAdapter` class renamed to `SearchRequestShaper`** — exported from `@mcp-rune/mcp-rune/api-extensions/search`. Internal file moved: `search-adapter.ts` → `request-shapers/default.ts`.
+- **`RailsSearchAdapter` class renamed to `RailsSearchRequestShaper`** — exported from `@mcp-rune/mcp-rune/api-extensions/search`. Internal file moved: `rails-search-adapter.ts` → `request-shapers/rails.ts`.
+- **`RailsAdapterConfig` type renamed to `RailsShaperConfig`**.
+- **Model-side config keys renamed**: `extensions.search.query.adapter` → `extensions.search.query.shaper`, `extensions.search.query.adapterConfig` → `extensions.search.query.shaperConfig`, `searchGroups.<name>.adapter` → `searchGroups.<name>.shaper`.
+- **`SearchService` constructor option renamed**: `defaultAdapter` → `defaultShaper`.
+- **`AppRegistry` constructor option renamed**: `defaultAdapter` → `defaultShaper`.
+- Documentation under `docs/guides/08-adapters/` and `docs/guides/09-extensions/` updated to use the new vocabulary.
+
+[0.77.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.76.0...v0.77.0
+
 ## [0.76.0] - 2026-06-06
 
 > **BREAKING.** Unifies the `ApiExtension` contract and its implementations under one folder, `src/mcp/data-layer/api-extensions/`. Previously the contract lived in `src/mcp/api-extensions/` and the implementations (`custom-actions`, `search`) lived in top-level `src/api-extensions/` — the opposite of every other extension surface in the repo. After this PR, the `ApiExtension` framework lives where it logically belongs: as part of the data layer it decorates. Part 3 of 5 in #218.

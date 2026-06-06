@@ -7,7 +7,7 @@
 
 import type { BaseConvention } from '#src/mcp/data-layer/api-conventions/base-convention.js'
 
-import type { SearchAdapter } from './search-adapter.js'
+import type { SearchRequestShaper } from './request-shapers/default.js'
 
 // ============================================================================
 // Model search configuration (declared on model classes)
@@ -26,8 +26,8 @@ export interface QueryConfig {
   method?: 'POST' | 'GET'
   queryParam?: string
   expand?: string[]
-  adapter?: unknown
-  adapterConfig?: Record<string, unknown>
+  shaper?: unknown
+  shaperConfig?: Record<string, unknown>
 }
 
 export interface SearchConfig {
@@ -74,7 +74,7 @@ export interface SearchModelClass {
 export interface SearchGroup {
   endpoint: string
   modelsParam: string
-  adapter?: SearchAdapter
+  shaper?: SearchRequestShaper
   queryParam?: string
   expand?: string[]
   [key: string]: unknown

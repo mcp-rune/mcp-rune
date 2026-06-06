@@ -1,6 +1,6 @@
 # Extension Recipes
 
-Start here. mcp-rune ships three extension surfaces (`HttpExtension`, `ApiExtension`, `ToolFlowExtension`) plus several non-extension seams (`DataLayer`, `BaseConvention`, `SearchAdapter`, attribute `Kind`s). Each has its own dedicated guide — but for first contact you usually want the inverse map: "I want to do **X** — which seam does that?"
+Start here. mcp-rune ships three extension surfaces (`HttpExtension`, `ApiExtension`, `ToolFlowExtension`) plus several non-extension seams (`DataLayer`, `BaseConvention`, `SearchRequestShaper`, attribute `Kind`s). Each has its own dedicated guide — but for first contact you usually want the inverse map: "I want to do **X** — which seam does that?"
 
 This page is that map. Each recipe is organized by deployer intent, not by extension type. Pick the entry that matches what you're trying to do, copy the example, then follow the link for the full reference.
 

@@ -1,7 +1,7 @@
-import { SearchAdapter } from '#src/mcp/data-layer/api-extensions/search/search-adapter.js'
+import { SearchRequestShaper } from '#src/mcp/data-layer/api-extensions/search/request-shapers/default.js'
 
-describe('SearchAdapter', () => {
-  const adapter = new SearchAdapter()
+describe('SearchRequestShaper', () => {
+  const adapter = new SearchRequestShaper()
   const searchConfig = {
     query: {
       endpoint: 'items/search',
@@ -96,11 +96,11 @@ describe('SearchAdapter', () => {
     })
   })
 
-  it('should ignore adapterConfig (base adapter does not use it)', () => {
+  it('should ignore shaperConfig (base adapter does not use it)', () => {
     const config = {
       query: {
         queryParam: 'q',
-        adapterConfig: { filtersParam: 'filters', rangeMappings: { x: { from: 'a', to: 'b' } } }
+        shaperConfig: { filtersParam: 'filters', rangeMappings: { x: { from: 'a', to: 'b' } } }
       }
     }
     const body = adapter.buildBody('test', { x: { from: 1 } }, { page: 1, perPage: 20 }, config)
