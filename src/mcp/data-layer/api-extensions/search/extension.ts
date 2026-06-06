@@ -16,7 +16,6 @@ import { z } from 'zod'
 
 import { pickFields } from '#src/core/helpers.js'
 import type { ApiExtension } from '#src/mcp/data-layer/api-extensions/types.js'
-import { resolveDerivedFields } from '#src/mcp/model-layer/derived-fields.js'
 import type { ModelConfig, ToolAnnotations, ToolResult } from '#src/mcp/tools/base-tool.js'
 import { BaseTool } from '#src/mcp/tools/base-tool.js'
 import type { FilterSchema } from '#src/mcp/tools/validators.js'
@@ -288,10 +287,7 @@ Call get_filters_guide first to learn available filters for the target model.`
         }
       )) as unknown as { records: Record<string, unknown>[]; pagination: PaginationInfo }
 
-      resolveDerivedFields(
-        records,
-        ModelClass as unknown as Parameters<typeof resolveDerivedFields>[1]
-      )
+      this.modelLayer?.(model).resolveDerivedFields(records)
       const filteredRecords = pickFields(records, fields)
 
       const result = {

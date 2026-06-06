@@ -38,6 +38,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import type { ApiClient } from '#src/core/api-client.js'
+import { createAnalysisLayerFactory } from '#src/mcp/analysis-layer/analysis-layer.js'
 import {
   BUILT_IN_SUMMARY_STRATEGIES,
   SummaryStrategyRegistry
@@ -49,6 +50,10 @@ import type {
 } from '#src/mcp/data-layer/api-extensions/types.js'
 import type { DataLayer, DataLayerFactory } from '#src/mcp/data-layer/data-layer.js'
 import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
+import {
+  createModelLayerFactory,
+  type ModelLayerFactory
+} from '#src/mcp/model-layer/model-layer.js'
 import * as logger from '#src/runtime/logger.js'
 import * as tracing from '#src/runtime/tracing.js'
 
@@ -218,6 +223,7 @@ export class ToolRegistry {
   /** Tracks which extension contributed each mixin method name, for collision diagnostics. */
   private _mixinMethodOwners: Map<string, string> = new Map()
   private _summaryStrategies: SummaryStrategyRegistry
+  private _modelLayer: ModelLayerFactory
 
   constructor(config: ToolRegistryConfig) {
     this._toolClasses = { ...config.toolClasses }
@@ -235,6 +241,11 @@ export class ToolRegistry {
     // (in Step 3) contribute additional strategies with collision detection
     // against the built-ins.
     this._summaryStrategies = new SummaryStrategyRegistry(BUILT_IN_SUMMARY_STRATEGIES)
+
+    // Per-model-bound ModelLayer factory. Stateless w.r.t. auth, so it's
+    // constructed once over the registry and shared across every tool
+    // instance. Cached per model class internally.
+    this._modelLayer = createModelLayerFactory(this._models)
 
     // Default DataLayer factory wraps ModelService and applies extension mixins.
     // Integrators can override to back the projection layer with a different
@@ -439,6 +450,7 @@ export class ToolRegistry {
     return new ToolCls({
       logger: this._logger,
       models: this._models,
+      modelLayer: this._modelLayer,
       promptRegistry: this._promptRegistry,
       serverContext: this.serverContext as ServerContext,
       domainRegistry: this._domainRegistry,
@@ -467,10 +479,13 @@ export class ToolRegistry {
       namespace: this._namespace,
       logger: this._logger
     })
+    const analysisLayer = createAnalysisLayerFactory(this._models, dataLayer)
     return new ToolCls({
       dataLayer,
       logger: this._logger,
       models: this._models,
+      modelLayer: this._modelLayer,
+      analysisLayer,
       promptRegistry: this._promptRegistry,
       serverContext: this.serverContext as ServerContext,
       domainRegistry: this._domainRegistry,

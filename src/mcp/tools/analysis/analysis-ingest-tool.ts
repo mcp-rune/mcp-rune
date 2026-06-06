@@ -2,7 +2,7 @@ import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
 import { pickFields } from '#src/core/helpers.js'
-import { extractEdgesFromRecord, type HopFollow } from '#src/mcp/analysis-layer/edge-extraction.js'
+import type { HopFollow } from '#src/mcp/analysis-layer/edge-extraction.js'
 import { expandHops } from '#src/mcp/analysis-layer/multi-hop-fetch.js'
 import type { SummaryEdge, SummaryInput } from '#src/mcp/analysis-layer/summary-strategies/index.js'
 import { defaultSummaryStrategyRegistry } from '#src/mcp/analysis-layer/summary-strategies/index.js'
@@ -977,11 +977,10 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     })
 
     if (pipeline.hopFollow !== 'none') {
-      const edges = records.flatMap((r) =>
-        extractEdgesFromRecord(r, modelConfig.associations, model, {
-          hopFollow: pipeline.hopFollow
-        })
-      )
+      const analysisLayer = this.analysisLayer?.(model)
+      const edges = analysisLayer
+        ? records.flatMap((r) => analysisLayer.extractEdges(r, { hopFollow: pipeline.hopFollow }))
+        : []
       if (edges.length > 0) {
         await storeIngestedEdges({ analysisId, edges, hopDepth: 0 })
       }

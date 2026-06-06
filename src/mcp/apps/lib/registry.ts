@@ -19,6 +19,7 @@ import {
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { z } from 'zod'
 
+import { createAnalysisLayerFactory } from '#src/mcp/analysis-layer/analysis-layer.js'
 import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
 import type {
   SearchGroup,
@@ -30,6 +31,10 @@ import {
 } from '#src/mcp/data-layer/api-extensions/search/index.js'
 import type { DataLayer, DataLayerFactory } from '#src/mcp/data-layer/data-layer.js'
 import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
+import {
+  createModelLayerFactory,
+  type ModelLayerFactory
+} from '#src/mcp/model-layer/model-layer.js'
 import type { KindDescriptor, KindRenderHint } from '#src/mcp/models/kinds/index.js'
 import { registerKind } from '#src/mcp/models/kinds/index.js'
 import type { ModelsRegistry } from '#src/mcp/tools/base-tool.js'
@@ -162,6 +167,7 @@ export class AppRegistry {
   private _createApiClient?: (token: string, options: { apiUrl: string }) => ApiClient
   private _models: ModelsRegistry
   private _dataLayerFactory: DataLayerFactory
+  private _modelLayer: ModelLayerFactory
   private _searchGroups: Record<string, SearchGroup>
   private _defaultShaper?: SearchRequestShaper
   private _headerIcon?: string
@@ -214,6 +220,11 @@ export class AppRegistry {
       dataLayer ??
       (({ apiClient, models: m, logger: log }): DataLayer =>
         new ModelService({ apiClient: apiClient!, models: m ?? modelsRef, logger: log }))
+
+    // Per-model-bound ModelLayer factory. Stateless w.r.t. auth and shared
+    // across every app invocation — the AnalysisLayer counterpart is built
+    // per-request below because it carries the request-scoped DataLayer.
+    this._modelLayer = createModelLayerFactory(this._models)
 
     for (const app of apps) {
       if (app.toolName) {
@@ -309,6 +320,8 @@ export class AppRegistry {
             // through the `*Normalized` methods on the seam — apps never see
             // SearchService directly. This enforces the projection-layer rule
             // by absence: the context bag has no `searchClient` field.
+            context.modelLayer = this._modelLayer
+
             if (app.needsAuth && getAccessToken && this._apiUrl && this._createApiClient) {
               const token = await getAccessToken()
               const apiClient = this._createApiClient(token, { apiUrl: this._apiUrl })
@@ -321,7 +334,9 @@ export class AppRegistry {
                 searchGroups: this._searchGroups,
                 defaultShaper: this._defaultShaper
               })
-              context.dataLayer = new SearchEnabledDataLayer(baseDataLayer, searchService)
+              const dataLayer = new SearchEnabledDataLayer(baseDataLayer, searchService)
+              context.dataLayer = dataLayer
+              context.analysisLayer = createAnalysisLayerFactory(this._models, dataLayer)
             }
 
             if (selectionStore) {
