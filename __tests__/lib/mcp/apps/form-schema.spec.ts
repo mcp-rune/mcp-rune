@@ -620,7 +620,7 @@ describe('lib/mcp/apps/form-schema', () => {
       })
     })
 
-    describe('kind → HTML input type (kind-metadata coverage)', () => {
+    describe('kind → HTML input type (kinds coverage)', () => {
       function fieldFor(attr) {
         const Model = {
           api: { endpoint: 'things' },

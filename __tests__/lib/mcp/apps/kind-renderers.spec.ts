@@ -5,91 +5,91 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  getFormatter,
+  getKindRenderer,
   helpers,
-  registerFormatter,
+  registerKindRenderer,
   renderCellValue
-} from '../../../../src/mcp/apps/shared/formatters.js'
+} from '../../../../src/mcp/apps/shared/kind-renderers.js'
 
-describe('lib/mcp/apps/shared/formatters', () => {
+describe('lib/mcp/apps/shared/kind-renderers', () => {
   describe('DOM rendering', () => {
     it('string renders raw text', () => {
-      expect(getFormatter('string').format('hello').textContent).toBe('hello')
+      expect(getKindRenderer('string').render('hello').textContent).toBe('hello')
     })
 
     it('integer renders the number as text', () => {
-      expect(getFormatter('integer').format(42).textContent).toBe('42')
+      expect(getKindRenderer('integer').render(42).textContent).toBe('42')
     })
 
     it('boolean renders Yes/No', () => {
-      expect(getFormatter('boolean').format(true).textContent).toBe('Yes')
-      expect(getFormatter('boolean').format(false).textContent).toBe('No')
+      expect(getKindRenderer('boolean').render(true).textContent).toBe('Yes')
+      expect(getKindRenderer('boolean').render(false).textContent).toBe('No')
     })
 
     it('time truncates seconds for display', () => {
-      expect(getFormatter('time').format('14:30:45').textContent).toBe('14:30')
+      expect(getKindRenderer('time').render('14:30:45').textContent).toBe('14:30')
     })
 
     it('enum renders a status badge with humanized label', () => {
-      const out = getFormatter('enum').format('in_progress', { column: { enumHints: {} } })
+      const out = getKindRenderer('enum').render('in_progress', { column: { enumHints: {} } })
       expect(out.className).toContain('mr-badge')
       expect(out.textContent).toBe('In Progress')
     })
 
     it('array renders a tag list', () => {
-      const out = getFormatter('array').format(['fiction', 'mystery'])
+      const out = getKindRenderer('array').render(['fiction', 'mystery'])
       expect(out.className).toBe('mr-badge-row')
       expect(out.querySelectorAll('.mr-badge')).toHaveLength(2)
     })
 
     it('json renders a pre block', () => {
-      const out = getFormatter('json').format({ foo: 1 })
+      const out = getKindRenderer('json').render({ foo: 1 })
       expect(out.tagName).toBe('PRE')
       expect(out.textContent).toContain('"foo": 1')
     })
 
     it('url renders an anchor with rel=noopener', () => {
-      const out = getFormatter('url').format('https://example.com')
+      const out = getKindRenderer('url').render('https://example.com')
       expect(out.tagName).toBe('A')
       expect(out.href).toBe('https://example.com/')
       expect(out.rel).toBe('noopener noreferrer')
     })
 
     it('email renders a mailto link', () => {
-      const out = getFormatter('email').format('a@b.com')
+      const out = getKindRenderer('email').render('a@b.com')
       expect(out.tagName).toBe('A')
       expect(out.href).toBe('mailto:a@b.com')
     })
 
     it('rating renders filled + empty stars up to max', () => {
-      const out = getFormatter('rating').format(3, { column: { max: 5 } })
+      const out = getKindRenderer('rating').render(3, { column: { max: 5 } })
       expect(out.textContent).toBe('★★★☆☆')
     })
 
     it('uuid renders monospace', () => {
-      const out = getFormatter('uuid').format('550e8400-e29b-41d4-a716-446655440000')
+      const out = getKindRenderer('uuid').render('550e8400-e29b-41d4-a716-446655440000')
       expect(out.style.fontFamily).toBe('var(--font-mono)')
     })
 
     it('base64 renders (binary) regardless of value', () => {
-      expect(getFormatter('base64').format('aGVsbG8=').textContent).toBe('(binary)')
+      expect(getKindRenderer('base64').render('aGVsbG8=').textContent).toBe('(binary)')
     })
 
     it('throws UnknownKindError for an unregistered kind (strict mode)', () => {
-      // getFormatter delegates to getKind, which throws on unknown kinds in
+      // getKindRenderer delegates to getKind, which throws on unknown kinds in
       // strict mode. validateRegistries() catches every model-driven case at
       // server boot; this throw exists for any direct call with a bogus kind.
-      expect(() => getFormatter('totally-made-up').format('hi')).toThrow(/Unknown kind/)
+      expect(() => getKindRenderer('totally-made-up').render('hi')).toThrow(/Unknown kind/)
     })
   })
 
-  describe('getFormatter returns the kind-metadata methods alongside DOM format', () => {
-    it('integer parse + serialize come from kind-metadata', () => {
-      const fmt = getFormatter('integer')
-      expect(fmt.parse('42')).toBe(42)
-      expect(fmt.serialize(42)).toBe(42)
-      expect(fmt.fromInput('42')).toBe(42)
-      expect(fmt.toInput(42)).toBe('42')
+  describe('getKindRenderer returns the kind descriptor methods alongside DOM render', () => {
+    it('integer parse + serialize come from the kind descriptor', () => {
+      const k = getKindRenderer('integer')
+      expect(k.parse('42')).toBe(42)
+      expect(k.serialize(42)).toBe(42)
+      expect(k.fromInput('42')).toBe(42)
+      expect(k.toInput(42)).toBe('42')
     })
   })
 
@@ -98,7 +98,7 @@ describe('lib/mcp/apps/shared/formatters', () => {
       expect(renderCellValue(null, { kind: 'string' }).textContent).toBe('—')
     })
 
-    it('routes through the formatter for the column kind', () => {
+    it('routes through the renderer for the column kind', () => {
       expect(renderCellValue(true, { kind: 'boolean' }).textContent).toBe('Yes')
     })
 
@@ -107,9 +107,9 @@ describe('lib/mcp/apps/shared/formatters', () => {
     })
 
     it('narrows DOM rendering by format when registered', () => {
-      registerFormatter(
+      registerKindRenderer(
         'string',
-        { format: () => helpers.text('ISBN match') },
+        { render: () => helpers.text('ISBN match') },
         { format: 'test-isbn' }
       )
       expect(renderCellValue('123', { kind: 'string', format: 'test-isbn' }).textContent).toBe(
@@ -118,18 +118,18 @@ describe('lib/mcp/apps/shared/formatters', () => {
     })
   })
 
-  describe('registerFormatter', () => {
-    it('throws when not given a format function', () => {
-      expect(() => registerFormatter('string', {} as unknown as { format: () => Node })).toThrow(
-        /format/
+  describe('registerKindRenderer', () => {
+    it('throws when not given a render function', () => {
+      expect(() => registerKindRenderer('string', {} as unknown as { render: () => Node })).toThrow(
+        /render/
       )
     })
 
     it('overrides the DOM renderer for a built-in kind', () => {
-      registerFormatter('boolean', { format: (v) => helpers.text(v ? '✓' : '✗') })
+      registerKindRenderer('boolean', { render: (v) => helpers.text(v ? '✓' : '✗') })
       expect(renderCellValue(true, { kind: 'boolean' }).textContent).toBe('✓')
       // Restore the built-in for subsequent tests.
-      registerFormatter('boolean', { format: (v) => helpers.text(v ? 'Yes' : 'No') })
+      registerKindRenderer('boolean', { render: (v) => helpers.text(v ? 'Yes' : 'No') })
     })
   })
 })

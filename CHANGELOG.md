@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.80.0] - 2026-06-06
+
+> **BREAKING.** Unifies the kind taxonomy. Before this release the deployer-facing kind extension was forked across two subsystems: `KindDescriptor` in `src/mcp/models/kind-metadata.ts` and `FormatterDescriptor` in `src/mcp/apps/lib/registry.ts` — the second one silently dropped most of its declared fields (`label`, `htmlInputType`, `promptType` were serialized but never read; `validation.{pattern,minLength,…}` duplicated server `validate()` without sharing logic; `parser.{regex,replacement}` was never implemented). This release collapses both into a single source of truth in `src/mcp/models/kinds/` (one file per built-in kind) with one deployer extension point on `AppRegistry`. The lead comment in `kinds/index.ts` opens with an `Activity` model example so the connection between `type: 'string'` in `static attributes` and "kind" is immediate.
+
+### Changed
+
+- **`src/mcp/models/kind-metadata.ts` replaced by `src/mcp/models/kinds/`** — one file per built-in kind (`string.ts`, `integer.ts`, `datetime.ts`, …17 total), plus `registry.ts` (machinery + types) and `helpers.ts` (multi-use date/string helpers). Built-in registration runs from `kinds/index.ts`.
+- **`AppRegistry` constructor option `formatters:` renamed to `kinds:`** — keyed by `"kind"` or `"kind:format"` (same convention as `getKind`). Each entry is a `KindExtension` (= `Partial<KindDescriptor> & { render?: KindRenderHint }`). At construction time the descriptor half registers with `src/mcp/models/kinds/` via `registerKind`; only `render` is serialized into the iframe.
+- **`FormatterDescriptor` type removed** — replaced by `KindExtension`. Iframe-only fields removed with no replacement: `validation.{pattern,minLength,maxLength,minimum,maximum}` (write a `validate(v)` function on the descriptor instead; runs server-side AND in the browser bundle), `parser.{regex,replacement}` (was never wired up). `display:` sub-block renamed to `render:` (`KindRenderHint` = `{ template, locale, dateStyle, timeStyle, badge }`).
+- **`src/mcp/apps/shared/formatters.ts` renamed to `src/mcp/apps/shared/kind-renderers.ts`** — `getFormatter` → `getKindRenderer`, `registerFormatter` → `registerKindRenderer`, the `Formatter` type → `KindWithRenderer`. The DOM-producing method is now `render(value, opts) -> Node` (was `format`). `FormatRenderer` type → `KindRenderer`, `FormatOpts` → `KindRenderOpts`.
+- **`src/mcp/apps/shared/formatters.runtime.js` renamed to `kind-renderers.runtime.js`** — window key renamed from `__MCP_RUNE_FORMATTERS__` to `__MCP_RUNE_KIND_RENDERERS__`. The runtime now only translates `KindRenderHint` (template/locale/dateStyle/badge) since descriptor-half fields no longer reach the iframe.
+- **Package export renamed**: `@mcp-rune/mcp-rune/apps/formatters` → `@mcp-rune/mcp-rune/apps/kind-renderers`.
+- **`@mcp-rune/mcp-rune/models` public surface narrowed** — still exports `getKind`, `registerKind`, `KindDescriptor`, `KindOpts`, plus the new `KindRenderHint` type. No longer re-exports `KIND_REGISTRY` (sibling-only; read by `model-validator.ts`) or `UnknownKindError` (internal; `getKind` still throws it).
+- Docs updated end-to-end: `attribute-kinds.md` (extension table now two paths instead of three; descriptor shape rewritten; ISBN and Currency worked examples; migration note for pre-0.80 `formatters:` → `kinds:`), `custom-app.md`, `extensibility.md`, `subpath-imports.md`.
+- Tests renamed and updated: `__tests__/lib/mcp/models/kind-metadata.spec.ts` → `kinds.spec.ts`; `__tests__/lib/mcp/apps/formatters.spec.ts` → `kind-renderers.spec.ts`; `registry.spec.ts` ISBN example rewritten to the new shape.
+
+### Removed
+
+- `FormatterDescriptor` type (replaced by `KindExtension`).
+- `display.template` / `display.locale` / `display.badge` etc. sub-block (now `render.template` / `render.locale` / `render.badge`).
+- `validation.{pattern,minLength,maxLength,minimum,maximum}` iframe-only HTML constraint hints (write a `validate(v)` function instead).
+- `parser.{regex,replacement}` block (was never implemented).
+- `KIND_REGISTRY` and `UnknownKindError` from the `@mcp-rune/mcp-rune/models` public surface.
+- `@mcp-rune/mcp-rune/apps/formatters` export entry (use `@mcp-rune/mcp-rune/apps/kind-renderers`).
+
+[0.80.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.79.0...v0.80.0
+
 ## [0.79.0] - 2026-06-06
 
 > **BREAKING.** Splits the monolithic `src/mcp/models/schema-validation.ts` (~465 lines) into per-kind validators that live next to the classes they validate. `validateFormClass` now lives with `BaseForm` under `src/mcp/apps/lib/`; `validatePromptClass` lives with `BasePrompt` under `src/mcp/prompts/`; the model validator stays in `src/mcp/models/`. Shared issue/report machinery and the `validateRegistries` orchestrator move to a new `src/mcp/schema/` module. Each subsystem now owns its validator — independent growth, single-file responsibility.

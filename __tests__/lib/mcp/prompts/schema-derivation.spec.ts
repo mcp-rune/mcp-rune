@@ -417,13 +417,13 @@ describe('lib/mcp/prompts/schema-derivation - Memoization', () => {
     })
   })
 
-  describe('attribute type → promptType (kind-metadata coverage)', () => {
+  describe('attribute type → promptType (kinds coverage)', () => {
     function promptTypeFor(attribute: Record<string, unknown>) {
       const modelConfig = { attributes: { value: attribute }, required: [] }
       return deriveFieldDefinitions(modelConfig).value.type
     }
 
-    it('uuid attribute kind surfaces as uuid (was string before kind-metadata)', () => {
+    it('uuid attribute kind surfaces as uuid (was string before the kinds registry)', () => {
       expect(promptTypeFor({ type: 'uuid', description: '' })).toBe('uuid')
     })
 

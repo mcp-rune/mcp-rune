@@ -13,7 +13,7 @@
  */
 
 import type { AttributeDefinition } from '#src/mcp/models/base-model.js'
-import { getKind } from '#src/mcp/models/kind-metadata.js'
+import { getKind } from '#src/mcp/models/kinds/index.js'
 
 import type {
   AssociationConfig,

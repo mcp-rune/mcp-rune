@@ -251,9 +251,9 @@ describe('AppRegistry logging', () => {
       expect(out).not.toContain(':root{')
     })
 
-    it('serializes declarative formatter descriptors into a script block before the style block', () => {
+    it('serializes the kind render hints into a script block before the style block', () => {
       const registry = new AppRegistry([], {
-        formatters: { date: { display: { locale: 'en-GB' } } },
+        kinds: { date: { render: { locale: 'en-GB' } } },
         themeOverrides: { cssVariables: { '--color-accent': '#0a84ff' } }
       })
 
@@ -264,33 +264,58 @@ describe('AppRegistry logging', () => {
       expect(scriptIdx).toBeGreaterThan(-1)
       expect(styleIdx).toBeGreaterThan(-1)
       expect(scriptIdx).toBeLessThan(styleIdx)
-      expect(out).toContain('window.__MCP_RUNE_FORMATTERS__=')
+      expect(out).toContain('window.__MCP_RUNE_KIND_RENDERERS__=')
       expect(out).toContain('"date"')
       expect(out).toContain('en-GB')
     })
 
-    it('serializes the full FormatterDescriptor shape (label, describe, htmlInputType, validation)', () => {
-      const registry = new AppRegistry([], {
-        formatters: {
-          'string:isbn': {
+    it('registers the descriptor half of a custom kind on the server (label/validate visible to getKind)', async () => {
+      const { getKind } = await import('../../../../src/mcp/models/kinds/index.js')
+
+      new AppRegistry([], {
+        kinds: {
+          'string:test-isbn': {
             label: 'ISBN',
             htmlInputType: 'text',
             promptType: 'string',
-            validation: { pattern: '^[0-9-]+$', minLength: 10, maxLength: 17 },
-            display: { template: 'ISBN: {value}' }
+            validate: (v) =>
+              typeof v === 'string' && /^[0-9-]+$/.test(v) ? null : 'must be an ISBN',
+            render: { template: 'ISBN: {value}' }
           }
         }
       })
+
+      const k = getKind('string', 'test-isbn')
+      expect(k.label).toBe('ISBN')
+      expect(k.htmlInputType).toBe('text')
+      expect(k.validate('123-456')).toBeNull()
+      expect(k.validate('not-an-isbn')).toBe('must be an ISBN')
+    })
+
+    it('only the render hint reaches the iframe — descriptor fields stay server-side', () => {
+      const registry = new AppRegistry([], {
+        kinds: {
+          'string:test-iframe-isbn': {
+            label: 'ISBN',
+            htmlInputType: 'text',
+            promptType: 'string',
+            render: { template: 'ISBN: {value}' }
+          }
+        }
+      })
+
       const out = registry.injectIntoHead(BASE_HTML)
-      expect(out).toContain('"label":"ISBN"')
-      expect(out).toContain('"htmlInputType":"text"')
-      expect(out).toContain('"pattern":"^[0-9-]+$"')
+
       expect(out).toContain('"template":"ISBN: {value}"')
+      // Descriptor-half fields must not be serialized into the iframe payload.
+      expect(out).not.toContain('"label"')
+      expect(out).not.toContain('"htmlInputType"')
+      expect(out).not.toContain('"promptType"')
     })
 
     it('escapes </script> sequences inside the serialized JSON', () => {
       const registry = new AppRegistry([], {
-        formatters: { string: { display: { template: '</script><x>' } } }
+        kinds: { string: { render: { template: '</script><x>' } } }
       })
 
       const out = registry.injectIntoHead(BASE_HTML)

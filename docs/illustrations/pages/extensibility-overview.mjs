@@ -41,7 +41,7 @@ function buildTiersFigure() {
       'Core Adapters',
       [
         'DataLayer · ApiClient · BaseConvention · SearchAdapter',
-        'Kinds (KindDescriptor / FormatterDescriptor)'
+        'Kinds (KindDescriptor + KindRenderHint)'
       ],
       'data path: HTTP → normalize → CRUD → projection',
       colors.teal

@@ -60,7 +60,7 @@ A deployer extends this taxonomy through a single declarative channel — `AppRe
 
 ## Built-in Kinds
 
-All 17 kinds are registered in `src/core/kind-metadata.ts`. Browser-side display rendering (`format()`) for kinds whose output is more than `helpers.text(String(value))` lives in `src/mcp/apps/shared/formatters.ts`.
+All 17 kinds are registered in `src/mcp/models/kinds/` — one file per built-in kind. Browser-side display rendering (`render()`) for kinds whose output is more than `helpers.text(String(value))` lives in `src/mcp/apps/shared/kind-renderers.ts`.
 
 | Kind       | `htmlInputType`  | `promptType` | `describe` example               |
 | ---------- | ---------------- | ------------ | -------------------------------- |
@@ -148,85 +148,68 @@ Each method has a precise role. Read them as a contract between three caller gro
 
 `parse / serialize / toInput / fromInput` follow the standard rule: `parse` accepts whatever the API gave you (string, number, boolean, null); `toInput` produces a value the HTML `<input>` is happy with (always a string); `fromInput` accepts the raw `<input>.value` string; `serialize` returns the shape your API expects.
 
-## Three Extension Paths
+## Two Extension Paths
 
-| Path                            | When to use                                                                                          | Channel                                                                          | Crosses server boundary?                                                              |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| **Declarative descriptor**      | New kind your deployment needs (ISBN, currency, phone).                                              | `AppRegistry.formatters: Record<string, FormatterDescriptor>`                    | **Yes** — server + browser see the same descriptor.                                   |
-| **Programmatic `registerKind`** | Framework-internal kinds, or rich server-side behavior (e.g. a custom `serialize` that does crypto). | `registerKind(kind, descriptor, { format })` called at boot                      | Yes, but you import `@mcp-rune/mcp-rune/core` and call it directly (no JSON channel). |
-| **DOM-only display override**   | You want a different widget for an existing kind (slider for `rating`, gradient swatch for `color`). | `registerFormatter(kind, { format }, { format })` from `@mcp-rune/mcp-rune/apps` | **No** — only the iframe sees this.                                                   |
+| Path                            | When to use                                                                                     | Channel                                                                                                              |
+| ------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **`AppRegistry({ kinds })`**    | New kind your deployment needs (ISBN, currency, phone), or override fields on a built-in.       | `kinds: Record<string, KindExtension>` — descriptor half registers server-side; `render` half flows into the iframe. |
+| **`registerKindRenderer(...)`** | DOM-only widget change for an existing kind (slider for `rating`, gradient swatch for `color`). | `registerKindRenderer(kind, { render }, { format })` from `@mcp-rune/mcp-rune/apps/kind-renderers`. Iframe-only.     |
 
-The declarative descriptor is the canonical path. Use it unless you genuinely need imperative code on the server.
+`AppRegistry({ kinds })` is the canonical path — one entry per kind covers behavior (parse, validate, label, htmlInputType, promptType) AND rendering. `registerKindRenderer` exists only for DOM widget overrides on a kind already defined elsewhere.
 
-### The `FormatterDescriptor` shape
+### The `KindExtension` shape
 
-```ts file=src/formatter-descriptor.ts
-import type { FormatterDescriptor } from '@mcp-rune/mcp-rune/apps'
+```ts file=src/kind-extension.ts
+import type { KindExtension, KindDescriptor, KindRenderHint } from '@mcp-rune/mcp-rune/apps'
 
-interface FormatterDescriptor {
-  htmlInputType?: string
-  promptType?: string
-  label?: string
-  validation?: {
-    pattern?: string
-    minLength?: number
-    maxLength?: number
-    minimum?: number
-    maximum?: number
-  }
-  display?: {
-    template?: string // "{value}" substitution
-    locale?: string // Intl.DateTimeFormat
-    dateStyle?: 'full' | 'long' | 'medium' | 'short'
-    timeStyle?: 'full' | 'long' | 'medium' | 'short'
-    badge?: { icon?: string; className?: string }
-  }
-  parser?: {
-    regex?: string
-    replacement?: string
-  }
+// KindExtension = Partial<KindDescriptor> & { render?: KindRenderHint }
+//
+// Partial<KindDescriptor>: label, htmlInputType, promptType, plus the
+//   functions parse / serialize / toInput / fromInput / describe / validate.
+//   These run server-side (and in the browser when the bundle ships them).
+//
+// KindRenderHint: declarative DOM rendering forwarded to the iframe runtime
+//   through `window.__MCP_RUNE_KIND_RENDERERS__`. A closed allowlist of
+//   operations (template, Intl locale, badge variant) so the channel is
+//   CSP-safe — no inline JS is ever executed.
+
+interface KindRenderHint {
+  template?: string // "{value}" substitution
+  locale?: string // Intl.DateTimeFormat
+  dateStyle?: 'full' | 'long' | 'medium' | 'short'
+  timeStyle?: 'full' | 'long' | 'medium' | 'short'
+  badge?: { icon?: string; className?: string }
 }
 ```
 
-```js file=src/formatter-descriptor.js
+```js file=src/kind-extension.js
 /**
- * Iframe-side rendering metadata for a kind. Every field is optional —
- * the iframe only reads what the kind populates.
+ * KindExtension = Partial<KindDescriptor> & { render?: KindRenderHint }
  *
- * @typedef {Object} FormatterValidation
- * @property {string} [pattern]
- * @property {number} [minLength]
- * @property {number} [maxLength]
- * @property {number} [minimum]
- * @property {number} [maximum]
+ * Partial<KindDescriptor>: label, htmlInputType, promptType, plus the
+ *   functions parse / serialize / toInput / fromInput / describe / validate.
+ *   These run server-side (and in the browser when the bundle ships them).
  *
- * @typedef {Object} FormatterDisplay
+ * KindRenderHint: declarative DOM rendering forwarded to the iframe runtime
+ *   through `window.__MCP_RUNE_KIND_RENDERERS__`. A closed allowlist of
+ *   operations (template, Intl locale, badge variant) so the channel is
+ *   CSP-safe — no inline JS is ever executed.
+ *
+ * @typedef {Object} KindRenderHint
  * @property {string} [template]   `{value}` substitution
  * @property {string} [locale]     Intl.DateTimeFormat
  * @property {'full' | 'long' | 'medium' | 'short'} [dateStyle]
  * @property {'full' | 'long' | 'medium' | 'short'} [timeStyle]
  * @property {{ icon?: string, className?: string }} [badge]
- *
- * @typedef {Object} FormatterParser
- * @property {string} [regex]
- * @property {string} [replacement]
- *
- * @typedef {Object} FormatterDescriptor
- * @property {string} [htmlInputType]
- * @property {string} [promptType]
- * @property {string} [label]
- * @property {FormatterValidation} [validation]
- * @property {FormatterDisplay} [display]
- * @property {FormatterParser} [parser]
  */
 ```
 
-Notice the descriptor is JSON-serializable. It rides into the iframe through `AppRegistry.injectIntoHead` as `window.__MCP_RUNE_FORMATTERS__` (CSP-safe — no inline JS), and into the server through the same `formatters` config that `AppRegistry` already has. One source of truth.
+The descriptor half (functions and metadata) registers with `src/mcp/models/kinds/` at `AppRegistry` construction time and runs on the server. Only the `render` hint serializes into the iframe via `AppRegistry.injectIntoHead` as `window.__MCP_RUNE_KIND_RENDERERS__`. One config entry, one mental model.
 
 ## `getKind` Lookup Rules
 
 ```ts file=examples/attribute-kinds-guide-03.ts
-import { getKind } from '@mcp-rune/mcp-rune/core'
+import { getKind } from '@mcp-rune/mcp-rune/models'
 
 getKind('string', 'isbn') // 1. exact kind:format narrowing
 getKind('string', 'url') // 2. format hop — 'url' is a top-level kind
@@ -235,7 +218,7 @@ getKind('totally-fake') // 4. falls back to 'string'
 ```
 
 ```js file=examples/attribute-kinds-guide-03.js
-import { getKind } from '@mcp-rune/mcp-rune/core'
+import { getKind } from '@mcp-rune/mcp-rune/models'
 getKind('string', 'isbn') // 1. exact kind:format narrowing
 getKind('string', 'url') // 2. format hop — 'url' is a top-level kind
 getKind('uuid') // 3. base kind
@@ -261,17 +244,18 @@ import { MODEL_CLASSES } from './models'
 export const appRegistry = createDefaultAppRegistry({
   modelClasses: MODEL_CLASSES,
   namespace: 'bookshelf',
-  formatters: {
+  kinds: {
     'string:isbn': {
       label: 'ISBN',
       htmlInputType: 'text',
       promptType: 'string',
-      validation: {
-        pattern: '^(?:97[89][- ]?)?(?:\\d[- ]?){9}[\\dX]$',
-        minLength: 10,
-        maxLength: 17
+      validate: (v) => {
+        if (v === null || v === undefined || v === '') return null
+        const s = String(v)
+        if (s.length < 10 || s.length > 17) return 'ISBN must be 10–17 characters'
+        return /^(?:97[89][- ]?)?(?:\d[- ]?){9}[\dX]$/.test(s) ? null : 'invalid ISBN'
       },
-      display: { template: 'ISBN: {value}' }
+      render: { template: 'ISBN: {value}' }
     }
   }
 })
@@ -284,17 +268,18 @@ import { MODEL_CLASSES } from './models'
 export const appRegistry = createDefaultAppRegistry({
   modelClasses: MODEL_CLASSES,
   namespace: 'bookshelf',
-  formatters: {
+  kinds: {
     'string:isbn': {
       label: 'ISBN',
       htmlInputType: 'text',
       promptType: 'string',
-      validation: {
-        pattern: '^(?:97[89][- ]?)?(?:\\d[- ]?){9}[\\dX]$',
-        minLength: 10,
-        maxLength: 17
+      validate: (v) => {
+        if (v === null || v === undefined || v === '') return null
+        const s = String(v)
+        if (s.length < 10 || s.length > 17) return 'ISBN must be 10–17 characters'
+        return /^(?:97[89][- ]?)?(?:\d[- ]?){9}[\dX]$/.test(s) ? null : 'invalid ISBN'
       },
-      display: { template: 'ISBN: {value}' }
+      render: { template: 'ISBN: {value}' }
     }
   }
 })
@@ -329,92 +314,82 @@ Now:
 
 One declaration, four surfaces.
 
-## Worked Example: Currency Kind via `registerKind`
+## Worked Example: Currency Kind
 
-When the declarative descriptor isn't expressive enough — typically because you need custom `parse` or `serialize` logic that can't be expressed as a regex or a template — call `registerKind` directly at boot:
+Custom `parse` / `serialize` logic is just function fields on the same `KindExtension`. No separate "imperative" path:
 
 ```ts file=examples/attribute-kinds-guide-06.ts
-// your-server/kinds/currency.ts
-import { registerKind } from '@mcp-rune/mcp-rune/core'
+// your-server/registries/app-registry.ts
+import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
 
-registerKind('currency', {
-  label: 'Currency',
-  htmlInputType: 'number',
-  promptType: 'number',
-  parse: (v) => {
-    if (v === null || v === undefined || v === '') return null
-    if (typeof v === 'number') return v
-    return Number(String(v).replace(/[^0-9.-]/g, ''))
-  },
-  serialize: (v) => (typeof v === 'number' ? Math.round(v * 100) / 100 : null),
-  describe: (v) => {
-    if (v === null || v === undefined) return ''
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(v))
-  },
-  toInput: (v) => (v === null || v === undefined ? '' : String(v)),
-  fromInput: (v) => (v === '' ? null : Number(v)),
-  validate: (v) => {
-    if (v === null || v === undefined || v === '') return null
-    return typeof v === 'number' && Number.isFinite(v) ? null : 'must be a number'
+export const appRegistry = createDefaultAppRegistry({
+  modelClasses: MODEL_CLASSES,
+  namespace: 'invoicing',
+  kinds: {
+    currency: {
+      label: 'Currency',
+      htmlInputType: 'number',
+      promptType: 'number',
+      parse: (v) => {
+        if (v === null || v === undefined || v === '') return null
+        if (typeof v === 'number') return v
+        return Number(String(v).replace(/[^0-9.-]/g, ''))
+      },
+      serialize: (v) => (typeof v === 'number' ? Math.round(v * 100) / 100 : null),
+      describe: (v) => {
+        if (v === null || v === undefined) return ''
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
+          Number(v)
+        )
+      },
+      toInput: (v) => (v === null || v === undefined ? '' : String(v)),
+      fromInput: (v) => (v === '' ? null : Number(v)),
+      validate: (v) => {
+        if (v === null || v === undefined || v === '') return null
+        return typeof v === 'number' && Number.isFinite(v) ? null : 'must be a number'
+      }
+    }
   }
 })
 ```
 
 ```js file=examples/attribute-kinds-guide-06.js
-// your-server/kinds/currency.ts
-import { registerKind } from '@mcp-rune/mcp-rune/core'
-registerKind('currency', {
-  label: 'Currency',
-  htmlInputType: 'number',
-  promptType: 'number',
-  parse: (v) => {
-    if (v === null || v === undefined || v === '') return null
-    if (typeof v === 'number') return v
-    return Number(String(v).replace(/[^0-9.-]/g, ''))
-  },
-  serialize: (v) => (typeof v === 'number' ? Math.round(v * 100) / 100 : null),
-  describe: (v) => {
-    if (v === null || v === undefined) return ''
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(v))
-  },
-  toInput: (v) => (v === null || v === undefined ? '' : String(v)),
-  fromInput: (v) => (v === '' ? null : Number(v)),
-  validate: (v) => {
-    if (v === null || v === undefined || v === '') return null
-    return typeof v === 'number' && Number.isFinite(v) ? null : 'must be a number'
+// your-server/registries/app-registry.js
+import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
+export const appRegistry = createDefaultAppRegistry({
+  modelClasses: MODEL_CLASSES,
+  namespace: 'invoicing',
+  kinds: {
+    currency: {
+      label: 'Currency',
+      htmlInputType: 'number',
+      promptType: 'number',
+      parse: (v) => {
+        if (v === null || v === undefined || v === '') return null
+        if (typeof v === 'number') return v
+        return Number(String(v).replace(/[^0-9.-]/g, ''))
+      },
+      serialize: (v) => (typeof v === 'number' ? Math.round(v * 100) / 100 : null),
+      describe: (v) => {
+        if (v === null || v === undefined) return ''
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
+          Number(v)
+        )
+      },
+      toInput: (v) => (v === null || v === undefined ? '' : String(v)),
+      fromInput: (v) => (v === '' ? null : Number(v)),
+      validate: (v) => {
+        if (v === null || v === undefined || v === '') return null
+        return typeof v === 'number' && Number.isFinite(v) ? null : 'must be a number'
+      }
+    }
   }
 })
 ```
 
-Import this file once from your server's entry point — the `registerKind` call mutates the shared `KIND_REGISTRY` module. Both server-side prompt summaries and form-schema generation pick it up immediately.
+At `AppRegistry` construction the descriptor half registers with the shared kind registry; server-side prompt summaries, form-schema generation, and `validate_form` all pick it up immediately. Call `validateRegistries(...)` _after_ construction so the boot-time guard sees deployer-defined kinds.
 
-The iframe also needs to know about it. Add a matching declarative entry in `formatters` so the iframe registry sees the descriptor (the iframe can't import server-only code):
-
-```ts file=examples/attribute-kinds-guide-07.ts
-formatters: {
-  currency: {
-    label: 'Currency',
-    htmlInputType: 'number',
-    promptType: 'number'
-    // Server-side parse/serialize/describe are unused in the iframe; the
-    // iframe only needs htmlInputType + display rendering.
-  }
-}
-```
-
-```js file=examples/attribute-kinds-guide-07.js
-formatters: {
-  currency: {
-    label: 'Currency',
-    htmlInputType: 'number',
-    promptType: 'number'
-    // Server-side parse/serialize/describe are unused in the iframe; the
-    // iframe only needs htmlInputType + display rendering.
-  }
-}
-```
-
-In practice, the declarative channel covers ~80% of cases. Reach for `registerKind` only when you genuinely need imperative server-side code.
+> The framework also exports `registerKind(...)` from `@mcp-rune/mcp-rune/models` for tests and framework-internal callers. Application code should configure kinds through `AppRegistry({ kinds })` so there's one extension point to find.
 
 ## Worked Example: DOM-Only Override
 
@@ -422,10 +397,10 @@ Sometimes you want to keep a kind's contract intact but change the rendered widg
 
 ```ts file=src/max.ts
 // your-server/apps/rating-slider.js
-import { registerFormatter, helpers } from '@mcp-rune/mcp-rune/apps/formatters'
+import { registerKindRenderer, helpers } from '@mcp-rune/mcp-rune/apps/kind-renderers'
 
-registerFormatter('rating', {
-  format: (value, opts) => {
+registerKindRenderer('rating', {
+  render: (value, opts) => {
     const max = opts?.column?.max ?? 5
     const span = document.createElement('span')
     span.textContent = `${value}/${max}`
@@ -439,9 +414,9 @@ registerFormatter('rating', {
 
 ```js file=src/max.js
 // your-server/apps/rating-slider.js
-import { registerFormatter } from '@mcp-rune/mcp-rune/apps/formatters'
-registerFormatter('rating', {
-  format: (value, opts) => {
+import { registerKindRenderer } from '@mcp-rune/mcp-rune/apps/kind-renderers'
+registerKindRenderer('rating', {
+  render: (value, opts) => {
     const max = opts?.column?.max ?? 5
     const span = document.createElement('span')
     span.textContent = `${value}/${max}`
@@ -453,9 +428,9 @@ registerFormatter('rating', {
 })
 ```
 
-`registerFormatter` is **DOM-only**. It accepts only `{ format: (value, opts) => Node }` and throws if you try to pass `parse`, `serialize`, or any other key — those belong in `kind-metadata` (declarative descriptor or `registerKind`). The deliberate narrowing prevents the v0.50 drift where deployers used a JS-hook escape valve and the server-side prompts had no idea what kinds existed.
+`registerKindRenderer` is **DOM-only**. It accepts only `{ render: (value, opts) => Node }` and throws if you try to pass `parse`, `serialize`, or any other key — those belong in the kind descriptor (configured via `AppRegistry({ kinds })`). The deliberate narrowing prevents drift where the server-side prompts and validation diverge from what the iframe rendered.
 
-To register a brand-new kind via the iframe, use the declarative `FormatterDescriptor` channel above. `registerFormatter` only overrides the DOM rendering of an existing kind.
+To register a brand-new kind, use `AppRegistry({ kinds })` above. `registerKindRenderer` only overrides the DOM rendering of an existing kind.
 
 ## How a Kind Flows Through the System
 
@@ -467,11 +442,11 @@ Trace a single `published_at` attribute (`type: 'datetime'`) from definition to 
 
 3. **Form schema**: `form-schema.ts` calls `getKind('datetime').htmlInputType` → `'datetime-local'`. Renders as `<input type="datetime-local">` in the form-app iframes.
 
-4. **Form prefill**: `shared/model-form/main.js` receives an API value `"2026-05-28T14:30:00Z"`, calls `getFormatter('datetime').parse(...)` → `Date`, then `.toInput(date)` → `"2026-05-28T14:30"`. Sets the `<input value="…">`.
+4. **Form prefill**: `shared/model-form/main.js` receives an API value `"2026-05-28T14:30:00Z"`, calls `getKindRenderer('datetime').parse(...)` → `Date`, then `.toInput(date)` → `"2026-05-28T14:30"`. Sets the `<input value="…">`.
 
-5. **Cell rendering** in find-model-app: `renderCellValue(apiValue, column)` calls `getFormatter('datetime').format(parsedDate)` → a `<span>` with a localized "May 28, 2026, 2:30 PM" (locale overridable via `formatters.datetime.display.locale`).
+5. **Cell rendering** in find-model-app: `renderCellValue(apiValue, column)` calls `getKindRenderer('datetime').render(parsedDate)` → a `<span>` with a localized "May 28, 2026, 2:30 PM" (locale overridable via `kinds.datetime.render.locale`).
 
-6. **Form submit**: user changes the input to `"2026-06-01T09:00"`. `shared/model-form/main.js` calls `getFormatter('datetime').fromInput(raw)` → `Date`, then `.serialize(date)` → `"2026-06-01T09:00:00.000Z"`. Sent to the API.
+6. **Form submit**: user changes the input to `"2026-06-01T09:00"`. `shared/model-form/main.js` calls `getKindRenderer('datetime').fromInput(raw)` → `Date`, then `.serialize(date)` → `"2026-06-01T09:00:00.000Z"`. Sent to the API.
 
 7. **`validate_form`**: if the user instead pasted `"garbage"`, `BaseStrategy.validateField` calls `getKind('datetime').validate('garbage')` → `'must be a valid datetime'`. The tool returns the error before any API call.
 
@@ -484,7 +459,7 @@ Same kind, eight call sites, one descriptor.
 Test the descriptor's pure functions directly:
 
 ```ts file=examples/attribute-kinds-guide-09.ts
-import { getKind } from '@mcp-rune/mcp-rune/core'
+import { getKind } from '@mcp-rune/mcp-rune/models'
 import './kinds/currency' // ← side-effect import to register
 
 describe('currency kind', () => {
@@ -503,7 +478,7 @@ describe('currency kind', () => {
 ```
 
 ```js file=examples/attribute-kinds-guide-09.js
-import { getKind } from '@mcp-rune/mcp-rune/core'
+import { getKind } from '@mcp-rune/mcp-rune/models'
 import './kinds/currency' // ← side-effect import to register
 describe('currency kind', () => {
   it('parses string with $ sign to number', () => {
@@ -548,11 +523,11 @@ The DOM `format()` is tested in `happy-dom`:
 /**
  * @vitest-environment happy-dom
  */
-import { getFormatter } from '@mcp-rune/mcp-rune/apps/formatters'
+import { getKindRenderer } from '@mcp-rune/mcp-rune/apps/kind-renderers'
 
 it('rating renders a custom widget after override', () => {
-  // your registerFormatter override must run before this test
-  const node = getFormatter('rating').format(3, { column: { max: 5 } })
+  // your registerKindRenderer override must run before this test
+  const node = getKindRenderer('rating').render(3, { column: { max: 5 } })
   expect(node.textContent).toBe('3/5')
 })
 ```
@@ -561,29 +536,20 @@ it('rating renders a custom widget after override', () => {
 /**
  * @vitest-environment happy-dom
  */
-import { getFormatter } from '@mcp-rune/mcp-rune/apps/formatters'
+import { getKindRenderer } from '@mcp-rune/mcp-rune/apps/kind-renderers'
 it('rating renders a custom widget after override', () => {
-  // your registerFormatter override must run before this test
-  const node = getFormatter('rating').format(3, { column: { max: 5 } })
+  // your registerKindRenderer override must run before this test
+  const node = getKindRenderer('rating').render(3, { column: { max: 5 } })
   expect(node.textContent).toBe('3/5')
 })
 ```
 
-## Migrating from v0.50 `formatterScript`
+## Migrating from `AppRegistry.formatters`
 
-v0.50 shipped a `formatterScript` option on `AppRegistry` — a JS hook that ran inside the iframe and could register entirely new kinds. It was deleted in v0.51 because the server couldn't see what the hook registered (the prompt system and `validate_form` had no idea your `isbn` kind existed). The declarative `FormatterDescriptor` channel covers every case the hook covered, and now the server sees the kind too.
+Pre-v0.79 the deployer extension was `AppRegistry({ formatters })` with a `FormatterDescriptor` shape that mixed kind-definitional fields, iframe-only validation hints, and a never-implemented `parser` block. v0.79 unifies it into `AppRegistry({ kinds })` with a single `KindExtension` per kind: descriptor fields run server-side; only `render` reaches the iframe.
 
 ```ts file=examples/attribute-kinds-guide-12.ts
-// BEFORE (v0.50)
-formatterScript: `
-  window.__MCP_RUNE_REGISTER_FORMATTERS__ = (registerFormatter, helpers) => {
-    registerFormatter('isbn', {
-      format: (v) => helpers.text('ISBN: ' + v)
-    })
-  }
-`
-
-// AFTER (v0.51+)
+// BEFORE (pre-0.79)
 formatters: {
   'string:isbn': {
     label: 'ISBN',
@@ -592,41 +558,58 @@ formatters: {
     display: { template: 'ISBN: {value}' }
   }
 }
-```
 
-```js file=examples/attribute-kinds-guide-12.js
-// BEFORE (v0.50)
-formatterScript: `
-  window.__MCP_RUNE_REGISTER_FORMATTERS__ = (registerFormatter, helpers) => {
-    registerFormatter('isbn', {
-      format: (v) => helpers.text('ISBN: ' + v)
-    })
-  }
-`
-// AFTER (v0.51+)
-formatters: {
-  ;('string:isbn')
-  {
-    label: ('ISBN', htmlInputType)
-    ;('text', validation)
-    {
-      pattern: ('^[0-9-]+$', minLength)
-      ;(10, maxLength)
-      17
-    }
-    display: {
-      template: 'ISBN: {value}'
-    }
+// AFTER (0.79+)
+kinds: {
+  'string:isbn': {
+    label: 'ISBN',
+    htmlInputType: 'text',
+    validate: (v) =>
+      typeof v === 'string' && /^[0-9-]+$/.test(v) && v.length >= 10 && v.length <= 17
+        ? null
+        : 'must be an ISBN',
+    render: { template: 'ISBN: {value}' }
   }
 }
 ```
 
-If your old `formatterScript` did something genuinely imperative on the server (rare), use `registerKind` per the [Currency example](#worked-example-currency-kind-via-registerkind) above instead.
+```js file=examples/attribute-kinds-guide-12.js
+// BEFORE (pre-0.79)
+formatters: {
+  'string:isbn': {
+    label: 'ISBN',
+    htmlInputType: 'text',
+    validation: { pattern: '^[0-9-]+$', minLength: 10, maxLength: 17 },
+    display: { template: 'ISBN: {value}' }
+  }
+}
+
+// AFTER (0.79+)
+kinds: {
+  'string:isbn': {
+    label: 'ISBN',
+    htmlInputType: 'text',
+    validate: (v) =>
+      typeof v === 'string' && /^[0-9-]+$/.test(v) && v.length >= 10 && v.length <= 17
+        ? null
+        : 'must be an ISBN',
+    render: { template: 'ISBN: {value}' }
+  }
+}
+```
+
+What changed:
+
+- `formatters:` → `kinds:` (the option is honest about what it configures).
+- `display:` → `render:` (the sub-block is honest about being DOM-only).
+- `validation: { pattern, minLength, maxLength, … }` → write a `validate(v)` function instead. Same field, runs on the server (and in the browser bundle), no longer drifts from `KindDescriptor.validate`.
+- `parser:` removed — it was never wired up.
+- `label`, `htmlInputType`, `promptType` are no longer silently ignored — they register with the kind descriptor on the server.
 
 ---
 
 **Related guides:**
 
-- [Custom MCP App](../09-extensions/custom-app.md) — building a custom iframe app that consumes the kind taxonomy through `getFormatter`.
+- [Custom MCP App](../09-extensions/custom-app.md) — building a custom iframe app that consumes the kind taxonomy through `getKindRenderer`.
 - [Custom API Convention](../08-adapters/api-convention.md) — convention-level transformations sit upstream of kind parsing.
 - [Prompt Creation Guide](./prompt-creation.md) — how prompt strategies consume `promptType` and `describe`.

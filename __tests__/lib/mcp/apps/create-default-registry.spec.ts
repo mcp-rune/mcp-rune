@@ -123,18 +123,18 @@ describe('createDefaultAppRegistry', () => {
     expect(names).toContain('edit_model_app')
   })
 
-  it('threads themeOverrides and formatters into AppRegistry so injectIntoHead emits them', () => {
+  it('threads themeOverrides and kinds into AppRegistry so injectIntoHead emits them', () => {
     const registry = createDefaultAppRegistry({
       modelClasses: { book: FakeModel as never },
       namespace: 'test-default',
       themeOverrides: { cssVariables: { '--color-accent': '#0a84ff' } },
-      formatters: { date: { display: { locale: 'en-GB' } } }
+      kinds: { date: { render: { locale: 'en-GB' } } }
     })
 
     const out = registry.injectIntoHead('<html><head></head><body></body></html>')
 
     expect(out).toContain('--color-accent:#0a84ff')
-    expect(out).toContain('window.__MCP_RUNE_FORMATTERS__')
+    expect(out).toContain('window.__MCP_RUNE_KIND_RENDERERS__')
     expect(out).toContain('en-GB')
   })
 })

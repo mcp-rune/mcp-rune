@@ -30,6 +30,8 @@ import {
 } from '#src/mcp/data-layer/api-extensions/search/index.js'
 import type { DataLayer, DataLayerFactory } from '#src/mcp/data-layer/data-layer.js'
 import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
+import type { KindDescriptor, KindRenderHint } from '#src/mcp/models/kinds/index.js'
+import { registerKind } from '#src/mcp/models/kinds/index.js'
 import type { ModelsRegistry } from '#src/mcp/tools/base-tool.js'
 import * as logger from '#src/runtime/logger.js'
 
@@ -80,44 +82,23 @@ export interface ThemeOverrides {
 }
 
 /**
- * Declarative formatter descriptor — the single deployer-facing extension
- * channel for both new kinds and built-in overrides. Consumed by the iframe
- * (`formatters.runtime.js`) for DOM rendering AND by the server through
- * `kind-metadata` for prompt docs, form-schema HTML input types, and
- * `validate_form` errors. Everything declarative; CSP-safe.
+ * Deployer-facing kind extension — one entry per custom or overridden kind,
+ * keyed by `"kind"` or `"kind:format"` (the same convention as `getKind`).
  *
- * `htmlInputType` chooses the `<input type="…">` rendered in forms.
- * `promptType` sets the type label shown to the LLM in prompt docs.
- * `label` is a short human-facing name (used in prompts and UI hints).
- * `validation.pattern` is a regex source string applied during `validate_form`.
+ * Everything kind-definitional (parse, serialize, describe, validate, label,
+ * htmlInputType, promptType, …) is registered with `src/mcp/models/kinds/` at
+ * `AppRegistry` construction time and runs server-side. Only `render` flows
+ * into the iframe via a `<script>` tag — the runtime in
+ * `kind-renderers.runtime.js` compiles the hint into a DOM renderer through
+ * a closed allowlist of operations (template, Intl locale, badge variant),
+ * so the channel stays CSP-safe.
  *
- * `display.template` writes "{value}"-substituted text.
- * `display.locale` reroutes datetime rendering through `Intl.DateTimeFormat`.
- * `display.badge` renders the value as a status badge with the given variant.
- * `parser.regex` + `parser.replacement` transform the API value before display.
+ * This is the single extension path. There is no parallel iframe-only
+ * descriptor; if you want to influence form behavior, put it in the
+ * descriptor half.
  */
-export interface FormatterDescriptor {
-  htmlInputType?: string
-  promptType?: string
-  label?: string
-  validation?: {
-    pattern?: string
-    minLength?: number
-    maxLength?: number
-    minimum?: number
-    maximum?: number
-  }
-  display?: {
-    template?: string
-    locale?: string
-    dateStyle?: 'full' | 'long' | 'medium' | 'short'
-    timeStyle?: 'full' | 'long' | 'medium' | 'short'
-    badge?: { icon?: string; className?: string }
-  }
-  parser?: {
-    regex?: string
-    replacement?: string
-  }
+export interface KindExtension extends Partial<KindDescriptor> {
+  render?: KindRenderHint
 }
 
 interface RegistryOptions {
@@ -149,13 +130,17 @@ interface RegistryOptions {
   /** Per-deployment CSS variable + raw-CSS overrides applied to every app. */
   themeOverrides?: ThemeOverrides
   /**
-   * Declarative formatter overrides keyed by `"kind"` or `"kind:format"`.
-   * Translated by `formatters.runtime.js` for the iframe AND read by the
-   * server through `kind-metadata` for prompt docs, form-schema HTML input
-   * types, and `validate_form` errors. Single deployer extension channel.
-   * CSP-safe; serialized to a `<script>` tag.
+   * Deployer-defined kinds, keyed by `"kind"` or `"kind:format"`. Each entry
+   * is a `Partial<KindDescriptor>` (parse, validate, label, …) plus an
+   * optional `render` hint for the iframe. AppRegistry registers the
+   * descriptor half with `src/mcp/models/kinds/` at construction time and
+   * serializes `render` into a CSP-safe `<script>` block consumed by
+   * `kind-renderers.runtime.js`.
+   *
+   * Call `validateRegistries(...)` *after* constructing `AppRegistry` so
+   * boot-time validation sees deployer-defined kinds.
    */
-  formatters?: Record<string, FormatterDescriptor>
+  kinds?: Record<string, KindExtension>
 }
 
 interface RegisterToolsOptions {
@@ -181,7 +166,7 @@ export class AppRegistry {
   private _defaultShaper?: SearchRequestShaper
   private _headerIcon?: string
   private _themeOverrides?: ThemeOverrides
-  private _formatters?: Record<string, FormatterDescriptor>
+  private _kindRenderHints: Record<string, KindRenderHint> = {}
   private _formSubmitMode: FormSubmitMode = 'direct'
 
   constructor(
@@ -195,7 +180,7 @@ export class AppRegistry {
       defaultShaper,
       headerIcon,
       themeOverrides,
-      formatters
+      kinds
     }: RegistryOptions = {}
   ) {
     this._apiUrl = apiUrl
@@ -205,7 +190,21 @@ export class AppRegistry {
     this._defaultShaper = defaultShaper
     this._headerIcon = headerIcon
     this._themeOverrides = themeOverrides
-    this._formatters = formatters
+
+    if (kinds) {
+      for (const [extKey, extension] of Object.entries(kinds)) {
+        const { render, ...descriptor } = extension
+        const sep = extKey.indexOf(':')
+        const kind = sep === -1 ? extKey : extKey.slice(0, sep)
+        const format = sep === -1 ? undefined : extKey.slice(sep + 1)
+        if (Object.keys(descriptor).length > 0) {
+          registerKind(kind, descriptor, format ? { format } : {})
+        }
+        if (render) {
+          this._kindRenderHints[extKey] = render
+        }
+      }
+    }
 
     // Default DataLayer factory wraps ModelService. Apps share the same
     // pluggable seam as ToolRegistry — integrators can swap the adapter
@@ -398,19 +397,19 @@ export class AppRegistry {
   /**
    * Inject per-deployment overrides into an app's bundled HTML just before
    * serving it as a resource. Collects `--header-icon` + `themeOverrides`
-   * variables + raw CSS into one `<style>` block, and `formatters` into one
-   * `<script>` block, both placed before `</head>`. Returns the input
+   * variables + raw CSS into one `<style>` block, and kind render hints into
+   * one `<script>` block, both placed before `</head>`. Returns the input
    * unchanged when nothing needs injecting.
    *
    * Order matters: the `<script>` block precedes the `<style>` block so the
-   * formatter registry is populated before the bundled app code runs. Both
+   * renderer registry is populated before the bundled app code runs. Both
    * sit before `</head>` so the host iframe parses them before body content.
    *
    * Public so tests can exercise it without going through `registerResources`.
    */
   injectIntoHead(html: string): string {
     const styleBlock = this._buildStyleBlock()
-    const scriptBlock = this._buildFormattersBlock()
+    const scriptBlock = this._buildKindRenderersBlock()
     if (!styleBlock && !scriptBlock) return html
 
     return html.replace('</head>', `${scriptBlock}${styleBlock}</head>`)
@@ -433,10 +432,10 @@ export class AppRegistry {
     return `<style>${rootBlock}${rawCss}</style>`
   }
 
-  private _buildFormattersBlock(): string {
-    if (!this._formatters || Object.keys(this._formatters).length === 0) return ''
-    const json = escapeJsonForScript(JSON.stringify(this._formatters))
-    return `<script>window.__MCP_RUNE_FORMATTERS__=${json};</script>`
+  private _buildKindRenderersBlock(): string {
+    if (Object.keys(this._kindRenderHints).length === 0) return ''
+    const json = escapeJsonForScript(JSON.stringify(this._kindRenderHints))
+    return `<script>window.__MCP_RUNE_KIND_RENDERERS__=${json};</script>`
   }
 }
 

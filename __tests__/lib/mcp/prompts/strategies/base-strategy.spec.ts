@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { BaseStrategy } from '../../../../../src/mcp/prompts/strategies/base-strategy.js'
 
 describe('lib/mcp/prompts/strategies/base-strategy', () => {
-  describe('validateField - kind-aware checks (via kind-metadata)', () => {
+  describe('validateField - kind-aware checks (via the kinds registry)', () => {
     it('integer rejects non-integers', () => {
       const errors = BaseStrategy.validateField(
         'age',

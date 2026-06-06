@@ -16,8 +16,8 @@ import { initApp, showStatus, clearStatus } from '../../shared/app-init.js'
 import { renderFilterChips } from '../../shared/filter-chips.js'
 import { createFilterPopover } from '../../shared/filter-popover.js'
 import { createTableSelection } from '../../shared/selection.js'
-import { renderCellValue } from '../../shared/formatters.js'
-import '../../shared/formatters.runtime.js'
+import { renderCellValue } from '../../shared/kind-renderers.js'
+import '../../shared/kind-renderers.runtime.js'
 
 let listSchema = null
 let currentRecords = []

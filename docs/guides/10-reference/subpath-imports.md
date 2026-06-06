@@ -48,24 +48,24 @@ export {}
 
 ## Map by concern
 
-| Subpath                              | What lives there                                                           |
-| ------------------------------------ | -------------------------------------------------------------------------- |
-| `@mcp-rune/mcp-rune/core`            | `BaseModel`, `AttributeDefinition`, validators, helpers — the model layer. |
-| `@mcp-rune/mcp-rune/server`          | `StdioServer`, `HttpServer`, `createServer` factory.                       |
-| `@mcp-rune/mcp-rune/tools`           | `BaseTool`, `ToolRegistry`, categories, interceptors, types.               |
-| `@mcp-rune/mcp-rune/model-service`   | `ModelService`, `EndpointResolver` — orchestrates Convention + ApiClient.  |
-| `@mcp-rune/mcp-rune/prompts`         | `BasePrompt`, `PromptContentGenerator`, `derivePromptSchema`.              |
-| `@mcp-rune/mcp-rune/apps`            | `AppRegistry`, generic app factories (`createNewModelApp`, etc.).          |
-| `@mcp-rune/mcp-rune/apps/formatters` | Shared kind-to-input formatters for custom-app authors.                    |
-| `@mcp-rune/mcp-rune/search`          | `SearchService`, `SearchRequestShaper` base class.                         |
-| `@mcp-rune/mcp-rune/domain`          | `DomainRegistry`, `WorkflowDefinition`, business-rule types.               |
-| `@mcp-rune/mcp-rune/oauth2`          | `OAuthService` — issuance, introspection, revocation, refresh.             |
-| `@mcp-rune/mcp-rune/extensions`      | `HttpExtension` contract; mount-order rules; CIMD opt-in extension.        |
-| `@mcp-rune/mcp-rune/extensions/cimd` | Opt-in Client ID Metadata Document extension.                              |
-| `@mcp-rune/mcp-rune/api-extensions`  | Per-model config bags (e.g. `custom-actions`, `search`).                   |
-| `@mcp-rune/mcp-rune/services`        | `logger`, `tracing`, `errorTracking` facades.                              |
-| `@mcp-rune/mcp-rune/db`              | `setPool`, `query` — minimal PG client.                                    |
-| `@mcp-rune/mcp-rune/db/migrations`   | Versioned SQL migrations as a JS array — feed to your migration runner.    |
+| Subpath                                  | What lives there                                                                                          |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `@mcp-rune/mcp-rune/core`                | `BaseModel`, `AttributeDefinition`, validators, helpers — the model layer.                                |
+| `@mcp-rune/mcp-rune/server`              | `StdioServer`, `HttpServer`, `createServer` factory.                                                      |
+| `@mcp-rune/mcp-rune/tools`               | `BaseTool`, `ToolRegistry`, categories, interceptors, types.                                              |
+| `@mcp-rune/mcp-rune/model-service`       | `ModelService`, `EndpointResolver` — orchestrates Convention + ApiClient.                                 |
+| `@mcp-rune/mcp-rune/prompts`             | `BasePrompt`, `PromptContentGenerator`, `derivePromptSchema`.                                             |
+| `@mcp-rune/mcp-rune/apps`                | `AppRegistry`, generic app factories (`createNewModelApp`, etc.).                                         |
+| `@mcp-rune/mcp-rune/apps/kind-renderers` | DOM kind renderers (`getKindRenderer`, `registerKindRenderer`, `renderCellValue`) for custom-app authors. |
+| `@mcp-rune/mcp-rune/search`              | `SearchService`, `SearchRequestShaper` base class.                                                        |
+| `@mcp-rune/mcp-rune/domain`              | `DomainRegistry`, `WorkflowDefinition`, business-rule types.                                              |
+| `@mcp-rune/mcp-rune/oauth2`              | `OAuthService` — issuance, introspection, revocation, refresh.                                            |
+| `@mcp-rune/mcp-rune/extensions`          | `HttpExtension` contract; mount-order rules; CIMD opt-in extension.                                       |
+| `@mcp-rune/mcp-rune/extensions/cimd`     | Opt-in Client ID Metadata Document extension.                                                             |
+| `@mcp-rune/mcp-rune/api-extensions`      | Per-model config bags (e.g. `custom-actions`, `search`).                                                  |
+| `@mcp-rune/mcp-rune/services`            | `logger`, `tracing`, `errorTracking` facades.                                                             |
+| `@mcp-rune/mcp-rune/db`                  | `setPool`, `query` — minimal PG client.                                                                   |
+| `@mcp-rune/mcp-rune/db/migrations`       | Versioned SQL migrations as a JS array — feed to your migration runner.                                   |
 
 ## Why subpath imports
 
