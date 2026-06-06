@@ -21,7 +21,7 @@ import { validatePromptClass } from '#src/mcp/prompts/prompt-validator.js'
 import type { Issue, ModelClassLike, ValidationReport } from './types.js'
 
 export interface RegistriesInput {
-  /** Plain map of model name → ModelClass, matching how engineer-mcp exports MODEL_CLASSES. */
+  /** Plain map of model name → ModelClass, matching how deployers export MODEL_CLASSES. */
   models: Record<string, ModelClassLike>
   /** Optional map of model name → FormClass. */
   forms?: Record<string, FormClassLike>

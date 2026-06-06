@@ -1,21 +1,67 @@
 /**
- * PromptContentGenerator - Fluent pipeline for assembling prompt documentation
+ * PromptContentBuilder - Fluent pipeline for assembling prompt documentation
  *
  * Thin orchestrator that delegates all rendering to composable generators
  * in the generators/ directory. Each generator is a pure function that takes
  * a context object and returns markdown.
  *
- * Usage:
- * ```typescript
- * get promptContent() {
- *   return PromptContentGenerator.for(RulePrompt, 'rule')
- *     .add('# Rule Creation Guide\n...')
- *     .standard({ skip: ['content'] })
- *     .toolUsage({ parentPath: this.parentPath })
- *     .attributeReference()
- *     .build()
- * }
- * ```
+ * Always invoked from a prompt class's `get promptContent()` getter. The
+ * canonical shape is:
+ *
+ *   .for(ThisClass, '<model>')   // factory, binds class + model name
+ *   .add(`# <X> Creation Guide ...`)  // hand-written intro / What-is
+ *   .standard()                  // flow + guidance + sections + summary
+ *   .toolUsage()                 // auto-generated tool docs
+ *   .attributeReference()        // field table
+ *   .build()
+ *
+ * The five patterns the API is designed to support:
+ *
+ * 1. Plain — follow the canonical shape above verbatim. Reach for this first.
+ *
+ * 2. Custom appendix sections after `.toolUsage()`. The generated docs cover
+ *    the form; instance helpers append extra prose just before the attribute
+ *    table:
+ *
+ *      .standard()
+ *      .toolUsage()
+ *      .add(this.generateExtraSection())
+ *      .attributeReference()
+ *
+ * 3. State-dependent section skipping — `.standard({ skip })` omits
+ *    entries from `promptClass.sections` (by section key) that don't apply
+ *    to the current instance:
+ *
+ *      .standard({ skip: this.isVariantA ? ['section_a', 'section_b'] : [] })
+ *
+ * 4. Pre-rendered section that replaces a generated one — when something is
+ *    already decided at construction (so the auto-generated "choose X"
+ *    section is misleading), inject a hand-rendered panel via
+ *    `beforeSections` and `skip` the matching auto-section so it isn't
+ *    rendered twice. One common example: a prompt for a nested resource
+ *    that already knows its parent record (the value that will go into
+ *    `create_model`'s `parent_path`) renders an "already chosen" parent
+ *    panel and passes `parentPath` to `toolUsage` so the generated tool-call
+ *    example shows the nested URL. Same shape applies to any pre-decided
+ *    state — pre-selected type, pre-bound owner, etc.:
+ *
+ *      .standard({
+ *        beforeSections: preDecidedSection ? [preDecidedSection] : [],
+ *        skip: this.isPreDecided ? ['matching_section'] : [],
+ *      })
+ *      .toolUsage({ parentPath: this.parentPath })  // if nested
+ *
+ * 5. Capability flag at construction — `.for(Cls, name, { appsEnabled })`
+ *    lets generators vary their output based on whether the deployer wired
+ *    up the apps registry.
+ *
+ * Escape hatch: skip `.standard()` and compose manually when you don't want
+ * the guidance/summary blocks:
+ *
+ *   .flowDiagram().allSections().add(...).toolUsage().attributeReference()
+ *
+ * Prefer `.standard()` unless you have a concrete reason — the default
+ * composition is what keeps prompts consistent across models.
  */
 
 import { generateAttributeReference } from './generators/attribute-reference-generator.js'
@@ -47,7 +93,7 @@ interface AllSectionsOptions {
   customSections?: Record<string, (sectionNum: number) => string>
 }
 
-export class PromptContentGenerator {
+export class PromptContentBuilder {
   promptClass: PromptClassLike
   modelName: string
   appsEnabled: boolean
@@ -67,8 +113,8 @@ export class PromptContentGenerator {
     promptClass: PromptClassLike,
     modelName: string,
     options: GeneratorOptions = {}
-  ): PromptContentGenerator {
-    return new PromptContentGenerator(promptClass, modelName, options)
+  ): PromptContentBuilder {
+    return new PromptContentBuilder(promptClass, modelName, options)
   }
 
   // ===========================================================================
@@ -76,20 +122,20 @@ export class PromptContentGenerator {
   // ===========================================================================
 
   /** Add custom markdown content. */
-  add(content: string): PromptContentGenerator {
+  add(content: string): PromptContentBuilder {
     if (content) this.parts.push(content)
     return this
   }
 
   /** Add flow diagram overview from sections/fieldGroups config. */
-  flowDiagram(): PromptContentGenerator {
+  flowDiagram(): PromptContentBuilder {
     const content = generateFlowDiagram(this._context)
     if (content) this.parts.push(content)
     return this
   }
 
   /** Add stateful guidance instructions (mode selection, turn-taking, validation). */
-  guidance(): PromptContentGenerator {
+  guidance(): PromptContentBuilder {
     const content = generateGuidance(this._context)
     if (content) this.parts.push(content)
     return this
@@ -100,14 +146,14 @@ export class PromptContentGenerator {
     groupName: string,
     sectionNumber: number,
     options: Record<string, unknown> = {}
-  ): PromptContentGenerator {
+  ): PromptContentBuilder {
     const content = generateSection(this._context, groupName, sectionNumber, options)
     if (content) this.parts.push(content)
     return this
   }
 
   /** Add all sections documentation, auto-generated from sections config. */
-  allSections(options: AllSectionsOptions = {}): PromptContentGenerator {
+  allSections(options: AllSectionsOptions = {}): PromptContentBuilder {
     const content = generateAllSections(this._context, options)
     if (content) this.parts.push(content)
     return this
@@ -116,7 +162,7 @@ export class PromptContentGenerator {
   /**
    * Standard pipeline: flowDiagram -> guidance -> beforeSections -> allSections -> summary.
    */
-  standard(options: StandardOptions = {}): PromptContentGenerator {
+  standard(options: StandardOptions = {}): PromptContentBuilder {
     const { beforeSections = [], skip = [], customSections = {} } = options
     this.flowDiagram()
     this.guidance()
@@ -127,21 +173,21 @@ export class PromptContentGenerator {
   }
 
   /** Add standard summary template. */
-  summary(): PromptContentGenerator {
+  summary(): PromptContentBuilder {
     const content = generateSummary(this._context)
     if (content) this.parts.push(content)
     return this
   }
 
   /** Add attribute reference table. */
-  attributeReference(): PromptContentGenerator {
+  attributeReference(): PromptContentBuilder {
     const content = generateAttributeReference(this._context)
     if (content) this.parts.push(content)
     return this
   }
 
   /** Add auto-generated tool usage documentation from `static toolUsage` config. */
-  toolUsage(instanceOverrides: Record<string, unknown> = {}): PromptContentGenerator {
+  toolUsage(instanceOverrides: Record<string, unknown> = {}): PromptContentBuilder {
     const content = generateToolUsage(this._context, instanceOverrides)
     if (content) this.parts.push(content)
     return this

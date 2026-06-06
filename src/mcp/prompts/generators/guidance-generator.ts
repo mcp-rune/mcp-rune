@@ -3,7 +3,7 @@
  *
  * Generates stateful guidance instructions (mode selection, turn-taking,
  * validation requirements) for complex interactive prompts.
- * Pure function -- no dependency on BasePrompt or PromptContentGenerator.
+ * Pure function -- no dependency on BasePrompt or PromptContentBuilder.
  */
 
 import type { PromptClassLike } from '../prompt-definitions.js'

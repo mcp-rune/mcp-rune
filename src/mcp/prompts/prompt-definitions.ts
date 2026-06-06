@@ -3,8 +3,8 @@
  *
  * Mirrors the role of `src/mcp/models/attribute-definition.ts` for models:
  * holds the interfaces consumed by `BasePrompt`, strategies, generators,
- * `PromptContentGenerator`, and the registry. Definition lives here; the
- * `BasePrompt` class and `PromptContentGenerator` are consumers.
+ * `PromptContentBuilder`, and the registry. Definition lives here; the
+ * `BasePrompt` class and `PromptContentBuilder` are consumers.
  */
 
 import type { CompletionConfig } from '#src/mcp/models/attribute-definition.js'

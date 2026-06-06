@@ -8,13 +8,13 @@
  *   - `fieldDefinitions` — per-field schema, validation, completion
  *
  * Subclasses override these four static maps and a `get promptContent()`
- * getter that assembles the documentation via `PromptContentGenerator`
- * (see `./prompt-content-generator.ts`).
+ * getter that assembles the documentation via `PromptContentBuilder`
+ * (see `./prompt-content-builder.ts`).
  *
  * The type vocabulary (`Section`, `FieldGroup`, `PromptFieldDefinition`, …)
  * lives in `./prompt-definitions.ts`. Rendering helpers live as pure
  * functions in `./generators/` and are reached through
- * `PromptContentGenerator`, not from this class.
+ * `PromptContentBuilder`, not from this class.
  */
 
 import type {
@@ -29,7 +29,7 @@ import type {
 export class BasePrompt {
   /**
    * Assembled prompt content. Subclasses override with a getter that builds
-   * the prompt using `PromptContentGenerator`. Returns an empty string by
+   * the prompt using `PromptContentBuilder`. Returns an empty string by
    * default so the base class can be instantiated for inspection.
    */
   get promptContent(): string {

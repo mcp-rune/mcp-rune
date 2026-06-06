@@ -8,7 +8,7 @@ This document provides guidelines for creating MCP prompts in this codebase.
 - [Prompt Strategies](#prompt-strategies)
 - [Sections & field groups](#sections--field-groups) — see [`sections-groups.md`](./sections-groups.md)
 - [Schema Derivation](#schema-derivation)
-- [PromptContentGenerator](#promptcontentgenerator)
+- [PromptContentBuilder](#promptcontentgenerator)
 - [Stateful prompts](#stateful-prompts) — see [`stateful.md`](./stateful.md)
 - [Stateless Prompts](#stateless-prompts)
 - [Registry Configuration](#registry-configuration)
@@ -148,17 +148,17 @@ export class ActivityPrompt extends BasePrompt {
 3. **Schema derivation bridges them**: `derivePromptSchema()` generates `fieldDefinitions` from model config
 4. **Never hardcode field tables**: Use generated documentation from `fieldDefinitions`
 
-## PromptContentGenerator
+## PromptContentBuilder
 
-The `PromptContentGenerator` is a fluent builder for assembling prompt content from configuration. It implements Layers 3-4 of the derivation framework.
+The `PromptContentBuilder` is a fluent builder for assembling prompt content from configuration. It implements Layers 3-4 of the derivation framework.
 
 ### Usage
 
 ```js file=examples/prompt-creation-guide-02.js
-import { PromptContentGenerator } from '#src/mcp/prompts/prompt-content-generator.js'
+import { PromptContentBuilder } from '#src/mcp/prompts/prompt-content-builder.js'
 
 get promptContent() {
-  return PromptContentGenerator.for(ActivityPrompt, 'activity')
+  return PromptContentBuilder.for(ActivityPrompt, 'activity')
     .add(`# Activity Creation Guide
 
 ## What is an Activity?
@@ -171,10 +171,10 @@ get promptContent() {
 ```
 
 ```ts file=examples/prompt-creation-guide-02.ts
-import { PromptContentGenerator } from '#src/mcp/prompts/prompt-content-generator.js'
+import { PromptContentBuilder } from '#src/mcp/prompts/prompt-content-builder.js'
 
 get promptContent() {
-  return PromptContentGenerator.for(ActivityPrompt, 'activity')
+  return PromptContentBuilder.for(ActivityPrompt, 'activity')
     .add(`# Activity Creation Guide
 
 ## What is an Activity?
@@ -215,7 +215,7 @@ The builder delegates to these static methods on BasePrompt:
 **Standard** (all strategies — preferred):
 
 ```js file=examples/prompt-creation-guide-03.js
-PromptContentGenerator.for(ActivityPrompt, 'activity')
+PromptContentBuilder.for(ActivityPrompt, 'activity')
   .add(intro)
   .standard() // Enforces canonical ordering
   .add(toolUsage)
@@ -224,7 +224,7 @@ PromptContentGenerator.for(ActivityPrompt, 'activity')
 ```
 
 ```ts file=examples/prompt-creation-guide-03.ts
-PromptContentGenerator.for(ActivityPrompt, 'activity')
+PromptContentBuilder.for(ActivityPrompt, 'activity')
   .add(intro)
   .standard() // Enforces canonical ordering
   .add(toolUsage)
@@ -235,7 +235,7 @@ PromptContentGenerator.for(ActivityPrompt, 'activity')
 **With custom sections** (skip pattern):
 
 ```js file=examples/prompt-creation-guide-04.js
-PromptContentGenerator.for(MyPrompt, 'model')
+PromptContentBuilder.for(MyPrompt, 'model')
   .add(intro)
   .standard({
     beforeSections: [customSection], // Inserted before allSections
@@ -247,7 +247,7 @@ PromptContentGenerator.for(MyPrompt, 'model')
 ```
 
 ```ts file=examples/prompt-creation-guide-04.ts
-PromptContentGenerator.for(MyPrompt, 'model')
+PromptContentBuilder.for(MyPrompt, 'model')
   .add(intro)
   .standard({
     beforeSections: [customSection], // Inserted before allSections
@@ -482,7 +482,7 @@ describe('Prompt Snapshots', () => {
 - [ ] Define `sections` with user-facing structure (title, description, required, groups)
 - [ ] Define `fieldGroups` with validation structure (fields, required, conditional)
 - [ ] Use `derivePromptSchema()` to generate `fieldDefinitions` from model
-- [ ] Use `PromptContentGenerator` builder in `promptContent` getter
+- [ ] Use `PromptContentBuilder` builder in `promptContent` getter
 - [ ] Use `.standard()` for canonical pipeline ordering
 - [ ] Use `.attributeReference()` instead of manual attribute tables
 - [ ] Register in `prompts/registry.js`

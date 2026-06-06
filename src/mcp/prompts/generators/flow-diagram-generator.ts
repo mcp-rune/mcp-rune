@@ -2,7 +2,7 @@
  * Flow Diagram Generator
  *
  * Generates a compact interactive flow diagram from sections/fieldGroups config.
- * Pure functions -- no dependency on BasePrompt or PromptContentGenerator.
+ * Pure functions -- no dependency on BasePrompt or PromptContentBuilder.
  */
 
 import type { PromptClassLike } from '../prompt-definitions.js'

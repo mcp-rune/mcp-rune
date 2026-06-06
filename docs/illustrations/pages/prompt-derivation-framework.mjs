@@ -20,7 +20,7 @@ function buildLayersFigure() {
     '(derivePromptSchema) produces field definitions from model config; ' +
     'Layer 2 Grouping arranges sections and fieldGroups; Layer 3 Section ' +
     'Docs builds per-section tables; Layer 4 Assembly composes via ' +
-    'PromptContentGenerator.build(); Layer 5 Behavioral wraps it with ' +
+    'PromptContentBuilder.build(); Layer 5 Behavioral wraps it with ' +
     'stateful guidance instructions.'
 
   // [number, layer name, function ref, description, accent colour].
@@ -36,14 +36,14 @@ function buildLayersFigure() {
     [
       '4',
       'ASSEMBLY',
-      'PromptContentGenerator.build()',
+      'PromptContentBuilder.build()',
       'Composes all layers into final promptContent',
       colors.blue
     ],
     [
       '3',
       'SECTION DOCS',
-      'PromptContentGenerator + BasePrompt',
+      'PromptContentBuilder + BasePrompt',
       'Per-section field tables, enum tables, content notes',
       colors.teal
     ],

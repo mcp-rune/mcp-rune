@@ -5,7 +5,7 @@
  * prompt class configuration. Includes transformer detection for
  * auto-generating association instructions.
  *
- * Pure functions -- no dependency on BasePrompt or PromptContentGenerator.
+ * Pure functions -- no dependency on BasePrompt or PromptContentBuilder.
  */
 
 import type { TransformerConfig, TransformerEntry } from '../association-transformers.js'

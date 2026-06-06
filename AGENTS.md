@@ -47,6 +47,10 @@ Naming rules for new MCP tools and apps (the `<ui-verb>_model_app` / action-verb
 
 Data tools take the action-verb shape (`create_model`, `update_model`, `delete_model`, `find_records`, `list_models`); app tools take the UI-intent shape (`new_model_app`, `edit_model_app`, `show_model_app`, `list_model_app`). See the skill for the full ruleset, worked examples, and rationale.
 
+## Never name downstream implementors
+
+mcp-rune is the open-source framework; the projects that consume it are deployers/implementors and stay anonymous in this repo. **Do not mention any specific downstream consumer (private or public) by name in source, comments, docs, plans, commit messages, or PR descriptions.** When you need to illustrate a usage pattern, describe the _shape_ of the consumer ("a deployer that exports `MODEL_CLASSES`", "a prompt whose parent is fixed at construction") — never the identity. This applies even when you learned the pattern by reading a specific consumer's code.
+
 ## Roadmap
 
 Workflow for the public Roadmap (milestones, `area:*` / `status:*` / `shipped-in:*` labels, theme convergence) lives in the local `roadmap` skill at `.claude/skills/roadmap/SKILL.md`. Invoke it explicitly with `/roadmap` when you're about to open, label, close, or milestone-manage a Roadmap-relevant issue. It is intentionally opt-in (not auto-loaded) while the project is in heavy BREAKING-changes phase, since almost any issue could plausibly be Roadmap-relevant and auto-firing would defeat the extraction.
