@@ -1,9 +1,3 @@
----
-extension:
-  kind: plugin
-  what: Register custom filter types
----
-
 # Search Filter Integration Guide
 
 How to add structured filter search to an MCP server backed by a Rails API. This guide covers both sides of the integration: the Rails API endpoint and the MCP model filter specification.

@@ -1,9 +1,3 @@
----
-extension:
-  kind: hook
-  what: Request interceptors · domain error mapping
----
-
 # Service Layer Guide
 
 This guide covers the two services that sit between MCP tools and the API: `ModelService` for CRUD operations, and `SearchService` for search, lookup, and listing. Both compose lower-level primitives (EndpointResolver, Convention, SearchAdapter) into clean interfaces.

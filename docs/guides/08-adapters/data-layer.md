@@ -1,9 +1,3 @@
----
-extension:
-  kind: override
-  what: Implement a custom DataLayer
----
-
 # DataLayer Guide
 
 `DataLayer` is the seam between mcp-rune's projection layer (polymorphic CRUD tools, prompt strategies, schema-driven apps, domain workflows) and any concrete data backend. It declares the operations the projection layer needs; the default implementation is `ModelService` wrapping an `ApiClient`, but you can swap in an in-memory stub, a fetch-only adapter, or a third-party library wrapper without changing tools, prompts, or apps.

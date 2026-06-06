@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.73.9] - 2026-06-06
+
+> Strips the site-decoration `extension:` and `series:` YAML frontmatter blocks from the 22 guide markdown files that carried them. Those fields decided how mcp-rune-site rendered each guide (extension-point badges, multi-part tutorial ribbons) and don't belong in the framework repo. The docs site now owns that classification directly in its own guide registry.
+
+### Changed
+
+- **`docs/guides/**/\*.md`** — 22 guide files lose their leading `---\n…\n---\n`frontmatter block; bodies unchanged. Any external renderer that consumed`extension.kind`/`extension.what`/`series.{name,part,total}` from frontmatter must source that classification elsewhere.
+
+[0.73.9]: https://github.com/mcp-rune/mcp-rune/compare/v0.73.8...v0.73.9
+
 ## [0.73.8] - 2026-06-05
 
 > Adds the remaining `BaseTool`-related types to the `/tools` barrel so consumers can type their own `ToolRegistry`-style wrappers without reaching into `lib/*`.

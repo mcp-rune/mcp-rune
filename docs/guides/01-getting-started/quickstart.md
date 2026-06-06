@@ -1,10 +1,3 @@
----
-series:
-  name: Quickstart
-  part: 1
-  total: 2
----
-
 # Quickstart
 
 Get a real MCP server running in under ten minutes. The [`bookshelf`
