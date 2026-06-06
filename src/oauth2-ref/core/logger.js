@@ -7,7 +7,7 @@
  * Uses Winston for file and console logging.
  */
 
-import * as baseLogger from '#src/services/logger.js'
+import * as baseLogger from '#src/runtime/logger.js'
 
 /**
  * OAuth2 Flow Phases - Maps to the MCP Authorization specification

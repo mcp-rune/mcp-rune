@@ -8,7 +8,7 @@
  */
 
 import { normalizeListWithConvention } from '#src/mcp/data-layer/model-service/model-service.js'
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 import { errorMeta } from './helpers.js'
 import type { AppModelClass, DataLayer, FormFieldDefinition } from './types.js'

@@ -1,4 +1,4 @@
-vi.mock('#src/services/vector-storage.js', () => ({
+vi.mock('#src/runtime/vector-storage.js', () => ({
   storeAnalysisMemory: vi.fn(() => Promise.resolve('memo-1')),
   queryIngestedData: vi.fn(() => Promise.resolve([])),
   describeAnalysisSession: vi.fn(() => Promise.resolve({ model: 'scheduling', totalRecords: 3 }))
@@ -8,7 +8,7 @@ import {
   describeAnalysisSession,
   queryIngestedData,
   storeAnalysisMemory
-} from '#src/services/vector-storage.js'
+} from '#src/runtime/vector-storage.js'
 
 import { AnalysisSummarizeTool } from '../../../../../src/mcp/tools/analysis/analysis-summarize-tool.js'
 

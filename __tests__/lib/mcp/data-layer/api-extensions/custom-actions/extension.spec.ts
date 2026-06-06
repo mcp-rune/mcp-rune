@@ -16,16 +16,16 @@ import {
 import { DATA_TOOL_CLASSES, ListModelsTool } from '../../../../../../src/mcp/tools/data/index.js'
 import { ToolRegistry } from '../../../../../../src/mcp/tools/tool-registry.js'
 
-vi.mock('#src/services/logger.js', () => ({
+vi.mock('#src/runtime/logger.js', () => ({
   info: vi.fn(),
   warn: vi.fn(),
   error: vi.fn(),
   debug: vi.fn()
 }))
-vi.mock('#src/services/tracing.js', () => ({
+vi.mock('#src/runtime/tracing.js', () => ({
   traceToolCall: vi.fn((_n, _a, h) => h())
 }))
-vi.mock('#src/services/vector-storage.js', () => ({
+vi.mock('#src/runtime/vector-storage.js', () => ({
   storeOperation: vi.fn(() => Promise.resolve())
 }))
 

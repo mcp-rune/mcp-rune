@@ -10,7 +10,7 @@
 import cors from 'cors'
 import type { NextFunction, Request, Response } from 'express'
 
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 export interface CorsOptions {
   /** Comma-separated allow-list. Trimmed and split internally. */

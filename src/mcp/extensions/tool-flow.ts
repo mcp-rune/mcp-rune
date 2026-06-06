@@ -22,7 +22,7 @@
  * See `docs/guides/extensions.md` for the authoring guide.
  */
 
-import type * as logger from '#src/services/logger.js'
+import type * as logger from '#src/runtime/logger.js'
 
 import type { AppDefinition } from '../apps/lib/registry.js'
 

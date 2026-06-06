@@ -27,7 +27,7 @@ vi.mock('openid-client', () => ({
   allowInsecureRequests: Symbol('allowInsecureRequests')
 }))
 
-vi.mock('#src/services/logger.js', () => ({
+vi.mock('#src/runtime/logger.js', () => ({
   info: vi.fn(),
   debug: vi.fn(),
   error: vi.fn(),

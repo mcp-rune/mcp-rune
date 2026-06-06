@@ -13,7 +13,7 @@ import {
   getEmbeddingsForRecords,
   queryIngestedData,
   storeAnalysisMemory
-} from '#src/services/vector-storage.js'
+} from '#src/runtime/vector-storage.js'
 
 import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { BaseAnalysisTool } from './base-analysis-tool.js'

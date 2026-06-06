@@ -7,9 +7,9 @@ const { mockLogger } = vi.hoisted(() => ({
   }
 }))
 
-vi.mock('#src/services/logger.js', () => mockLogger)
+vi.mock('#src/runtime/logger.js', () => mockLogger)
 
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 import { SessionManager } from '../../../src/mcp/session-manager.js'
 

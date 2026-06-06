@@ -28,9 +28,9 @@ import type {
 } from '#src/mcp/extensions/tool-flow.js'
 import type { PromptRegistry } from '#src/mcp/prompts/prompt-registry.js'
 import type { ToolRegistry } from '#src/mcp/tools/tool-registry.js'
-import { setMcpClientContext } from '#src/services/error-tracking.js'
-import * as logger from '#src/services/logger.js'
-import { setSessionContext } from '#src/services/tracing.js'
+import { setMcpClientContext } from '#src/runtime/error-tracking.js'
+import * as logger from '#src/runtime/logger.js'
+import { setSessionContext } from '#src/runtime/tracing.js'
 
 // Dynamic import for request schemas needed for custom handlers
 let CompleteRequestSchema: unknown = null

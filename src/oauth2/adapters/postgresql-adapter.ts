@@ -9,7 +9,7 @@
 
 import type { Pool } from 'pg'
 
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 import type { StoreTokensParams, TokenData } from './base-adapter.js'
 import { BaseTokenStoreAdapter } from './base-adapter.js'

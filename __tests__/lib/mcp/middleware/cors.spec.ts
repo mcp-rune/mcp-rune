@@ -16,9 +16,9 @@ vi.mock('cors', () => ({
   }
 }))
 
-vi.mock('#src/services/logger.js', () => mockLogger)
+vi.mock('#src/runtime/logger.js', () => mockLogger)
 
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 import { createCorsMiddleware } from '../../../../src/mcp/middleware/cors.js'
 

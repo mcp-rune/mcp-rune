@@ -1,14 +1,14 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
-import type { GraphStratifierSpec } from '#src/services/vector-storage.js'
+import type { GraphStratifierSpec } from '#src/runtime/vector-storage.js'
 import {
   describeAnalysisSession,
   ensureRecordEmbeddings,
   getSessionGraphInfo,
   queryIngestedData,
   recallAnalysisMemories
-} from '#src/services/vector-storage.js'
+} from '#src/runtime/vector-storage.js'
 
 import type { ToolResult } from '../base-tool.js'
 import { BaseAnalysisTool } from './base-analysis-tool.js'

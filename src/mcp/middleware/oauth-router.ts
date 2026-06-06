@@ -37,7 +37,7 @@ import { Router } from 'express'
 
 import { oauthAxios as axios } from '#src/oauth2/oauth-axios.js'
 import type { OAuthService } from '#src/oauth2/service.js'
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 /** Escape HTML special characters to prevent XSS attacks */
 function escapeHtml(str: string): string {

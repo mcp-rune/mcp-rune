@@ -26,9 +26,9 @@ vi.mock('@modelcontextprotocol/sdk/server/streamableHttp.js', () => ({
   StreamableHTTPServerTransport: MockStreamableHTTPServerTransport
 }))
 
-vi.mock('#src/services/logger.js', () => mockLogger)
+vi.mock('#src/runtime/logger.js', () => mockLogger)
 
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 import { createMcpRequestHandler } from '../../../../src/mcp/middleware/mcp-handler.js'
 import { SessionManager } from '../../../../src/mcp/session-manager.js'

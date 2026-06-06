@@ -18,7 +18,7 @@
  */
 
 import { getKind } from '#src/mcp/models/kind-metadata.js'
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 import type { FieldGroup, PromptFieldDefinition } from '../base-prompt.js'
 import { BaseStrategy } from './base-strategy.js'

@@ -1,7 +1,7 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
-import { getOperationClusters } from '#src/services/vector-storage.js'
+import { getOperationClusters } from '#src/runtime/vector-storage.js'
 
 import type { ToolResult } from '../base-tool.js'
 import { BaseOperationsTool } from './base-operations-tool.js'

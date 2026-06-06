@@ -1,12 +1,12 @@
 import { CreateModelTool } from '../../../../../src/mcp/tools/data/create-model-tool.js'
 import { flatConvention } from '../../../../__fixtures__/flat-convention.js'
 
-vi.mock('#src/services/vector-storage.js', () => ({
+vi.mock('#src/runtime/vector-storage.js', () => ({
   storeOperation: vi.fn().mockResolvedValue(null)
 }))
 import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
 
-const { storeOperation } = await import('#src/services/vector-storage.js')
+const { storeOperation } = await import('#src/runtime/vector-storage.js')
 
 describe('lib/mcp/tools/data/create-model-tool', () => {
   describe('description composition', () => {

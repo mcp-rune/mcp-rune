@@ -1,4 +1,4 @@
-vi.mock('#src/services/vector-storage.js', () => ({
+vi.mock('#src/runtime/vector-storage.js', () => ({
   storeOperation: vi.fn().mockResolvedValue(null),
   getIngestedRecordCount: vi.fn(),
   getIngestedRecordIdsFiltered: vi.fn(),
@@ -11,7 +11,7 @@ import {
   getIngestedRecordDryRun,
   getIngestedRecordIdsFiltered,
   storeOperation
-} from '#src/services/vector-storage.js'
+} from '#src/runtime/vector-storage.js'
 
 import {
   AnalysisActTool,

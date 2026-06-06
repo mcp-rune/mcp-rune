@@ -11,7 +11,7 @@
  * - LRU eviction keeps memory usage bounded
  */
 
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 import type {
   PromptClass,

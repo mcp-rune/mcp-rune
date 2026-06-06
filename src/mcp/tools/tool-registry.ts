@@ -49,8 +49,8 @@ import {
   BUILT_IN_SUMMARY_STRATEGIES,
   SummaryStrategyRegistry
 } from '#src/mcp/models/summary-strategies/index.js'
-import * as logger from '#src/services/logger.js'
-import * as tracing from '#src/services/tracing.js'
+import * as logger from '#src/runtime/logger.js'
+import * as tracing from '#src/runtime/tracing.js'
 
 import type {
   DomainRegistry,

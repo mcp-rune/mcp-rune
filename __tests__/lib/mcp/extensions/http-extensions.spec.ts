@@ -35,7 +35,7 @@ const {
 vi.mock('@modelcontextprotocol/sdk/server/streamableHttp.js', () => ({
   StreamableHTTPServerTransport: MockStreamableHTTPServerTransport
 }))
-vi.mock('#src/services/logger.js', () => mockLogger)
+vi.mock('#src/runtime/logger.js', () => mockLogger)
 vi.mock('../../../../src/mcp/middleware/request-id.js', () => ({
   createRequestIdMiddleware: mockRequestIdMiddleware
 }))

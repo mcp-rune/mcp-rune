@@ -19,7 +19,7 @@
 import type { Router } from 'express'
 
 import type { OAuthService } from '#src/oauth2/service.js'
-import type * as logger from '#src/services/logger.js'
+import type * as logger from '#src/runtime/logger.js'
 
 /**
  * Capabilities an extension can require from the host. Validated at boot —

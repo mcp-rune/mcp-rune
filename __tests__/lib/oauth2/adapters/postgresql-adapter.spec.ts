@@ -11,7 +11,7 @@ const { mockPool } = vi.hoisted(() => {
   return { mockPool }
 })
 
-vi.mock('#src/services/logger.js', () => ({
+vi.mock('#src/runtime/logger.js', () => ({
   info: vi.fn(),
   warn: vi.fn(),
   error: vi.fn()

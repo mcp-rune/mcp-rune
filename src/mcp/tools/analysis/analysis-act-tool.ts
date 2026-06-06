@@ -5,7 +5,7 @@ import {
   getIngestedRecordCount,
   getIngestedRecordDryRun,
   getIngestedRecordIdsFiltered
-} from '#src/services/vector-storage.js'
+} from '#src/runtime/vector-storage.js'
 
 import type { ModelConfig, ToolAnnotations, ToolResult } from '../base-tool.js'
 import { SaveModelBaseTool } from '../save-model-base-tool.js'

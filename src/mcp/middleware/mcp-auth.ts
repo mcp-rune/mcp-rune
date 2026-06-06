@@ -23,7 +23,7 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
 
 import type { OAuthService } from '#src/oauth2/service.js'
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 import { extractBearerToken, sendUnauthorized } from './oauth-router.js'
 

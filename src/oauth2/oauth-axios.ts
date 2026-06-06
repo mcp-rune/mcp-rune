@@ -12,10 +12,7 @@
  * logging needed.
  */
 
-import {
-  createInstrumentedAxios,
-  type EndpointLogConfig
-} from '#src/services/instrumented-axios.js'
+import { createInstrumentedAxios, type EndpointLogConfig } from '#src/runtime/instrumented-axios.js'
 
 const OAUTH_ENDPOINT_LOGS: EndpointLogConfig[] = [
   {

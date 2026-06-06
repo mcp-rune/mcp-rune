@@ -13,14 +13,14 @@ vi.mock('openid-client', () => ({
   allowInsecureRequests: Symbol('allowInsecureRequests')
 }))
 
-vi.mock('#src/services/logger.js', () => ({
+vi.mock('#src/runtime/logger.js', () => ({
   info: vi.fn(),
   warn: vi.fn(),
   error: vi.fn(),
   debug: vi.fn()
 }))
 
-vi.mock('#src/services/error-tracking.js', () => ({
+vi.mock('#src/runtime/error-tracking.js', () => ({
   captureException: vi.fn(),
   ErrorCategory: { AUTH: 'auth_error' }
 }))
@@ -32,8 +32,8 @@ vi.mock('../../../src/oauth2/token-store.js', () => ({
 
 import * as client from 'openid-client'
 
-import { captureException } from '#src/services/error-tracking.js'
-import * as logger from '#src/services/logger.js'
+import { captureException } from '#src/runtime/error-tracking.js'
+import * as logger from '#src/runtime/logger.js'
 
 import { AudienceMismatchError, OAuthService } from '../../../src/oauth2/service.js'
 
