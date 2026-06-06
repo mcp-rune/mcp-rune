@@ -1,13 +1,13 @@
-import type { ApiClient } from '../../../../src/core/api-client.js'
-import { jsonApiConvention } from '../../../../src/mcp/api-conventions/index.js'
+import type { ApiClient } from '../../../../../src/core/api-client.js'
+import { jsonApiConvention } from '../../../../../src/mcp/data-layer/api-conventions/index.js'
 import {
   MissingRequiredFieldsError,
   ModelReadOnlyError,
   ModelService,
   normalizeListWithConvention,
   UnknownModelError
-} from '../../../../src/mcp/services/model-service.js'
-import type { ModelConfig } from '../../../../src/mcp/tools/base-tool.js'
+} from '../../../../../src/mcp/data-layer/model-service/model-service.js'
+import type { ModelConfig } from '../../../../../src/mcp/tools/base-tool.js'
 
 describe('lib/mcp/services/model-service', () => {
   // =========================================================================

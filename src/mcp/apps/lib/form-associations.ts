@@ -25,7 +25,7 @@
  *   'list'         -- browse all scoped records (small sets)
  */
 
-import type { BaseConvention } from '#src/mcp/api-conventions/base-convention.js'
+import type { BaseConvention } from '#src/mcp/data-layer/api-conventions/base-convention.js'
 
 import type { AppModelClass } from './types.js'
 

@@ -1,4 +1,4 @@
-import { ModelService } from '#src/mcp/services/model-service.js'
+import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
 
 import { RailsSearchAdapter } from '../../../../src/api-extensions/search/rails-search-adapter.js'
 import { SearchService } from '../../../../src/api-extensions/search/search-service.js'

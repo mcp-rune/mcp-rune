@@ -34,7 +34,7 @@ import type {
   ModelsRegistry,
   NormalizedListResponse,
   PaginationParams
-} from '#src/core/data-layer.js'
+} from '#src/mcp/data-layer/data-layer.js'
 
 import { getSearchConfig } from './capabilities.js'
 import type { SearchService } from './search-service.js'

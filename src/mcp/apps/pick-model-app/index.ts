@@ -17,9 +17,9 @@ import path from 'node:path'
 import { z } from 'zod'
 
 import { getSearchConfig } from '#src/api-extensions/search/index.js'
-import type { DataLayer } from '#src/core/data-layer.js'
 import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
 import { createSelectionTools } from '#src/mcp/apps/lib/selection-tools.js'
+import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 import * as logger from '#src/services/logger.js'
 
 import type { AppModelClass, ToolResult } from '../lib/types.js'

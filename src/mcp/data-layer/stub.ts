@@ -30,9 +30,9 @@
 
 import { readFileSync } from 'node:fs'
 
-import { EndpointResolver } from '#src/mcp/services/endpoint-resolver.js'
+import { EndpointResolver } from '#src/mcp/data-layer/model-service/endpoint-resolver.js'
 
-import type { ApiClient, RequestOptions } from './api-client.js'
+import type { ApiClient, RequestOptions } from '../../core/api-client.js'
 import type {
   DataLayer,
   ModelConfig,

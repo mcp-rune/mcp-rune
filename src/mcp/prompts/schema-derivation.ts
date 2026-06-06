@@ -19,7 +19,7 @@ import type {
   AssociationConfig,
   BaseConvention,
   FieldDefinition
-} from '../api-conventions/base-convention.js'
+} from '../data-layer/api-conventions/base-convention.js'
 import type { FieldGroup, PromptFieldDefinition } from './base-prompt.js'
 
 // ---------------------------------------------------------------------------

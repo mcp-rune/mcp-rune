@@ -25,8 +25,8 @@
  * surface; SearchService only handles the search-specific dispatch paths.
  */
 
-import type { DataLayer } from '#src/core/data-layer.js'
-import { defaultConvention } from '#src/mcp/api-conventions/index.js'
+import { defaultConvention } from '#src/mcp/data-layer/api-conventions/index.js'
+import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 
 import { getSearchConfig } from './capabilities.js'
 import { SearchAdapter } from './search-adapter.js'

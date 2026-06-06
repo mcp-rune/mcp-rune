@@ -3,4 +3,8 @@
  *
  * Keeps existing model imports working without a mass-rename.
  */
-export { BaseConvention, defaultConvention, jsonApiConvention } from '../api-conventions/index.js'
+export {
+  BaseConvention,
+  defaultConvention,
+  jsonApiConvention
+} from '../data-layer/api-conventions/index.js'

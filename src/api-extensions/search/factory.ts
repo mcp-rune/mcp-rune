@@ -12,7 +12,7 @@
  * one edit instead of three.
  */
 
-import type { DataLayer } from '#src/core/data-layer.js'
+import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 
 import { SearchService } from './search-service.js'
 import type { SearchGroup } from './types.js'

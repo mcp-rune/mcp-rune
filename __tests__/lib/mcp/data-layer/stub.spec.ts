@@ -2,8 +2,8 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { InMemoryDataLayer, loadFixturesFromJson } from '../../../src/core/data-layer-stub.js'
-import type { ModelConfig } from '../../../src/mcp/tools/base-tool.js'
+import { InMemoryDataLayer, loadFixturesFromJson } from '../../../../src/mcp/data-layer/stub.js'
+import type { ModelConfig } from '../../../../src/mcp/tools/base-tool.js'
 
 describe('lib/core/data-layer-stub', () => {
   function makeModels(): Record<string, ModelConfig> {

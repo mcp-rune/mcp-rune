@@ -19,10 +19,10 @@
  * `pathForType()` and `applyNamespace()` from this class.
  */
 
-import type { EndpointOverrides } from '../models/base-model.js'
-import type { ModelConfig } from '../tools/base-tool.js'
+import type { EndpointOverrides } from '../../models/base-model.js'
+import type { ModelConfig } from '../../tools/base-tool.js'
 
-export type { EndpointOverrides } from '../models/base-model.js'
+export type { EndpointOverrides } from '../../models/base-model.js'
 
 // ============================================================================
 // Types

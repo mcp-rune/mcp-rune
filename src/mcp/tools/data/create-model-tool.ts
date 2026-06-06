@@ -1,7 +1,7 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
-import { MissingRequiredFieldsError } from '#src/mcp/services/model-service.js'
+import { MissingRequiredFieldsError } from '#src/mcp/data-layer/model-service/model-service.js'
 
 import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { SaveModelBaseTool } from '../save-model-base-tool.js'

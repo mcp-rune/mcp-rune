@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.75.0] - 2026-06-06
+
+> **BREAKING.** Consolidates the `DataLayer` seam, its in-memory stub, the default `ModelService` adapter, and the `api-conventions` that wrap each model's response shape into one folder, `src/mcp/data-layer/`. Previously the interface lived in `src/core/`, its stub sat next to it, the production adapter sat in `src/mcp/services/`, and the conventions lived in `src/mcp/api-conventions/` — no single folder owned "data access" end-to-end. Also fixes a layering inversion where `core/data-layer.ts` imported `NormalizedListResponse` from `api-extensions/search/types.ts`. Part 2 of 5 in #218.
+
+### Changed
+
+- **`DataLayer`, `DataLayerFactory`, `DataLayerFactoryContext`, `InMemoryDataLayer`, `createInMemoryDataLayer`, `loadFixturesFromJson`, and related types moved from `@mcp-rune/mcp-rune/core` to `@mcp-rune/mcp-rune/data-layer`** — consumers must update imports.
+- **`@mcp-rune/mcp-rune/model-service` now resolves to `dist/mcp/data-layer/model-service/index.js`** — the path moved; the entry point name is unchanged. `MissingRequiredFieldsError`, `ModelService`, `ModelRequestOptions`, `PaginationParams` still available from this entry point and from `/data-layer`.
+- **`@mcp-rune/mcp-rune/api-conventions` now resolves to `dist/mcp/data-layer/api-conventions/index.js`** — path moved; symbols unchanged.
+- **`#src/core/data-layer*`, `#src/mcp/services/*`, `#src/mcp/api-conventions/*` paths moved** — anyone reaching into `/lib/*` for these files must update to `/lib/mcp/data-layer/...`.
+- **Layering inversion fixed**: `NormalizedListResponse` and `PaginationInfo` now declared in `src/mcp/data-layer/types.ts`; the search extension imports them from there, not the other way around.
+
+### Added
+
+- **`@mcp-rune/mcp-rune/data-layer` public entry point** — single barrel for the data-access seam, stub, default adapter, and conventions.
+
+[0.75.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.74.0...v0.75.0
+
 ## [0.74.0] - 2026-06-06
 
 > **BREAKING.** Extracts the model-domain layer out of `src/core/` into its own folder, `src/mcp/models/`. `core/` was being used as a dumping ground for "anything shared between `apps/` and `tools/`," collapsing two distinct meanings of shared: framework primitives (config, env, api-client) vs model-domain primitives (BaseModel, schema validation, kind metadata, summary strategies). The two now live in separate folders with separate public entry points. First of 5 PRs under the [src/ layout refactor (#218)](https://github.com/mcp-rune/mcp-rune/issues/218).

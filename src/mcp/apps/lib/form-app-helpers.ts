@@ -7,7 +7,7 @@
  * fetch for edit) stay in each factory.
  */
 
-import { normalizeListWithConvention } from '#src/mcp/services/model-service.js'
+import { normalizeListWithConvention } from '#src/mcp/data-layer/model-service/model-service.js'
 import * as logger from '#src/services/logger.js'
 
 import { errorMeta } from './helpers.js'

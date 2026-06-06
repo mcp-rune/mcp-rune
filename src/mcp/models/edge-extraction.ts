@@ -6,7 +6,7 @@
  * that gets fed to the embedding model).
  */
 
-import type { AssociationConfig } from '#src/mcp/api-conventions/base-convention.js'
+import type { AssociationConfig } from '#src/mcp/data-layer/api-conventions/base-convention.js'
 
 export interface Edge {
   src_model: string

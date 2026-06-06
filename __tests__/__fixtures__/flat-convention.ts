@@ -12,8 +12,8 @@ import type {
   FieldDefinition,
   HasManyAssociation,
   NormalizedListResponse
-} from '../../src/mcp/api-conventions/base-convention.js'
-import { BaseConvention } from '../../src/mcp/api-conventions/base-convention.js'
+} from '../../src/mcp/data-layer/api-conventions/base-convention.js'
+import { BaseConvention } from '../../src/mcp/data-layer/api-conventions/base-convention.js'
 
 class FlatConvention extends BaseConvention {
   get name(): string {
