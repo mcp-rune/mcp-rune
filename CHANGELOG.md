@@ -4,6 +4,37 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.81.0] - 2026-06-06
+
+> Introduces two per-model-bound peer seams to `DataLayer` — `ModelLayer` for model-configuration reads and `AnalysisLayer` for analysis-domain projections — and reorganises the model-related helpers behind them. Apps, tools, prompts, and ApiExtensions now reach `resolveDerivedFields`, `kindFor`, `validFieldNames`, `promptSchema`, `checkRequired`, `extractEdges`, and `buildEmbeddingText` through `modelLayer(name)` and `analysisLayer(name)` factories instead of importing the helpers directly. An eslint guard enforces the new boundary. Public package surface is unchanged for existing consumers — the previous helper exports are preserved through barrel re-exports.
+
+### Added
+
+- **`@mcp-rune/mcp-rune/model-layer`** (new module) — `ModelLayer` interface plus `createModelLayer(model)` and `createModelLayerFactory(models)` factories. Bound to a single model at construction, exposes `kindFor`, `resolveDerivedFields`, `validFieldNames`, `promptSchema`, `checkRequired`. Synchronous; stateless; cached per model class.
+- **`@mcp-rune/mcp-rune/analysis-layer`** (new module) — `AnalysisLayer` interface plus `createAnalysisLayer({model, modelName, dataLayer})` and `createAnalysisLayerFactory(models, dataLayer)` factories. Bound to a single model + a per-request `DataLayer`, exposes `extractEdges` and `buildEmbeddingText`. Designed to host `walkHops`, `summarize`, and `buildStratifier` in follow-up releases.
+- **`ToolDependencies.modelLayer` / `ToolDependencies.analysisLayer`** on `BaseTool` — `ToolRegistry` constructs `modelLayer` once at boot and `analysisLayer` per authenticated invocation. `BaseTool` defaults both to factories over the local `models` registry when not explicitly injected, so ad-hoc tool instantiations keep working without extra wiring.
+- **`context.modelLayer` / `context.analysisLayer`** on the MCP app handler context — `AppRegistry` mirrors the same pattern as `context.dataLayer`. Apps destructure them alongside `dataLayer` in their handler signatures.
+- **Kinds-style model-snippet headers** on every relocated helper — each module opens with a concrete `class … extends BaseModel { static attributes = … }` example showing exactly which declaration shape the helper consumes, matching the header style of `src/mcp/models/kinds/index.ts`.
+- **`eslint.config.js` abstraction guard** — `no-restricted-imports` block scoped to `src/mcp/apps/**`, `src/mcp/tools/**`, `src/mcp/prompts/**`, and `src/mcp/data-layer/api-extensions/**` that fails on direct imports of `derived-fields`, `field-names`, `schema-derivation`, `validators`, `edge-extraction`, `graph-stratifiers`, and `multi-hop-fetch`. Boot-time validators (`form-validator.ts`, `prompt-validator.ts`) are exempt because they run before any layer factory exists.
+
+### Changed
+
+- **`src/mcp/models/` trimmed to what a model IS** — `base-model.ts` and `kinds/` remain. The model-consuming helpers move into two new sibling folders that mirror `src/mcp/data-layer/`'s shape.
+- **`src/mcp/models/derived-fields.ts` → `src/mcp/model-layer/derived-fields.ts`** (consumed via `modelLayer(name).resolveDerivedFields(records)`).
+- **`src/mcp/models/model-validator.ts` → `src/mcp/model-layer/model-validator.ts`** (boot-time validator; still callable via `validateModelClass` from the public barrel).
+- **`src/mcp/models/validators.ts` → `src/mcp/model-layer/validators.ts`** (per-value predicates).
+- **`src/mcp/schema/field-names.ts` → `src/mcp/model-layer/field-names.ts`** (consumed via `modelLayer(name).validFieldNames()`).
+- **`src/mcp/prompts/schema-derivation.ts` → `src/mcp/model-layer/schema-derivation.ts`** (consumed via `modelLayer(name).promptSchema(options)`).
+- **`src/mcp/models/edge-extraction.ts` → `src/mcp/analysis-layer/edge-extraction.ts`** (consumed via `analysisLayer(name).extractEdges(record)` / `analysisLayer(name).buildEmbeddingText(record)`).
+- **`src/mcp/models/multi-hop-fetch.ts` → `src/mcp/analysis-layer/multi-hop-fetch.ts`**.
+- **`src/mcp/models/graph-stratifiers.ts` → `src/mcp/analysis-layer/graph-stratifiers.ts`**.
+- **`src/mcp/models/summary-strategies/` → `src/mcp/analysis-layer/summary-strategies/`**.
+- **Existing public surface preserved** — `src/mcp/models/index.ts` keeps re-exporting `resolveDerivedFields`, `validateAssociation`, `validateAttributeDefinition`, `validateModelClass`, `validateEnum`, `validateModel`, `validatePositiveInt`, `validateRequired`, `validateUrl`, and the summary-strategies surface from their new internal locations. External consumers importing from `@mcp-rune/mcp-rune/models` see no break.
+- **Internal call sites migrated to the new seam** — `find-model-app`, `view-selection-app`, the `search` ApiExtension, and `analysis-ingest-tool` now call `modelLayer(name).resolveDerivedFields(records)` and `analysisLayer(name).extractEdges(record)` rather than importing the helpers directly.
+- Spec files moved to mirror the new source layout (`__tests__/lib/mcp/{model-layer,analysis-layer}/...`) and their `describe()` labels updated to match.
+
+[0.81.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.80.0...v0.81.0
+
 ## [0.80.0] - 2026-06-06
 
 > **BREAKING.** Unifies the kind taxonomy. Before this release the deployer-facing kind extension was forked across two subsystems: `KindDescriptor` in `src/mcp/models/kind-metadata.ts` and `FormatterDescriptor` in `src/mcp/apps/lib/registry.ts` — the second one silently dropped most of its declared fields (`label`, `htmlInputType`, `promptType` were serialized but never read; `validation.{pattern,minLength,…}` duplicated server `validate()` without sharing logic; `parser.{regex,replacement}` was never implemented). This release collapses both into a single source of truth in `src/mcp/models/kinds/` (one file per built-in kind) with one deployer extension point on `AppRegistry`. The lead comment in `kinds/index.ts` opens with an `Activity` model example so the connection between `type: 'string'` in `static attributes` and "kind" is immediate.
