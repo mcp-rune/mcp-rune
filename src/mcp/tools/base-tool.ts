@@ -3,8 +3,16 @@ import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 export type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 import type { RequestOptions } from '#src/core/api-client.js'
+import {
+  type AnalysisLayerFactory,
+  createAnalysisLayerFactory
+} from '#src/mcp/analysis-layer/analysis-layer.js'
 import type { SummaryStrategyRegistry } from '#src/mcp/analysis-layer/summary-strategies/index.js'
 import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
+import {
+  createModelLayerFactory,
+  type ModelLayerFactory
+} from '#src/mcp/model-layer/model-layer.js'
 import type { ApiConfig, AttributeDefinition } from '#src/mcp/models/base-model.js'
 import { storeOperation } from '#src/runtime/vector-storage.js'
 
@@ -21,7 +29,9 @@ export type { PromptRegistry } from '../prompts/prompt-registry.js'
 // ============================================================================
 
 export type { RequestOptions }
+export type { AnalysisLayerFactory } from '#src/mcp/analysis-layer/analysis-layer.js'
 export type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
+export type { ModelLayerFactory } from '#src/mcp/model-layer/model-layer.js'
 
 /** Logger interface expected by tools */
 export interface ToolLogger {
@@ -86,6 +96,21 @@ export interface ToolDependencies {
   dataLayer?: DataLayer
   logger?: ToolLogger
   models?: ModelsRegistry
+  /**
+   * Per-model-bound `ModelLayer` factory — `deps.modelLayer('episode')`
+   * returns a `ModelLayer` bound to that model. Threaded in by
+   * `ToolRegistry`. Apps/tools/prompts should consume this instead of
+   * importing model-config helpers directly.
+   */
+  modelLayer?: ModelLayerFactory
+  /**
+   * Per-model-bound `AnalysisLayer` factory — `deps.analysisLayer('episode')`
+   * returns an `AnalysisLayer` bound to that model and this request's
+   * `DataLayer`. Only present for authenticated tool invocations (because
+   * it needs `DataLayer`). Analysis-domain code should consume this
+   * instead of importing edge/embedding/hop helpers directly.
+   */
+  analysisLayer?: AnalysisLayerFactory
   promptRegistry?: PromptRegistry
   serverContext?: ServerContext
   domainRegistry?: DomainRegistry
@@ -206,6 +231,8 @@ export class BaseTool {
   dataLayer: DataLayer | undefined
   logger: ToolLogger | undefined
   models: ModelsRegistry
+  modelLayer: ModelLayerFactory | undefined
+  analysisLayer: AnalysisLayerFactory | undefined
   promptRegistry: PromptRegistry | undefined
   serverContext: ServerContext
   domainRegistry: DomainRegistry | undefined
@@ -218,6 +245,14 @@ export class BaseTool {
     this.dataLayer = dependencies.dataLayer
     this.logger = dependencies.logger
     this.models = dependencies.models ?? {}
+    // Default both layer factories to one built over the local models registry
+    // so ad-hoc tool instantiations (tests, integrators not using ToolRegistry)
+    // get a working layer without extra wiring. ToolRegistry always passes
+    // explicit factories that win over these defaults.
+    this.modelLayer = dependencies.modelLayer ?? createModelLayerFactory(this.models)
+    this.analysisLayer =
+      dependencies.analysisLayer ??
+      (this.dataLayer ? createAnalysisLayerFactory(this.models, this.dataLayer) : undefined)
     this.promptRegistry = dependencies.promptRegistry
     this.serverContext = dependencies.serverContext ?? {}
     this.domainRegistry = dependencies.domainRegistry
