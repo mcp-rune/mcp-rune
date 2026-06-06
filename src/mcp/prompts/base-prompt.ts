@@ -38,9 +38,11 @@ export class BasePrompt {
 
   /**
    * Optional per-instance description shown in `prompts/get` responses.
-   * Falls back to the registry entry's description.
+   * Falls back to the registry entry's description. `declare` so subclasses
+   * can override with a `get description()` getter without being shadowed by
+   * an emitted class field.
    */
-  description?: string
+  declare description?: string
 
   /** Strategy type for this prompt. Override in subclasses. */
   static strategy: StrategyType = 'stateless'

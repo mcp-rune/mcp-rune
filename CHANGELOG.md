@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.84.1] - 2026-06-07
+
+Patch fixing a class-field shadowing bug introduced when `BasePrompt` was slimmed in v0.83.0.
+
+### Fixed
+
+- **`BasePrompt.description` no longer shadows subclass `get description()` getters.** The previous `description?: string` field declaration compiled to an own instance property `this.description = undefined` under ES2022 class-field semantics, overwriting any getter a subclass installed on the prototype. Changed to `declare description?: string` so the type remains visible to TypeScript without emitting a runtime field. Subclasses that expose a per-instance description via a getter (`get description() { ... }`) now work as documented.
+
+[0.84.1]: https://github.com/mcp-rune/mcp-rune/compare/v0.84.0...v0.84.1
+
 ## [0.84.0] - 2026-06-06
 
 > **BREAKING.** Renames `PromptContentGenerator` to `PromptContentBuilder`. The class is structurally a fluent builder (`add` / `flowDiagram` / `section` / ... terminated by `.build()`, accumulating into a `parts: string[]`); the actual generators are the pure functions in `src/mcp/prompts/generators/`. The old name had it backwards and collided with the folder name. No back-compat alias — call sites import the new name.
