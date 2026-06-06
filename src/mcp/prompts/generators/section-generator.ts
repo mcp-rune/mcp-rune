@@ -13,7 +13,7 @@ import {
   generateTransformerInstructions,
   getTransformersForFields
 } from '../association-transformers.js'
-import type { PromptClassLike, Section } from '../base-prompt.js'
+import type { PromptClassLike, Section } from '../prompt-definitions.js'
 import {
   renderEnumTables,
   renderExtractionExamples,

@@ -5,7 +5,7 @@
  * Each takes explicit data as input and returns a markdown string.
  */
 
-import type { PromptFieldDefinition } from '../base-prompt.js'
+import type { PromptFieldDefinition } from '../prompt-definitions.js'
 
 /** Convert snake_case name to Title Case. */
 export function titleCase(name: string): string {

@@ -12,7 +12,7 @@
  * app's handleToolCall can resolve IDs to labels from the API.
  */
 
-import type { FieldGroup } from '#src/mcp/prompts/base-prompt.js'
+import type { FieldGroup } from '#src/mcp/prompts/prompt-definitions.js'
 
 import { humanize, pluralize } from './helpers.js'
 import type {

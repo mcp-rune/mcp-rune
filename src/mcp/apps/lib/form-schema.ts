@@ -20,7 +20,7 @@ import type {
   TransformerEntry
 } from '#src/mcp/prompts/association-transformers.js'
 import { buildFieldTransformerMap } from '#src/mcp/prompts/association-transformers.js'
-import type { FieldGroup, Section } from '#src/mcp/prompts/base-prompt.js'
+import type { FieldGroup, Section } from '#src/mcp/prompts/prompt-definitions.js'
 
 import { humanize, pluralize } from './helpers.js'
 import type {

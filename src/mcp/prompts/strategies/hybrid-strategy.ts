@@ -20,7 +20,7 @@
 import { getKind } from '#src/mcp/models/kinds/index.js'
 import * as logger from '#src/runtime/logger.js'
 
-import type { FieldGroup, PromptFieldDefinition } from '../base-prompt.js'
+import type { FieldGroup, PromptFieldDefinition } from '../prompt-definitions.js'
 import { BaseStrategy } from './base-strategy.js'
 
 /** Validation error entry */

@@ -16,7 +16,7 @@
 
 import { getKind } from '#src/mcp/models/kinds/index.js'
 
-import type { PromptFieldDefinition } from '../base-prompt.js'
+import type { PromptFieldDefinition } from '../prompt-definitions.js'
 
 export interface ValidationContext {
   field?: string
