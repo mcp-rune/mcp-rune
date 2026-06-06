@@ -1,9 +1,29 @@
 /**
- * Edge extraction and textification for analysis_ingest.
+ * Edge Extraction & Embedding Text — project a record into the two shapes
+ * analysis_ingest needs, driven by the model's `static associations` and
+ * `static attributes`.
  *
- * Pure functions — no I/O. Consumed by both the ingest tool (extracts edges
- * to persist in ingested_edges) and the embedding pipeline (builds the text
- * that gets fed to the embedding model).
+ *   class Book extends BaseModel {
+ *     static attributes   = { title: { type: 'string' }, summary: { type: 'string' } }
+ *     static associations = {
+ *       belongsTo: { author: { target_model: 'author' } },               // record.author_id → Edge { dst_model: 'author' }
+ *       hasMany:   { tags:   { target_model: 'tag'    } }                // record.tag_ids   → Edge[]
+ *     }
+ *   }
+ *
+ *   extractEdgesFromRecord({ id: 1, author_id: 7, tag_ids: [2,3] }, Book.associations, 'book')
+ *     → [{ src: book/1 → author/7, edge_type: 'belongsTo:author' },
+ *        { src: book/1 → tag/2,    edge_type: 'hasMany:tags'    },
+ *        { src: book/1 → tag/3,    edge_type: 'hasMany:tags'    }]
+ *
+ *   buildEmbeddingText({ id: 1, title: 'X', summary: 'A short novel' })
+ *     → "summary: A short novel. title: X"   // string attrs only, sorted, *_id fields skipped
+ *
+ * Pure functions — no I/O. Consumed by the analysis ingest tool (persists
+ * the edges into `ingested_edges`) and by the embedding pipeline (feeds the
+ * text into the embedding model). Reached through
+ * `analysisLayer.extractEdges(record)` and `analysisLayer.buildEmbeddingText(record)`
+ * after PR2.
  */
 
 import type { AssociationConfig } from '#src/mcp/data-layer/api-conventions/base-convention.js'

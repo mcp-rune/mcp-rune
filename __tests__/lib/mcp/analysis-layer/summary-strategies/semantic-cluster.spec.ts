@@ -1,5 +1,5 @@
-import { semanticClusterStrategy } from '../../../../../src/mcp/models/summary-strategies/semantic-cluster.js'
-import type { SummaryInput } from '../../../../../src/mcp/models/summary-strategies/types.js'
+import { semanticClusterStrategy } from '../../../../../src/mcp/analysis-layer/summary-strategies/semantic-cluster.js'
+import type { SummaryInput } from '../../../../../src/mcp/analysis-layer/summary-strategies/types.js'
 
 function unitVec(angle: number): Float32Array {
   const v = new Float32Array(384)
@@ -19,7 +19,7 @@ function makeInput(overrides: Partial<SummaryInput>): SummaryInput {
   }
 }
 
-describe('lib/core/summary-strategies/semantic-cluster', () => {
+describe('lib/mcp/analysis-layer/summary-strategies/semantic-cluster', () => {
   it('exposes name, description, requires=["embeddings"]', () => {
     expect(semanticClusterStrategy.name).toBe('semantic-cluster')
     expect(semanticClusterStrategy.requires).toEqual(['embeddings'])

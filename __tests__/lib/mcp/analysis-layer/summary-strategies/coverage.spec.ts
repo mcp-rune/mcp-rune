@@ -1,5 +1,5 @@
-import { coverageStrategy } from '../../../../../src/mcp/models/summary-strategies/coverage.js'
-import type { SummaryInput } from '../../../../../src/mcp/models/summary-strategies/types.js'
+import { coverageStrategy } from '../../../../../src/mcp/analysis-layer/summary-strategies/coverage.js'
+import type { SummaryInput } from '../../../../../src/mcp/analysis-layer/summary-strategies/types.js'
 
 function makeInput(overrides: Partial<SummaryInput>): SummaryInput {
   return {
@@ -12,7 +12,7 @@ function makeInput(overrides: Partial<SummaryInput>): SummaryInput {
   }
 }
 
-describe('lib/core/summary-strategies/coverage', () => {
+describe('lib/mcp/analysis-layer/summary-strategies/coverage', () => {
   it('exposes the expected name and description', () => {
     expect(coverageStrategy.name).toBe('coverage')
     expect(coverageStrategy.description).toMatch(/missing/i)

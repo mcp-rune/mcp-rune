@@ -1,10 +1,24 @@
 /**
- * Validate a model class: its attribute definitions and its
- * belongsTo/hasMany associations.
+ * Model Validator — schema-time checks on a Model class's `static attributes`
+ * and `static associations`. Run at boot so a malformed declaration fails
+ * loudly before any tool/app/prompt touches it.
  *
- * Pure functions only — no I/O, no logger calls. Errors and warnings are
- * returned as `Issue[]`; the caller (`validateRegistries`) decides how
- * to aggregate and surface them.
+ *   class Book extends BaseModel {
+ *     static attributes = {
+ *       title:  { type: 'string',  required: true },             // ✓ kind registered
+ *       rating: { type: 'integer', format: 'rating', max: 5 },   // ✓ kind:format registered
+ *       cover:  { type: 'avatar' }                               // ✗ Issue: unknown kind
+ *     }
+ *     static associations = {
+ *       belongsTo: { author: { target_model: 'authour' } }       // ✗ Issue: target_model not in registry
+ *     }
+ *   }
+ *
+ * `validateModelClass(name, ModelClass, allModelNames)` returns an `Issue[]`
+ * listing every problem with severity + path. Pure functions only — no I/O,
+ * no logger calls. The caller (`validateRegistries`) aggregates and surfaces
+ * them. Reached through `modelLayer.validate(...)` (record-level) and
+ * `validateRegistries` (boot-level) after PR2.
  */
 
 import '#src/mcp/models/kinds/index.js'

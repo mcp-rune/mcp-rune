@@ -1,26 +1,41 @@
 /**
- * Schema Derivation Utilities
+ * Prompt Schema Derivation — turn a model's `static attributes` (plus
+ * convention-resolved association fields) into the `PromptFieldDefinition`
+ * map a prompt strategy consumes.
  *
- * Derives prompt field definitions from model classes to eliminate redundancy.
- * This creates a single source of truth for field metadata.
+ *   class Book extends BaseModel {
+ *     static attributes = {
+ *       title: { type: 'string',  required: true,  description: 'Book title' },
+ *       year:  { type: 'integer', prompt_visible: false },                       // ← skipped (prompt_visible: false)
+ *       genre: { type: 'enum',    enumValues: ['fiction', 'non-fiction'] }
+ *     }
+ *     static associations = {
+ *       belongsTo: { author: { target_model: 'author' } }                        // ← convention emits author_id field
+ *     }
+ *     static api = { convention: jsonApiConvention }
+ *   }
  *
- * Benefits:
- * - Eliminates 60-70% code duplication between model classes and prompts
- * - Ensures consistency between API schema and prompt definitions
- * - Reduces maintenance burden (update once, reflect everywhere)
- * - Maintains flexibility for prompt-specific overrides
- * - Memoization ensures static schemas are computed only once
+ *   derivePromptSchema(Book) →
+ *     { fieldDefinitions: {
+ *         title:  { type: 'string',  required: true,  description: 'Book title' },
+ *         genre:  { type: 'enum',    required: false, enumValues: [...] },
+ *         author_id: { type: 'string', required: false, description: '…' } } }
+ *
+ * Reads `type`, `format`, `required`, `description`, `prompt_visible`, and
+ * `enumValues` from each attribute, then calls the model's API convention
+ * to resolve association → field mappings. Memoized: the inputs are static
+ * at boot, so each `(modelConfig, options)` pair derives at most once.
+ * Reached through `modelLayer.promptSchema(options)` after PR2.
  */
-
-import type { AttributeDefinition } from '#src/mcp/models/base-model.js'
-import { getKind } from '#src/mcp/models/kinds/index.js'
 
 import type {
   AssociationConfig,
   BaseConvention,
   FieldDefinition
-} from '../data-layer/api-conventions/base-convention.js'
-import type { FieldGroup, PromptFieldDefinition } from './base-prompt.js'
+} from '#src/mcp/data-layer/api-conventions/base-convention.js'
+import type { AttributeDefinition } from '#src/mcp/models/base-model.js'
+import { getKind } from '#src/mcp/models/kinds/index.js'
+import type { FieldGroup, PromptFieldDefinition } from '#src/mcp/prompts/base-prompt.js'
 
 // ---------------------------------------------------------------------------
 // Types

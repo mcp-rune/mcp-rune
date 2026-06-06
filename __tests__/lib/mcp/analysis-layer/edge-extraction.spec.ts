@@ -1,10 +1,10 @@
-import type { AssociationConfig } from '../../../../src/mcp/data-layer/api-conventions/base-convention.js'
 import {
   buildEmbeddingText,
   extractEdgesFromRecord
-} from '../../../../src/mcp/models/edge-extraction.js'
+} from '../../../../src/mcp/analysis-layer/edge-extraction.js'
+import type { AssociationConfig } from '../../../../src/mcp/data-layer/api-conventions/base-convention.js'
 
-describe('lib/core/edge-extraction', () => {
+describe('lib/mcp/analysis-layer/edge-extraction', () => {
   describe('extractEdgesFromRecord', () => {
     const associations: AssociationConfig = {
       belongsTo: {

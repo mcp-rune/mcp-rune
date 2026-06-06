@@ -1,10 +1,10 @@
-import { distributionStrategy } from '../../../../../src/mcp/models/summary-strategies/distribution.js'
+import { distributionStrategy } from '../../../../../src/mcp/analysis-layer/summary-strategies/distribution.js'
 import {
   BUILT_IN_SUMMARY_STRATEGIES,
   defaultSummaryStrategyRegistry,
   SummaryStrategyRegistry
-} from '../../../../../src/mcp/models/summary-strategies/index.js'
-import type { SummaryStrategy } from '../../../../../src/mcp/models/summary-strategies/types.js'
+} from '../../../../../src/mcp/analysis-layer/summary-strategies/index.js'
+import type { SummaryStrategy } from '../../../../../src/mcp/analysis-layer/summary-strategies/types.js'
 
 const stubStrategy = (name: string, description = 'stub'): SummaryStrategy => ({
   name,
@@ -12,7 +12,7 @@ const stubStrategy = (name: string, description = 'stub'): SummaryStrategy => ({
   generate: () => ({ finding: '', metadata: {} })
 })
 
-describe('lib/core/summary-strategies/registry', () => {
+describe('lib/mcp/analysis-layer/summary-strategies/registry', () => {
   describe('SummaryStrategyRegistry', () => {
     it('starts empty when no initial strategies are provided', () => {
       const r = new SummaryStrategyRegistry()

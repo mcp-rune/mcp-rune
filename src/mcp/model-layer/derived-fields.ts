@@ -1,23 +1,23 @@
 /**
- * Derived Fields -- Extract nested association data into flat record fields.
+ * Derived Fields — the `derived: { from, field }` you write on a model's
+ * `static attributes` to flatten nested association data into top-level fields.
  *
- * When the API response includes expanded associations (via `?expand=...`),
- * this utility resolves derived attribute declarations into flat fields
- * on each record. For example, if a scheduling record has:
+ *   class Scheduling extends BaseModel {
+ *     static attributes = {
+ *       title:      { type: 'belongsTo' },                                           // API returns { name: 'Breaking Bad', … }
+ *       title_name: { type: 'string', derived: { from: 'title', field: 'name' } }    // ← derived declaration
+ *     }
+ *   }
  *
- *   { title: { name: "Breaking Bad", ... }, platform: { name: "Netflix", ... } }
+ * Each attribute with `derived: { from, field }` says: "after the API
+ * expands `from`, copy `from.field` into a flat top-level field on the
+ * record." `resolveDerivedFields(records, ModelClass)` performs that copy
+ * across an array of records — turning `{ title: { name: 'X' } }` into
+ * `{ title: { name: 'X' }, title_name: 'X' }`.
  *
- * and the model declares:
- *
- *   title_name: { derived: { from: 'title', field: 'name' } }
- *
- * then after resolution the record will have:
- *
- *   { title_name: "Breaking Bad", platform_name: "Netflix", ... }
- *
- * Lives in `core` because it is consumed across feature boundaries: by MCP
- * apps (`find-model-app`) and by the `search` ApiExtension's `search_records`
- * tool. Decoupled from any specific model-shape import.
+ * Consumed by apps (`find-model-app`, `view-selection-app`) and by the
+ * `search` ApiExtension's `search_records` tool. Reached through
+ * `modelLayer.resolveDerivedFields(records)` after PR2.
  */
 
 /**

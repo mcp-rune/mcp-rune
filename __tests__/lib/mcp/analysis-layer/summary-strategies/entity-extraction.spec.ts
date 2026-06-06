@@ -1,5 +1,5 @@
-import { entityExtractionStrategy } from '../../../../../src/mcp/models/summary-strategies/entity-extraction.js'
-import type { SummaryInput } from '../../../../../src/mcp/models/summary-strategies/types.js'
+import { entityExtractionStrategy } from '../../../../../src/mcp/analysis-layer/summary-strategies/entity-extraction.js'
+import type { SummaryInput } from '../../../../../src/mcp/analysis-layer/summary-strategies/types.js'
 
 function makeInput(overrides: Partial<SummaryInput>): SummaryInput {
   return {
@@ -12,7 +12,7 @@ function makeInput(overrides: Partial<SummaryInput>): SummaryInput {
   }
 }
 
-describe('lib/core/summary-strategies/entity-extraction', () => {
+describe('lib/mcp/analysis-layer/summary-strategies/entity-extraction', () => {
   it('exposes the expected name and description', () => {
     expect(entityExtractionStrategy.name).toBe('entity-extraction')
     expect(entityExtractionStrategy.description).toMatch(/association|entit|id/i)

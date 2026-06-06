@@ -38,6 +38,10 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import type { ApiClient } from '#src/core/api-client.js'
+import {
+  BUILT_IN_SUMMARY_STRATEGIES,
+  SummaryStrategyRegistry
+} from '#src/mcp/analysis-layer/summary-strategies/index.js'
 import type {
   ApiExtensionContext,
   ApiExtensionMap,
@@ -45,10 +49,6 @@ import type {
 } from '#src/mcp/data-layer/api-extensions/types.js'
 import type { DataLayer, DataLayerFactory } from '#src/mcp/data-layer/data-layer.js'
 import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
-import {
-  BUILT_IN_SUMMARY_STRATEGIES,
-  SummaryStrategyRegistry
-} from '#src/mcp/models/summary-strategies/index.js'
 import * as logger from '#src/runtime/logger.js'
 import * as tracing from '#src/runtime/tracing.js'
 

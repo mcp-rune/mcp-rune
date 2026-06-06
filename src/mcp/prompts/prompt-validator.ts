@@ -8,7 +8,7 @@
  */
 
 import { closestMatch } from '#src/core/suggestions.js'
-import { collectValidFieldNames } from '#src/mcp/schema/field-names.js'
+import { collectValidFieldNames } from '#src/mcp/model-layer/field-names.js'
 import type { Issue, ModelClassLike } from '#src/mcp/schema/types.js'
 
 export interface PromptClassLike {

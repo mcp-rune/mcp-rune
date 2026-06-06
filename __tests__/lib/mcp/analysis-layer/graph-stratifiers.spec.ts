@@ -3,13 +3,13 @@ import {
   buildConceptStratifier,
   buildEdgeStratifier,
   type ParamRef
-} from '../../../../src/mcp/models/graph-stratifiers.js'
+} from '../../../../src/mcp/analysis-layer/graph-stratifiers.js'
 
 function freshRef(startAt = 2): ParamRef {
   return { next: startAt, params: [] }
 }
 
-describe('lib/core/graph-stratifiers', () => {
+describe('lib/mcp/analysis-layer/graph-stratifiers', () => {
   describe('buildConceptStratifier', () => {
     it('emits a CTE that joins filtered → ingested_edges and yields a binary flag', () => {
       const ref = freshRef()

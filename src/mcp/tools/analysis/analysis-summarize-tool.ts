@@ -5,8 +5,8 @@ import type {
   SummaryEdge,
   SummaryInput,
   SummaryStrategyRegistry
-} from '#src/mcp/models/summary-strategies/index.js'
-import { defaultSummaryStrategyRegistry } from '#src/mcp/models/summary-strategies/index.js'
+} from '#src/mcp/analysis-layer/summary-strategies/index.js'
+import { defaultSummaryStrategyRegistry } from '#src/mcp/analysis-layer/summary-strategies/index.js'
 import {
   describeAnalysisSession,
   getEdgesForSources,
