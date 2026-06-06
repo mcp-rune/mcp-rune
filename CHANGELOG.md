@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.82.0] - 2026-06-06
+
+> **BREAKING.** Centralises the interfaces that define a model — `AttributeDefinition`, `AssociationConfig` (with its `BelongsToAssociation` / `HasManyAssociation` variants), `ApiConfig`, and the new symmetric `AttributesConfig` — in `src/mcp/models/`, so every other layer (`data-layer`, `model-layer`, `analysis-layer`, `prompts`, `apps`, `tools`) consumes a single source of truth. Previously `base-model.ts` imported `AssociationConfig` from the data layer, the duplicate `CompletionConfig` lived in both `base-convention.ts` and `base-prompt.ts`, and `FieldDefinition` (the resolved-schema output) sat inside `base-convention.ts` while being primarily consumed by `model-layer/schema-derivation.ts`. This release relocates each interface to its canonical home and deletes the duplicates with no back-compat shims.
+
+### Added
+
+- **`src/mcp/models/attribute-definition.ts`** — `AttributeDefinition` (moved from `base-model.ts`), new `AttributesConfig` alias for `Record<string, AttributeDefinition>`, and the canonical `CompletionConfig`.
+- **`src/mcp/models/association-config.ts`** — `BelongsToAssociation`, `HasManyAssociation`, `AssociationConfig` (moved from `data-layer/api-conventions/base-convention.ts`).
+- **`src/mcp/models/api-config.ts`** — `ApiConfig`, `EndpointOverrides` (moved from `base-model.ts`).
+- **`src/mcp/model-layer/field-definition.ts`** — `FieldDefinition`, the resolved field-schema shape produced by conventions and consumed by `schema-derivation`. References the canonical `CompletionConfig`.
+
+### Changed
+
+- **`BaseModel.attributes`** is now typed as `AttributesConfig` (symmetric to `static associations: AssociationConfig`). No runtime change.
+- **`src/mcp/models/base-model.ts` trimmed** to `BaseModel` + `ModelData` only. The two `// ====` banner-comment dividers were dropped in line with the project's no-banner-comments rule.
+- **`src/mcp/models/index.ts`** re-exports the new interface files so `@mcp-rune/mcp-rune/models` carries the full set: `AttributeDefinition`, `AttributesConfig`, `CompletionConfig`, `AssociationConfig`, `BelongsToAssociation`, `HasManyAssociation`, `ApiConfig`, `EndpointOverrides`, `BaseModel`, `ModelData`.
+- **`src/mcp/data-layer/api-conventions/base-convention.ts`** keeps `BaseConvention` + `ErrorResponse`; imports the relocated interfaces from `models/` and `model-layer/`.
+- **`src/mcp/prompts/base-prompt.ts`** deletes its local empty `CompletionConfig` and imports the canonical one from `models/`.
+- **Internal call sites updated** — `json-api.ts`, `schema-derivation.ts`, `model-validator.ts`, `tools/base-tool.ts`, `analysis-layer/{analysis-layer,edge-extraction}.ts`, `data-layer/model-service/{model-service,endpoint-resolver}.ts`, `apps/lib/types.ts`, and `schema/types.ts` now import each type from its new home.
+
+### Removed
+
+- **`@mcp-rune/mcp-rune/api-conventions` no longer exports** `AssociationConfig`, `BelongsToAssociation`, `HasManyAssociation`, or `CompletionConfig`. Import these from `@mcp-rune/mcp-rune/models` (or `@mcp-rune/mcp-rune/prompts` for `CompletionConfig`). `FieldDefinition` remains exported from `api-conventions` but is now sourced from `model-layer/field-definition.ts` internally.
+- **`@mcp-rune/mcp-rune/data-layer` no longer re-exports** `AssociationConfig`, `BelongsToAssociation`, `HasManyAssociation`. Import them from `@mcp-rune/mcp-rune/models`.
+- Duplicate `CompletionConfig` definitions in `base-convention.ts` and `base-prompt.ts` (the latter was an empty `[key: string]: unknown` shape) — collapsed into a single canonical definition with a typed surface plus index signature for forward-compat.
+- Internal `EndpointOverrides` re-export shim in `data-layer/model-service/endpoint-resolver.ts` now points at `models/api-config.ts` instead of `models/base-model.ts`.
+
+[0.82.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.81.0...v0.82.0
+
 ## [0.81.0] - 2026-06-06
 
 > Introduces two per-model-bound peer seams to `DataLayer` — `ModelLayer` for model-configuration reads and `AnalysisLayer` for analysis-domain projections — and reorganises the model-related helpers behind them. Apps, tools, prompts, and ApiExtensions now reach `resolveDerivedFields`, `kindFor`, `validFieldNames`, `promptSchema`, `checkRequired`, `extractEdges`, and `buildEmbeddingText` through `modelLayer(name)` and `analysisLayer(name)` factories instead of importing the helpers directly. An eslint guard enforces the new boundary. Public package surface is unchanged for existing consumers — the previous helper exports are preserved through barrel re-exports.

@@ -14,6 +14,7 @@
  * This is the shared library version. Server-specific BasePrompts should extend this class.
  */
 
+import type { CompletionConfig } from '#src/mcp/models/attribute-definition.js'
 import { getKind } from '#src/mcp/models/kinds/index.js'
 
 import { generateAttributeReference } from './generators/attribute-reference-generator.js'
@@ -73,10 +74,6 @@ export interface FieldValidation {
   maximum?: number
   pattern?: RegExp
   patternMessage?: string
-  [key: string]: unknown
-}
-
-export interface CompletionConfig {
   [key: string]: unknown
 }
 

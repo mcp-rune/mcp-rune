@@ -1,13 +1,4 @@
-export type {
-  AssociationConfig,
-  BelongsToAssociation,
-  CompletionConfig,
-  ErrorResponse,
-  FieldDefinition,
-  HasManyAssociation,
-  NormalizedListResponse,
-  PaginationInfo
-} from './base-convention.js'
+export type { ErrorResponse, NormalizedListResponse, PaginationInfo } from './base-convention.js'
 export { BaseConvention } from './base-convention.js'
 export { jsonApiConvention } from './json-api.js'
 

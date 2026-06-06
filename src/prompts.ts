@@ -6,9 +6,9 @@ export {
   enhanceModelConfig,
   getSchemaCacheStats
 } from './mcp/model-layer/schema-derivation.js'
+export type { CompletionConfig } from './mcp/models/attribute-definition.js'
 export type {
   AttributeRow,
-  CompletionConfig,
   FieldGroup,
   FieldValidation,
   FormSchemaFieldDefinition,

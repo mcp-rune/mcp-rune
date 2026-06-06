@@ -6,12 +6,11 @@
  * layer does not know about.
  */
 
-import type {
-  AssociationConfig,
-  BaseConvention
-} from '#src/mcp/data-layer/api-conventions/base-convention.js'
+import type { BaseConvention } from '#src/mcp/data-layer/api-conventions/base-convention.js'
 import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
-import type { ApiConfig, AttributeDefinition } from '#src/mcp/models/base-model.js'
+import type { ApiConfig } from '#src/mcp/models/api-config.js'
+import type { AssociationConfig } from '#src/mcp/models/association-config.js'
+import type { AttributeDefinition } from '#src/mcp/models/attribute-definition.js'
 
 import type { FormDataStore } from './form-data-store.js'
 import type { SelectionStore } from './selection-store.js'

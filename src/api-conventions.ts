@@ -2,11 +2,7 @@
 // shaping API request/response payloads (jsonApiConvention default,
 // custom conventions via subclassing BaseConvention).
 export type {
-  AssociationConfig,
-  BelongsToAssociation,
   ErrorResponse,
-  FieldDefinition,
-  HasManyAssociation,
   NormalizedListResponse,
   PaginationInfo
 } from './mcp/data-layer/api-conventions/index.js'
@@ -15,3 +11,4 @@ export {
   defaultConvention,
   jsonApiConvention
 } from './mcp/data-layer/api-conventions/index.js'
+export type { FieldDefinition } from './mcp/model-layer/field-definition.js'

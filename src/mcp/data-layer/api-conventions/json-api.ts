@@ -8,13 +8,13 @@
  *   - Response extraction: normalizeListResponse (.data, .meta)
  */
 
+import type { FieldDefinition } from '#src/mcp/model-layer/field-definition.js'
 import type {
   BelongsToAssociation,
-  ErrorResponse,
-  FieldDefinition,
-  HasManyAssociation,
-  NormalizedListResponse
-} from './base-convention.js'
+  HasManyAssociation
+} from '#src/mcp/models/association-config.js'
+
+import type { ErrorResponse, NormalizedListResponse } from './base-convention.js'
 import { BaseConvention } from './base-convention.js'
 
 /**
