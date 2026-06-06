@@ -29,7 +29,7 @@ const mockModels = {
     // No search
   }
 }
-import { ModelService } from '#src/mcp/services/model-service.js'
+import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
 
 describe('SearchRecordsTool', () => {
   let tool

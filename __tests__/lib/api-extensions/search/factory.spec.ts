@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { ModelService } from '#src/mcp/services/model-service.js'
+import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
 
 import { createSearchService } from '../../../../src/api-extensions/search/factory.js'
 import { SearchAdapter } from '../../../../src/api-extensions/search/search-adapter.js'

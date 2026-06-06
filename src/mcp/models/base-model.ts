@@ -9,8 +9,11 @@
  * 2. Instantiated with record data: new BookModel(record).displayValue
  */
 
-import type { AssociationConfig, BaseConvention } from '#src/mcp/api-conventions/base-convention.js'
-import { jsonApiConvention } from '#src/mcp/api-conventions/index.js'
+import type {
+  AssociationConfig,
+  BaseConvention
+} from '#src/mcp/data-layer/api-conventions/base-convention.js'
+import { jsonApiConvention } from '#src/mcp/data-layer/api-conventions/index.js'
 
 // ============================================================================
 // Types

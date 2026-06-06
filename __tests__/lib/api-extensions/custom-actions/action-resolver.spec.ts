@@ -5,7 +5,7 @@ import {
   customActionsConfig,
   UnknownActionError
 } from '../../../../src/api-extensions/custom-actions.js'
-import { EndpointResolver } from '../../../../src/mcp/services/endpoint-resolver.js'
+import { EndpointResolver } from '../../../../src/mcp/data-layer/model-service/endpoint-resolver.js'
 import type { ModelConfig } from '../../../../src/mcp/tools/base-tool.js'
 
 describe('api-extensions/custom-actions — ActionResolver', () => {

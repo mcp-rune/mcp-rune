@@ -5,7 +5,7 @@ vi.mock('#src/services/vector-storage.js', () => ({
   getIngestedRecordDryRun: vi.fn()
 }))
 
-import { ModelService } from '#src/mcp/services/model-service.js'
+import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
 import {
   getIngestedRecordCount,
   getIngestedRecordDryRun,

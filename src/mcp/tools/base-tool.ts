@@ -3,13 +3,13 @@ import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 export type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 import type { RequestOptions } from '#src/core/api-client.js'
-import type { DataLayer } from '#src/core/data-layer.js'
+import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 import type { ApiConfig, AttributeDefinition } from '#src/mcp/models/base-model.js'
 import type { SummaryStrategyRegistry } from '#src/mcp/models/summary-strategies/index.js'
 import { storeOperation } from '#src/services/vector-storage.js'
 
-import type { AssociationConfig } from '../api-conventions/base-convention.js'
-import { defaultConvention } from '../api-conventions/index.js'
+import type { AssociationConfig } from '../data-layer/api-conventions/base-convention.js'
+import { defaultConvention } from '../data-layer/api-conventions/index.js'
 import type { DomainRegistry } from '../domain/registry.js'
 import type { PromptRegistry } from '../prompts/prompt-registry.js'
 
@@ -21,7 +21,7 @@ export type { PromptRegistry } from '../prompts/prompt-registry.js'
 // ============================================================================
 
 export type { RequestOptions }
-export type { DataLayer } from '#src/core/data-layer.js'
+export type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 
 /** Logger interface expected by tools */
 export interface ToolLogger {

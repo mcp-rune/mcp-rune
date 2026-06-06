@@ -6,8 +6,11 @@
  * layer does not know about.
  */
 
-import type { DataLayer } from '#src/core/data-layer.js'
-import type { AssociationConfig, BaseConvention } from '#src/mcp/api-conventions/base-convention.js'
+import type {
+  AssociationConfig,
+  BaseConvention
+} from '#src/mcp/data-layer/api-conventions/base-convention.js'
+import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 import type { ApiConfig, AttributeDefinition } from '#src/mcp/models/base-model.js'
 
 import type { FormDataStore } from './form-data-store.js'
@@ -15,7 +18,7 @@ import type { SelectionStore } from './selection-store.js'
 
 // Re-exported for AppRegistry consumers wiring up the createApiClient factory.
 export type { ApiClient } from '#src/core/api-client.js'
-export type { DataLayer } from '#src/core/data-layer.js'
+export type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 
 /**
  * Attribute definition as seen by MCP Apps. Alias of the canonical

@@ -4,7 +4,7 @@ import { flatConvention } from '../../../../__fixtures__/flat-convention.js'
 vi.mock('#src/services/vector-storage.js', () => ({
   storeOperation: vi.fn().mockResolvedValue(null)
 }))
-import { ModelService } from '#src/mcp/services/model-service.js'
+import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
 
 const { storeOperation } = await import('#src/services/vector-storage.js')
 

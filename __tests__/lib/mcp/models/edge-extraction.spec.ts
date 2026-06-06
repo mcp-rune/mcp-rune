@@ -1,4 +1,4 @@
-import type { AssociationConfig } from '../../../../src/mcp/api-conventions/base-convention.js'
+import type { AssociationConfig } from '../../../../src/mcp/data-layer/api-conventions/base-convention.js'
 import {
   buildEmbeddingText,
   extractEdgesFromRecord

@@ -5,7 +5,7 @@
  * across base-model, search-adapter, search-service, and api-conventions.
  */
 
-import type { BaseConvention } from '#src/mcp/api-conventions/base-convention.js'
+import type { BaseConvention } from '#src/mcp/data-layer/api-conventions/base-convention.js'
 
 import type { SearchAdapter } from './search-adapter.js'
 
@@ -80,19 +80,11 @@ export interface SearchGroup {
   [key: string]: unknown
 }
 
-export interface PaginationInfo {
-  page: number
-  per_page: number
-  total: number
-  total_pages?: number
-}
+export type { NormalizedListResponse, PaginationInfo } from '#src/mcp/data-layer/types.js'
+
+import type { PaginationInfo } from '#src/mcp/data-layer/types.js'
 
 export interface SearchResult {
-  records: Record<string, unknown>[]
-  pagination: PaginationInfo
-}
-
-export interface NormalizedListResponse {
   records: Record<string, unknown>[]
   pagination: PaginationInfo
 }

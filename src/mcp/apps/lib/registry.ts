@@ -21,9 +21,9 @@ import type { z } from 'zod'
 
 import type { SearchAdapter, SearchGroup } from '#src/api-extensions/search/index.js'
 import { createSearchService, SearchEnabledDataLayer } from '#src/api-extensions/search/index.js'
-import type { DataLayer, DataLayerFactory } from '#src/core/data-layer.js'
 import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
-import { ModelService } from '#src/mcp/services/model-service.js'
+import type { DataLayer, DataLayerFactory } from '#src/mcp/data-layer/data-layer.js'
+import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
 import type { ModelsRegistry } from '#src/mcp/tools/base-tool.js'
 import * as logger from '#src/services/logger.js'
 

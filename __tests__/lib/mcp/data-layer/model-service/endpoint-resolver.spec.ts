@@ -1,8 +1,8 @@
 import {
   EndpointResolver,
   MissingParentError
-} from '../../../../src/mcp/services/endpoint-resolver.js'
-import type { ModelConfig } from '../../../../src/mcp/tools/base-tool.js'
+} from '../../../../../src/mcp/data-layer/model-service/endpoint-resolver.js'
+import type { ModelConfig } from '../../../../../src/mcp/tools/base-tool.js'
 
 describe('lib/mcp/services/endpoint-resolver', () => {
   // =========================================================================

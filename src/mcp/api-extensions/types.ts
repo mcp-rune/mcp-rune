@@ -22,7 +22,7 @@
 import type { SummaryStrategy } from '#src/mcp/models/summary-strategies/index.js'
 import type * as logger from '#src/services/logger.js'
 
-import type { ModelService } from '../services/model-service.js'
+import type { ModelService } from '../data-layer/model-service/model-service.js'
 import type { ModelsRegistry, ServerContext } from '../tools/base-tool.js'
 import type { ToolClass } from '../tools/tool-registry.js'
 

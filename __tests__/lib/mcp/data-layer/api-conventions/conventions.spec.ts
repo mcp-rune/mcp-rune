@@ -1,5 +1,5 @@
-import { BaseConvention } from '../../../../src/mcp/api-conventions/base-convention.js'
-import { jsonApiConvention } from '../../../../src/mcp/api-conventions/json-api.js'
+import { BaseConvention } from '../../../../../src/mcp/data-layer/api-conventions/base-convention.js'
+import { jsonApiConvention } from '../../../../../src/mcp/data-layer/api-conventions/json-api.js'
 
 describe('lib/mcp/api-conventions', () => {
   describe('BaseConvention', () => {

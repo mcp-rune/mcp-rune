@@ -2,7 +2,7 @@ import {
   buildCollectionPath,
   buildCompoundId,
   parseId
-} from '../../../../src/mcp/services/compound-id.js'
+} from '../../../../../src/mcp/data-layer/model-service/compound-id.js'
 
 describe('lib/mcp/services/compound-id', () => {
   // =========================================================================

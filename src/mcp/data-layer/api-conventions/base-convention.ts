@@ -58,8 +58,8 @@ export interface AssociationConfig {
   hasMany?: Record<string, HasManyAssociation>
 }
 
-import type { NormalizedListResponse } from '#src/api-extensions/search/types.js'
-export type { NormalizedListResponse, PaginationInfo } from '#src/api-extensions/search/types.js'
+import type { NormalizedListResponse } from '#src/mcp/data-layer/types.js'
+export type { NormalizedListResponse, PaginationInfo } from '#src/mcp/data-layer/types.js'
 
 /** HTTP error response shape passed to convention error parsing */
 export interface ErrorResponse {

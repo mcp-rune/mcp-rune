@@ -1,21 +1,9 @@
-// mcp-rune/core — framework primitives: config, env, helpers, api-client,
-// data-layer seam. Model-domain primitives live under `./models` (was here).
+// mcp-rune/core — framework primitives only: config, env, helpers, api-client.
+// Model-domain primitives live under `./models`. The DataLayer seam, its stub,
+// ModelService, and api-conventions live under `./data-layer`.
 export type { ApiClient, RequestOptions, SearchApiClient } from './core/api-client.js'
 export type { Config, ConfigDescriptor, ConfigSchema } from './core/config.js'
 export { loadConfig } from './core/config.js'
-export type {
-  DataLayer,
-  DataLayerFactory,
-  DataLayerFactoryContext,
-  ModelRequestOptions,
-  PaginationParams
-} from './core/data-layer.js'
-export type { InMemoryDataLayerOptions, StubFixtures, StubRecord } from './core/data-layer-stub.js'
-export {
-  createInMemoryDataLayer,
-  InMemoryDataLayer,
-  loadFixturesFromJson
-} from './core/data-layer-stub.js'
 export { boolEnv, intEnv, optionalEnv, requireEnv } from './core/env.js'
 export { hintForError } from './core/error-hints.js'
 export {
@@ -29,8 +17,3 @@ export {
 export { readPackageInfo } from './core/package-info.js'
 export { StartupTracker } from './core/startup-tracker.js'
 export { closestMatch, levenshtein } from './core/suggestions.js'
-export type {
-  AssociationConfig,
-  BelongsToAssociation,
-  HasManyAssociation
-} from './mcp/api-conventions/base-convention.js'

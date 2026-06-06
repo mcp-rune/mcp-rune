@@ -9,9 +9,9 @@ export type {
   HasManyAssociation,
   NormalizedListResponse,
   PaginationInfo
-} from './mcp/api-conventions/index.js'
+} from './mcp/data-layer/api-conventions/index.js'
 export {
   BaseConvention,
   defaultConvention,
   jsonApiConvention
-} from './mcp/api-conventions/index.js'
+} from './mcp/data-layer/api-conventions/index.js'

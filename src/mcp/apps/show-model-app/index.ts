@@ -17,10 +17,10 @@ import path from 'node:path'
 
 import { z } from 'zod'
 
-import type { DataLayer } from '#src/core/data-layer.js'
 import { generateDetailSchema } from '#src/mcp/apps/lib/detail-schema.js'
 import { appResponseMeta, formatAppSummary } from '#src/mcp/apps/lib/format-summary.js'
 import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
+import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 import * as logger from '#src/services/logger.js'
 
 import type { SelectionStore } from '../lib/selection-store.js'
