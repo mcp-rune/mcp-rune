@@ -1,9 +1,3 @@
----
-extension:
-  kind: plugin
-  what: Server-specific tools · interceptors · validators
----
-
 # Tool Creation Guide
 
 This document provides guidelines for creating MCP tools in this codebase.

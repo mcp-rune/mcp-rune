@@ -1,9 +1,3 @@
----
-extension:
-  kind: strategy
-  what: Implement a custom summary strategy
----
-
 # Summary Strategies
 
 mcp-rune's `analysis_ingest` and `analysis_summarize` tools persist a **page summary** for every batch of records they process. The summary is embedded and recallable via `analysis_query mode: semantic` — it's the LLM's "starter pack" before any qualitative findings have been written.

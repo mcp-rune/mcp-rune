@@ -1,9 +1,3 @@
----
-extension:
-  kind: plugin
-  what: Author API extensions — tools + ModelService methods
----
-
 # API Extensions
 
 mcp-rune supports **opt-in API extensions** that contribute MCP tools and `ModelService` methods on top of the framework's built-in CRUD pipeline. Use API extensions to ship capabilities that aren't part of pure REST/CRUD — custom non-CRUD verbs, search subsystems, GraphQL field selection, bulk operations, RPC-style endpoints — without pulling them into the framework's core surface.

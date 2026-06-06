@@ -1,9 +1,3 @@
----
-extension:
-  kind: strategy
-  what: Implement a custom StatefulStrategy
----
-
 # Stateful Strategies
 
 For complex models with many fields organized into sections, mcp-rune ships a **stateful** strategy that walks the agent through one section at a time, validating as it goes. Use this when a single-shot validation would overwhelm the LLM — typically 20+ fields, multiple required dependencies, or workflows where the user needs to see partial progress before committing.

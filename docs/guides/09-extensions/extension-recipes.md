@@ -1,9 +1,3 @@
----
-extension:
-  kind: hub
-  what: Recipes — start here to pick the right extension surface
----
-
 # Extension Recipes
 
 Start here. mcp-rune ships three extension surfaces (`HttpExtension`, `ApiExtension`, `ToolFlowExtension`) plus several non-extension seams (`DataLayer`, `BaseConvention`, `SearchAdapter`, attribute `Kind`s). Each has its own dedicated guide — but for first contact you usually want the inverse map: "I want to do **X** — which seam does that?"
