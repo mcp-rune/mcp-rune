@@ -24,6 +24,7 @@ export {
   type PromptResult,
   type RegisterOptions
 } from './mcp/prompts/prompt-registry.js'
+export { validatePromptClass } from './mcp/prompts/prompt-validator.js'
 export {
   clearSchemaCaches,
   deriveFieldDefinitions,

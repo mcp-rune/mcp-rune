@@ -1,0 +1,5 @@
+export { formatReport } from './format-report.js'
+export { SchemaValidationError } from './schema-validation-error.js'
+export type { Issue, IssueLevel, IssueScope, ModelClassLike, ValidationReport } from './types.js'
+export type { RegistriesInput } from './validate-registries.js'
+export { validateRegistries } from './validate-registries.js'

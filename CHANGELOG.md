@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.79.0] - 2026-06-06
+
+> **BREAKING.** Splits the monolithic `src/mcp/models/schema-validation.ts` (~465 lines) into per-kind validators that live next to the classes they validate. `validateFormClass` now lives with `BaseForm` under `src/mcp/apps/lib/`; `validatePromptClass` lives with `BasePrompt` under `src/mcp/prompts/`; the model validator stays in `src/mcp/models/`. Shared issue/report machinery and the `validateRegistries` orchestrator move to a new `src/mcp/schema/` module. Each subsystem now owns its validator — independent growth, single-file responsibility.
+
+### Changed
+
+- **`validateFormClass` no longer exported from `@mcp-rune/mcp-rune/models`** — now exported from `@mcp-rune/mcp-rune/apps` (its natural home next to `BaseForm`).
+- **`validatePromptClass` no longer exported from `@mcp-rune/mcp-rune/models`** — now exported from `@mcp-rune/mcp-rune/prompts` (its natural home next to `BasePrompt`).
+- **`@mcp-rune/mcp-rune/models` still exports** `validateModelClass`, `validateAttributeDefinition`, `validateAssociation`, plus the shared types (`Issue`, `IssueLevel`, `IssueScope`, `ValidationReport`, `RegistriesInput`) and the orchestrator surface (`validateRegistries`, `SchemaValidationError`, `formatReport`) — no consumer change needed for these.
+- Internal: `src/mcp/models/schema-validation.ts` deleted; replaced by `src/mcp/models/model-validator.ts`, `src/mcp/apps/lib/form-validator.ts`, `src/mcp/prompts/prompt-validator.ts`, and `src/mcp/schema/` (types, error, format-report, field-names, validate-registries).
+- Tests split to mirror the new layout: `model-validator.spec.ts`, `apps/form-validator.spec.ts`, `prompts/prompt-validator.spec.ts`, `schema/validate-registries.spec.ts`, and the unrelated `closestMatch` / `levenshtein` block extracted to `__tests__/lib/core/suggestions.spec.ts`.
+
+[0.79.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.78.0...v0.79.0
+
 ## [0.78.0] - 2026-06-06
 
 > **BREAKING.** Renames `src/services/` → `src/runtime/` (and `@mcp-rune/mcp-rune/services` → `@mcp-rune/mcp-rune/runtime`) to resolve the name collision with `src/mcp/services/`. Top-level `services/` and the nested `mcp/services/` represented two unrelated layers (cross-cutting runtime concerns vs data-access). With PR 2 having moved `mcp/services/` into `mcp/data-layer/model-service/`, the remaining `services/` now gets a name that actually describes its scope. Final part (5 of 5) in #218.

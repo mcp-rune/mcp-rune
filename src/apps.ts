@@ -10,6 +10,7 @@ export { createDefaultAppRegistry } from './mcp/apps/lib/create-default-registry
 export { generateDetailSchema } from './mcp/apps/lib/detail-schema.js'
 export { createFormDataTools } from './mcp/apps/lib/form-data-tools.js'
 export { generateFormSchema } from './mcp/apps/lib/form-schema.js'
+export { validateFormClass } from './mcp/apps/lib/form-validator.js'
 export { humanize, pluralize } from './mcp/apps/lib/helpers.js'
 export { generateListSchema } from './mcp/apps/lib/list-schema.js'
 export type { AppDefinition, FormatterDescriptor, ThemeOverrides } from './mcp/apps/lib/registry.js'

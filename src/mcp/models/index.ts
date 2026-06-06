@@ -8,23 +8,11 @@ export type { ModelWithDerivedAttrs } from './derived-fields.js'
 export { resolveDerivedFields } from './derived-fields.js'
 export type { KindDescriptor, KindOpts } from './kind-metadata.js'
 export { getKind, KIND_REGISTRY, registerKind, UnknownKindError } from './kind-metadata.js'
-export type {
-  Issue,
-  IssueLevel,
-  IssueScope,
-  RegistriesInput,
-  ValidationReport
-} from './schema-validation.js'
 export {
-  formatReport,
-  SchemaValidationError,
   validateAssociation,
   validateAttributeDefinition,
-  validateFormClass,
-  validateModelClass,
-  validatePromptClass,
-  validateRegistries
-} from './schema-validation.js'
+  validateModelClass
+} from './model-validator.js'
 export * from './summary-strategies/index.js'
 export {
   validateEnum,
@@ -33,3 +21,11 @@ export {
   validateRequired,
   validateUrl
 } from './validators.js'
+export type {
+  Issue,
+  IssueLevel,
+  IssueScope,
+  RegistriesInput,
+  ValidationReport
+} from '#src/mcp/schema/index.js'
+export { formatReport, SchemaValidationError, validateRegistries } from '#src/mcp/schema/index.js'
