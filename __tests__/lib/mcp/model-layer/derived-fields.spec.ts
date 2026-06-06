@@ -1,6 +1,6 @@
-import { resolveDerivedFields } from '../../../../src/mcp/models/derived-fields.js'
+import { resolveDerivedFields } from '../../../../src/mcp/model-layer/derived-fields.js'
 
-describe('lib/core/derived-fields', () => {
+describe('lib/mcp/model-layer/derived-fields', () => {
   function makeModel(attributes = {}) {
     return { attributes }
   }

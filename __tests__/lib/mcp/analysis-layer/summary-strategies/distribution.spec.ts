@@ -1,5 +1,5 @@
-import { distributionStrategy } from '../../../../../src/mcp/models/summary-strategies/distribution.js'
-import type { SummaryInput } from '../../../../../src/mcp/models/summary-strategies/types.js'
+import { distributionStrategy } from '../../../../../src/mcp/analysis-layer/summary-strategies/distribution.js'
+import type { SummaryInput } from '../../../../../src/mcp/analysis-layer/summary-strategies/types.js'
 
 function makeInput(overrides: Partial<SummaryInput>): SummaryInput {
   return {
@@ -12,7 +12,7 @@ function makeInput(overrides: Partial<SummaryInput>): SummaryInput {
   }
 }
 
-describe('lib/core/summary-strategies/distribution', () => {
+describe('lib/mcp/analysis-layer/summary-strategies/distribution', () => {
   it('exposes the expected name and description', () => {
     expect(distributionStrategy.name).toBe('distribution')
     expect(distributionStrategy.description).toMatch(/general-purpose/i)

@@ -1,5 +1,5 @@
-import { temporalStrategy } from '../../../../../src/mcp/models/summary-strategies/temporal.js'
-import type { SummaryInput } from '../../../../../src/mcp/models/summary-strategies/types.js'
+import { temporalStrategy } from '../../../../../src/mcp/analysis-layer/summary-strategies/temporal.js'
+import type { SummaryInput } from '../../../../../src/mcp/analysis-layer/summary-strategies/types.js'
 
 function makeInput(overrides: Partial<SummaryInput>): SummaryInput {
   return {
@@ -12,7 +12,7 @@ function makeInput(overrides: Partial<SummaryInput>): SummaryInput {
   }
 }
 
-describe('lib/core/summary-strategies/temporal', () => {
+describe('lib/mcp/analysis-layer/summary-strategies/temporal', () => {
   it('exposes the expected name and description', () => {
     expect(temporalStrategy.name).toBe('temporal')
     expect(temporalStrategy.description).toMatch(/temporal|date|time/i)

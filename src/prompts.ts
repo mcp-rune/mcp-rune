@@ -1,4 +1,11 @@
 // mcp-rune/prompts — base prompt, strategies, pipeline, strategy tools
+export {
+  clearSchemaCaches,
+  deriveFieldDefinitions,
+  derivePromptSchema,
+  enhanceModelConfig,
+  getSchemaCacheStats
+} from './mcp/model-layer/schema-derivation.js'
 export type {
   AttributeRow,
   CompletionConfig,
@@ -25,12 +32,5 @@ export {
   type RegisterOptions
 } from './mcp/prompts/prompt-registry.js'
 export { validatePromptClass } from './mcp/prompts/prompt-validator.js'
-export {
-  clearSchemaCaches,
-  deriveFieldDefinitions,
-  derivePromptSchema,
-  enhanceModelConfig,
-  getSchemaCacheStats
-} from './mcp/prompts/schema-derivation.js'
 export * from './mcp/prompts/strategies/index.js'
 export * from './mcp/prompts/tools/index.js'

@@ -1,5 +1,5 @@
-import { ruleViolationStrategy } from '../../../../../src/mcp/models/summary-strategies/rule-violation.js'
-import type { SummaryInput } from '../../../../../src/mcp/models/summary-strategies/types.js'
+import { ruleViolationStrategy } from '../../../../../src/mcp/analysis-layer/summary-strategies/rule-violation.js'
+import type { SummaryInput } from '../../../../../src/mcp/analysis-layer/summary-strategies/types.js'
 
 const completedNeedRating = {
   name: 'completed-books-need-rating',
@@ -33,7 +33,7 @@ function makeInput(overrides: Partial<SummaryInput>): SummaryInput {
   }
 }
 
-describe('lib/core/summary-strategies/rule-violation', () => {
+describe('lib/mcp/analysis-layer/summary-strategies/rule-violation', () => {
   it('exposes name, description, requires=["domainRegistry"]', () => {
     expect(ruleViolationStrategy.name).toBe('rule-violation')
     expect(ruleViolationStrategy.requires).toEqual(['domainRegistry'])

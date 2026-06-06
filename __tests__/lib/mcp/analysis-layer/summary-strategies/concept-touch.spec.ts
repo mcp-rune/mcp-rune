@@ -1,8 +1,8 @@
-import { conceptTouchStrategy } from '../../../../../src/mcp/models/summary-strategies/concept-touch.js'
+import { conceptTouchStrategy } from '../../../../../src/mcp/analysis-layer/summary-strategies/concept-touch.js'
 import type {
   SummaryEdge,
   SummaryInput
-} from '../../../../../src/mcp/models/summary-strategies/types.js'
+} from '../../../../../src/mcp/analysis-layer/summary-strategies/types.js'
 
 const registryWithReading = {
   knowledge: {
@@ -26,7 +26,7 @@ function makeInput(overrides: Partial<SummaryInput>): SummaryInput {
   }
 }
 
-describe('lib/core/summary-strategies/concept-touch', () => {
+describe('lib/mcp/analysis-layer/summary-strategies/concept-touch', () => {
   it('exposes name, description, and requires=["edges","domainRegistry"]', () => {
     expect(conceptTouchStrategy.name).toBe('concept-touch')
     expect(conceptTouchStrategy.requires).toEqual(['edges', 'domainRegistry'])

@@ -2,6 +2,10 @@ import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
 import { pickFields } from '#src/core/helpers.js'
+import { extractEdgesFromRecord, type HopFollow } from '#src/mcp/analysis-layer/edge-extraction.js'
+import { expandHops } from '#src/mcp/analysis-layer/multi-hop-fetch.js'
+import type { SummaryEdge, SummaryInput } from '#src/mcp/analysis-layer/summary-strategies/index.js'
+import { defaultSummaryStrategyRegistry } from '#src/mcp/analysis-layer/summary-strategies/index.js'
 import { defaultConvention } from '#src/mcp/data-layer/api-conventions/index.js'
 import type { SearchService } from '#src/mcp/data-layer/api-extensions/search/index.js'
 import {
@@ -9,10 +13,6 @@ import {
   getSearchConfig
 } from '#src/mcp/data-layer/api-extensions/search/index.js'
 import { buildCollectionPath } from '#src/mcp/data-layer/model-service/compound-id.js'
-import { extractEdgesFromRecord, type HopFollow } from '#src/mcp/models/edge-extraction.js'
-import { expandHops } from '#src/mcp/models/multi-hop-fetch.js'
-import type { SummaryEdge, SummaryInput } from '#src/mcp/models/summary-strategies/index.js'
-import { defaultSummaryStrategyRegistry } from '#src/mcp/models/summary-strategies/index.js'
 import {
   getEdgesForSources,
   getEmbeddingsForRecords,

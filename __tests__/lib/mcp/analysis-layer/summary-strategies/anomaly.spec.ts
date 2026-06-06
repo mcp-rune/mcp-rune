@@ -1,5 +1,5 @@
-import { anomalyStrategy } from '../../../../../src/mcp/models/summary-strategies/anomaly.js'
-import type { SummaryInput } from '../../../../../src/mcp/models/summary-strategies/types.js'
+import { anomalyStrategy } from '../../../../../src/mcp/analysis-layer/summary-strategies/anomaly.js'
+import type { SummaryInput } from '../../../../../src/mcp/analysis-layer/summary-strategies/types.js'
 
 function makeInput(overrides: Partial<SummaryInput>): SummaryInput {
   return {
@@ -12,7 +12,7 @@ function makeInput(overrides: Partial<SummaryInput>): SummaryInput {
   }
 }
 
-describe('lib/core/summary-strategies/anomaly', () => {
+describe('lib/mcp/analysis-layer/summary-strategies/anomaly', () => {
   it('exposes the expected name and description', () => {
     expect(anomalyStrategy.name).toBe('anomaly')
     expect(anomalyStrategy.description).toMatch(/outlier|anomal/i)

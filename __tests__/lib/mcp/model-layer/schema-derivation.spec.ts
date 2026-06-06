@@ -8,9 +8,9 @@ import {
   derivePromptSchema,
   enhanceModelConfig,
   getSchemaCacheStats
-} from '../../../../src/mcp/prompts/schema-derivation.js'
+} from '../../../../src/mcp/model-layer/schema-derivation.js'
 
-describe('lib/mcp/prompts/schema-derivation - Memoization', () => {
+describe('lib/mcp/model-layer/schema-derivation - Memoization', () => {
   beforeEach(() => {
     // Clear caches before each test
     clearSchemaCaches()

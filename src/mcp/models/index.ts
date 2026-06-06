@@ -1,26 +1,28 @@
-// mcp-rune model-domain layer — BaseModel, schema validation, kind metadata,
-// derived fields, edge extraction, multi-hop fetch, graph stratifiers, and
-// summary strategies.
+// mcp-rune model-domain layer — BaseModel, kind metadata, and re-exports of
+// model-layer + analysis-layer helpers for backwards-compatible public access.
+// Helper logic itself lives in `src/mcp/model-layer/` (model-config consumers)
+// and `src/mcp/analysis-layer/` (analysis-domain consumers). PR3 will remove
+// the re-exports below in favor of `modelLayer` / `analysisLayer` injection.
 
 export type { ApiConfig, AttributeDefinition, EndpointOverrides, ModelData } from './base-model.js'
 export { BaseModel } from './base-model.js'
-export type { ModelWithDerivedAttrs } from './derived-fields.js'
-export { resolveDerivedFields } from './derived-fields.js'
 export type { KindDescriptor, KindOpts, KindRenderHint } from './kinds/index.js'
 export { getKind, registerKind } from './kinds/index.js'
+export * from '#src/mcp/analysis-layer/summary-strategies/index.js'
+export type { ModelWithDerivedAttrs } from '#src/mcp/model-layer/derived-fields.js'
+export { resolveDerivedFields } from '#src/mcp/model-layer/derived-fields.js'
 export {
   validateAssociation,
   validateAttributeDefinition,
   validateModelClass
-} from './model-validator.js'
-export * from './summary-strategies/index.js'
+} from '#src/mcp/model-layer/model-validator.js'
 export {
   validateEnum,
   validateModel,
   validatePositiveInt,
   validateRequired,
   validateUrl
-} from './validators.js'
+} from '#src/mcp/model-layer/validators.js'
 export type {
   Issue,
   IssueLevel,

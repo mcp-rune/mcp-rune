@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { getKind } from '../../../../src/mcp/models/kinds/index.js'
-import { UnknownKindError } from '../../../../src/mcp/models/kinds/registry.js'
 import {
   validateAssociation,
   validateAttributeDefinition
-} from '../../../../src/mcp/models/model-validator.js'
+} from '../../../../src/mcp/model-layer/model-validator.js'
+import { getKind } from '../../../../src/mcp/models/kinds/index.js'
+import { UnknownKindError } from '../../../../src/mcp/models/kinds/registry.js'
 
-describe('lib/mcp/models/kinds: strict mode', () => {
+describe('lib/mcp/model-layer/model-validator: kinds strict mode', () => {
   it('throws UnknownKindError for an unregistered kind', () => {
     expect(() => getKind('datetimme')).toThrow(UnknownKindError)
   })

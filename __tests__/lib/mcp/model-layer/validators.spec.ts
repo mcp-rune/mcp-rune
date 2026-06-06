@@ -4,9 +4,9 @@ import {
   validatePositiveInt,
   validateRequired,
   validateUrl
-} from '../../../../src/mcp/models/validators.js'
+} from '../../../../src/mcp/model-layer/validators.js'
 
-describe('lib/core/validators', () => {
+describe('lib/mcp/model-layer/validators', () => {
   describe('validateRequired', () => {
     it('should return valid when all required fields are present', () => {
       const result = validateRequired({ name: 'John', age: 30 }, ['name', 'age'])

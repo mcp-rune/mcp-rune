@@ -1,8 +1,8 @@
-import { relationshipCoverageStrategy } from '../../../../../src/mcp/models/summary-strategies/relationship-coverage.js'
+import { relationshipCoverageStrategy } from '../../../../../src/mcp/analysis-layer/summary-strategies/relationship-coverage.js'
 import type {
   SummaryEdge,
   SummaryInput
-} from '../../../../../src/mcp/models/summary-strategies/types.js'
+} from '../../../../../src/mcp/analysis-layer/summary-strategies/types.js'
 
 function makeInput(overrides: Partial<SummaryInput>): SummaryInput {
   return {
@@ -15,7 +15,7 @@ function makeInput(overrides: Partial<SummaryInput>): SummaryInput {
   }
 }
 
-describe('lib/core/summary-strategies/relationship-coverage', () => {
+describe('lib/mcp/analysis-layer/summary-strategies/relationship-coverage', () => {
   it('exposes name, description, and requires=["edges"]', () => {
     expect(relationshipCoverageStrategy.name).toBe('relationship-coverage')
     expect(relationshipCoverageStrategy.requires).toEqual(['edges'])

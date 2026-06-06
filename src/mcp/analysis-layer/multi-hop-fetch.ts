@@ -1,12 +1,28 @@
 /**
- * Multi-hop ingest helper.
+ * Multi-Hop Fetch — BFS-walk a model's declared `belongsTo` associations
+ * to expand a root set of records into their connected graph, fetching via
+ * DataLayer.
  *
- * Given a set of root records and an analysis_ingest tool's hop options,
- * BFS-walks declared `belongsTo` associations, fetching destination records
- * via DataLayer.find and yielding them in batches grouped by target model.
+ *   class Episode extends BaseModel {
+ *     static associations = {
+ *       belongsTo: { title:    { target_model: 'title'    },         // hop 1: episode.title_id    → title
+ *                    platform: { target_model: 'platform' } }        // hop 1: episode.platform_id → platform
+ *     }
+ *   }
+ *   class Title extends BaseModel {
+ *     static associations = { belongsTo: { studio: { target_model: 'studio' } } }   // hop 2: title.studio_id → studio
+ *   }
  *
- * Cycle-safe via a shared visited Set. Per-hop fan-out is capped to keep
- * a runaway graph from exploding ingest cost.
+ *   expandHops([episode1, episode2], { maxDepth: 2, hopFollow: 'declared' })
+ *     yields → { model: 'title',    records: [...] }   // hop 1
+ *              { model: 'platform', records: [...] }   // hop 1
+ *              { model: 'studio',   records: [...] }   // hop 2
+ *
+ * Cycle-safe via a shared visited Set. Per-hop fan-out is capped so a
+ * runaway graph can't explode ingest cost. Composes `extractEdgesFromRecord`
+ * (to find destination IDs) with `DataLayer.find` (to materialize each
+ * destination record). Reached through `analysisLayer.walkHops(roots, options)`
+ * after PR2.
  */
 
 import type { DataLayer, ModelConfig, ModelsRegistry } from '#src/mcp/tools/base-tool.js'

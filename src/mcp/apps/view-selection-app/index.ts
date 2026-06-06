@@ -36,7 +36,7 @@ import {
 } from '#src/mcp/apps/lib/selection-tools.js'
 import { getSearchConfig } from '#src/mcp/data-layer/api-extensions/search/index.js'
 import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
-import { resolveDerivedFields } from '#src/mcp/models/derived-fields.js'
+import { resolveDerivedFields } from '#src/mcp/model-layer/derived-fields.js'
 import * as logger from '#src/runtime/logger.js'
 
 import type { AppModelClass, ListSchema, ToolResult } from '../lib/types.js'
