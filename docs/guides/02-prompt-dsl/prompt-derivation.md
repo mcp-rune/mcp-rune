@@ -10,7 +10,7 @@ A 5-layer architecture for generating prompt documentation from model and prompt
 - [Layer 3: Section Documentation](#layer-3-section-documentation)
 - [Layer 4: Assembly Pipeline](#layer-4-assembly-pipeline)
 - [Layer 5: Behavioral](#layer-5-behavioral)
-- [PromptContentGenerator API](#promptcontentgenerator-api)
+- [PromptContentBuilder API](#promptcontentgenerator-api)
 - [Migration Guide](#migration-guide)
 - [Content Categories](#content-categories)
 
@@ -23,10 +23,10 @@ A 5-layer architecture for generating prompt documentation from model and prompt
 │ Layer 5: BEHAVIORAL — generateStatefulGuidanceInstructions()    │
 │ (BasePrompt) Turn-taking, validation, mode selection            │
 ├──────────────────────────────────────────────────────────────────┤
-│ Layer 4: ASSEMBLY — PromptContentGenerator.build()              │
+│ Layer 4: ASSEMBLY — PromptContentBuilder.build()              │
 │ Composes all layers into final promptContent                    │
 ├──────────────────────────────────────────────────────────────────┤
-│ Layer 3: SECTION DOCS — PromptContentGenerator + BasePrompt     │
+│ Layer 3: SECTION DOCS — PromptContentBuilder + BasePrompt     │
 │ Per-section field tables, enum tables, content notes            │
 ├──────────────────────────────────────────────────────────────────┤
 │ Layer 2: GROUPING — sections + fieldGroups                      │
@@ -163,7 +163,7 @@ static fieldGroups = {
 
 ## Layer 3: Section Documentation
 
-**Files**: `lib/mcp/prompts/base-prompt.js`, `lib/mcp/prompts/prompt-content-generator.js`
+**Files**: `lib/mcp/prompts/base-prompt.js`, `lib/mcp/prompts/prompt-content-builder.js`
 
 Generates per-section documentation from config. Includes:
 
@@ -238,13 +238,13 @@ Generated output:
 
 ## Layer 4: Assembly Pipeline
 
-**File**: `lib/mcp/prompts/prompt-content-generator.js`
+**File**: `lib/mcp/prompts/prompt-content-builder.js`
 
-The `PromptContentGenerator` builder composes all layers into final `promptContent`.
+The `PromptContentBuilder` builder composes all layers into final `promptContent`.
 
 ```js file=examples/prompt-derivation-framework-guide-05.js
 get promptContent() {
-  return PromptContentGenerator.for(ActivityPrompt, 'activity')
+  return PromptContentBuilder.for(ActivityPrompt, 'activity')
     .add(`# Activity Creation Guide
 
 ## What is an Activity?
@@ -258,7 +258,7 @@ Custom intro text...`)
 
 ```ts file=examples/prompt-derivation-framework-guide-05.ts
 get promptContent() {
-  return PromptContentGenerator.for(ActivityPrompt, 'activity')
+  return PromptContentBuilder.for(ActivityPrompt, 'activity')
     .add(`# Activity Creation Guide
 
 ## What is an Activity?
@@ -285,16 +285,16 @@ Only applies to stateful prompts. Generates:
 
 Accessed via `.guidance()` in the builder.
 
-## PromptContentGenerator API
+## PromptContentBuilder API
 
 ### Factory
 
 ```js file=examples/prompt-derivation-framework-guide-06.js
-PromptContentGenerator.for(PromptClass, 'model_name')
+PromptContentBuilder.for(PromptClass, 'model_name')
 ```
 
 ```ts file=examples/prompt-derivation-framework-guide-06.ts
-PromptContentGenerator.for(PromptClass, 'model_name')
+PromptContentBuilder.for(PromptClass, 'model_name')
 ```
 
 ### Builder Methods
@@ -379,10 +379,10 @@ ${this.generateAttributeReference()}  ← Custom method per prompt
 ### After (framework)
 
 ```js file=examples/prompt-derivation-framework-guide-09.js
-import { PromptContentGenerator } from '#src/mcp/prompts/prompt-content-generator.js'
+import { PromptContentBuilder } from '#src/mcp/prompts/prompt-content-builder.js'
 
 get promptContent() {
-  return PromptContentGenerator.for(MyPrompt, 'my_model')
+  return PromptContentBuilder.for(MyPrompt, 'my_model')
     .add(`# My Guide\n\n...intro...`)
     .standard()
     .add(this.generateToolUsageSection())
@@ -392,10 +392,10 @@ get promptContent() {
 ```
 
 ```ts file=examples/prompt-derivation-framework-guide-09.ts
-import { PromptContentGenerator } from '#src/mcp/prompts/prompt-content-generator.js'
+import { PromptContentBuilder } from '#src/mcp/prompts/prompt-content-builder.js'
 
 get promptContent() {
-  return PromptContentGenerator.for(MyPrompt, 'my_model')
+  return PromptContentBuilder.for(MyPrompt, 'my_model')
     .add(`# My Guide\n\n...intro...`)
     .standard()
     .add(this.generateToolUsageSection())
@@ -406,7 +406,7 @@ get promptContent() {
 
 ### Migration Steps
 
-1. Add `import { PromptContentGenerator } from '#src/mcp/prompts/prompt-content-generator.js'`
+1. Add `import { PromptContentBuilder } from '#src/mcp/prompts/prompt-content-builder.js'`
 2. Replace `promptContent` getter with builder pipeline
 3. Remove `generateAttributeReference()` → replaced by `.attributeReference()`
 4. Remove `generateSummarySection()` → replaced by `.summary()` (stateful)

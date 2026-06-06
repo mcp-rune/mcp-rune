@@ -2,7 +2,7 @@
  * Summary Generator
  *
  * Generates the standard summary/confirmation template for prompt workflows.
- * Pure function -- no dependency on BasePrompt or PromptContentGenerator.
+ * Pure function -- no dependency on BasePrompt or PromptContentBuilder.
  */
 
 export interface SummaryContext {

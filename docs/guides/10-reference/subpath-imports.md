@@ -26,7 +26,7 @@ import type {
 
 import { ModelService, EndpointResolver } from '@mcp-rune/mcp-rune/model-service'
 
-import { BasePrompt, PromptContentGenerator, derivePromptSchema } from '@mcp-rune/mcp-rune/prompts'
+import { BasePrompt, PromptContentBuilder, derivePromptSchema } from '@mcp-rune/mcp-rune/prompts'
 
 import { AppRegistry, createNewModelApp } from '@mcp-rune/mcp-rune/apps'
 
@@ -54,7 +54,7 @@ export {}
 | `@mcp-rune/mcp-rune/server`              | `StdioServer`, `HttpServer`, `createServer` factory.                                                      |
 | `@mcp-rune/mcp-rune/tools`               | `BaseTool`, `ToolRegistry`, categories, interceptors, types.                                              |
 | `@mcp-rune/mcp-rune/model-service`       | `ModelService`, `EndpointResolver` — orchestrates Convention + ApiClient.                                 |
-| `@mcp-rune/mcp-rune/prompts`             | `BasePrompt`, `PromptContentGenerator`, `derivePromptSchema`.                                             |
+| `@mcp-rune/mcp-rune/prompts`             | `BasePrompt`, `PromptContentBuilder`, `derivePromptSchema`.                                               |
 | `@mcp-rune/mcp-rune/apps`                | `AppRegistry`, generic app factories (`createNewModelApp`, etc.).                                         |
 | `@mcp-rune/mcp-rune/apps/kind-renderers` | DOM kind renderers (`getKindRenderer`, `registerKindRenderer`, `renderCellValue`) for custom-app authors. |
 | `@mcp-rune/mcp-rune/search`              | `SearchService`, `SearchRequestShaper` base class.                                                        |

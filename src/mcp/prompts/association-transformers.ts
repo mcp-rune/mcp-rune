@@ -8,7 +8,7 @@
  * - `autocomplete`:   Visual picker UI before form opens (LLM pre-orchestrates)
  * - `multi_select`:   Multi-select picker UI before form opens
  *
- * Both prompts (PromptContentGenerator) and forms (form-schema.js) consume
+ * Both prompts (PromptContentBuilder) and forms (form-schema.js) consume
  * the same transformer config, eliminating bespoke methods.
  */
 

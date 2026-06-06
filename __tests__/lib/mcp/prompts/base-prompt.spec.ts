@@ -6,7 +6,7 @@
  *   - getDefaults, getSectionForGroup, generateTechnicalSummary, toFormSchema
  *
  * Rendering (flow diagrams, guidance, sections, summary template, attribute
- * reference, etc.) is exercised through `prompt-content-generator.spec.ts`
+ * reference, etc.) is exercised through `prompt-content-builder.spec.ts`
  * and the per-generator specs under `generators/`.
  */
 

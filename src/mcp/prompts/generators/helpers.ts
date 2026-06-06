@@ -1,7 +1,7 @@
 /**
  * Shared rendering primitives for prompt generators.
  *
- * Pure functions with no dependency on BasePrompt or PromptContentGenerator.
+ * Pure functions with no dependency on BasePrompt or PromptContentBuilder.
  * Each takes explicit data as input and returns a markdown string.
  */
 

@@ -5,7 +5,7 @@
  * and model metadata. Auto-derives example attributes, required/optional
  * checklists, and immutable field warnings from fieldDefinitions.
  *
- * Pure function -- no dependency on BasePrompt or PromptContentGenerator.
+ * Pure function -- no dependency on BasePrompt or PromptContentBuilder.
  */
 
 import type { PromptClassLike, PromptFieldDefinition } from '../prompt-definitions.js'

@@ -131,9 +131,9 @@ ${ActivityPrompt.generateFieldGroupsList()}
 
 ${ActivityPrompt.generateFlowDiagramFromConfig()}`
 
-  // 8. Prompt content using PromptContentGenerator
+  // 8. Prompt content using PromptContentBuilder
   get promptContent() {
-    return PromptContentGenerator.for(ActivityPrompt, 'activity')
+    return PromptContentBuilder.for(ActivityPrompt, 'activity')
       .add(`# Activity Creation Guide\n\n...`)
       .standard()
       .add(this.generateToolUsageSection())
@@ -195,9 +195,9 @@ ${ActivityPrompt.generateFieldGroupsList()}
 
 ${ActivityPrompt.generateFlowDiagramFromConfig()}`
 
-  // 8. Prompt content using PromptContentGenerator
+  // 8. Prompt content using PromptContentBuilder
   get promptContent() {
-    return PromptContentGenerator.for(ActivityPrompt, 'activity')
+    return PromptContentBuilder.for(ActivityPrompt, 'activity')
       .add(`# Activity Creation Guide\n\n...`)
       .standard()
       .add(this.generateToolUsageSection())

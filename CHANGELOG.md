@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.84.1] - 2026-06-07
+
+Patch fixing a class-field shadowing bug introduced when `BasePrompt` was slimmed in v0.83.0.
+
+### Fixed
+
+- **`BasePrompt.description` no longer shadows subclass `get description()` getters.** The previous `description?: string` field declaration compiled to an own instance property `this.description = undefined` under ES2022 class-field semantics, overwriting any getter a subclass installed on the prototype. Changed to `declare description?: string` so the type remains visible to TypeScript without emitting a runtime field. Subclasses that expose a per-instance description via a getter (`get description() { ... }`) now work as documented.
+
+[0.84.1]: https://github.com/mcp-rune/mcp-rune/compare/v0.84.0...v0.84.1
+
+## [0.84.0] - 2026-06-06
+
+> **BREAKING.** Renames `PromptContentGenerator` to `PromptContentBuilder`. The class is structurally a fluent builder (`add` / `flowDiagram` / `section` / ... terminated by `.build()`, accumulating into a `parts: string[]`); the actual generators are the pure functions in `src/mcp/prompts/generators/`. The old name had it backwards and collided with the folder name. No back-compat alias — call sites import the new name.
+
+### Changed
+
+- **`PromptContentGenerator` → `PromptContentBuilder`** at `src/mcp/prompts/prompt-content-builder.ts` (renamed from `prompt-content-generator.ts`). Public export from `@mcp-rune/mcp-rune/prompts` renamed accordingly. The fluent API surface, options, and rendering behaviour are unchanged — this is a pure rename.
+- **All internal references updated** — `base-prompt.ts`, `prompt-definitions.ts`, `association-transformers.ts`, every file under `src/mcp/prompts/generators/`, the spec at `__tests__/lib/mcp/prompts/prompt-content-builder.spec.ts` (renamed from `prompt-content-generator.spec.ts`), and the prompt-DSL guides under `docs/guides/02-prompt-dsl/` plus `docs/guides/10-reference/subpath-imports.md`.
+
+[0.84.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.83.0...v0.84.0
+
 ## [0.83.0] - 2026-06-06
 
 > **BREAKING.** Slims `BasePrompt` to its definitional core (the four static config maps plus the four production-used statics) and extracts the type vocabulary that describes a prompt into its own module. The rendering-helper statics that previously lived on the class were unreachable from any non-test code in the framework or its downstream consumers; they are deleted rather than kept around as a deprecated surface. `PromptContentGenerator` is unchanged and remains the canonical way to assemble a prompt's content from its config.

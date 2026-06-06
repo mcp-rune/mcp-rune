@@ -9,7 +9,7 @@ export {
 export type { CompletionConfig } from './mcp/models/attribute-definition.js'
 export { BasePrompt } from './mcp/prompts/base-prompt.js'
 export { createPromptCache } from './mcp/prompts/prompt-cache.js'
-export { PromptContentGenerator } from './mcp/prompts/prompt-content-generator.js'
+export { PromptContentBuilder } from './mcp/prompts/prompt-content-builder.js'
 export type {
   FieldGroup,
   FieldValidation,

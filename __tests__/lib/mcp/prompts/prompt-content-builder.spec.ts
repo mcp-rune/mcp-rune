@@ -1,11 +1,11 @@
 /**
- * Tests for PromptContentGenerator pipeline methods.
+ * Tests for PromptContentBuilder pipeline methods.
  *
  * Focuses on the standard() method which encapsulates the canonical
  * middle of the pipeline: flowDiagram → guidance → beforeSections → allSections → summary
  */
 
-import { PromptContentGenerator } from '../../../../src/mcp/prompts/prompt-content-generator.js'
+import { PromptContentBuilder } from '../../../../src/mcp/prompts/prompt-content-builder.js'
 
 // Minimal mock prompt class with required static methods
 class MockPrompt {
@@ -67,10 +67,10 @@ class MockPrompt {
   }
 }
 
-describe('PromptContentGenerator', () => {
+describe('PromptContentBuilder', () => {
   describe('standard()', () => {
     it('calls flowDiagram, guidance, allSections, summary in order', () => {
-      const result = PromptContentGenerator.for(MockPrompt, 'test')
+      const result = PromptContentBuilder.for(MockPrompt, 'test')
         .add('# Intro')
         .standard()
         .attributeReference()
@@ -98,7 +98,7 @@ describe('PromptContentGenerator', () => {
     })
 
     it('inserts beforeSections before allSections', () => {
-      const result = PromptContentGenerator.for(MockPrompt, 'test')
+      const result = PromptContentBuilder.for(MockPrompt, 'test')
         .add('# Intro')
         .standard({
           beforeSections: ['## Custom Section\n\nCustom content']
@@ -115,7 +115,7 @@ describe('PromptContentGenerator', () => {
     })
 
     it('passes skip to allSections', () => {
-      const result = PromptContentGenerator.for(MockPrompt, 'test')
+      const result = PromptContentBuilder.for(MockPrompt, 'test')
         .standard({ skip: ['details'] })
         .build()
 
@@ -126,20 +126,20 @@ describe('PromptContentGenerator', () => {
     })
 
     it('returns this for chaining', () => {
-      const generator = PromptContentGenerator.for(MockPrompt, 'test')
+      const generator = PromptContentBuilder.for(MockPrompt, 'test')
       const result = generator.standard()
       expect(result).toBe(generator)
     })
 
     it('works with empty options', () => {
-      const result = PromptContentGenerator.for(MockPrompt, 'test').standard({}).build()
+      const result = PromptContentBuilder.for(MockPrompt, 'test').standard({}).build()
 
       expect(result).toContain('**Flow:**')
       expect(result).toContain('SUMMARY AND CONFIRMATION')
     })
 
     it('handles multiple beforeSections', () => {
-      const result = PromptContentGenerator.for(MockPrompt, 'test')
+      const result = PromptContentBuilder.for(MockPrompt, 'test')
         .standard({
           beforeSections: ['## First Custom', '## Second Custom']
         })
@@ -154,7 +154,7 @@ describe('PromptContentGenerator', () => {
     })
 
     it('skips null/empty beforeSections gracefully', () => {
-      const result = PromptContentGenerator.for(MockPrompt, 'test')
+      const result = PromptContentBuilder.for(MockPrompt, 'test')
         .standard({
           beforeSections: [null, '', 'Valid Section']
         })
@@ -243,14 +243,14 @@ describe('PromptContentGenerator', () => {
     }
 
     it('renders ### sub-headings for each group', () => {
-      const result = PromptContentGenerator.for(MockMultiGroupPrompt, 'test').standard().build()
+      const result = PromptContentBuilder.for(MockMultiGroupPrompt, 'test').standard().build()
 
       expect(result).toContain('### Group Alpha')
       expect(result).toContain('### Group Beta')
     })
 
     it('renders section-level intro before group sub-sections', () => {
-      const result = PromptContentGenerator.for(MockMultiGroupPrompt, 'test').standard().build()
+      const result = PromptContentBuilder.for(MockMultiGroupPrompt, 'test').standard().build()
 
       const sectionIntroIdx = result.indexOf('This section has two groups.')
       const groupAlphaIdx = result.indexOf('### Group Alpha')
@@ -258,7 +258,7 @@ describe('PromptContentGenerator', () => {
     })
 
     it('renders section-level notes after all groups', () => {
-      const result = PromptContentGenerator.for(MockMultiGroupPrompt, 'test').standard().build()
+      const result = PromptContentBuilder.for(MockMultiGroupPrompt, 'test').standard().build()
 
       const groupBetaIdx = result.indexOf('### Group Beta')
       const sectionNotesIdx = result.indexOf('Section-level note one')
@@ -266,7 +266,7 @@ describe('PromptContentGenerator', () => {
     })
 
     it('renders per-group intro within each sub-section', () => {
-      const result = PromptContentGenerator.for(MockMultiGroupPrompt, 'test').standard().build()
+      const result = PromptContentBuilder.for(MockMultiGroupPrompt, 'test').standard().build()
 
       // Alpha intro should be between ### Group Alpha and ### Group Beta
       const alphaHeadingIdx = result.indexOf('### Group Alpha')
@@ -281,7 +281,7 @@ describe('PromptContentGenerator', () => {
     })
 
     it('renders per-group notes within each sub-section', () => {
-      const result = PromptContentGenerator.for(MockMultiGroupPrompt, 'test').standard().build()
+      const result = PromptContentBuilder.for(MockMultiGroupPrompt, 'test').standard().build()
 
       expect(result).toContain('Alpha note one')
       expect(result).toContain('Beta note one')
@@ -289,7 +289,7 @@ describe('PromptContentGenerator', () => {
     })
 
     it('renders separate field tables per group', () => {
-      const result = PromptContentGenerator.for(MockMultiGroupPrompt, 'test').standard().build()
+      const result = PromptContentBuilder.for(MockMultiGroupPrompt, 'test').standard().build()
 
       // Group Alpha table should contain field_a1, field_a2 but not field_b1
       const alphaIdx = result.indexOf('### Group Alpha')
@@ -344,7 +344,7 @@ describe('PromptContentGenerator', () => {
         }
       }
 
-      const result = PromptContentGenerator.for(MockNoContextPrompt, 'test').allSections().build()
+      const result = PromptContentBuilder.for(MockNoContextPrompt, 'test').allSections().build()
 
       expect(result).toContain('### Snake Case Group')
       expect(result).toContain('### Another Group')
@@ -411,7 +411,7 @@ describe('PromptContentGenerator', () => {
         }
       }
 
-      const result = PromptContentGenerator.for(MockEnumGroupPrompt, 'test').allSections().build()
+      const result = PromptContentBuilder.for(MockEnumGroupPrompt, 'test').allSections().build()
 
       expect(result).toContain('`status` values:')
       expect(result).toContain('`"active"`')
@@ -478,14 +478,14 @@ describe('PromptContentGenerator', () => {
         }
       }
 
-      const result = PromptContentGenerator.for(MockExtractionPrompt, 'test').allSections().build()
+      const result = PromptContentBuilder.for(MockExtractionPrompt, 'test').allSections().build()
 
       expect(result).toContain('Common Patterns')
       expect(result).toContain('"Play run"')
     })
 
     it('section() method adds single section documentation', () => {
-      const result = PromptContentGenerator.for(MockMultiGroupPrompt, 'test')
+      const result = PromptContentBuilder.for(MockMultiGroupPrompt, 'test')
         .section('identity', 1)
         .build()
 
@@ -503,7 +503,7 @@ describe('PromptContentGenerator', () => {
         }
       }
 
-      const result = PromptContentGenerator.for(MockEmptySectionPrompt, 'test')
+      const result = PromptContentBuilder.for(MockEmptySectionPrompt, 'test')
         .section('nonexistent', 1)
         .build()
 
@@ -555,7 +555,7 @@ describe('PromptContentGenerator', () => {
         }
       }
 
-      const result = PromptContentGenerator.for(MockCustomSectionsPrompt, 'test')
+      const result = PromptContentBuilder.for(MockCustomSectionsPrompt, 'test')
         .allSections({
           customSections: {
             custom: (sectionNum) => `## CUSTOM SECTION ${sectionNum}: overridden`
@@ -612,7 +612,7 @@ describe('PromptContentGenerator', () => {
         }
       }
 
-      const result = PromptContentGenerator.for(MockBareGroupPrompt, 'test').allSections().build()
+      const result = PromptContentBuilder.for(MockBareGroupPrompt, 'test').allSections().build()
 
       // Bare group gets title-cased heading and field table, no intro/notes
       expect(result).toContain('### Bare Group')
@@ -626,22 +626,22 @@ describe('PromptContentGenerator', () => {
 
   describe('appsEnabled threading', () => {
     it('defaults appsEnabled to false', () => {
-      const gen = PromptContentGenerator.for(MockPrompt, 'test')
+      const gen = PromptContentBuilder.for(MockPrompt, 'test')
       expect(gen.appsEnabled).toBe(false)
     })
 
     it('accepts appsEnabled via constructor options', () => {
-      const gen = new PromptContentGenerator(MockPrompt, 'test', { appsEnabled: true })
+      const gen = new PromptContentBuilder(MockPrompt, 'test', { appsEnabled: true })
       expect(gen.appsEnabled).toBe(true)
     })
 
     it('accepts appsEnabled via factory method', () => {
-      const gen = PromptContentGenerator.for(MockPrompt, 'test', { appsEnabled: true })
+      const gen = PromptContentBuilder.for(MockPrompt, 'test', { appsEnabled: true })
       expect(gen.appsEnabled).toBe(true)
     })
 
     it('treats non-boolean appsEnabled as false', () => {
-      const gen = PromptContentGenerator.for(MockPrompt, 'test', { appsEnabled: 'yes' })
+      const gen = PromptContentBuilder.for(MockPrompt, 'test', { appsEnabled: 'yes' })
       expect(gen.appsEnabled).toBe(false)
     })
   })
@@ -723,7 +723,7 @@ describe('PromptContentGenerator', () => {
     }
 
     it('replaces content.intro with transformer instructions for covered single-group sections', () => {
-      const result = PromptContentGenerator.for(MockTransformerPrompt, 'test', {
+      const result = PromptContentBuilder.for(MockTransformerPrompt, 'test', {
         appsEnabled: false
       })
         .allSections()
@@ -737,7 +737,7 @@ describe('PromptContentGenerator', () => {
     })
 
     it('preserves content.intro for sections without transformers', () => {
-      const result = PromptContentGenerator.for(MockTransformerPrompt, 'test', {
+      const result = PromptContentBuilder.for(MockTransformerPrompt, 'test', {
         appsEnabled: false
       })
         .allSections()
@@ -748,7 +748,7 @@ describe('PromptContentGenerator', () => {
     })
 
     it('generates app-aware instructions when appsEnabled is true', () => {
-      const result = PromptContentGenerator.for(MockTransformerPrompt, 'test', {
+      const result = PromptContentBuilder.for(MockTransformerPrompt, 'test', {
         appsEnabled: true
       })
         .allSections()
@@ -760,7 +760,7 @@ describe('PromptContentGenerator', () => {
     })
 
     it('generates non-app instructions when appsEnabled is false', () => {
-      const result = PromptContentGenerator.for(MockTransformerPrompt, 'test', {
+      const result = PromptContentBuilder.for(MockTransformerPrompt, 'test', {
         appsEnabled: false
       })
         .allSections()
@@ -841,7 +841,7 @@ describe('PromptContentGenerator', () => {
     }
 
     it('replaces content.intro with transformer instructions in multi-group section', () => {
-      const result = PromptContentGenerator.for(MockMultiGroupTransformerPrompt, 'test', {
+      const result = PromptContentBuilder.for(MockMultiGroupTransformerPrompt, 'test', {
         appsEnabled: false
       })
         .allSections()
@@ -855,7 +855,7 @@ describe('PromptContentGenerator', () => {
     })
 
     it('renders preamble before transformer instructions', () => {
-      const result = PromptContentGenerator.for(MockMultiGroupTransformerPrompt, 'test', {
+      const result = PromptContentBuilder.for(MockMultiGroupTransformerPrompt, 'test', {
         appsEnabled: false
       })
         .allSections()
@@ -868,7 +868,7 @@ describe('PromptContentGenerator', () => {
     })
 
     it('preserves section-level notes after all groups', () => {
-      const result = PromptContentGenerator.for(MockMultiGroupTransformerPrompt, 'test', {
+      const result = PromptContentBuilder.for(MockMultiGroupTransformerPrompt, 'test', {
         appsEnabled: false
       })
         .allSections()
@@ -878,7 +878,7 @@ describe('PromptContentGenerator', () => {
     })
 
     it('generates picker instructions when appsEnabled is true', () => {
-      const result = PromptContentGenerator.for(MockMultiGroupTransformerPrompt, 'test', {
+      const result = PromptContentBuilder.for(MockMultiGroupTransformerPrompt, 'test', {
         appsEnabled: true
       })
         .allSections()
@@ -929,7 +929,7 @@ describe('PromptContentGenerator', () => {
         }
       }
 
-      const result = PromptContentGenerator.for(NoTransformerPrompt, 'test').allSections().build()
+      const result = PromptContentBuilder.for(NoTransformerPrompt, 'test').allSections().build()
 
       expect(result).toContain('Static intro preserved.')
     })

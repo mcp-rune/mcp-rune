@@ -2,7 +2,7 @@
  * Attribute Reference Generator
  *
  * Generates a markdown attribute reference table from fieldDefinitions.
- * Pure function -- no dependency on BasePrompt or PromptContentGenerator.
+ * Pure function -- no dependency on BasePrompt or PromptContentBuilder.
  */
 
 import type { PromptClassLike } from '../prompt-definitions.js'
