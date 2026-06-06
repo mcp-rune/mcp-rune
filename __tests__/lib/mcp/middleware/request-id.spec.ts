@@ -1,5 +1,5 @@
 import { createRequestIdMiddleware } from '../../../../src/mcp/middleware/request-id.js'
-import { getRequestId } from '../../../../src/services/request-context.js'
+import { getRequestId } from '../../../../src/runtime/request-context.js'
 
 describe('lib/mcp/middleware/request-id', () => {
   let middleware

@@ -19,13 +19,13 @@ const { mockLogger, mockGetUpstream } = vi.hoisted(() => ({
   mockGetUpstream: vi.fn()
 }))
 
-vi.mock('#src/services/logger.js', () => mockLogger)
-vi.mock('#src/services/request-context.js', async (importOriginal) => {
+vi.mock('#src/runtime/logger.js', () => mockLogger)
+vi.mock('#src/runtime/request-context.js', async (importOriginal) => {
   const actual = await importOriginal()
   return { ...actual, getUpstream: mockGetUpstream }
 })
 
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 import { createRequestLoggerMiddleware } from '../../../../src/mcp/middleware/request-logger.js'
 

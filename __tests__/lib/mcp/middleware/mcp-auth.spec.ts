@@ -11,14 +11,14 @@ const { mockLogger, mockExtractBearerToken, mockSendUnauthorized } = vi.hoisted(
   })
 }))
 
-vi.mock('#src/services/logger.js', () => mockLogger)
+vi.mock('#src/runtime/logger.js', () => mockLogger)
 
 vi.mock('../../../../src/mcp/middleware/oauth-router.js', () => ({
   extractBearerToken: mockExtractBearerToken,
   sendUnauthorized: mockSendUnauthorized
 }))
 
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 import { createMcpAuthMiddleware } from '../../../../src/mcp/middleware/mcp-auth.js'
 

@@ -4,8 +4,8 @@ import { URL } from 'node:url'
 import open from 'open'
 import * as client from 'openid-client'
 
-import { captureException, ErrorCategory } from '#src/services/error-tracking.js'
-import * as logger from '#src/services/logger.js'
+import { captureException, ErrorCategory } from '#src/runtime/error-tracking.js'
+import * as logger from '#src/runtime/logger.js'
 
 import * as tokenStore from './token-store.js'
 

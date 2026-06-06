@@ -9,7 +9,7 @@
 
 import { z } from 'zod'
 
-import type { GraphStratifierSpec } from '#src/services/vector-storage.js'
+import type { GraphStratifierSpec } from '#src/runtime/vector-storage.js'
 
 export const ConceptStratifierSchema = z.object({
   kind: z.literal('concept'),

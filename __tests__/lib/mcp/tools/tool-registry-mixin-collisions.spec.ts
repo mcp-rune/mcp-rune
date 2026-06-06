@@ -14,14 +14,14 @@ import type { ApiExtension } from '#src/mcp/data-layer/api-extensions/types.js'
 
 import { ToolRegistry } from '../../../../src/mcp/tools/tool-registry.js'
 
-vi.mock('#src/services/logger.js', () => ({
+vi.mock('#src/runtime/logger.js', () => ({
   info: vi.fn(),
   warn: vi.fn(),
   error: vi.fn(),
   debug: vi.fn()
 }))
 
-vi.mock('#src/services/tracing.js', () => ({
+vi.mock('#src/runtime/tracing.js', () => ({
   traceToolCall: vi.fn((_name, _args, handler) => handler())
 }))
 

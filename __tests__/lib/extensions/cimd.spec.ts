@@ -17,7 +17,7 @@ const { mockLogger } = vi.hoisted(() => ({
   }
 }))
 
-vi.mock('#src/services/logger.js', () => mockLogger)
+vi.mock('#src/runtime/logger.js', () => mockLogger)
 
 import { Router } from 'express'
 

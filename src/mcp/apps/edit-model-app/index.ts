@@ -23,7 +23,7 @@ import { z } from 'zod'
 
 import { generateFormSchema } from '#src/mcp/apps/lib/form-schema.js'
 import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 import type { FormSubmitMode } from '../../extensions/tool-flow.js'
 import {

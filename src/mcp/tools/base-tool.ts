@@ -6,7 +6,7 @@ import type { RequestOptions } from '#src/core/api-client.js'
 import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 import type { ApiConfig, AttributeDefinition } from '#src/mcp/models/base-model.js'
 import type { SummaryStrategyRegistry } from '#src/mcp/models/summary-strategies/index.js'
-import { storeOperation } from '#src/services/vector-storage.js'
+import { storeOperation } from '#src/runtime/vector-storage.js'
 
 import type { AssociationConfig } from '../data-layer/api-conventions/base-convention.js'
 import { defaultConvention } from '../data-layer/api-conventions/index.js'

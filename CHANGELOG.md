@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.78.0] - 2026-06-06
+
+> **BREAKING.** Renames `src/services/` → `src/runtime/` (and `@mcp-rune/mcp-rune/services` → `@mcp-rune/mcp-rune/runtime`) to resolve the name collision with `src/mcp/services/`. Top-level `services/` and the nested `mcp/services/` represented two unrelated layers (cross-cutting runtime concerns vs data-access). With PR 2 having moved `mcp/services/` into `mcp/data-layer/model-service/`, the remaining `services/` now gets a name that actually describes its scope. Final part (5 of 5) in #218.
+
+### Changed
+
+- **`@mcp-rune/mcp-rune/services` entry point removed; `@mcp-rune/mcp-rune/runtime` added in its place** — consumers importing `embeddings`, `errorTracking`, `logger`, `requestContext`, `toolOutputAdapters`, `tracing`, `vectorStorage` namespaces must switch entry-point name.
+- **`#src/services/*` paths moved to `#src/runtime/*`** — anyone reaching into `/lib/services/*` directly must update to `/lib/runtime/*`.
+
+[0.78.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.77.0...v0.78.0
+
 ## [0.77.0] - 2026-06-06
 
 > **BREAKING.** Renames `SearchAdapter` → `SearchRequestShaper` (and `RailsSearchAdapter` → `RailsSearchRequestShaper`) to disambiguate from `DataLayer` adapters. Before this PR, the word "adapter" meant two unrelated things in nearby code: a `DataLayer` implementation, and a request-body shape transformer for the search endpoint. Pure rename — no semantic changes. Part 4 of 5 in #218.

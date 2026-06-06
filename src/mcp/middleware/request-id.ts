@@ -17,7 +17,7 @@ import { randomUUID } from 'node:crypto'
 
 import type { NextFunction, Request, Response } from 'express'
 
-import { requestContext } from '#src/services/request-context.js'
+import { requestContext } from '#src/runtime/request-context.js'
 
 /** Express middleware that attaches a request ID to each request */
 export function createRequestIdMiddleware(): (

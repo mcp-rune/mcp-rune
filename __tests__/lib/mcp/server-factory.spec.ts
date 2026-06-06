@@ -37,7 +37,7 @@ vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
 vi.mock('@modelcontextprotocol/sdk/types.js', () => mockSchemas)
 
 // Mock logger
-vi.mock('#src/services/logger.js', () => ({
+vi.mock('#src/runtime/logger.js', () => ({
   debug: vi.fn(),
   info: vi.fn(),
   warn: vi.fn(),
@@ -45,8 +45,8 @@ vi.mock('#src/services/logger.js', () => ({
 }))
 
 // Mock error tracking and tracing
-vi.mock('#src/services/error-tracking.js', () => mockErrorTracking)
-vi.mock('#src/services/tracing.js', () => mockTracing)
+vi.mock('#src/runtime/error-tracking.js', () => mockErrorTracking)
+vi.mock('#src/runtime/tracing.js', () => mockTracing)
 
 // Mock form handlers
 vi.mock('#src/mcp/forms/form-handlers.js', () => ({
@@ -58,7 +58,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { CompleteRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 
 import { createServer } from '../../../src/mcp/server-factory.js'
-import * as logger from '../../../src/services/logger.js'
+import * as logger from '../../../src/runtime/logger.js'
 
 describe('lib/mcp/server-factory', () => {
   let mockToolRegistry

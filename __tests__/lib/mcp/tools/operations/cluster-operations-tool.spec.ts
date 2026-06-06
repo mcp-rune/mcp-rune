@@ -1,8 +1,8 @@
-vi.mock('#src/services/vector-storage.js', () => ({
+vi.mock('#src/runtime/vector-storage.js', () => ({
   getOperationClusters: vi.fn()
 }))
 
-import { getOperationClusters } from '#src/services/vector-storage.js'
+import { getOperationClusters } from '#src/runtime/vector-storage.js'
 
 import { ClusterOperationsTool } from '../../../../../src/mcp/tools/operations/cluster-operations-tool.js'
 

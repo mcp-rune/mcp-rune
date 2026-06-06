@@ -25,9 +25,9 @@ import {
   ErrorCategory,
   flushErrorTracking,
   isErrorTrackingEnabled
-} from '#src/services/error-tracking.js'
-import * as logger from '#src/services/logger.js'
-import { closeTracing, flushTracing } from '#src/services/tracing.js'
+} from '#src/runtime/error-tracking.js'
+import * as logger from '#src/runtime/logger.js'
+import { closeTracing, flushTracing } from '#src/runtime/tracing.js'
 
 import type { HttpExtensionMap } from './extensions/types.js'
 import { createCorsMiddleware } from './middleware/cors.js'

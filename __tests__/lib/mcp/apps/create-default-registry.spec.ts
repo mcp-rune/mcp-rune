@@ -11,7 +11,7 @@ vi.mock('@modelcontextprotocol/ext-apps/server', () => ({
   RESOURCE_MIME_TYPE: 'text/html;profile=mcp-app'
 }))
 
-vi.mock('#src/services/logger.js', () => ({
+vi.mock('#src/runtime/logger.js', () => ({
   debug: vi.fn(),
   info: vi.fn(),
   warn: vi.fn(),

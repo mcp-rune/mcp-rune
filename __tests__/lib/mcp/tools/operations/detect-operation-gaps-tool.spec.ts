@@ -1,8 +1,8 @@
-vi.mock('#src/services/vector-storage.js', () => ({
+vi.mock('#src/runtime/vector-storage.js', () => ({
   detectOperationGaps: vi.fn()
 }))
 
-import { detectOperationGaps } from '#src/services/vector-storage.js'
+import { detectOperationGaps } from '#src/runtime/vector-storage.js'
 
 import { DetectOperationGapsTool } from '../../../../../src/mcp/tools/operations/detect-operation-gaps-tool.js'
 

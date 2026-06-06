@@ -21,7 +21,7 @@ import {
   storeAnalysisMemory,
   storeIngestedEdges,
   storeIngestedRecords
-} from '#src/services/vector-storage.js'
+} from '#src/runtime/vector-storage.js'
 
 import type { DataLayer, ModelConfig, ToolAnnotations, ToolResult } from '../base-tool.js'
 import type { NestedValidationError, NestedValidationSuccess } from '../validators.js'

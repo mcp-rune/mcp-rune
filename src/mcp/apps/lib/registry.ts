@@ -31,7 +31,7 @@ import {
 import type { DataLayer, DataLayerFactory } from '#src/mcp/data-layer/data-layer.js'
 import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
 import type { ModelsRegistry } from '#src/mcp/tools/base-tool.js'
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 import type { FormSubmitMode } from '../../extensions/tool-flow.js'
 import type { FormDataStore } from './form-data-store.js'

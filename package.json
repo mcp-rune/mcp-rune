@@ -1,6 +1,6 @@
 {
   "name": "@mcp-rune/mcp-rune",
-  "version": "0.77.0",
+  "version": "0.78.0",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "restricted"
@@ -78,9 +78,9 @@
       "types": "./dist/mcp/data-layer/api-extensions/search/index.d.ts",
       "import": "./dist/mcp/data-layer/api-extensions/search/index.js"
     },
-    "./services": {
-      "types": "./dist/services.d.ts",
-      "import": "./dist/services.js"
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "import": "./dist/runtime.js"
     },
     "./model-service": {
       "types": "./dist/mcp/data-layer/model-service/index.d.ts",

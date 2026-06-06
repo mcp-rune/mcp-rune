@@ -5,12 +5,12 @@ import {
 } from '../../../../src/mcp/domain/search-strategy.js'
 
 // Mock embeddings module (used by SemanticSearch inside EmbeddingSearch)
-vi.mock('#src/services/embeddings.js', () => ({
+vi.mock('#src/runtime/embeddings.js', () => ({
   embed: vi.fn(),
   embedBatch: vi.fn()
 }))
 
-import { embed, embedBatch } from '#src/services/embeddings.js'
+import { embed, embedBatch } from '#src/runtime/embeddings.js'
 
 const testItems = [
   {

@@ -12,7 +12,7 @@
  * const handler = wrapToolHandler('find_records', [loggingInterceptor(), tracingInterceptor()], rawHandler)
  */
 
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 import type { ToolResult } from './base-tool.js'
 import type { ToolInterceptor } from './tool-pipeline.js'

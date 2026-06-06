@@ -1,8 +1,8 @@
-vi.mock('#src/services/vector-storage.js', () => ({
+vi.mock('#src/runtime/vector-storage.js', () => ({
   findSimilarOperations: vi.fn()
 }))
 
-import { findSimilarOperations } from '#src/services/vector-storage.js'
+import { findSimilarOperations } from '#src/runtime/vector-storage.js'
 
 import { FindSimilarOperationsTool } from '../../../../../src/mcp/tools/operations/find-similar-operations-tool.js'
 

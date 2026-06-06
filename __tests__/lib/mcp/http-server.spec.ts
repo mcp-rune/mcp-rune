@@ -55,7 +55,7 @@ vi.mock('@modelcontextprotocol/sdk/server/streamableHttp.js', () => ({
   StreamableHTTPServerTransport: MockStreamableHTTPServerTransport
 }))
 
-vi.mock('#src/services/logger.js', () => mockLogger)
+vi.mock('#src/runtime/logger.js', () => mockLogger)
 
 vi.mock('../../../src/mcp/middleware/request-id.js', () => ({
   createRequestIdMiddleware: mockRequestIdMiddleware
@@ -71,7 +71,7 @@ vi.mock('../../../src/mcp/middleware/oauth-router.js', () => ({
   sendUnauthorized: mockSendUnauthorized
 }))
 
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 import { HttpServer } from '../../../src/mcp/http-server.js'
 import { createOAuthRouter } from '../../../src/mcp/middleware/oauth-router.js'

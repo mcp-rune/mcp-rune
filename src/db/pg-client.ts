@@ -10,7 +10,7 @@
 
 import type { Pool, QueryResult } from 'pg'
 
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 let pool: Pool | null = null
 

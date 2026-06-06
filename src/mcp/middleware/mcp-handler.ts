@@ -23,7 +23,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import type { Request, RequestHandler, Response } from 'express'
 
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 import type { SessionEntry, SessionManager } from '../session-manager.js'
 import type { AuthenticatedMcpRequest } from './mcp-auth.js'

@@ -22,7 +22,7 @@
  * Example models: Rule, Right, Deal
  */
 
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 import type { FieldGroup, PromptFieldDefinition, Section } from '../base-prompt.js'
 import { BaseStrategy } from './base-strategy.js'

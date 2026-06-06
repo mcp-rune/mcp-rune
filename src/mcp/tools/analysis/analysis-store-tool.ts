@@ -1,7 +1,7 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
-import { storeAnalysisMemory } from '#src/services/vector-storage.js'
+import { storeAnalysisMemory } from '#src/runtime/vector-storage.js'
 
 import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { BaseAnalysisTool } from './base-analysis-tool.js'

@@ -14,7 +14,7 @@
  * Example models: Feature, Clip, Brand
  */
 
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 import { BaseStrategy } from './base-strategy.js'
 

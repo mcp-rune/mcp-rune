@@ -13,7 +13,7 @@
  *   const result = strategy.validateFields(promptClass, fields)
  */
 
-import * as logger from '#src/services/logger.js'
+import * as logger from '#src/runtime/logger.js'
 
 import { BaseStrategy } from './base-strategy.js'
 import { HybridStrategy } from './hybrid-strategy.js'

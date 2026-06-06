@@ -9,14 +9,14 @@ import {
 import type { ToolContext } from '../../../../src/mcp/tools/tool-pipeline.js'
 
 // Mock logger
-vi.mock('#src/services/logger.js', () => ({
+vi.mock('#src/runtime/logger.js', () => ({
   info: vi.fn(),
   warn: vi.fn(),
   error: vi.fn(),
   debug: vi.fn()
 }))
 
-import * as logger from '../../../../src/services/logger.js'
+import * as logger from '../../../../src/runtime/logger.js'
 
 const makeCtx = (overrides: Partial<ToolContext> = {}): ToolContext => ({
   toolName: 'test_tool',

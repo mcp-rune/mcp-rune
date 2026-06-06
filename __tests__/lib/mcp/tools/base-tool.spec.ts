@@ -1,6 +1,6 @@
 import { BaseTool } from '../../../../src/mcp/tools/base-tool.js'
 
-vi.mock('../../../../src/services/vector-storage.js', () => ({
+vi.mock('../../../../src/runtime/vector-storage.js', () => ({
   storeOperation: vi.fn().mockResolvedValue(null)
 }))
 
@@ -335,7 +335,7 @@ describe('lib/mcp/tools/base-tool', () => {
 
   describe('storeToolMemory', () => {
     it('calls storeOperation with correct params including sessionId', async () => {
-      const { storeOperation } = await import('../../../../src/services/vector-storage.js')
+      const { storeOperation } = await import('../../../../src/runtime/vector-storage.js')
       vi.mocked(storeOperation).mockResolvedValue(null)
 
       class TestTool extends BaseTool {
@@ -368,7 +368,7 @@ describe('lib/mcp/tools/base-tool', () => {
     })
 
     it('logs warning when storeOperation rejects', async () => {
-      const { storeOperation } = await import('../../../../src/services/vector-storage.js')
+      const { storeOperation } = await import('../../../../src/runtime/vector-storage.js')
       vi.mocked(storeOperation).mockRejectedValue(new Error('DB connection failed'))
 
       const mockLogger = { warn: vi.fn() }
@@ -396,7 +396,7 @@ describe('lib/mcp/tools/base-tool', () => {
     })
 
     it('does not throw when logger is missing and storeOperation rejects', async () => {
-      const { storeOperation } = await import('../../../../src/services/vector-storage.js')
+      const { storeOperation } = await import('../../../../src/runtime/vector-storage.js')
       vi.mocked(storeOperation).mockRejectedValue(new Error('DB down'))
 
       class TestTool extends BaseTool {

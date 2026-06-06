@@ -25,9 +25,9 @@ import {
   type EndpointLogConfig,
   extractFields,
   matchEndpointConfig
-} from '#src/services/instrumented-axios.js'
-import * as logger from '#src/services/logger.js'
-import { getUpstream } from '#src/services/request-context.js'
+} from '#src/runtime/instrumented-axios.js'
+import * as logger from '#src/runtime/logger.js'
+import { getUpstream } from '#src/runtime/request-context.js'
 
 const DEFERRED_START_MS = 1000
 const SERVICE = 'express'

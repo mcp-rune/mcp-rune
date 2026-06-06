@@ -1,5 +1,5 @@
 // Mock vector storage
-vi.mock('#src/services/vector-storage.js', () => ({
+vi.mock('#src/runtime/vector-storage.js', () => ({
   storeAnalysisMemory: vi.fn(() => Promise.resolve('uuid-123')),
   storeIngestedRecords: vi.fn((params) => Promise.resolve(params.records.length)),
   getIngestedRecordIds: vi.fn(() => Promise.resolve(['sched-1', 'sched-2', 'sched-3'])),
@@ -12,7 +12,7 @@ import {
   getIngestedRecordIds,
   storeAnalysisMemory,
   storeIngestedRecords
-} from '#src/services/vector-storage.js'
+} from '#src/runtime/vector-storage.js'
 
 import { AnalysisIngestTool } from '../../../../../src/mcp/tools/analysis/analysis-ingest-tool.js'
 import { flatConvention } from '../../../../__fixtures__/flat-convention.js'
