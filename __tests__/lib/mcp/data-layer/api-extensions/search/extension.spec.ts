@@ -8,9 +8,10 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { searchExtension } from '../../../../src/api-extensions/search/index.js'
-import { DATA_TOOL_CLASSES } from '../../../../src/mcp/tools/data/index.js'
-import { ToolRegistry } from '../../../../src/mcp/tools/tool-registry.js'
+import { searchExtension } from '#src/mcp/data-layer/api-extensions/search/index.js'
+
+import { DATA_TOOL_CLASSES } from '../../../../../../src/mcp/tools/data/index.js'
+import { ToolRegistry } from '../../../../../../src/mcp/tools/tool-registry.js'
 
 vi.mock('#src/services/logger.js', () => ({
   info: vi.fn(),

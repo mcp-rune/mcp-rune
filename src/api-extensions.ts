@@ -7,7 +7,7 @@ export type {
   ApiExtensionContext,
   ApiExtensionMap,
   ModelServiceMixin
-} from './mcp/api-extensions/types.js'
+} from './mcp/data-layer/api-extensions/types.js'
 export type {
   SummaryInput,
   SummaryOutput,

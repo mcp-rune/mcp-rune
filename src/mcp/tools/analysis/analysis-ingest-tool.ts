@@ -1,10 +1,13 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
-import type { SearchService } from '#src/api-extensions/search/index.js'
-import { createSearchService, getSearchConfig } from '#src/api-extensions/search/index.js'
 import { pickFields } from '#src/core/helpers.js'
 import { defaultConvention } from '#src/mcp/data-layer/api-conventions/index.js'
+import type { SearchService } from '#src/mcp/data-layer/api-extensions/search/index.js'
+import {
+  createSearchService,
+  getSearchConfig
+} from '#src/mcp/data-layer/api-extensions/search/index.js'
 import { buildCollectionPath } from '#src/mcp/data-layer/model-service/compound-id.js'
 import { extractEdgesFromRecord, type HopFollow } from '#src/mcp/models/edge-extraction.js'
 import { expandHops } from '#src/mcp/models/multi-hop-fetch.js'

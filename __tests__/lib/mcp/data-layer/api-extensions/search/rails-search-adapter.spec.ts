@@ -1,4 +1,4 @@
-import { RailsSearchAdapter } from '../../../../src/api-extensions/search/rails-search-adapter.js'
+import { RailsSearchAdapter } from '#src/mcp/data-layer/api-extensions/search/rails-search-adapter.js'
 
 describe('RailsSearchAdapter', () => {
   // ============================================================================

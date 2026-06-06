@@ -1,8 +1,8 @@
+import { RailsSearchAdapter } from '#src/mcp/data-layer/api-extensions/search/rails-search-adapter.js'
+import { SearchService } from '#src/mcp/data-layer/api-extensions/search/search-service.js'
 import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
 
-import { RailsSearchAdapter } from '../../../../src/api-extensions/search/rails-search-adapter.js'
-import { SearchService } from '../../../../src/api-extensions/search/search-service.js'
-import { flatConvention } from '../../../__fixtures__/flat-convention.js'
+import { flatConvention } from '../../../../../__fixtures__/flat-convention.js'
 
 // Mock model classes
 const DirectSearchModel = {

@@ -8,10 +8,11 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { ApiExtension, ApiExtensionContext } from '../../../../src/mcp/api-extensions/types.js'
-import type { ToolResult } from '../../../../src/mcp/tools/base-tool.js'
-import { BaseTool } from '../../../../src/mcp/tools/base-tool.js'
-import { ToolRegistry } from '../../../../src/mcp/tools/tool-registry.js'
+import type { ApiExtension, ApiExtensionContext } from '#src/mcp/data-layer/api-extensions/types.js'
+
+import type { ToolResult } from '../../../../../src/mcp/tools/base-tool.js'
+import { BaseTool } from '../../../../../src/mcp/tools/base-tool.js'
+import { ToolRegistry } from '../../../../../src/mcp/tools/tool-registry.js'
 
 vi.mock('#src/services/logger.js', () => ({
   info: vi.fn(),

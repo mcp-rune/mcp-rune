@@ -11,9 +11,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   customActionsConfig,
   customActionsExtension
-} from '../../../../src/api-extensions/custom-actions.js'
-import { DATA_TOOL_CLASSES, ListModelsTool } from '../../../../src/mcp/tools/data/index.js'
-import { ToolRegistry } from '../../../../src/mcp/tools/tool-registry.js'
+} from '#src/mcp/data-layer/api-extensions/custom-actions/custom-actions.js'
+
+import { DATA_TOOL_CLASSES, ListModelsTool } from '../../../../../../src/mcp/tools/data/index.js'
+import { ToolRegistry } from '../../../../../../src/mcp/tools/tool-registry.js'
 
 vi.mock('#src/services/logger.js', () => ({
   info: vi.fn(),

@@ -7,7 +7,7 @@
  * The schema is a pure data structure -- no API calls, no side effects.
  */
 
-import { getSearchConfig } from '#src/api-extensions/search/index.js'
+import { getSearchConfig } from '#src/mcp/data-layer/api-extensions/search/index.js'
 
 import { humanize } from './helpers.js'
 import type { AppModelClass, ColumnDefinition, ListSchema } from './types.js'
