@@ -27,7 +27,7 @@ At a glance, the seam and what sits above and below it:
                           │
                           ▼
    ┌────────────────────────────────────────────────────┐
-   │   Default adapter: ModelService                    │
+   │   Default shaper: ModelService                    │
    │     ├─ ApiClient   (HTTP verbs against URLs)       │
    │     └─ Convention  (payload / association shape)   │
    └────────────────────────────────────────────────────┘
@@ -136,14 +136,14 @@ Plain `ModelService` has no notion of search endpoints — it delegates `searchN
 import { withSearchEnabledDataLayer } from '@mcp-rune/mcp-rune/api-extensions/search'
 
 const base = new ModelService({ apiClient, models, namespace })
-const dataLayer = withSearchEnabledDataLayer(base, { searchGroups, defaultAdapter })
+const dataLayer = withSearchEnabledDataLayer(base, { searchGroups, defaultShaper })
 ```
 
 ```js file=src/registry.js
 import { withSearchEnabledDataLayer } from '@mcp-rune/mcp-rune/api-extensions/search'
 
 const base = new ModelService({ apiClient, models, namespace })
-const dataLayer = withSearchEnabledDataLayer(base, { searchGroups, defaultAdapter })
+const dataLayer = withSearchEnabledDataLayer(base, { searchGroups, defaultShaper })
 ```
 
 `AppRegistry.registerTools` does this automatically — every app handler receives a `dataLayer` already wrapped. `ToolRegistry` does not auto-wrap today; tools that need text search call `withSearchEnabledDataLayer` explicitly.

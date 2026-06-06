@@ -1,6 +1,6 @@
 # Custom Search Adapter Guide
 
-A **search adapter** translates the MCP-generic search format (`{ query, filters, page, perPage }`) into the request shape your API expects. The default adapter (`SearchAdapter`) spreads filters flat into the POST body — fine for hand-rolled REST APIs but wrong for Rails Ransack, Elasticsearch DSL, JSON:API filter syntax, or anything that requires nesting.
+A **search adapter** translates the MCP-generic search format (`{ query, filters, page, perPage }`) into the request shape your API expects. The default adapter (`SearchRequestShaper`) spreads filters flat into the POST body — fine for hand-rolled REST APIs but wrong for Rails Ransack, Elasticsearch DSL, JSON:API filter syntax, or anything that requires nesting.
 
 You write a custom adapter when your API expects filters in a specific envelope and you want LLMs and forms to keep using the simple `filters: { author_id: 7, status: 'published' }` shape on the front end.
 
@@ -19,12 +19,12 @@ The adapter is purely about request shaping. Response normalization is the [conv
 
 ## The Class
 
-`SearchAdapter` lives at `@mcp-rune/mcp-rune/api-extensions/search`. It exposes one method you'll override (`buildBody`) and two extension hooks (`buildRequest`, `_buildQueryParams`).
+`SearchRequestShaper` lives at `@mcp-rune/mcp-rune/api-extensions/search`. It exposes one method you'll override (`buildBody`) and two extension hooks (`buildRequest`, `_buildQueryParams`).
 
 ```ts file=src/search/my-adapter.ts
-import { SearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
+import { SearchRequestShaper } from '@mcp-rune/mcp-rune/api-extensions/search'
 
-class MyAdapter extends SearchAdapter {
+class MyAdapter extends SearchRequestShaper {
   override buildBody(
     query: string | null,
     filters: Record<string, unknown> | undefined,
@@ -37,9 +37,9 @@ class MyAdapter extends SearchAdapter {
 ```
 
 ```js file=src/search/my-adapter.js
-import { SearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
+import { SearchRequestShaper } from '@mcp-rune/mcp-rune/api-extensions/search'
 
-class MyAdapter extends SearchAdapter {
+class MyAdapter extends SearchRequestShaper {
   buildBody(query, filters, pagination, searchConfig) {
     // shape the body
   }
@@ -116,10 +116,10 @@ Rails Ransack expects filters under a `q` key with predicates encoded in the fie
 
 ```ts file=src/adapters/ransack-adapter.ts
 // your-server/search/ransack-adapter.ts
-import { SearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
+import { SearchRequestShaper } from '@mcp-rune/mcp-rune/api-extensions/search'
 import type { Pagination, SearchConfig } from '@mcp-rune/mcp-rune/api-extensions/search'
 
-export class RansackAdapter extends SearchAdapter {
+export class RansackAdapter extends SearchRequestShaper {
   override buildBody(
     query: string | null,
     filters: Record<string, unknown> | undefined,
@@ -153,8 +153,8 @@ export class RansackAdapter extends SearchAdapter {
 
 ```js file=src/adapters/ransack-adapter.js
 // your-server/search/ransack-adapter.ts
-import { SearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
-export class RansackAdapter extends SearchAdapter {
+import { SearchRequestShaper } from '@mcp-rune/mcp-rune/api-extensions/search'
+export class RansackAdapter extends SearchRequestShaper {
   buildBody(query, filters, { page, perPage }, searchConfig) {
     const body = { page, per_page: perPage }
     const q = {}
@@ -185,10 +185,10 @@ The LLM still calls `search` with `filters: { author_id: 7, status: 'published' 
 Elasticsearch expects a `query` object with `bool.must` arrays. The MCP-generic filter format maps cleanly:
 
 ```ts file=src/adapters/elastic-adapter.ts
-import { SearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
+import { SearchRequestShaper } from '@mcp-rune/mcp-rune/api-extensions/search'
 import type { Pagination, SearchConfig } from '@mcp-rune/mcp-rune/api-extensions/search'
 
-export class ElasticAdapter extends SearchAdapter {
+export class ElasticAdapter extends SearchRequestShaper {
   override buildBody(
     query: string | null,
     filters: Record<string, unknown> | undefined,
@@ -223,8 +223,8 @@ export class ElasticAdapter extends SearchAdapter {
 ```
 
 ```js file=src/adapters/elastic-adapter.js
-import { SearchAdapter } from '@mcp-rune/mcp-rune/api-extensions/search'
-export class ElasticAdapter extends SearchAdapter {
+import { SearchRequestShaper } from '@mcp-rune/mcp-rune/api-extensions/search'
+export class ElasticAdapter extends SearchRequestShaper {
   buildBody(query, filters, { page, perPage }, searchConfig) {
     const must = []
     if (query) {
@@ -257,7 +257,7 @@ export class ElasticAdapter extends SearchAdapter {
 Attach an adapter to the model's search config:
 
 ```ts file=src/book.ts
-import { ransackAdapter } from './search/ransack-adapter'
+import { ransackShaper } from './search/ransack-adapter'
 
 class Book extends BaseModel {
   static singularName = 'book'
@@ -269,7 +269,7 @@ class Book extends BaseModel {
         endpoint: 'books/search',
         queryParam: 'q',
         searchFields: ['title', 'author_name'],
-        adapter: ransackAdapter
+        shaper: ransackShaper
       },
       filters: {
         author_id: { type: 'integer', description: 'Filter by author' },
@@ -281,7 +281,7 @@ class Book extends BaseModel {
 ```
 
 ```js file=src/book.js
-import { ransackAdapter } from './search/ransack-adapter'
+import { ransackShaper } from './search/ransack-adapter'
 class Book extends BaseModel {
   static singularName = 'book'
   static api = { endpoint: 'books' }
@@ -291,7 +291,7 @@ class Book extends BaseModel {
         endpoint: 'books/search',
         queryParam: 'q',
         searchFields: ['title', 'author_name'],
-        adapter: ransackAdapter
+        shaper: ransackShaper
       },
       filters: {
         author_id: { type: 'integer', description: 'Filter by author' },
@@ -310,22 +310,22 @@ If most of your models share an adapter, set it once on `AppRegistry` (or pass i
 
 ```ts file=src/registries/app-registry.ts
 import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
-import { ransackAdapter } from './search/ransack-adapter'
+import { ransackShaper } from './search/ransack-adapter'
 
 export const appRegistry = createDefaultAppRegistry({
   modelClasses: MODEL_CLASSES,
   namespace: 'bookshelf',
-  defaultAdapter: ransackAdapter
+  defaultShaper: ransackShaper
 })
 ```
 
 ```js file=src/registries/app-registry.js
 import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
-import { ransackAdapter } from './search/ransack-adapter'
+import { ransackShaper } from './search/ransack-adapter'
 export const appRegistry = createDefaultAppRegistry({
   modelClasses: MODEL_CLASSES,
   namespace: 'bookshelf',
-  defaultAdapter: ransackAdapter
+  defaultShaper: ransackShaper
 })
 ```
 
@@ -351,7 +351,7 @@ export const appRegistry = createDefaultAppRegistry({
     catalog: {
       endpoint: 'search',
       modelsParam: 'type',
-      adapter: ransackAdapter
+      shaper: ransackShaper
     }
   }
 })
@@ -366,7 +366,7 @@ export const appRegistry = createDefaultAppRegistry({
     catalog: {
       endpoint: 'search',
       modelsParam: 'type',
-      adapter: ransackAdapter
+      shaper: ransackShaper
     }
   }
 })

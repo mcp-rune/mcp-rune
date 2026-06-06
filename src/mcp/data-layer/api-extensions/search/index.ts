@@ -3,7 +3,7 @@
  *
  * The extension owns the entire search subsystem post-v0.47.0:
  *   - The MCP tools (`search_records`, `get_filters_guide`)
- *   - The `SearchService` engine + `SearchAdapter` / `RailsSearchAdapter`
+ *   - The `SearchService` engine + `SearchRequestShaper` / `RailsSearchRequestShaper`
  *     used by apps and `analysis-ingest-tool` as a shared module import
  *   - The typed capability readers consumed by every place that needs to
  *     interrogate a model's search config (extension, apps, analysis-ingest,
@@ -37,9 +37,9 @@ export {
 export { GetFiltersGuideTool, searchExtension, SearchRecordsTool } from './extension.js'
 export type { SearchFactoryContext } from './factory.js'
 export { createSearchService } from './factory.js'
-export type { RailsAdapterConfig } from './rails-search-adapter.js'
-export { RailsSearchAdapter } from './rails-search-adapter.js'
-export { SearchAdapter } from './search-adapter.js'
+export { SearchRequestShaper } from './request-shapers/default.js'
+export type { RailsShaperConfig } from './request-shapers/rails.js'
+export { RailsSearchRequestShaper } from './request-shapers/rails.js'
 export { SearchEnabledDataLayer, withSearchEnabledDataLayer } from './search-enabled-data-layer.js'
 export { SearchService } from './search-service.js'
 export type {

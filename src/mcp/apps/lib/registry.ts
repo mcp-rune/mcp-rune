@@ -20,7 +20,10 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { z } from 'zod'
 
 import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
-import type { SearchAdapter, SearchGroup } from '#src/mcp/data-layer/api-extensions/search/index.js'
+import type {
+  SearchGroup,
+  SearchRequestShaper
+} from '#src/mcp/data-layer/api-extensions/search/index.js'
 import {
   createSearchService,
   SearchEnabledDataLayer
@@ -136,7 +139,7 @@ interface RegistryOptions {
    */
   dataLayer?: DataLayerFactory
   searchGroups?: Record<string, SearchGroup>
-  defaultAdapter?: SearchAdapter
+  defaultShaper?: SearchRequestShaper
   /**
    * SVG data URI for the h1::before header icon. Kept as a top-level option
    * because it is the common case; equivalent to setting
@@ -175,7 +178,7 @@ export class AppRegistry {
   private _models: ModelsRegistry
   private _dataLayerFactory: DataLayerFactory
   private _searchGroups: Record<string, SearchGroup>
-  private _defaultAdapter?: SearchAdapter
+  private _defaultShaper?: SearchRequestShaper
   private _headerIcon?: string
   private _themeOverrides?: ThemeOverrides
   private _formatters?: Record<string, FormatterDescriptor>
@@ -189,7 +192,7 @@ export class AppRegistry {
       models,
       dataLayer,
       searchGroups = {},
-      defaultAdapter,
+      defaultShaper,
       headerIcon,
       themeOverrides,
       formatters
@@ -199,7 +202,7 @@ export class AppRegistry {
     this._createApiClient = createApiClient
     this._models = models ?? {}
     this._searchGroups = searchGroups
-    this._defaultAdapter = defaultAdapter
+    this._defaultShaper = defaultShaper
     this._headerIcon = headerIcon
     this._themeOverrides = themeOverrides
     this._formatters = formatters
@@ -317,7 +320,7 @@ export class AppRegistry {
               })
               const searchService = createSearchService(baseDataLayer, {
                 searchGroups: this._searchGroups,
-                defaultAdapter: this._defaultAdapter
+                defaultShaper: this._defaultShaper
               })
               context.dataLayer = new SearchEnabledDataLayer(baseDataLayer, searchService)
             }

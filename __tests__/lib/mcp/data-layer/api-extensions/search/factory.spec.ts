@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { createSearchService } from '#src/mcp/data-layer/api-extensions/search/factory.js'
-import { SearchAdapter } from '#src/mcp/data-layer/api-extensions/search/search-adapter.js'
+import { SearchRequestShaper } from '#src/mcp/data-layer/api-extensions/search/request-shapers/default.js'
 import { SearchService } from '#src/mcp/data-layer/api-extensions/search/search-service.js'
 import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
 
@@ -32,12 +32,12 @@ describe('api-extensions/search/factory — createSearchService', () => {
     expect(apiClient.post).toHaveBeenCalledWith('catalogue/search', expect.any(Object))
   })
 
-  it('pulls defaultAdapter from the passed context', () => {
+  it('pulls defaultShaper from the passed context', () => {
     const apiClient = stubApiClient()
-    const customAdapter = new SearchAdapter()
+    const customAdapter = new SearchRequestShaper()
     const spy = vi.spyOn(customAdapter, 'buildRequest')
     const service = createSearchService(new ModelService({ apiClient, models: {} }), {
-      defaultAdapter: customAdapter
+      defaultShaper: customAdapter
     })
     // Indirectly verify the adapter was retained: invoke a search through a
     // model that has a direct endpoint, which triggers buildRequest on the

@@ -69,7 +69,7 @@ These tools are completely generic — they have zero server-specific logic. The
 Tools delegate data operations to two services:
 
 - **`ModelService`** — CRUD operations (create, find, update, delete). Composes `EndpointResolver` + `Convention` + `ApiClient`.
-- **`SearchService`** — search, lookup, and listing. Composes `SearchAdapter` + `Convention` + `ApiClient`.
+- **`SearchService`** — search, lookup, and listing. Composes `SearchRequestShaper` + `Convention` + `ApiClient`.
 
 <!-- illustration: tool-creation#service -->
 
@@ -86,7 +86,7 @@ Tools delegate data operations to two services:
     └──────┬───┬──────┘  └───────┬────────┘
            │   │                 │
     ┌──────▼┐ ┌▼──────────┐ ┌───▼──────────┐
-    │Endpoint│ │Convention │ │SearchAdapter  │
+    │Endpoint│ │Convention │ │SearchRequestShaper  │
     │Resolver│ │(payload/  │ │(query body   │
     │(URLs)  │ │ response) │ │ building)    │
     └──────┬┘ └─────┬─────┘ └───┬──────────┘

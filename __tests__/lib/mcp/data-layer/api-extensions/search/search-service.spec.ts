@@ -1,4 +1,4 @@
-import { RailsSearchAdapter } from '#src/mcp/data-layer/api-extensions/search/rails-search-adapter.js'
+import { RailsSearchRequestShaper } from '#src/mcp/data-layer/api-extensions/search/request-shapers/rails.js'
 import { SearchService } from '#src/mcp/data-layer/api-extensions/search/search-service.js'
 import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
 
@@ -141,7 +141,7 @@ describe('SearchService', () => {
     })
 
     it('should use custom adapter when declared on model', async () => {
-      const customAdapter = {
+      const customShaper = {
         buildRequest: vi.fn().mockReturnValue({
           body: {
             q: 'test',
@@ -159,7 +159,7 @@ describe('SearchService', () => {
             ...DirectSearchModel.extensions.search,
             query: {
               ...DirectSearchModel.extensions.search.query,
-              adapter: customAdapter
+              shaper: customShaper
             }
           }
         }
@@ -169,7 +169,7 @@ describe('SearchService', () => {
         filters: { duration_minutes: { from: 40 } }
       })
 
-      expect(customAdapter.buildRequest).toHaveBeenCalledWith(
+      expect(customShaper.buildRequest).toHaveBeenCalledWith(
         'test',
         { duration_minutes: { from: 40 } },
         { page: 1, perPage: 20 },
@@ -231,16 +231,16 @@ describe('SearchService', () => {
   })
 
   // ============================================================================
-  // defaultAdapter
+  // defaultShaper
   // ============================================================================
 
-  describe('defaultAdapter', () => {
-    it('should use the provided defaultAdapter for direct search', async () => {
+  describe('defaultShaper', () => {
+    it('should use the provided defaultShaper for direct search', async () => {
       const railsClient = new SearchService(
         new ModelService({ apiClient: mockApiClient, models: {} }),
         {
           searchGroups,
-          defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
+          defaultShaper: new RailsSearchRequestShaper({ filtersParam: 'filters' })
         }
       )
 
@@ -256,12 +256,12 @@ describe('SearchService', () => {
       })
     })
 
-    it('should use the provided defaultAdapter for group search', async () => {
+    it('should use the provided defaultShaper for group search', async () => {
       const railsClient = new SearchService(
         new ModelService({ apiClient: mockApiClient, models: {} }),
         {
           searchGroups,
-          defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
+          defaultShaper: new RailsSearchRequestShaper({ filtersParam: 'filters' })
         }
       )
 
@@ -277,8 +277,8 @@ describe('SearchService', () => {
       })
     })
 
-    it('should allow per-model adapter to override defaultAdapter', async () => {
-      const customAdapter = {
+    it('should allow per-model adapter to override defaultShaper', async () => {
+      const customShaper = {
         buildRequest: vi.fn().mockReturnValue({
           body: { q: 'test', page: 1, per_page: 20, custom: true },
           queryParams: null
@@ -289,7 +289,7 @@ describe('SearchService', () => {
         extensions: {
           search: {
             ...DirectSearchModel.search,
-            query: { ...DirectSearchModel.extensions.search.query, adapter: customAdapter }
+            query: { ...DirectSearchModel.extensions.search.query, shaper: customShaper }
           }
         }
       }
@@ -297,17 +297,17 @@ describe('SearchService', () => {
       const railsClient = new SearchService(
         new ModelService({ apiClient: mockApiClient, models: {} }),
         {
-          defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
+          defaultShaper: new RailsSearchRequestShaper({ filtersParam: 'filters' })
         }
       )
 
       await railsClient.search(modelWithAdapter, 'test')
 
-      expect(customAdapter.buildRequest).toHaveBeenCalled()
+      expect(customShaper.buildRequest).toHaveBeenCalled()
     })
 
-    it('should allow per-group adapter to override defaultAdapter', async () => {
-      const customAdapter = {
+    it('should allow per-group adapter to override defaultShaper', async () => {
+      const customShaper = {
         buildBody: vi.fn().mockReturnValue({
           q: 'test',
           page: 1,
@@ -316,22 +316,22 @@ describe('SearchService', () => {
         })
       }
       const customGroups = {
-        library: { ...searchGroups.library, adapter: customAdapter }
+        library: { ...searchGroups.library, shaper: customShaper }
       }
       const railsClient = new SearchService(
         new ModelService({ apiClient: mockApiClient, models: {} }),
         {
           searchGroups: customGroups,
-          defaultAdapter: new RailsSearchAdapter({ filtersParam: 'filters' })
+          defaultShaper: new RailsSearchRequestShaper({ filtersParam: 'filters' })
         }
       )
 
       await railsClient.groupSearch('library', 'test')
 
-      expect(customAdapter.buildBody).toHaveBeenCalled()
+      expect(customShaper.buildBody).toHaveBeenCalled()
     })
 
-    it('should default to base SearchAdapter when no defaultAdapter provided', async () => {
+    it('should default to base SearchRequestShaper when no defaultShaper provided', async () => {
       const plainClient = new SearchService(
         new ModelService({ apiClient: mockApiClient, models: {} }),
         { searchGroups }
@@ -631,7 +631,7 @@ describe('SearchService', () => {
     })
 
     it('should use custom adapter when declared on group config', async () => {
-      const customAdapter = {
+      const customShaper = {
         buildBody: vi.fn().mockReturnValue({
           q: 'test',
           page: 1,
@@ -640,7 +640,7 @@ describe('SearchService', () => {
         })
       }
       const customGroups = {
-        library: { ...searchGroups.library, adapter: customAdapter }
+        library: { ...searchGroups.library, shaper: customShaper }
       }
       const customClient = new SearchService(
         new ModelService({ apiClient: mockApiClient, models: {} }),
@@ -651,7 +651,7 @@ describe('SearchService', () => {
         filters: { tag_id: 3 }
       })
 
-      expect(customAdapter.buildBody).toHaveBeenCalledWith(
+      expect(customShaper.buildBody).toHaveBeenCalledWith(
         'test',
         { tag_id: 3 },
         { page: 1, perPage: 20 },

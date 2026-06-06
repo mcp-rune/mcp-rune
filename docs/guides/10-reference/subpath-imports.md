@@ -30,7 +30,7 @@ import { BasePrompt, PromptContentGenerator, derivePromptSchema } from '@mcp-run
 
 import { AppRegistry, createNewModelApp } from '@mcp-rune/mcp-rune/apps'
 
-import { SearchService, SearchAdapter } from '@mcp-rune/mcp-rune/search'
+import { SearchService, SearchRequestShaper } from '@mcp-rune/mcp-rune/search'
 
 import { DomainRegistry, WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
 
@@ -57,7 +57,7 @@ export {}
 | `@mcp-rune/mcp-rune/prompts`         | `BasePrompt`, `PromptContentGenerator`, `derivePromptSchema`.              |
 | `@mcp-rune/mcp-rune/apps`            | `AppRegistry`, generic app factories (`createNewModelApp`, etc.).          |
 | `@mcp-rune/mcp-rune/apps/formatters` | Shared kind-to-input formatters for custom-app authors.                    |
-| `@mcp-rune/mcp-rune/search`          | `SearchService`, `SearchAdapter` base class.                               |
+| `@mcp-rune/mcp-rune/search`          | `SearchService`, `SearchRequestShaper` base class.                         |
 | `@mcp-rune/mcp-rune/domain`          | `DomainRegistry`, `WorkflowDefinition`, business-rule types.               |
 | `@mcp-rune/mcp-rune/oauth2`          | `OAuthService` — issuance, introspection, revocation, refresh.             |
 | `@mcp-rune/mcp-rune/extensions`      | `HttpExtension` contract; mount-order rules; CIMD opt-in extension.        |

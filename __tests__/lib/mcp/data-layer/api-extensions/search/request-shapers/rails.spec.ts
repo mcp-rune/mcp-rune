@@ -1,13 +1,13 @@
-import { RailsSearchAdapter } from '#src/mcp/data-layer/api-extensions/search/rails-search-adapter.js'
+import { RailsSearchRequestShaper } from '#src/mcp/data-layer/api-extensions/search/request-shapers/rails.js'
 
-describe('RailsSearchAdapter', () => {
+describe('RailsSearchRequestShaper', () => {
   // ============================================================================
   // filtersParam nesting
   // ============================================================================
 
   describe('filtersParam', () => {
     it('should nest filters under filtersParam from constructor', () => {
-      const adapter = new RailsSearchAdapter({ filtersParam: 'filters' })
+      const adapter = new RailsSearchRequestShaper({ filtersParam: 'filters' })
       const config = { query: { queryParam: 'q' } }
       const body = adapter.buildBody('test', { theme_id: 1 }, { page: 1, perPage: 20 }, config)
 
@@ -19,12 +19,12 @@ describe('RailsSearchAdapter', () => {
       })
     })
 
-    it('should override constructor filtersParam with adapterConfig', () => {
-      const adapter = new RailsSearchAdapter({ filtersParam: 'filters' })
+    it('should override constructor filtersParam with shaperConfig', () => {
+      const adapter = new RailsSearchRequestShaper({ filtersParam: 'filters' })
       const config = {
         query: {
           queryParam: 'q',
-          adapterConfig: { filtersParam: 'criteria' }
+          shaperConfig: { filtersParam: 'criteria' }
         }
       }
       const body = adapter.buildBody('test', { status: 'active' }, { page: 1, perPage: 20 }, config)
@@ -38,7 +38,7 @@ describe('RailsSearchAdapter', () => {
     })
 
     it('should fall back to flat spread when no filtersParam is set', () => {
-      const adapter = new RailsSearchAdapter()
+      const adapter = new RailsSearchRequestShaper()
       const config = { query: { queryParam: 'q' } }
       const body = adapter.buildBody(
         'test',
@@ -57,7 +57,7 @@ describe('RailsSearchAdapter', () => {
     })
 
     it('should not include filters key when filters object is empty', () => {
-      const adapter = new RailsSearchAdapter({ filtersParam: 'filters' })
+      const adapter = new RailsSearchRequestShaper({ filtersParam: 'filters' })
       const config = { query: { queryParam: 'q' } }
       const body = adapter.buildBody('test', {}, { page: 1, perPage: 20 }, config)
 
@@ -69,7 +69,7 @@ describe('RailsSearchAdapter', () => {
     })
 
     it('should not include filters key when filters is undefined', () => {
-      const adapter = new RailsSearchAdapter({ filtersParam: 'filters' })
+      const adapter = new RailsSearchRequestShaper({ filtersParam: 'filters' })
       const config = { query: { queryParam: 'q' } }
       const body = adapter.buildBody('test', undefined, { page: 1, perPage: 20 }, config)
 
@@ -81,7 +81,7 @@ describe('RailsSearchAdapter', () => {
     })
 
     it('should omit query param when query is null', () => {
-      const adapter = new RailsSearchAdapter({ filtersParam: 'filters' })
+      const adapter = new RailsSearchRequestShaper({ filtersParam: 'filters' })
       const config = { query: { queryParam: 'q' } }
       const body = adapter.buildBody(null, { theme_id: 1 }, { page: 1, perPage: 20 }, config)
 
@@ -98,11 +98,11 @@ describe('RailsSearchAdapter', () => {
   // ============================================================================
 
   describe('rangeMappings', () => {
-    const adapter = new RailsSearchAdapter({ filtersParam: 'filters' })
+    const adapter = new RailsSearchRequestShaper({ filtersParam: 'filters' })
     const configWithMappings = {
       query: {
         queryParam: 'q',
-        adapterConfig: {
+        shaperConfig: {
           rangeMappings: {
             duration_minutes: { from: 'min_duration', to: 'max_duration' },
             started_at: { from: 'started_after', to: 'started_before' }
@@ -172,11 +172,11 @@ describe('RailsSearchAdapter', () => {
 
   describe('rangeMappings without filtersParam', () => {
     it('should flatten ranges and spread flat when no filtersParam', () => {
-      const adapter = new RailsSearchAdapter()
+      const adapter = new RailsSearchRequestShaper()
       const config = {
         query: {
           queryParam: 'q',
-          adapterConfig: {
+          shaperConfig: {
             rangeMappings: {
               duration_minutes: { from: 'min_duration', to: 'max_duration' }
             }
@@ -203,11 +203,11 @@ describe('RailsSearchAdapter', () => {
 
   describe('combined filtersParam and rangeMappings', () => {
     it('should nest range-mapped filters under filtersParam', () => {
-      const adapter = new RailsSearchAdapter({ filtersParam: 'filters' })
+      const adapter = new RailsSearchRequestShaper({ filtersParam: 'filters' })
       const config = {
         query: {
           queryParam: 'q',
-          adapterConfig: {
+          shaperConfig: {
             rangeMappings: {
               duration_minutes: { from: 'min_duration', to: 'max_duration' }
             }
@@ -232,7 +232,7 @@ describe('RailsSearchAdapter', () => {
 
   describe('buildRequest', () => {
     it('should support expand queryParams alongside nested filters', () => {
-      const adapter = new RailsSearchAdapter({ filtersParam: 'filters' })
+      const adapter = new RailsSearchRequestShaper({ filtersParam: 'filters' })
       const config = {
         query: {
           queryParam: 'q',

@@ -1,5 +1,5 @@
 /**
- * SearchAdapter — Default adapter for building search request bodies.
+ * SearchRequestShaper — Default adapter for building search request bodies.
  *
  * Adapters sit between the MCP SearchService and the API, transforming
  * the MCP-generic filter format into the shape each API endpoint expects.
@@ -10,12 +10,12 @@
  *   → get_filters_guide tells LLM the available filter shapes
  *   → LLM calls search tool with MCP-generic format:
  *       { query, filters: { category_id: 4, status: "active" } }
- *   → SearchAdapter.buildBody() builds the request body
+ *   → SearchRequestShaper.buildBody() builds the request body
  *   → SearchService POSTs the body to the API endpoint
  *
  * ## Default Behavior
  *
- * The base SearchAdapter spreads filters flat into the request body alongside
+ * The base SearchRequestShaper spreads filters flat into the request body alongside
  * pagination and query params. This is the most generic behavior and works
  * with APIs that accept filters as top-level POST body params.
  *
@@ -24,14 +24,14 @@
  * // Output: { q: "Haskell", page: 1, per_page: 20, category_id: 4, status: "active" }
  *
  * For APIs that require filters nested under a key (e.g., Rails conventions),
- * use a subclass like RailsSearchAdapter.
+ * use a subclass like RailsSearchRequestShaper.
  *
  * Override `buildBody()` in a subclass for more complex transformations.
  */
 
-import type { Pagination, QueryConfig, SearchConfig, SearchRequest } from './types.js'
+import type { Pagination, QueryConfig, SearchConfig, SearchRequest } from '../types.js'
 
-export class SearchAdapter {
+export class SearchRequestShaper {
   /**
    * Build the request body for a search API call.
    *
