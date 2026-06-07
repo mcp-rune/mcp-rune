@@ -11,9 +11,9 @@ import { z } from 'zod'
 import { coerceToObject } from '#src/core/helpers.js'
 import type { ToolResult } from '#src/mcp/tools/base-tool.js'
 
-import { BaseStrategyTool } from './base-strategy-tool.js'
+import { BaseFormStrategyTool } from './base-form-strategy-tool.js'
 
-export class ValidateFormTool extends BaseStrategyTool {
+export class ValidateFormTool extends BaseFormStrategyTool {
   get name(): string {
     return 'validate_form'
   }
@@ -80,8 +80,8 @@ Use this tool after collecting form data to:
     }
 
     // Get the strategy for this prompt
-    const strategy = this.getStrategy(
-      promptClass as { strategy?: 'stateless' | 'hybrid' | 'stateful' }
+    const strategy = this.getFormStrategy(
+      promptClass as { formStrategy?: 'stateless' | 'hybrid' | 'stateful' }
     )
 
     // Check if validation is supported

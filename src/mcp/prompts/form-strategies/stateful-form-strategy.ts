@@ -1,5 +1,5 @@
 /**
- * StatefulStrategy - Full progressive validation with sections
+ * StatefulFormStrategy - Full progressive validation with sections
  *
  * This strategy provides complete state management with:
  * - Section-by-section validation
@@ -24,83 +24,20 @@
 
 import * as logger from '#src/runtime/logger.js'
 
-import type { FieldGroup, PromptFieldDefinition, Section } from '../prompt-definitions.js'
-import { BaseStrategy } from './base-strategy.js'
-import type { SummaryResult, ValidationResult } from './hybrid-strategy.js'
-import { HybridStrategy } from './hybrid-strategy.js'
+import { BaseFormStrategy } from './base-form-strategy.js'
+import type {
+  ProgressResult,
+  SectionMetadata,
+  SectionValidationResult,
+  StatefulPromptClass,
+  StatefulSummaryResult,
+  StatefulValidationResult
+} from './form-strategy-definitions.js'
+import { HybridFormStrategy } from './hybrid-form-strategy.js'
 
-/** Section validation result */
-interface SectionValidationResult {
-  section: string
-  valid: boolean
-  errors?: Array<{ field: string; message: string }>
-  warnings?: string[]
-  error?: string
-  available_sections?: string[]
-  skipped?: boolean
-  reason?: string
-  next_section?: string | null
-  section_complete?: boolean
-}
+const log = logger.child({ service: 'form-strategy', formStrategy: 'stateful' })
 
-/** Section progress entry */
-interface SectionProgress {
-  applicable: boolean
-  reason?: string
-  total_fields?: number
-  filled_fields?: number
-  complete?: boolean
-  partial?: boolean
-  required?: boolean
-  title?: string
-}
-
-/** Overall progress */
-interface ProgressResult {
-  sections: Record<string, SectionProgress>
-  overall: {
-    total_sections: number
-    completed_sections: number
-    required_complete: boolean
-    percentage?: number
-  }
-}
-
-/** Extended validation result with progress */
-interface StatefulValidationResult extends ValidationResult {
-  progress: ProgressResult
-}
-
-/** Extended summary with progress */
-interface StatefulSummaryResult extends SummaryResult {
-  progress: ProgressResult
-}
-
-/** Section metadata */
-interface SectionMetadata {
-  name: string
-  title: string
-  required: boolean
-  conditional: Record<string, unknown> | null
-  fields: string[]
-  groups: string[]
-  description?: string
-}
-
-/** Prompt class shape used by stateful strategy */
-interface StatefulPromptClassLike {
-  fieldDefinitions?: Record<string, PromptFieldDefinition>
-  fieldGroups?: Record<string, FieldGroup>
-  sections?: Record<string, Section>
-  crossSectionValidation?: (
-    fields: Record<string, unknown>,
-    errors: Array<{ field: string; message: string }>,
-    warnings: string[]
-  ) => void
-  getSectionForGroup?: (groupName: string) => { title: string } | null
-}
-
-export class StatefulStrategy extends BaseStrategy {
+export class StatefulFormStrategy extends BaseFormStrategy {
   static override type = 'stateful'
 
   static override getSupportedOperations(): string[] {
@@ -119,49 +56,44 @@ export class StatefulStrategy extends BaseStrategy {
     promptContent: string
     constructor: { name: string }
   }): string {
+    log.debug('getDocumentation called', {
+      promptClass: promptInstance.constructor.name
+    })
     const promptContent = promptInstance.promptContent
-
-    logger.debug('getDocumentation called', {
-      service: 'strategy',
-      strategy: 'stateful',
-      promptClass: promptInstance.constructor.name,
+    log.debug('getDocumentation complete', {
       promptContentLength: promptContent?.length || 0
     })
-
     return promptContent
   }
 
   /** Validate a specific section */
   static validateSection(
-    promptClass: StatefulPromptClassLike,
+    promptClass: StatefulPromptClass,
     sectionName: string,
     fields: Record<string, unknown>,
     _context: Record<string, unknown> = {}
   ): SectionValidationResult {
     const fieldGroups = promptClass.fieldGroups || {}
     const group = fieldGroups[sectionName]
-
-    logger.debug('validateSection called', {
-      service: 'strategy',
-      strategy: 'stateful',
+    log.debug('validateSection called', {
       section: sectionName,
       fieldCount: Object.keys(fields).length,
       availableSections: Object.keys(fieldGroups)
     })
 
     if (!group) {
-      logger.debug('validateSection unknown section', {
-        service: 'strategy',
-        strategy: 'stateful',
-        section: sectionName,
-        error: 'Section not found in fieldGroups'
-      })
-      return {
+      const result: SectionValidationResult = {
         valid: false,
         error: `Unknown section: ${sectionName}`,
         available_sections: Object.keys(fieldGroups),
         section: sectionName
       }
+      log.debug('validateSection complete', {
+        section: sectionName,
+        valid: false,
+        reason: 'unknown_section'
+      })
+      return result
     }
 
     const errors: Array<{ field: string; message: string }> = []
@@ -177,23 +109,19 @@ export class StatefulStrategy extends BaseStrategy {
       const validValues = Array.isArray(condValue) ? condValue : [condValue]
       const conditionMet = validValues.includes(actualValue)
 
-      logger.debug('validateSection conditional check', {
-        service: 'strategy',
-        strategy: 'stateful',
-        section: sectionName,
-        conditionalField: condField,
-        expectedValues: validValues,
-        actualValue,
-        conditionMet
-      })
-
       if (!conditionMet) {
-        return {
+        const result: SectionValidationResult = {
           section: sectionName,
           valid: true,
           skipped: true,
           reason: `Section only applies when ${condField} is ${validValues.join(' or ')}`
         }
+        log.debug('validateSection complete', {
+          section: sectionName,
+          valid: true,
+          skipped: true
+        })
+        return result
       }
     }
 
@@ -217,33 +145,14 @@ export class StatefulStrategy extends BaseStrategy {
       for (const message of fieldErrors) {
         errors.push({ field: fieldName!, message })
       }
-
-      logger.debug('validateSection field validation', {
-        service: 'strategy',
-        strategy: 'stateful',
-        section: sectionName,
-        field: fieldName,
-        hasValue: value !== undefined && value !== '',
-        valueType: typeof value,
-        hasError: fieldErrors.length > 0
-      })
     }
 
     // Custom per-section validator function
     if (group.validateSection && typeof group.validateSection === 'function') {
       try {
         group.validateSection(fields, errors, warnings)
-        logger.debug('validateSection custom section validator executed', {
-          service: 'strategy',
-          strategy: 'stateful',
-          section: sectionName,
-          errorsAfter: errors.length,
-          warningsAfter: warnings.length
-        })
       } catch (err) {
-        logger.error('Custom section validator threw error', {
-          service: 'strategy',
-          strategy: 'stateful',
+        log.error('Custom section validator threw error', {
           section: sectionName,
           error: (err as Error).message
         })
@@ -262,9 +171,7 @@ export class StatefulStrategy extends BaseStrategy {
       section_complete: errors.length === 0 && group.fields.some((f) => fields[f!] !== undefined)
     }
 
-    logger.debug('validateSection complete', {
-      service: 'strategy',
-      strategy: 'stateful',
+    log.debug('validateSection complete', {
       section: sectionName,
       valid: result.valid,
       errorCount: errors.length,
@@ -277,17 +184,14 @@ export class StatefulStrategy extends BaseStrategy {
 
   /** Get the next section to fill based on current state */
   static getNextSection(
-    promptClass: StatefulPromptClassLike,
+    promptClass: StatefulPromptClass,
     currentSection: string,
     fields: Record<string, unknown>
   ): string | null {
     const fieldGroups = promptClass.fieldGroups || {}
     const groupNames = Object.keys(fieldGroups)
     const currentIndex = groupNames.indexOf(currentSection)
-
-    logger.debug('getNextSection called', {
-      service: 'strategy',
-      strategy: 'stateful',
+    log.debug('getNextSection called', {
       currentSection,
       currentIndex,
       totalSections: groupNames.length
@@ -304,51 +208,36 @@ export class StatefulStrategy extends BaseStrategy {
         const validValues = Array.isArray(condValue) ? condValue : [condValue]
 
         if (!validValues.includes(actualValue)) {
-          logger.debug('getNextSection skipping section (conditional not met)', {
-            service: 'strategy',
-            strategy: 'stateful',
-            skippedSection: groupName,
-            conditionalField: condField,
-            expectedValues: validValues,
-            actualValue
-          })
           continue
         }
       }
 
-      logger.debug('getNextSection found next', {
-        service: 'strategy',
-        strategy: 'stateful',
+      log.debug('getNextSection complete', {
         currentSection,
         nextSection: groupName
       })
-
       return groupName
     }
 
-    logger.debug('getNextSection complete (no more sections)', {
-      service: 'strategy',
-      strategy: 'stateful',
-      currentSection
+    log.debug('getNextSection complete', {
+      currentSection,
+      nextSection: null
     })
-
     return null // All sections complete
   }
 
-  /** Validate all fields (delegates to HybridStrategy) */
+  /** Validate all fields (delegates to HybridFormStrategy) */
   static validateFields(
-    promptClass: StatefulPromptClassLike,
+    promptClass: StatefulPromptClass,
     fields: Record<string, unknown>,
     context: Record<string, unknown> = {}
   ): StatefulValidationResult {
-    logger.debug('validateFields called', {
-      service: 'strategy',
-      strategy: 'stateful',
+    log.debug('validateFields called', {
       fieldCount: Object.keys(fields).length
     })
 
-    // Get base validation from HybridStrategy
-    const result = HybridStrategy.validateFields(
+    // Get base validation from HybridFormStrategy
+    const result = HybridFormStrategy.validateFields(
       promptClass,
       fields,
       context
@@ -357,9 +246,7 @@ export class StatefulStrategy extends BaseStrategy {
     // Add section-level progress
     result.progress = this.getProgress(promptClass, fields)
 
-    logger.debug('validateFields complete', {
-      service: 'strategy',
-      strategy: 'stateful',
+    log.debug('validateFields complete', {
       valid: result.valid,
       readyToSubmit: result.ready_to_submit,
       errorCount: result.errors?.length || 0,
@@ -371,7 +258,7 @@ export class StatefulStrategy extends BaseStrategy {
 
   /** Get completion progress by section */
   static getProgress(
-    promptClass: StatefulPromptClassLike,
+    promptClass: StatefulPromptClass,
     fields: Record<string, unknown>
   ): ProgressResult {
     const fieldGroups = promptClass.fieldGroups || {}
@@ -383,10 +270,7 @@ export class StatefulStrategy extends BaseStrategy {
         required_complete: true
       }
     }
-
-    logger.debug('getProgress called', {
-      service: 'strategy',
-      strategy: 'stateful',
+    log.debug('getProgress called', {
       totalGroups: Object.keys(fieldGroups).length,
       fieldCount: Object.keys(fields).length
     })
@@ -406,12 +290,6 @@ export class StatefulStrategy extends BaseStrategy {
           applicable: false,
           reason: 'Conditional not met'
         }
-        logger.debug('getProgress section not applicable', {
-          service: 'strategy',
-          strategy: 'stateful',
-          section: groupName,
-          reason: 'Conditional not met'
-        })
         continue
       }
 
@@ -438,17 +316,6 @@ export class StatefulStrategy extends BaseStrategy {
         title: sectionForGroup?.title || group.context || groupName
       }
 
-      logger.debug('getProgress section status', {
-        service: 'strategy',
-        strategy: 'stateful',
-        section: groupName,
-        filledFields,
-        totalFields,
-        isComplete,
-        isPartial,
-        required: group.required || false
-      })
-
       progress.overall.total_sections++
       if (isComplete) {
         progress.overall.completed_sections++
@@ -464,9 +331,7 @@ export class StatefulStrategy extends BaseStrategy {
         ? Math.round((progress.overall.completed_sections / progress.overall.total_sections) * 100)
         : 0
 
-    logger.debug('getProgress complete', {
-      service: 'strategy',
-      strategy: 'stateful',
+    log.debug('getProgress complete', {
       totalSections: progress.overall.total_sections,
       completedSections: progress.overall.completed_sections,
       percentage: progress.overall.percentage,
@@ -476,20 +341,18 @@ export class StatefulStrategy extends BaseStrategy {
     return progress
   }
 
-  /** Generate summary (delegates to HybridStrategy) */
+  /** Generate summary (delegates to HybridFormStrategy) */
   static generateSummary(
-    promptClass: StatefulPromptClassLike,
+    promptClass: StatefulPromptClass,
     fields: Record<string, unknown>,
     context: Record<string, unknown> = {}
   ): StatefulSummaryResult {
-    logger.debug('generateSummary called', {
-      service: 'strategy',
-      strategy: 'stateful',
+    log.debug('generateSummary called', {
       fieldCount: Object.keys(fields).length,
       model: context.model
     })
 
-    const summary = HybridStrategy.generateSummary(
+    const summary = HybridFormStrategy.generateSummary(
       promptClass,
       fields,
       context
@@ -498,9 +361,7 @@ export class StatefulStrategy extends BaseStrategy {
     // Add progress to summary
     summary.progress = this.getProgress(promptClass, fields)
 
-    logger.debug('generateSummary complete', {
-      service: 'strategy',
-      strategy: 'stateful',
+    log.debug('generateSummary complete', {
       hasHumanSummary: !!summary.human,
       hasTechnicalSummary: !!summary.technical,
       progressPercentage: summary.progress?.overall?.percentage
@@ -510,20 +371,20 @@ export class StatefulStrategy extends BaseStrategy {
   }
 
   /** Get default values for all fields */
-  static getDefaults(promptClass: StatefulPromptClassLike): Record<string, unknown> {
+  static getDefaults(promptClass: StatefulPromptClass): Record<string, unknown> {
     const fieldDefs = promptClass.fieldDefinitions || {}
-    const defaults: Record<string, unknown> = {}
+    log.debug('getDefaults called', {
+      totalFields: Object.keys(fieldDefs).length
+    })
 
+    const defaults: Record<string, unknown> = {}
     for (const [name, def] of Object.entries(fieldDefs)) {
       if (def.default !== undefined) {
         defaults[name] = def.default
       }
     }
 
-    logger.debug('getDefaults called', {
-      service: 'strategy',
-      strategy: 'stateful',
-      totalFields: Object.keys(fieldDefs).length,
+    log.debug('getDefaults complete', {
       defaultsCount: Object.keys(defaults).length,
       defaultFields: Object.keys(defaults)
     })
@@ -536,7 +397,7 @@ export class StatefulStrategy extends BaseStrategy {
    * Uses the sections configuration (first-class citizen) if available,
    * otherwise falls back to fieldGroups for backward compatibility.
    */
-  static getSections(promptClass: StatefulPromptClassLike): SectionMetadata[] {
+  static getSections(promptClass: StatefulPromptClass): SectionMetadata[] {
     const sections = promptClass.sections || {}
     const fieldGroups = promptClass.fieldGroups || {}
 

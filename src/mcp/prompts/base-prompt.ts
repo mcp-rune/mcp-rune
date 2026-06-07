@@ -21,9 +21,9 @@ import type {
   FieldGroup,
   FormSchema,
   FormSchemaFieldDefinition,
+  FormStrategyType,
   PromptFieldDefinition,
-  Section,
-  StrategyType
+  Section
 } from './prompt-definitions.js'
 
 export class BasePrompt {
@@ -44,8 +44,8 @@ export class BasePrompt {
    */
   declare description?: string
 
-  /** Strategy type for this prompt. Override in subclasses. */
-  static strategy: StrategyType = 'stateless'
+  /** Form-strategy type for this prompt. Override in subclasses. */
+  static formStrategy: FormStrategyType = 'stateless'
 
   /** Sections define the user-facing workflow structure. */
   static sections: Record<string, Section> = {}
@@ -81,7 +81,7 @@ export class BasePrompt {
    *   `static description = `${MyPrompt.getStrategyIntro()} something.``
    */
   static getStrategyIntro(): string {
-    switch (this.strategy) {
+    switch (this.formStrategy) {
       case 'stateless':
         return 'Guide for creating'
       case 'hybrid':
@@ -178,7 +178,7 @@ export class BasePrompt {
       title: (this as unknown as { title?: string }).title || this.name,
       description: (this as unknown as { description?: string }).description || '',
       modelName: (this as unknown as { modelName?: string }).modelName || null,
-      strategy: this.strategy || 'stateless',
+      formStrategy: this.formStrategy || 'stateless',
       fieldDefinitions,
       fieldGroups: this.fieldGroups || {},
       sections: this.sections || {},

@@ -1,5 +1,5 @@
 /**
- * HybridStrategy - Documentation + validation before submit
+ * HybridFormStrategy - Documentation + validation before submit
  *
  * This strategy provides documentation and validates all fields
  * before submission, but doesn't track progress by section.
@@ -20,51 +20,18 @@
 import { getKind } from '#src/mcp/models/kinds/index.js'
 import * as logger from '#src/runtime/logger.js'
 
-import type { FieldGroup, PromptFieldDefinition } from '../prompt-definitions.js'
-import { BaseStrategy } from './base-strategy.js'
+import { BaseFormStrategy } from './base-form-strategy.js'
+import type {
+  HybridPromptClass,
+  SummaryResult,
+  TechnicalSummary,
+  ValidationError,
+  ValidationResult
+} from './form-strategy-definitions.js'
 
-/** Validation error entry */
-interface ValidationError {
-  field: string
-  message: string
-}
+const log = logger.child({ service: 'form-strategy', formStrategy: 'hybrid' })
 
-/** Result from validateFields */
-export interface ValidationResult {
-  valid: boolean
-  ready_to_submit: boolean
-  errors: ValidationError[]
-  warnings: string[]
-  computed: Record<string, unknown>
-  fields: Record<string, unknown>
-}
-
-/** Result from generateSummary */
-export interface SummaryResult {
-  human: string
-  technical: TechnicalSummary
-  progress?: unknown
-}
-
-interface TechnicalSummary {
-  model: string
-  parent_path: string | undefined
-  attributes: Record<string, unknown>
-}
-
-/** Prompt class shape used by strategy methods */
-interface PromptClassLike {
-  fieldDefinitions?: Record<string, PromptFieldDefinition>
-  fieldGroups?: Record<string, FieldGroup>
-  crossSectionValidation?: (
-    fields: Record<string, unknown>,
-    errors: ValidationError[],
-    warnings: string[]
-  ) => void
-  getSectionForGroup?: (groupName: string) => { title: string } | null
-}
-
-export class HybridStrategy extends BaseStrategy {
+export class HybridFormStrategy extends BaseFormStrategy {
   static override type = 'hybrid'
 
   static override getSupportedOperations(): string[] {
@@ -76,36 +43,31 @@ export class HybridStrategy extends BaseStrategy {
     promptContent: string
     constructor: { name: string }
   }): string {
+    log.debug('getDocumentation called', {
+      promptClass: promptInstance.constructor.name
+    })
     const promptContent = promptInstance.promptContent
-
-    logger.debug('getDocumentation called', {
-      service: 'strategy',
-      strategy: 'hybrid',
-      promptClass: promptInstance.constructor.name,
+    log.debug('getDocumentation complete', {
       promptContentLength: promptContent?.length || 0
     })
-
     return promptContent
   }
 
   /** Validate all fields at once */
   static validateFields(
-    promptClass: PromptClassLike,
+    promptClass: HybridPromptClass,
     fields: Record<string, unknown>,
     _context: Record<string, unknown> = {}
   ): ValidationResult {
-    const errors: ValidationError[] = []
-    const warnings: string[] = []
-    const computed: Record<string, unknown> = {}
-
     const fieldDefs = promptClass.fieldDefinitions || {}
-
-    logger.debug('validateFields called', {
-      service: 'strategy',
-      strategy: 'hybrid',
+    log.debug('validateFields called', {
       fieldCount: Object.keys(fields).length,
       definedFieldCount: Object.keys(fieldDefs).length
     })
+
+    const errors: ValidationError[] = []
+    const warnings: string[] = []
+    const computed: Record<string, unknown> = {}
 
     // 1. Check required fields
     for (const [name, def] of Object.entries(fieldDefs)) {
@@ -113,11 +75,6 @@ export class HybridStrategy extends BaseStrategy {
         errors.push({
           field: name,
           message: `${def.description || name} is required`
-        })
-        logger.debug('validateFields required field missing', {
-          service: 'strategy',
-          strategy: 'hybrid',
-          field: name
         })
       }
     }
@@ -138,16 +95,8 @@ export class HybridStrategy extends BaseStrategy {
     ) {
       try {
         promptClass.crossSectionValidation(fields, errors, warnings)
-        logger.debug('validateFields cross-section validation executed', {
-          service: 'strategy',
-          strategy: 'hybrid',
-          errorsAfter: errors.length,
-          warningsAfter: warnings.length
-        })
       } catch (err) {
-        logger.error('Cross-section validator threw error', {
-          service: 'strategy',
-          strategy: 'hybrid',
+        log.error('Cross-section validator threw error', {
           error: (err as Error).message
         })
       }
@@ -158,12 +107,6 @@ export class HybridStrategy extends BaseStrategy {
       if (fields[name] === undefined && def.default !== undefined) {
         computed[name] = def.default
         warnings.push(`Using default for ${name}: ${def.default}`)
-        logger.debug('validateFields applying default', {
-          service: 'strategy',
-          strategy: 'hybrid',
-          field: name,
-          defaultValue: def.default
-        })
       }
     }
 
@@ -176,9 +119,7 @@ export class HybridStrategy extends BaseStrategy {
       errors.length === 0 &&
       requiredFields.every((f) => fields[f] !== undefined && fields[f] !== '')
 
-    logger.debug('validateFields complete', {
-      service: 'strategy',
-      strategy: 'hybrid',
+    log.debug('validateFields complete', {
       valid: errors.length === 0,
       readyToSubmit,
       errorCount: errors.length,
@@ -198,13 +139,11 @@ export class HybridStrategy extends BaseStrategy {
 
   /** Generate human and technical summary */
   static generateSummary(
-    promptClass: PromptClassLike,
+    promptClass: HybridPromptClass,
     fields: Record<string, unknown>,
     context: Record<string, unknown> = {}
   ): SummaryResult {
-    logger.debug('generateSummary called', {
-      service: 'strategy',
-      strategy: 'hybrid',
+    log.debug('generateSummary called', {
       fieldCount: Object.keys(fields).length,
       model: context.model
     })
@@ -212,9 +151,7 @@ export class HybridStrategy extends BaseStrategy {
     const humanSummary = this.generateHumanSummary(promptClass, fields)
     const technicalSummary = this.generateTechnicalSummary(promptClass, fields, context)
 
-    logger.debug('generateSummary complete', {
-      service: 'strategy',
-      strategy: 'hybrid',
+    log.debug('generateSummary complete', {
       humanSummaryLength: humanSummary?.length || 0,
       technicalAttributeCount: Object.keys(technicalSummary?.attributes || {}).length
     })
@@ -227,7 +164,7 @@ export class HybridStrategy extends BaseStrategy {
 
   /** Generate human-readable summary */
   static generateHumanSummary(
-    promptClass: PromptClassLike,
+    promptClass: HybridPromptClass,
     fields: Record<string, unknown>
   ): string {
     const fieldDefs = promptClass.fieldDefinitions || {}
@@ -276,7 +213,7 @@ export class HybridStrategy extends BaseStrategy {
 
   /** Generate technical summary (API-ready) */
   static generateTechnicalSummary(
-    _promptClass: PromptClassLike,
+    _promptClass: HybridPromptClass,
     fields: Record<string, unknown>,
     context: Record<string, unknown> = {}
   ): TechnicalSummary {

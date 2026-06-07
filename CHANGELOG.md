@@ -4,6 +4,49 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.86.0] - 2026-06-07
+
+> **BREAKING.** Renames the form-handling strategy surface from unqualified `Strategy` to qualified `FormStrategy`, moves the folders accordingly, and consolidates the per-strategy type vocabularies into a single `form-strategy-definitions.ts`. Parallel consolidation in `models/`: three definition files (`api-config`, `association-config`, `attribute-definition`) merge into `model-definitions.ts`. No back-compat shims — call sites import the new names.
+>
+> **Public-API renames** (consumers must update imports):
+>
+> - `BaseStrategy` → `BaseFormStrategy`, `BaseStrategyTool` → `BaseFormStrategyTool`
+> - `StatelessStrategy` / `HybridStrategy` / `StatefulStrategy` → `…FormStrategy`
+> - `getStrategy` → `getFormStrategy`, `StrategyType` → `FormStrategyType`, `STRATEGY_TOOL_CLASSES` → `FORM_STRATEGY_TOOL_CLASSES`
+> - `BasePrompt.strategy` (static) → `BasePrompt.formStrategy`; `FormSchema.strategy` → `FormSchema.formStrategy`; `PromptClassLike.strategy` → `PromptClassLike.formStrategy`
+>
+> **Folder/file moves**:
+>
+> - `src/mcp/prompts/strategies/` → `src/mcp/prompts/form-strategies/` (files renamed `*-strategy.ts` → `*-form-strategy.ts`)
+> - `src/mcp/tools/prompts/` → `src/mcp/tools/form-strategies/` (`base-strategy-tool.ts` → `base-form-strategy-tool.ts`)
+>
+> **Log envelope** changes (Loki/Promtail queries need updating):
+>
+> - `service: 'strategy'` → `service: 'form-strategy'`
+> - field name `strategy:` → `formStrategy:` in strategy debug/error logs
+
+Unifies the naming on both halves of the form-handling pattern (definitions and the tools that dispatch to them), eliminates the `tools/prompts/` ↔ top-level `prompts/` name collision, and applies the same definition-from-consumption split to models that PR #241 applied to prompts.
+
+### Added
+
+- **`src/mcp/prompts/form-strategies/form-strategy-definitions.ts`** — new module holding the shared form-strategy type vocabulary: `ValidationContext`, `ValidationError`, `ValidationResult`, `TechnicalSummary`, `SummaryResult`, `HybridPromptClass`, `SectionValidationResult`, `SectionProgress`, `ProgressResult`, `StatefulValidationResult`, `StatefulSummaryResult`, `SectionMetadata`, `StatefulPromptClass`. Mirrors `prompt-definitions.ts`. Removes the wrong-direction `import type … from './hybrid-form-strategy.js'` that `stateful-form-strategy.ts` previously needed.
+- **`src/mcp/models/model-definitions.ts`** — new module consolidating the model type vocabulary (`ApiConfig`, `EndpointOverrides`, `AttributesConfig`, `AttributeDefinition`, `CompletionConfig`, `AssociationConfig`, `BelongsToAssociation`, `HasManyAssociation`). Replaces three smaller files. Mirrors the prompt/form-strategy precedent: definitions in one place, consumption next door.
+
+### Changed
+
+- **`prompts/strategies/` → `prompts/form-strategies/`** and **`tools/prompts/` → `tools/form-strategies/`** with every file renamed to the `*-form-strategy[-tool].ts` form. Public exports re-exported from `@mcp-rune/mcp-rune/prompts` and `@mcp-rune/mcp-rune/tools` under the new names.
+- **Per-prompt-class declaration**: `static strategy = '…'` becomes `static formStrategy = '…'`. The string variant tags (`'stateless' | 'hybrid' | 'stateful'`) are unchanged.
+- **Local `PromptClassLike` interfaces** in the strategy files renamed to `HybridPromptClass` / `StatefulPromptClass` so they no longer shadow the global `PromptClassLike` in `prompt-definitions.ts`.
+- **Strategy logging cleanup**: every public static method on `HybridFormStrategy` and `StatefulFormStrategy` now uses a module-scoped `logger.child({ service: 'form-strategy', formStrategy: '<type>' })` and follows a uniform entry-`called` / exit-`complete` debug pair. Per-iteration debugs inside validation/progress loops are removed — the completion logs already carry the aggregated counts. Net: −102 lines across the two files, ~35% fewer log calls.
+- **`models/base-model.ts`** imports `ApiConfig` / `AttributesConfig` / `AssociationConfig` from the consolidated `model-definitions.js` instead of three separate files. `data-layer/model-service/endpoint-resolver.ts` follows for `EndpointOverrides`.
+- **`form-strategies/README.md`** rewritten in the new vocabulary (folder layout, class names, import paths, log envelope keys).
+
+### Removed
+
+- **`src/mcp/models/api-config.ts`**, **`association-config.ts`**, **`attribute-definition.ts`** — contents merged into `model-definitions.ts`. No re-export shims.
+
+[0.86.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.85.0...v0.86.0
+
 ## [0.85.0] - 2026-06-07
 
 > **BREAKING (adapter authors only).** The `DataLayer` interface gains a required `readonly defaultConvention: BaseConvention` property. Any custom adapter implementing `DataLayer` must now expose this field. The bundled adapters (`ModelService`, `InMemoryDataLayer`, `SearchEnabledDataLayer`) are updated. No changes required for code that only _consumes_ a `DataLayer`.

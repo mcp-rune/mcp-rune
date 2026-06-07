@@ -102,7 +102,7 @@ const SENTINEL_MODEL_SERVICE: ModelService = (() => {
  * - `requiresPromptRegistry` — skip registration when no `promptRegistry` was passed.
  *
  * All are declared on `BaseTool` with safe defaults; family bases
- * (`BaseStrategyTool`, `BaseAnalysisTool`, `BaseOperationsTool`,
+ * (`BaseFormStrategyTool`, `BaseAnalysisTool`, `BaseOperationsTool`,
  * `BaseDomainTool`) override declaratively.
  */
 export interface ToolClass {

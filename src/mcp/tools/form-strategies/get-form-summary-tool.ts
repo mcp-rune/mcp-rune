@@ -11,9 +11,9 @@ import { z } from 'zod'
 import { coerceToObject } from '#src/core/helpers.js'
 import type { ToolResult } from '#src/mcp/tools/base-tool.js'
 
-import { BaseStrategyTool } from './base-strategy-tool.js'
+import { BaseFormStrategyTool } from './base-form-strategy-tool.js'
 
-export class GetFormSummaryTool extends BaseStrategyTool {
+export class GetFormSummaryTool extends BaseFormStrategyTool {
   get name(): string {
     return 'get_form_summary'
   }
@@ -63,8 +63,8 @@ Not supported by: Stateless strategy models`
     }
 
     // Get the strategy for this prompt
-    const strategy = this.getStrategy(
-      promptClass as { strategy?: 'stateless' | 'hybrid' | 'stateful' }
+    const strategy = this.getFormStrategy(
+      promptClass as { formStrategy?: 'stateless' | 'hybrid' | 'stateful' }
     )
 
     // Check if summary generation is supported

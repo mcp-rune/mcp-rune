@@ -4,21 +4,20 @@
 // and `src/mcp/analysis-layer/` (analysis-domain consumers). PR3 will remove
 // the re-exports below in favor of `modelLayer` / `analysisLayer` injection.
 
-export type { ApiConfig, EndpointOverrides } from './api-config.js'
-export type {
-  AssociationConfig,
-  BelongsToAssociation,
-  HasManyAssociation
-} from './association-config.js'
-export type {
-  AttributeDefinition,
-  AttributesConfig,
-  CompletionConfig
-} from './attribute-definition.js'
 export type { ModelData } from './base-model.js'
 export { BaseModel } from './base-model.js'
 export type { KindDescriptor, KindOpts, KindRenderHint } from './kinds/index.js'
 export { getKind, registerKind } from './kinds/index.js'
+export type {
+  ApiConfig,
+  AssociationConfig,
+  AttributeDefinition,
+  AttributesConfig,
+  BelongsToAssociation,
+  CompletionConfig,
+  EndpointOverrides,
+  HasManyAssociation
+} from './model-definitions.js'
 export * from '#src/mcp/analysis-layer/summary-strategies/index.js'
 export type { ModelWithDerivedAttrs } from '#src/mcp/model-layer/derived-fields.js'
 export { resolveDerivedFields } from '#src/mcp/model-layer/derived-fields.js'

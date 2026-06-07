@@ -1,5 +1,5 @@
 /**
- * BaseStrategy - Interface for form handling strategies
+ * BaseFormStrategy - Interface for form handling strategies
  *
  * Strategies define how forms are processed:
  * - Stateless: Documentation only, no validation
@@ -17,13 +17,9 @@
 import { getKind } from '#src/mcp/models/kinds/index.js'
 
 import type { PromptFieldDefinition } from '../prompt-definitions.js'
+import type { ValidationContext } from './form-strategy-definitions.js'
 
-export interface ValidationContext {
-  field?: string
-  [key: string]: unknown
-}
-
-export class BaseStrategy {
+export class BaseFormStrategy {
   static type = 'base'
 
   static getSupportedOperations(): string[] {

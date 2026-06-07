@@ -1,27 +1,29 @@
-# Strategy Pattern for Form Handling
+# Form-Strategies (qualified GoF Strategy)
 
-This module implements a **Strategy Pattern** for handling form data collection across different prompt complexities. Each strategy defines how the LLM interacts with the server during form creation.
+This module implements a **Strategy Pattern** — qualified here as **form-strategies** —
+for handling form data collection across different prompt complexities. Each
+form-strategy defines how the LLM interacts with the server during form creation.
 
 ## Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           STRATEGY SELECTION                                 │
+│                           FORM-STRATEGY SELECTION                            │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  Prompt Class                                                                │
 │       │                                                                      │
 │       ▼                                                                      │
-│  static strategy = 'stateless' | 'hybrid' | 'stateful'                      │
+│  static formStrategy = 'stateless' | 'hybrid' | 'stateful'                  │
 │       │                                                                      │
 │       ▼                                                                      │
 │  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐                      │
 │  │  Stateless  │    │   Hybrid    │    │  Stateful   │                      │
-│  │  Strategy   │    │  Strategy   │    │  Strategy   │                      │
+│  │FormStrategy │    │FormStrategy │    │FormStrategy │                      │
 │  └─────────────┘    └─────────────┘    └─────────────┘                      │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Strategy Comparison
+## Form-Strategy Comparison
 
 | Aspect                | Stateless               | Hybrid                                | Stateful                                          |
 | --------------------- | ----------------------- | ------------------------------------- | ------------------------------------------------- |
@@ -31,9 +33,9 @@ This module implements a **Strategy Pattern** for handling form data collection 
 | **Conditionals**      | LLM handles             | Basic                                 | Full support                                      |
 | **Operations**        | `getDocumentation`      | `+ validateFields`, `generateSummary` | `+ validateSection`, `getProgress`, `getDefaults` |
 
-## Strategy Details
+## Form-Strategy Details
 
-### 1. Stateless Strategy (`stateless-strategy.js`)
+### 1. StatelessFormStrategy (`stateless-form-strategy.ts`)
 
 **Purpose:** Documentation-only approach for simple forms.
 
@@ -55,7 +57,7 @@ get_prompt_guide → LLM guides conversation → create_model
 
 ---
 
-### 2. Hybrid Strategy (`hybrid-strategy.js`)
+### 2. HybridFormStrategy (`hybrid-form-strategy.ts`)
 
 **Purpose:** Documentation + validation before submission.
 
@@ -79,7 +81,7 @@ get_prompt_guide → LLM guides → validate_form → create_model
 
 ---
 
-### 3. Stateful Strategy (`stateful-strategy.js`)
+### 3. StatefulFormStrategy (`stateful-form-strategy.ts`)
 
 **Purpose:** Full progressive validation with sections.
 
@@ -107,32 +109,32 @@ get_prompt_guide → [validate_section]* → validate_form → get_form_progress
 
 ---
 
-## How Strategy is Selected
+## How a Form-Strategy is Selected
 
-Each prompt class declares its strategy via a static property:
+Each prompt class declares its form-strategy via a static property:
 
 ```javascript
 // In prompt class
 export class MyPrompt extends BasePrompt {
-  static strategy = 'stateful' // 'stateless' | 'hybrid' | 'stateful'
+  static formStrategy = 'stateful' // 'stateless' | 'hybrid' | 'stateful'
   // ...
 }
 ```
 
-The strategy is retrieved using:
+The form-strategy is retrieved using:
 
 ```javascript
-import { getStrategy } from '#src/mcp/prompts/strategies/index.js'
+import { getFormStrategy } from '#src/mcp/prompts/form-strategies/index.js'
 
-const strategyType = PromptClass.strategy || 'stateless'
-const strategy = getStrategy(strategyType)
+const strategyType = PromptClass.formStrategy || 'stateless'
+const strategy = getFormStrategy(strategyType)
 ```
 
 ---
 
 ## Tool Integration
 
-### MCP Tools and Strategies
+### MCP Tools and Form-Strategies
 
 | MCP Tool            | Stateless     | Hybrid          | Stateful                   |
 | ------------------- | ------------- | --------------- | -------------------------- |
@@ -141,11 +143,14 @@ const strategy = getStrategy(strategyType)
 | `get_form_progress` | Not supported | Not supported   | Returns section progress   |
 | `get_form_summary`  | Not supported | Returns summary | Returns summary + progress |
 
+The three form-strategy tools live in `src/mcp/tools/form-strategies/` and all
+inherit from `BaseFormStrategyTool`.
+
 ---
 
 ## Implementing a New Prompt
 
-### Step 1: Choose the Right Strategy
+### Step 1: Choose the Right Form-Strategy
 
 | Question                                                             | If Yes →  |
 | -------------------------------------------------------------------- | --------- |
@@ -156,11 +161,11 @@ const strategy = getStrategy(strategyType)
 ### Step 2: Create the Prompt Class
 
 ```javascript
-import { BasePrompt } from './base_prompt.js'
+import { BasePrompt } from './base-prompt.js'
 
 export class MyPrompt extends BasePrompt {
-  // REQUIRED: Declare strategy
-  static strategy = 'hybrid' // Choose: 'stateless', 'hybrid', 'stateful'
+  // REQUIRED: Declare form-strategy
+  static formStrategy = 'hybrid' // Choose: 'stateless', 'hybrid', 'stateful'
 
   // REQUIRED for hybrid/stateful: Field definitions
   static fieldDefinitions = {
@@ -193,11 +198,13 @@ export class MyPrompt extends BasePrompt {
 
 ### Step 3: Add Validation Instructions to Documentation (CRITICAL for Hybrid/Stateful)
 
-> **WARNING**: The strategy system provides validation capabilities, but the LLM will NOT
-> automatically call `validate_form` unless explicitly instructed in the prompt documentation.
+> **WARNING**: The form-strategy system provides validation capabilities, but
+> the LLM will NOT automatically call `validate_form` unless explicitly
+> instructed in the prompt documentation.
 
-For **Hybrid** and **Stateful** strategies, your prompt's `promptContent` getter MUST include
-explicit instructions telling the LLM to call validation tools:
+For **Hybrid** and **Stateful** form-strategies, your prompt's `promptContent`
+getter MUST include explicit instructions telling the LLM to call validation
+tools:
 
 ```javascript
 get promptContent() {
@@ -254,19 +261,20 @@ Check that \`ready_to_submit: true\` before calling \`create_model\`.
 │  │  Prompt Registry │────▶│   Prompt Class   │                              │
 │  └──────────────────┘     └────────┬─────────┘                              │
 │                                    │                                         │
-│                                    │ static strategy = 'stateful'           │
+│                                    │ static formStrategy = 'stateful'       │
 │                                    ▼                                         │
 │                           ┌──────────────────┐                              │
-│                           │ Strategy Selector│                              │
-│                           │ (strategies/     │                              │
-│                           │  index.js)       │                              │
+│                           │ Form-Strategy    │                              │
+│                           │ Selector         │                              │
+│                           │ (form-strategies/│                              │
+│                           │  index.ts)       │                              │
 │                           └────────┬─────────┘                              │
 │                                    │                                         │
 │           ┌────────────────────────┼────────────────────────┐               │
 │           ▼                        ▼                        ▼               │
 │  ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐       │
 │  │    Stateless    │     │     Hybrid      │     │    Stateful     │       │
-│  │    Strategy     │     │    Strategy     │     │    Strategy     │       │
+│  │  FormStrategy   │     │  FormStrategy   │     │  FormStrategy   │       │
 │  ├─────────────────┤     ├─────────────────┤     ├─────────────────┤       │
 │  │ getDocumentation│     │ getDocumentation│     │ getDocumentation│       │
 │  │                 │     │ validateFields  │     │ validateFields  │       │
@@ -283,14 +291,14 @@ Check that \`ready_to_submit: true\` before calling \`create_model\`.
 
 ## Files in This Directory
 
-| File                    | Description                                    |
-| ----------------------- | ---------------------------------------------- |
-| `index.js`              | Strategy registry and `getStrategy()` function |
-| `base-strategy.js`      | Abstract base class for all strategies         |
-| `stateless-strategy.js` | Simple documentation-only strategy             |
-| `hybrid-strategy.js`    | Documentation + validation strategy            |
-| `stateful-strategy.js`  | Full progressive validation with sections      |
-| `README.md`             | This documentation                             |
+| File                         | Description                                             |
+| ---------------------------- | ------------------------------------------------------- |
+| `index.ts`                   | Form-strategy registry and `getFormStrategy()` function |
+| `base-form-strategy.ts`      | Abstract base class for all form-strategies             |
+| `stateless-form-strategy.ts` | Simple documentation-only form-strategy                 |
+| `hybrid-form-strategy.ts`    | Documentation + validation form-strategy                |
+| `stateful-form-strategy.ts`  | Full progressive validation with sections               |
+| `README.md`                  | This documentation                                      |
 
 ---
 
@@ -317,7 +325,7 @@ static fieldDefinitions = {
     name: 'status',
     type: 'enum',
     enumValues: ['active', 'inactive', 'draft'],
-    default: 'draft',  // Applied automatically by strategy
+    default: 'draft',  // Applied automatically by the form-strategy
     required: true
   }
 }
@@ -327,7 +335,7 @@ static fieldDefinitions = {
 
 ## Logging
 
-All strategies include debug-level logging for troubleshooting and auditing.
+All form-strategies include debug-level logging for troubleshooting and auditing.
 
 ### Enabling Debug Logs
 
@@ -339,7 +347,7 @@ LOG_LEVEL=debug
 
 ### Log Format
 
-All strategy logs include:
+All form-strategy logs include:
 
-- `service: 'strategy'` - Identifies logs from the strategy module
-- `strategy: 'stateless|hybrid|stateful'` - Which strategy generated the log
+- `service: 'form-strategy'` — Identifies logs from the form-strategy module
+- `formStrategy: 'stateless|hybrid|stateful'` — Which form-strategy generated the log

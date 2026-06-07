@@ -1,5 +1,5 @@
 /**
- * StatelessStrategy - Simple documentation-only approach
+ * StatelessFormStrategy - Simple documentation-only approach
  *
  * This strategy provides only documentation to guide the LLM.
  * No server-side validation or state management.
@@ -16,9 +16,9 @@
 
 import * as logger from '#src/runtime/logger.js'
 
-import { BaseStrategy } from './base-strategy.js'
+import { BaseFormStrategy } from './base-form-strategy.js'
 
-export class StatelessStrategy extends BaseStrategy {
+export class StatelessFormStrategy extends BaseFormStrategy {
   static override type = 'stateless'
 
   static override getSupportedOperations(): string[] {
@@ -33,8 +33,8 @@ export class StatelessStrategy extends BaseStrategy {
     const promptContent = promptInstance.promptContent
 
     logger.debug('getDocumentation called', {
-      service: 'strategy',
-      strategy: 'stateless',
+      service: 'form-strategy',
+      formStrategy: 'stateless',
       promptClass: promptInstance.constructor.name,
       promptContentLength: promptContent?.length || 0
     })

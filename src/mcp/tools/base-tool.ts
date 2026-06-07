@@ -169,7 +169,7 @@ interface HttpError extends Error {
 /**
  * Base class for MCP tool implementations
  *
- * All tools extend this class (directly or via a family base — `BaseStrategyTool`,
+ * All tools extend this class (directly or via a family base — `BaseFormStrategyTool`,
  * `BaseAnalysisTool`, `BaseOperationsTool`, `BaseDomainTool`) and provide:
  * - name: Tool name
  * - baseDescription: Base tool description (description getter adds sections)
@@ -183,7 +183,7 @@ interface HttpError extends Error {
  * Static metadata fields drive registry behavior. `BaseTool` itself defaults
  * to the (former DATA) "needs API auth, no special services" profile —
  * extending it directly is correct for any CRUD-style tool. Family bases
- * override the defaults declaratively (e.g. `BaseStrategyTool` sets
+ * override the defaults declaratively (e.g. `BaseFormStrategyTool` sets
  * `requiresAuth = false`).
  */
 export class BaseTool {
@@ -212,7 +212,7 @@ export class BaseTool {
 
   /**
    * Whether this tool requires a prompt registry to be configured. Implicit
-   * for `BaseStrategyTool` subclasses.
+   * for `BaseFormStrategyTool` subclasses.
    */
   static requiresPromptRegistry: boolean = false
 
