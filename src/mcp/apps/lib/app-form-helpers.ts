@@ -11,14 +11,14 @@ import { normalizeListWithConvention } from '#src/mcp/data-layer/model-service/m
 import * as logger from '#src/runtime/logger.js'
 
 import { errorMeta } from './helpers.js'
-import type { AppModelClass, DataLayer, FormFieldDefinition } from './types.js'
+import type { AppFormFieldDefinition, AppModelClass, DataLayer } from './types.js'
 
 /**
  * Fetch association options from the API for fields that declare associations.
  * Mutates the fields array in place, adding `options` to association fields.
  */
 export async function resolveAssociationOptions(
-  fields: FormFieldDefinition[],
+  fields: AppFormFieldDefinition[],
   dataLayer: DataLayer,
   defaults: Record<string, unknown> = {}
 ): Promise<void> {

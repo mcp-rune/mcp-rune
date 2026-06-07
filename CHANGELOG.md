@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.87.0] - 2026-06-07
+
+> **BREAKING.** Renames all app-form symbols and files from the unqualified `Form*` / `BaseForm` prefix to the qualified `AppForm*` / `BaseAppForm` prefix. Removes the dead `DisplayAdapter` class. No back-compat shims — call sites import the new names.
+>
+> **Public-API renames** (consumers must update imports):
+>
+> - `BaseForm` → `BaseAppForm`
+> - `FormSchema` → `AppFormSchema`, `FormFieldDefinition` → `AppFormFieldDefinition`, `FieldsetDefinition` → `AppFormFieldsetDefinition`
+> - `FieldsetConfig` → `AppFormFieldsetConfig`, `FormAssociationEntry` → `AppFormAssociationEntry`, `PostCreateConfig` → `AppFormPostCreateConfig`
+> - `generateFormSchema` → `generateAppFormSchema`
+> - `validateFormClass` → `validateAppForm`, `FormClassLike` → `AppFormClassLike`
+> - `createFormDataTools` → `createAppFormDataTools`
+> - `FormDataStore` → `AppFormDataStore`, `FormDataEntry` → `AppFormDataEntry`
+>
+> **File renames** in `src/mcp/apps/lib/`:
+>
+> - `base-form.ts` → `base-app-form.ts`
+> - `form-schema.ts` → `app-form-schema.ts`
+> - `form-validator.ts` → `app-form-validator.ts`
+> - `form-associations.ts` → `app-form-associations.ts`
+> - `form-app-helpers.ts` → `app-form-helpers.ts`
+> - `form-data-store.ts` → `app-form-data-store.ts`
+> - `form-data-tools.ts` → `app-form-data-tools.ts`
+>
+> **Removed**: `display-adapter.ts` — `DisplayAdapter` had zero consumers.
+
+Disambiguates the two independent "form" subsystems in mcp-rune: prompt form-strategies (LLM elicitation protocol) and app forms (browser CRUD UI). The unqualified `Form*` prefix was ambiguous; `AppForm*` makes the scope explicit at every call site.
+
 ## [0.86.0] - 2026-06-07
 
 > **BREAKING.** Renames the form-handling strategy surface from unqualified `Strategy` to qualified `FormStrategy`, moves the folders accordingly, and consolidates the per-strategy type vocabularies into a single `form-strategy-definitions.ts`. Parallel consolidation in `models/`: three definition files (`api-config`, `association-config`, `attribute-definition`) merge into `model-definitions.ts`. No back-compat shims — call sites import the new names.

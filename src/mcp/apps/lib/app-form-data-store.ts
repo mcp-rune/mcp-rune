@@ -8,7 +8,7 @@
  * Follows the same pattern as SelectionStore.
  */
 
-export interface FormDataEntry {
+export interface AppFormDataEntry {
   model: string
   fields: Record<string, unknown>
   mode: string
@@ -21,11 +21,11 @@ interface FormDataInput {
   mode?: string
 }
 
-export class FormDataStore {
-  private _forms = new Map<string, FormDataEntry>()
+export class AppFormDataStore {
+  private _forms = new Map<string, AppFormDataEntry>()
 
-  set({ model, fields, mode }: FormDataInput): FormDataEntry {
-    const entry: FormDataEntry = {
+  set({ model, fields, mode }: FormDataInput): AppFormDataEntry {
+    const entry: AppFormDataEntry = {
       model,
       fields: fields || {},
       mode: mode || 'create',
@@ -35,12 +35,12 @@ export class FormDataStore {
     return entry
   }
 
-  get(model?: string): FormDataEntry | null | undefined {
+  get(model?: string): AppFormDataEntry | null | undefined {
     if (!model) return null
     return this._forms.get(model)
   }
 
-  getAll(): Record<string, FormDataEntry> {
+  getAll(): Record<string, AppFormDataEntry> {
     return Object.fromEntries(this._forms)
   }
 

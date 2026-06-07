@@ -38,8 +38,8 @@
  * boot.
  */
 
-import { FormDataStore } from '#src/mcp/apps/lib/form-data-store.js'
-import { createFormDataTools } from '#src/mcp/apps/lib/form-data-tools.js'
+import { AppFormDataStore } from '#src/mcp/apps/lib/app-form-data-store.js'
+import { createAppFormDataTools } from '#src/mcp/apps/lib/app-form-data-tools.js'
 import { defineContextKey, type ToolFlowExtension } from '#src/mcp/extensions/tool-flow.js'
 
 const FORM_TOOL_NAME = 'new_model_app'
@@ -51,7 +51,7 @@ const FORM_TOOL_NAME = 'new_model_app'
  * that needs to read staged form payloads) import this key to read the store
  * with its typed shape.
  */
-export const FORM_DATA_STORE_KEY = defineContextKey<FormDataStore>('formDataStore')
+export const FORM_DATA_STORE_KEY = defineContextKey<AppFormDataStore>('formDataStore')
 
 export const centerOfControlExtension: ToolFlowExtension = {
   requires: ['apps'],
@@ -78,10 +78,10 @@ export const centerOfControlExtension: ToolFlowExtension = {
 
     ctx.setFormSubmitMode('collect')
 
-    const store = new FormDataStore()
+    const store = new AppFormDataStore()
     ctx.provideContext(FORM_DATA_STORE_KEY, store)
 
-    const formDataTools = createFormDataTools(
+    const formDataTools = createAppFormDataTools(
       formApp.resourceUri,
       modelNames as [string, ...string[]],
       { getHtml: formApp.getHtml }

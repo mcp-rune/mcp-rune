@@ -1,5 +1,5 @@
 /**
- * Validate a FormClass against its model. Each entry in `FormClass.fields`
+ * Validate an AppForm class against its model. Each entry in `AppFormClass.fields`
  * and `fieldsets[*].fields` must name an attribute or an association on the
  * model (associations contribute `<name>_id` for belongsTo, `<name>_ids` for
  * hasMany — and association-link forms also accept `<name>_link`).
@@ -12,14 +12,14 @@ import { closestMatch } from '#src/core/suggestions.js'
 import { collectValidFieldNames } from '#src/mcp/model-layer/field-names.js'
 import type { Issue, ModelClassLike } from '#src/mcp/schema/types.js'
 
-export interface FormClassLike {
+export interface AppFormClassLike {
   fields?: string[]
   fieldsets?: Record<string, { fields?: string[] }>
 }
 
-export function validateFormClass(
+export function validateAppForm(
   modelName: string,
-  FormClass: FormClassLike,
+  FormClass: AppFormClassLike,
   ModelClass: ModelClassLike
 ): Issue[] {
   const issues: Issue[] = []
@@ -34,7 +34,7 @@ export function validateFormClass(
         scope: 'form',
         model: modelName,
         attribute: fieldName,
-        message: `FormClass.fields references unknown attribute "${fieldName}" on ${modelName}`,
+        message: `AppFormClass.fields references unknown attribute "${fieldName}" on ${modelName}`,
         hint: suggestion
           ? `did you mean "${suggestion}"?`
           : `Known attributes: ${[...validNames].join(', ')}`
@@ -50,7 +50,7 @@ export function validateFormClass(
           scope: 'form',
           model: modelName,
           attribute: fieldName,
-          message: `fieldsets["${fsKey}"] references "${fieldName}" which is not in FormClass.fields`,
+          message: `fieldsets["${fsKey}"] references "${fieldName}" which is not in AppFormClass.fields`,
           hint: 'every name in a fieldset must also appear in the top-level fields array'
         })
       }
