@@ -1,12 +1,15 @@
 /**
- * Fail-fast schema validation entry point for models, forms, and prompts.
+ * Two-tier schema validation for model, form, and prompt registries.
  *
- * The consuming server calls `validateRegistries({ models, forms, prompts })`
- * during boot (typically inside a `StartupTracker.phase()`). On any errors,
- * it throws `SchemaValidationError` with a structured report — the tracker
- * surfaces the error and the server refuses to start. This catches typos
- * like `type: 'datetimme'` or missing `enumValues` before they reach the
- * UI as a silent text-input fallback.
+ * Tier 1 — cross-registry binding: every form and prompt must reference a
+ * model key that exists in MODEL_CLASSES. This check lives here because no
+ * single registry can see across its siblings.
+ *
+ * Tier 2 — intra-class structure: field names, group keys, and type
+ * references within each model, form, or prompt class. Delegated to the
+ * per-layer validators (validateModelClass, validateAppForm,
+ * validatePromptClass), which receive a resolved ModelClass only after
+ * Tier 1 confirms the binding is valid.
  *
  * Pure functions only — no I/O, no logger calls. Errors and warnings are
  * returned as data structures; the caller decides how to render them.
@@ -37,39 +40,52 @@ export interface RegistriesInput {
 export function validateRegistries(input: RegistriesInput): ValidationReport {
   const errors: Issue[] = []
   const warnings: Issue[] = []
-
   const modelNames = Object.keys(input.models)
 
   for (const [name, ModelClass] of Object.entries(input.models)) {
     push(validateModelClass(name, ModelClass, modelNames), errors, warnings)
   }
 
-  if (input.forms) {
-    for (const [modelName, FormClass] of Object.entries(input.forms)) {
-      const ModelClass = input.models[modelName]
-      if (!ModelClass) {
-        errors.push({
-          level: 'error',
-          scope: 'form',
-          model: modelName,
-          message: `FormClass for "${modelName}" references a model that is not in MODEL_CLASSES.`,
-          hint: `Known models: ${modelNames.join(', ')}`
-        })
-        continue
-      }
-      push(validateAppForm(modelName, FormClass, ModelClass), errors, warnings)
-    }
-  }
-
-  if (input.prompts) {
-    for (const [modelName, PromptClass] of Object.entries(input.prompts)) {
-      const ModelClass = input.models[modelName]
-      if (!ModelClass) continue // already reported via forms or models
-      push(validatePromptClass(modelName, PromptClass, ModelClass), errors, warnings)
-    }
-  }
+  if (input.forms) validateBoundForms(input.forms, input.models, modelNames, errors, warnings)
+  if (input.prompts) validateBoundPrompts(input.prompts, input.models, errors, warnings)
 
   return { errors, warnings }
+}
+
+function validateBoundForms(
+  forms: Record<string, AppFormClassLike>,
+  models: Record<string, ModelClassLike>,
+  modelNames: string[],
+  errors: Issue[],
+  warnings: Issue[]
+): void {
+  for (const [modelName, FormClass] of Object.entries(forms)) {
+    const ModelClass = models[modelName]
+    if (!ModelClass) {
+      errors.push({
+        level: 'error',
+        scope: 'form',
+        model: modelName,
+        message: `FormClass for "${modelName}" references a model that is not in MODEL_CLASSES.`,
+        hint: `Known models: ${modelNames.join(', ')}`
+      })
+      continue
+    }
+    push(validateAppForm(modelName, FormClass, ModelClass), errors, warnings)
+  }
+}
+
+function validateBoundPrompts(
+  prompts: Record<string, PromptClassLike>,
+  models: Record<string, ModelClassLike>,
+  errors: Issue[],
+  warnings: Issue[]
+): void {
+  for (const [modelName, PromptClass] of Object.entries(prompts)) {
+    const ModelClass = models[modelName]
+    if (!ModelClass) continue
+    push(validatePromptClass(modelName, PromptClass, ModelClass), errors, warnings)
+  }
 }
 
 function push(issues: Issue[], errors: Issue[], warnings: Issue[]): void {
