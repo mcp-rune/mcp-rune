@@ -2,7 +2,7 @@
  * Tests for PromptCache
  */
 
-import { createPromptCache, PromptCache } from '../../../../src/mcp/prompt-layer/prompt-cache.js'
+import { createPromptCache, PromptCache } from '../../../../src/mcp/prompts/prompt-cache.js'
 
 describe('PromptCache', () => {
   let mockRegistry

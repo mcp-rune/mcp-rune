@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { validatePromptClass } from '../../../../src/mcp/prompt-layer/prompt-validator.js'
+import { validatePromptClass } from '../../../../src/mcp/prompts/prompt-validator.js'
 
 const BookModel = {
   modelName: 'book',

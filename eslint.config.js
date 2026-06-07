@@ -83,7 +83,7 @@ export default [
     files: [
       'src/mcp/apps/**/*.ts',
       'src/mcp/tools/**/*.ts',
-      'src/mcp/prompt-layer/**/*.ts',
+      'src/mcp/prompts/**/*.ts',
       'src/mcp/data-layer/api-extensions/**/*.ts'
     ],
     rules: {
@@ -118,7 +118,7 @@ export default [
   // Boot-time validators run before any layer factory is constructed, so
   // they're exempt from the abstraction guard.
   {
-    files: ['src/mcp/apps/lib/form-validator.ts', 'src/mcp/prompt-layer/prompt-validator.ts'],
+    files: ['src/mcp/apps/lib/form-validator.ts', 'src/mcp/prompts/prompt-validator.ts'],
     rules: {
       'no-restricted-imports': 'off'
     }

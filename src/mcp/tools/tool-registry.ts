@@ -54,7 +54,7 @@ import {
   createModelLayerFactory,
   type ModelLayerFactory
 } from '#src/mcp/model-layer/model-layer.js'
-import type { FormSummaryRenderer } from '#src/mcp/prompt-layer/form-strategies/form-strategy-definitions.js'
+import type { FormSummaryRenderer } from '#src/mcp/prompts/form-strategies/form-strategy-definitions.js'
 import * as logger from '#src/runtime/logger.js'
 import * as tracing from '#src/runtime/tracing.js'
 

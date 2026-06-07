@@ -18,8 +18,8 @@
 import type { AppFormClassLike } from '#src/mcp/apps/lib/app-form-validator.js'
 import { validateAppForm } from '#src/mcp/apps/lib/app-form-validator.js'
 import { validateModelClass } from '#src/mcp/model-layer/model-validator.js'
-import type { PromptClassLike } from '#src/mcp/prompt-layer/prompt-validator.js'
-import { validatePromptClass } from '#src/mcp/prompt-layer/prompt-validator.js'
+import type { PromptClassLike } from '#src/mcp/prompts/prompt-validator.js'
+import { validatePromptClass } from '#src/mcp/prompts/prompt-validator.js'
 
 import type { Issue, ModelClassLike, ValidationReport } from './types.js'
 
