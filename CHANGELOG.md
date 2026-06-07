@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.93.0] - 2026-06-07
+
+> Auto-discovers MCP Apps in the vite build. Adding a new app no longer requires editing `vite.config.js`. Final axis of the `src/mcp/apps/` architecture epic (#255), axis A8 (#266).
+
+### Added
+
+- `src/mcp/apps/scripts/build-all.mjs` — scans `src/mcp/apps/<name>/ui/index.html` to discover every MCP App, cleans `dist/` once at the start, then runs the first app sequentially and the rest in parallel with `SKIP_CLEAN=1`. New apps drop in with zero build-config edits.
+
+### Changed
+
+- `src/mcp/apps/vite.config.js` — drops the hardcoded per-app `configs` map. `root` and `outFile` now derive directly from `BUILD_TARGET`. Throws a clear error naming the missing path if `BUILD_TARGET=<x>` but `src/mcp/apps/<x>/ui/index.html` does not exist. `emptyOutDir` is now driven by `SKIP_CLEAN` alone — no more hardcoded `target === 'new-model-app'` special case.
+- `build:all-apps` script in `package.json` now invokes `node src/mcp/apps/scripts/build-all.mjs` instead of chaining named per-app scripts. The dev-convenience `build:apps:<name>` scripts stay but every one of them now sets `SKIP_CLEAN=1` so a single-app rebuild preserves sibling outputs.
+
 ## [0.92.0] - 2026-06-07
 
 > **BREAKING.** Folds `src/mcp/prompt-layer/` into `src/mcp/prompts/`. The `prompt-layer/` folder name mirrored `model-layer/` / `data-layer/` but the contents were never a per-model-bound projection seam — just a registry interface, a cache, a validator, and the form-strategy implementations. Everything prompt-shaped now lives in one folder. Part of the `src/mcp/apps/` architecture epic (#255), axis A7 (#264).
