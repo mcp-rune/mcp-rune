@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.94.0] - 2026-06-07
+
+> **BREAKING.** Replaces the local `ToolResult` discriminated union with the MCP SDK's `CallToolResult`. The cast at the SDK boundary in `tool-registry.ts` is gone — tool callbacks are now structurally assignable to `McpServer.registerTool`. First axis of the duplicated/misplaced interfaces epic (#268), sub-issue #269.
+
+### Added
+
+- `src/mcp/tools/tool-result.ts` — single home for the tool-call result type. Re-exports `ToolResult` as an alias for the SDK's `CallToolResult`. Exposes `textResult(text, meta?)` and `textError(text)` helpers so the text-only narrowing (every tool in this repo returns plain text today) is preserved as a runtime convention without locking the type.
+- `textResult` / `textError` re-exported from `@mcp-rune/mcp-rune/tools` for downstream use.
+
+### Changed
+
+- `ToolResult` (now `= CallToolResult`) is the single canonical type. `BaseTool.formatError` and `BaseTool.formatResponse` return `ToolResult` (was `ToolErrorResponse` / `ToolSuccessResponse`).
+- `BaseDomainTool.formatResponse` return type tracks the parent — now `ToolResult`.
+- `ToolHandlerExtra.sendNotification` now takes the SDK's `ServerNotification` discriminated union (was an ad-hoc `{ method: string; params: Record<string, unknown> }`). Tool authors that call it get full discriminated-union safety; `BaseTool.sendProgress` already passed shape-correct payloads.
+- `src/mcp/tools/tool-registry.ts` — `mcpServer.registerTool(...)` no longer needs the `as unknown as Parameters<McpServer['registerTool']>[2]` cast. The handler is directly assignable now that both `ToolResult` and the `extra` parameter align with the SDK.
+
+### Removed
+
+- `ToolResult` / `ToolSuccessResponse` / `ToolErrorResponse` / `ToolResponseContent` interface declarations from `src/mcp/tools/base-tool.ts`. `ToolResult` is now re-exported from `tools/tool-result.ts`; the three narrow helpers are gone — tool code that needed `ToolSuccessResponse` / `ToolErrorResponse` should use `ToolResult` (which is the SDK type and covers both shapes).
+- `ToolResult` interface declaration from `src/mcp/apps/lib/app-shared-entities.ts`. The barrel now re-exports the canonical `ToolResult` from `tools/tool-result.ts` so existing app imports keep compiling. (The convenience re-export itself will be removed in a later sub-PR of #268, axis 10.)
+- `ToolSuccessResponse`, `ToolErrorResponse`, `ToolResponseContent` re-exports from the `@mcp-rune/mcp-rune/tools` entry. Downstream code should switch to `ToolResult` (= `CallToolResult`).
+
+[0.94.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.93.0...v0.94.0
+
 ## [0.93.0] - 2026-06-07
 
 > Auto-discovers MCP Apps in the vite build. Adding a new app no longer requires editing `vite.config.js`. Final axis of the `src/mcp/apps/` architecture epic (#255), axis A8 (#266).

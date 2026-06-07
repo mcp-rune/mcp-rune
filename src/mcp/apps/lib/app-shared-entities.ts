@@ -57,12 +57,7 @@ export interface AppModelInstance {
   lookupFields: Record<string, unknown>
 }
 
-/** Tool call result shape from MCP SDK */
-export interface ToolResult {
-  content: Array<{ type: string; text: string }>
-  isError?: boolean
-  _meta?: Record<string, unknown>
-}
+export type { ToolResult } from '#src/mcp/tools/tool-result.js'
 
 /** Context passed to handleToolCall by AppRegistry */
 export interface AppToolContext {

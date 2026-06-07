@@ -1,6 +1,6 @@
 import type { DomainRegistry } from '#src/mcp/domain/registry.js'
 
-import type { ToolAnnotations, ToolSuccessResponse } from '../base-tool.js'
+import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
 
 /**
@@ -38,7 +38,7 @@ export class BaseDomainTool extends BaseTool {
   override formatResponse(
     text: string | Record<string, unknown>,
     options?: { meta?: Record<string, unknown> }
-  ): ToolSuccessResponse {
+  ): ToolResult {
     const textStr = typeof text === 'string' ? text : JSON.stringify(text, null, 2)
     return super.formatResponse(textStr + PRESENTATION_FOOTER, options)
   }

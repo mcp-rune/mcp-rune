@@ -451,8 +451,7 @@ export class ToolRegistry {
           inputSchema: defInstance.inputSchema,
           annotations: defInstance.annotations
         },
-        // SDK ToolCallback receives (args, extra) — we pass extra through the pipeline
-        tracedHandler as unknown as Parameters<McpServer['registerTool']>[2]
+        tracedHandler
       )
     }
   }

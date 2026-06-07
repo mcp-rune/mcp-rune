@@ -14,12 +14,8 @@ export type {
   ServerContext,
   ToolAnnotations,
   ToolDependencies,
-  ToolErrorResponse,
   ToolHandlerExtra,
-  ToolLogger,
-  ToolResponseContent,
-  ToolResult,
-  ToolSuccessResponse
+  ToolLogger
 } from './mcp/tools/base-tool.js'
 export { BaseTool } from './mcp/tools/base-tool.js'
 export {
@@ -68,6 +64,8 @@ export type {
   ToolRegistryConfig
 } from './mcp/tools/tool-registry.js'
 export { ToolRegistry } from './mcp/tools/tool-registry.js'
+export type { ToolResult } from './mcp/tools/tool-result.js'
+export { textError, textResult } from './mcp/tools/tool-result.js'
 export {
   normalizeFilterValues,
   validateFilterParams,
