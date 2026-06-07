@@ -1,51 +1,29 @@
-import { defineConfig } from 'vite'
-import { viteSingleFile } from 'vite-plugin-singlefile'
+import fs from 'node:fs'
 import path from 'node:path'
+
+import { viteSingleFile } from 'vite-plugin-singlefile'
+import { defineConfig } from 'vite'
 
 const isDevelopment = process.env.NODE_ENV === 'development'
 
-// Build target: 'new-model-app' (default) or any generic app
+// Build target maps directly to a sibling app directory: every app under
+// src/mcp/apps/ ships its iframe entry at <app>/ui/index.html and bundles
+// to dist/<app>.html. No per-app config map — adding a new app is a
+// filesystem-only change.
 const target = process.env.BUILD_TARGET || 'new-model-app'
-
-const configs = {
-  'new-model-app': {
-    root: 'new-model-app/ui',
-    outFile: 'new-model-app.html'
-  },
-  'edit-model-app': {
-    root: 'edit-model-app/ui',
-    outFile: 'edit-model-app.html'
-  },
-  'find-model-app': {
-    root: 'find-model-app/ui',
-    outFile: 'find-model-app.html'
-  },
-  'show-model-app': {
-    root: 'show-model-app/ui',
-    outFile: 'show-model-app.html'
-  },
-  'pick-model-app': {
-    root: 'pick-model-app/ui',
-    outFile: 'pick-model-app.html'
-  },
-  'multi-pick-model-app': {
-    root: 'multi-pick-model-app/ui',
-    outFile: 'multi-pick-model-app.html'
-  },
-  'view-selection-app': {
-    root: 'view-selection-app/ui',
-    outFile: 'view-selection-app.html'
-  },
-  'workflow-panel-app': {
-    root: 'workflow-panel-app/ui',
-    outFile: 'workflow-panel-app.html'
-  }
+const targetRoot = path.resolve(import.meta.dirname, target, 'ui')
+const targetIndex = path.join(targetRoot, 'index.html')
+if (!fs.existsSync(targetIndex)) {
+  const relative = path.relative(process.cwd(), targetIndex)
+  throw new Error(
+    `vite-apps: BUILD_TARGET="${target}" but ${relative} does not exist. ` +
+      `Each app must ship its iframe entry at src/mcp/apps/<name>/ui/index.html.`
+  )
 }
-
-const config = configs[target]
+const outFile = `${target}.html`
 
 export default defineConfig({
-  root: path.resolve(import.meta.dirname, config.root),
+  root: targetRoot,
   plugins: [
     viteSingleFile(),
     // Rename index.html → target-specific filename after singlefile inlining
@@ -53,8 +31,8 @@ export default defineConfig({
       name: 'rename-output',
       enforce: 'post',
       generateBundle(_, bundle) {
-        if (config.outFile !== 'index.html' && bundle['index.html']) {
-          bundle['index.html'].fileName = config.outFile
+        if (bundle['index.html']) {
+          bundle['index.html'].fileName = outFile
         }
       }
     }
@@ -69,6 +47,6 @@ export default defineConfig({
     cssMinify: !isDevelopment,
     minify: !isDevelopment,
     outDir: path.resolve(import.meta.dirname, 'dist'),
-    emptyOutDir: process.env.SKIP_CLEAN !== '1' && target === 'new-model-app'
+    emptyOutDir: process.env.SKIP_CLEAN !== '1'
   }
 })
