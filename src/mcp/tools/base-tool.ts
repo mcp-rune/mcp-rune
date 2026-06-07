@@ -1,4 +1,4 @@
-import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
+import type { ServerNotification, ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 export type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
@@ -134,34 +134,13 @@ export interface ToolDependencies {
   summaryRenderer?: FormSummaryRenderer
 }
 
-/** Tool response content item */
-export interface ToolResponseContent {
-  type: 'text'
-  text: string
-}
-
-/** Tool success response */
-export interface ToolSuccessResponse {
-  content: ToolResponseContent[]
-  _meta?: Record<string, unknown>
-}
-
-/** Tool error response */
-export interface ToolErrorResponse {
-  content: ToolResponseContent[]
-  isError: true
-}
-
-/** Union of all tool response shapes */
-export type ToolResult = ToolSuccessResponse | ToolErrorResponse
+export type { ToolResult } from './tool-result.js'
+import type { ToolResult } from './tool-result.js'
 
 /** Subset of SDK RequestHandlerExtra exposed to tools via the pipeline */
 export interface ToolHandlerExtra {
   signal?: AbortSignal
-  sendNotification?: (notification: {
-    method: string
-    params: Record<string, unknown>
-  }) => Promise<void>
+  sendNotification?: (notification: ServerNotification) => Promise<void>
   _meta?: { progressToken?: string | number; [key: string]: unknown }
 }
 
@@ -351,7 +330,7 @@ export class BaseTool {
   }
 
   /** Format error response */
-  formatError(error: HttpError): ToolErrorResponse {
+  formatError(error: HttpError): ToolResult {
     const errorMessage = error.response ? this.formatErrorResponse(error.response) : error.message
 
     if (this.logger) {
@@ -397,9 +376,9 @@ export class BaseTool {
   formatResponse(
     data: string | Record<string, unknown>,
     { meta }: { meta?: Record<string, unknown> } = {}
-  ): ToolSuccessResponse {
+  ): ToolResult {
     const text = typeof data === 'string' ? data : this.sanitizeResponseData(data)
-    const response: ToolSuccessResponse = {
+    const response: ToolResult = {
       content: [
         {
           type: 'text',
