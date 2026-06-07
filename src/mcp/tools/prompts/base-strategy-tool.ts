@@ -9,12 +9,11 @@
  * Examples: get_prompt_guide, validate_form, get_form_summary, get_form_progress
  */
 
+import type { PromptClassLike, StrategyType } from '#src/mcp/prompts/prompt-definitions.js'
+import type { BaseStrategy } from '#src/mcp/prompts/strategies/base-strategy.js'
+import { getStrategy } from '#src/mcp/prompts/strategies/index.js'
 import type { ToolAnnotations, ToolResult } from '#src/mcp/tools/base-tool.js'
 import { BaseTool } from '#src/mcp/tools/base-tool.js'
-
-import type { PromptClassLike, StrategyType } from '../prompt-definitions.js'
-import type { BaseStrategy } from '../strategies/base-strategy.js'
-import { getStrategy } from '../strategies/index.js'
 
 /** Error info returned by checkOperation */
 interface OperationCheckResult {

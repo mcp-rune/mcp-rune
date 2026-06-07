@@ -22,14 +22,6 @@ export type {
   ToolSuccessResponse
 } from './mcp/tools/base-tool.js'
 export { BaseTool } from './mcp/tools/base-tool.js'
-/**
- * Canonical tool-family base classes. Extend one of these (or `BaseTool`
- * directly for CRUD-style auth) and the registry handles the rest.
- *
- * `BaseStrategyTool` is also re-exported from `@mcp-rune/mcp-rune/prompts`
- * for backward import-path compatibility.
- */
-export { BaseStrategyTool } from './mcp/prompts/tools/base-strategy-tool.js'
 export {
   BulkActionModelsTool,
   CreateModelTool,
@@ -59,6 +51,13 @@ export {
   FindSimilarOperationsTool,
   OPERATIONS_TOOL_CLASSES
 } from './mcp/tools/operations/index.js'
+export {
+  BaseStrategyTool,
+  GetFormSummaryTool,
+  GetPromptGuideTool,
+  STRATEGY_TOOL_CLASSES,
+  ValidateFormTool
+} from './mcp/tools/prompts/index.js'
 export { SaveModelBaseTool } from './mcp/tools/save-model-base-tool.js'
 export type { ToolContext, ToolHandler, ToolInterceptor } from './mcp/tools/tool-pipeline.js'
 export { wrapToolHandler } from './mcp/tools/tool-pipeline.js'

@@ -31,4 +31,3 @@ export {
 } from './mcp/prompts/prompt-registry.js'
 export { validatePromptClass } from './mcp/prompts/prompt-validator.js'
 export * from './mcp/prompts/strategies/index.js'
-export * from './mcp/prompts/tools/index.js'
