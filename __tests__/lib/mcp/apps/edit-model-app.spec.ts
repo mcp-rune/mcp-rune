@@ -1,7 +1,6 @@
 import { vi } from 'vitest'
 
-import { createEditModelApp } from '../../../../src/mcp/apps/edit-model-app/index.js'
-import { createNewModelApp } from '../../../../src/mcp/apps/new-model-app/index.js'
+import { createModelFormApp } from '../../../../src/mcp/apps/lib/create-model-form-app.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 
@@ -41,7 +40,13 @@ const formClasses = { book: MockFormClass }
 const promptClasses = { book: MockPrompt }
 
 function createApp() {
-  return createEditModelApp({ modelClasses, formClasses, promptClasses, namespace: 'test' })
+  return createModelFormApp({
+    mode: 'update',
+    modelClasses,
+    formClasses,
+    promptClasses,
+    namespace: 'test'
+  })
 }
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
@@ -62,7 +67,8 @@ describe('lib/mcp/apps/edit-model-app', () => {
 
     it('uses a distinct resourceUri from new_model_app', () => {
       const editApp = createApp()
-      const newApp = createNewModelApp({
+      const newApp = createModelFormApp({
+        mode: 'create',
         modelClasses,
         formClasses,
         promptClasses,

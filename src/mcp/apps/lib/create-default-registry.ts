@@ -15,14 +15,13 @@ import type {
 } from '#src/mcp/data-layer/api-extensions/search/index.js'
 import type { DataLayerFactory } from '#src/mcp/data-layer/data-layer.js'
 
-import { createEditModelApp } from '../edit-model-app/index.js'
 import { createFindModelApp } from '../find-model-app/index.js'
 import { createMultiPickModelApp } from '../multi-pick-model-app/index.js'
-import { createNewModelApp } from '../new-model-app/index.js'
 import { createPickModelApp } from '../pick-model-app/index.js'
 import { createShowModelApp } from '../show-model-app/index.js'
 import { createViewSelectionApp } from '../view-selection-app/index.js'
 import type { ApiClient, AppModelClass } from './app-shared-entities.js'
+import { createModelFormApp } from './create-model-form-app.js'
 import type { AppDefinition, KindExtension, ThemeOverrides } from './registry.js'
 import { AppRegistry } from './registry.js'
 
@@ -119,7 +118,8 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
   add('view-selection-app', createViewSelectionApp({ modelClasses, namespace }))
   add(
     'new-model-app',
-    createNewModelApp({
+    createModelFormApp({
+      mode: 'create',
       modelClasses,
       formClasses: effectiveFormClasses as never,
       ...(promptClasses && { promptClasses: promptClasses as never }),
@@ -128,7 +128,8 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
   )
   add(
     'edit-model-app',
-    createEditModelApp({
+    createModelFormApp({
+      mode: 'update',
       modelClasses,
       formClasses: effectiveFormClasses as never,
       ...(promptClasses && { promptClasses: promptClasses as never }),
