@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.92.0] - 2026-06-07
+
+> **BREAKING.** Folds `src/mcp/prompt-layer/` into `src/mcp/prompts/`. The `prompt-layer/` folder name mirrored `model-layer/` / `data-layer/` but the contents were never a per-model-bound projection seam — just a registry interface, a cache, a validator, and the form-strategy implementations. Everything prompt-shaped now lives in one folder. Part of the `src/mcp/apps/` architecture epic (#255), axis A7 (#264).
+
+### Changed
+
+- Moved `src/mcp/prompt-layer/{prompt-registry,prompt-cache,prompt-validator}.ts` into `src/mcp/prompts/`.
+- Moved `src/mcp/prompt-layer/form-strategies/` into `src/mcp/prompts/form-strategies/`.
+- Moved `__tests__/lib/mcp/prompt-layer/*.spec.ts` into `__tests__/lib/mcp/prompts/`.
+- Updated every `#src/mcp/prompt-layer/...` / `../prompt-layer/...` import to its new `prompts/` path. Touched: `src/prompts.ts`, `src/mcp/http-server.ts`, `src/mcp/server-factory.ts`, `src/mcp/middleware/status-router.ts`, `src/mcp/schema/validate-registries.ts`, `src/mcp/tools/base-tool.ts`, `src/mcp/tools/tool-registry.ts`, `src/mcp/tools/form-strategies/{base-form-strategy-tool,get-form-summary-tool}.ts`, `eslint.config.js`, `AGENTS.md`.
+- `AGENTS.md` "Folder layout" entry now describes `prompts/` as the home for both the declarative side (`base-prompt.ts`, `prompt-definitions.ts`, …) and the runtime consumers (`prompt-registry.ts`, `prompt-cache.ts`, `prompt-validator.ts`, `form-strategies/`), noting that the runtime side is not per-model-bound the way `model-layer/` or `analysis-layer/` are.
+
+### Removed
+
+- `src/mcp/prompt-layer/api-conventions.ts` — dead re-export shim whose only consumer was its own test. Replaced by direct imports from `src/mcp/data-layer/api-conventions/`.
+- `__tests__/lib/mcp/prompt-layer/api-conventions.spec.ts`.
+- `src/mcp/prompt-layer/` directory.
+
 ## [0.91.0] - 2026-06-07
 
 > **BREAKING.** Introduces `bindAppForm(FormClass, ModelClass): BoundAppForm` and reshapes the schema generator and association resolver around it. Per-field association detection is now convention-aware — the hardcoded `name.endsWith('_id')` / `name.replace(/_ids$/, 's')` guesses in `buildField` are gone. Part of the `src/mcp/apps/` architecture epic (#255), axes A4 + A6 (#262).

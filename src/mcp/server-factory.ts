@@ -26,7 +26,7 @@ import type {
   ToolFlowExtensionContext,
   ToolFlowExtensionMap
 } from '#src/mcp/extensions/tool-flow.js'
-import type { PromptRegistry } from '#src/mcp/prompt-layer/prompt-registry.js'
+import type { PromptRegistry } from '#src/mcp/prompts/prompt-registry.js'
 import type { ToolRegistry } from '#src/mcp/tools/tool-registry.js'
 import { setMcpClientContext } from '#src/runtime/error-tracking.js'
 import * as logger from '#src/runtime/logger.js'

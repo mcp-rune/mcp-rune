@@ -129,7 +129,7 @@ export class MyPrompt extends BasePrompt {
 The form-strategy is retrieved using:
 
 ```javascript
-import { getFormStrategy } from '#src/mcp/prompt-layer/form-strategies/index.js'
+import { getFormStrategy } from '#src/mcp/prompts/form-strategies/index.js'
 
 const strategyType = PromptClass.formStrategy || 'stateless'
 const strategy = getFormStrategy(strategyType)

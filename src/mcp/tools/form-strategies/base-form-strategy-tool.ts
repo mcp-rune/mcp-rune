@@ -9,10 +9,10 @@
  * Examples: get_prompt_guide, validate_form, get_form_summary, get_form_progress
  */
 
-import type { BaseFormStrategy } from '#src/mcp/prompt-layer/form-strategies/base-form-strategy.js'
-import { defaultFormSummaryRenderer } from '#src/mcp/prompt-layer/form-strategies/default-form-summary-renderer.js'
-import type { FormSummaryRenderer } from '#src/mcp/prompt-layer/form-strategies/form-strategy-definitions.js'
-import { getFormStrategy } from '#src/mcp/prompt-layer/form-strategies/index.js'
+import type { BaseFormStrategy } from '#src/mcp/prompts/form-strategies/base-form-strategy.js'
+import { defaultFormSummaryRenderer } from '#src/mcp/prompts/form-strategies/default-form-summary-renderer.js'
+import type { FormSummaryRenderer } from '#src/mcp/prompts/form-strategies/form-strategy-definitions.js'
+import { getFormStrategy } from '#src/mcp/prompts/form-strategies/index.js'
 import type { FormStrategyType, PromptClassLike } from '#src/mcp/prompts/prompt-definitions.js'
 import type { ToolAnnotations, ToolDependencies, ToolResult } from '#src/mcp/tools/base-tool.js'
 import { BaseTool } from '#src/mcp/tools/base-tool.js'
