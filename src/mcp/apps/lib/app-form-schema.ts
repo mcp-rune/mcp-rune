@@ -1,26 +1,18 @@
 /**
  * App Form Schema Generator
  *
- * Generates app form schemas from model configuration. Supports two modes:
+ * Generates an app form schema from `AppFormClass.fields` (+ optional
+ * `AppFormClass.fieldsets`) merged with `ModelClass.attributes`. Pure data:
+ * no API calls, no side effects. Association fields are marked with an
+ * `association` property so the app's handleToolCall can fetch options
+ * from the API separately.
  *
- * 1. **AppFormClass mode** (preferred): Reads `AppFormClass.fields` for field list
- *    and optional `AppFormClass.fieldsets` for layout. No Prompt dependency needed.
- *
- * 2. **Prompt mode** (legacy): Reads `PromptClass.fieldGroups/sections` for field
- *    list and layout, with `associationTransformers` for association handling.
- *
- * The schema is a pure data structure -- no API calls, no side effects.
- * Association fields are marked with an `association` property so the
- * app's handleToolCall can fetch options from the API separately.
+ * Boot-time `validateAppForm` guarantees every registered FormClass has at
+ * least one renderable field. The runtime throw at the head of this
+ * function is belt-and-braces for callers that bypass `validateRegistries`.
  */
 
 import { getKind } from '#src/mcp/models/kinds/index.js'
-import type {
-  TransformerConfig,
-  TransformerEntry
-} from '#src/mcp/prompts/association-transformers.js'
-import { buildFieldTransformerMap } from '#src/mcp/prompts/association-transformers.js'
-import type { FieldGroup, Section } from '#src/mcp/prompts/prompt-definitions.js'
 
 import type {
   AppAttributeDefinition,
@@ -36,7 +28,7 @@ interface AppFormSchemaOptions {
 }
 
 interface AppFormClassLike {
-  fields?: string[]
+  fields: string[]
   fieldsets?: Record<
     string,
     { title?: string; description?: string; required?: boolean; fields?: string[] }
@@ -44,61 +36,23 @@ interface AppFormClassLike {
   [key: string]: unknown
 }
 
-interface PromptClassLike {
-  fieldGroups?: Record<string, FieldGroup>
-  sections?: Record<string, Section>
-  associationTransformers?: Record<string, TransformerConfig>
-  title?: string
-  [key: string]: unknown
-}
-
-/**
- * Generate an app form schema from model and optional form/prompt configuration.
- *
- * Priority: AppFormClass > PromptClass > empty schema.
- */
+/** Generate an app form schema from model and form configuration. */
 export function generateAppFormSchema(
-  ModelClass: AppModelClass,
-  FormOrPromptClass?: AppFormClassLike | PromptClassLike,
-  { allModelClasses }: AppFormSchemaOptions = {}
-): AppFormSchema {
-  // AppFormClass path: has static fields array
-  if (
-    Array.isArray((FormOrPromptClass as AppFormClassLike)?.fields) &&
-    (FormOrPromptClass as AppFormClassLike).fields!.length > 0
-  ) {
-    return generateFromFormClass(ModelClass, FormOrPromptClass as AppFormClassLike, {
-      allModelClasses
-    })
-  }
-
-  // PromptClass path (legacy): has fieldGroups
-  const asPrompt = FormOrPromptClass as PromptClassLike | undefined
-  const hasPromptLayout = asPrompt?.fieldGroups && Object.keys(asPrompt.fieldGroups).length > 0
-  if (hasPromptLayout) {
-    return generateFromPrompt(ModelClass, asPrompt!, { allModelClasses })
-  }
-
-  // Fallback: empty schema
-  return {
-    model: ModelClass.singularName,
-    title: `Create ${humanize(ModelClass.api.endpoint)}`,
-    fieldsets: [],
-    fields: []
-  }
-}
-
-// --- AppFormClass-based generation ---
-
-function generateFromFormClass(
   ModelClass: AppModelClass,
   FormClass: AppFormClassLike,
   { allModelClasses }: AppFormSchemaOptions = {}
 ): AppFormSchema {
+  if (!Array.isArray(FormClass?.fields) || FormClass.fields.length === 0) {
+    throw new Error(
+      `app-form-schema: ${ModelClass.singularName} has no AppFormClass.fields. ` +
+        `Call validateRegistries() at server boot to catch this earlier.`
+    )
+  }
+
   const groupKey = 'default'
 
   const fields: AppFormFieldDefinition[] = []
-  for (const fieldName of FormClass.fields!) {
+  for (const fieldName of FormClass.fields) {
     const attr = ModelClass.attributes[fieldName]
     if (!attr) continue
     if (attr.prompt_visible === false) continue
@@ -107,10 +61,8 @@ function generateFromFormClass(
     if (field) fields.push(field)
   }
 
-  // Use FormClass.fieldsets if provided, otherwise create a single default fieldset
   let fieldsets: AppFormFieldsetDefinition[]
   if (FormClass.fieldsets && Object.keys(FormClass.fieldsets).length > 0) {
-    // Assign fields to their declared fieldset groups
     const fieldsByName = new Map(fields.map((f) => [f.name, f]))
     for (const [fsKey, fsConfig] of Object.entries(FormClass.fieldsets)) {
       for (const name of fsConfig.fields || []) {
@@ -119,7 +71,6 @@ function generateFromFormClass(
       }
     }
 
-    // Index rendered fields by group for empty-fieldset filtering
     const fieldsByGroup: Record<string, AppFormFieldDefinition[]> = {}
     for (const f of fields) {
       ;(fieldsByGroup[f.group] = fieldsByGroup[f.group] || []).push(f)
@@ -151,115 +102,6 @@ function generateFromFormClass(
     title: `Create ${humanize(ModelClass.api.endpoint)}`,
     fieldsets,
     fields
-  }
-}
-
-// --- Prompt-based generation (legacy) ---
-
-function generateFromPrompt(
-  ModelClass: AppModelClass,
-  PromptClass: PromptClassLike,
-  { allModelClasses }: AppFormSchemaOptions = {}
-): AppFormSchema {
-  const fields: AppFormFieldDefinition[] = []
-  const fieldGroups = PromptClass.fieldGroups || {}
-  const sections = PromptClass.sections || {}
-  const transformers = PromptClass.associationTransformers || {}
-
-  // Map each target field name -> its transformer config
-  const fieldToTransformer = buildFieldTransformerMap(transformers)
-
-  // Build ordered field list from fieldGroups
-  for (const [groupKey, group] of Object.entries(fieldGroups)) {
-    for (const fieldName of group.fields) {
-      const transformer = fieldToTransformer.get(fieldName)
-
-      if (transformer) {
-        if (transformer.type === 'select') {
-          // Simple association -> render as <select>
-          fields.push(buildSelectFromTransformer(fieldName, transformer, groupKey))
-        }
-        // type: 'autocomplete' or 'multi_select' -> SKIP (LLM pre-orchestrates)
-        continue
-      }
-
-      // Not a transformer target -> check model attributes (existing behavior)
-      const attr = ModelClass.attributes[fieldName]
-      if (!attr) continue
-      if (attr.prompt_visible === false) continue
-
-      const field = buildField(fieldName, attr, ModelClass, groupKey, allModelClasses)
-      if (field) fields.push(field)
-    }
-  }
-
-  // Index rendered fields by group for empty-fieldset filtering
-  const fieldsByGroup: Record<string, AppFormFieldDefinition[]> = {}
-  for (const f of fields) {
-    ;(fieldsByGroup[f.group] = fieldsByGroup[f.group] || []).push(f)
-  }
-
-  // Build fieldsets from sections, filtering out those with zero rendered fields
-  const fieldsets: AppFormFieldsetDefinition[] = Object.entries(sections)
-    .map(([key, section]) => ({
-      key,
-      title: section.title,
-      description: section.description,
-      required: section.required || false,
-      groups: section.groups || [key]
-    }))
-    .filter((fs) => fs.groups.some((g) => (fieldsByGroup[g] || []).length > 0))
-
-  const groupLayouts = buildGroupLayouts(fieldGroups)
-
-  return {
-    model: ModelClass.singularName,
-    title: PromptClass.title || `Create ${humanize(ModelClass.api.endpoint)}`,
-    fieldsets,
-    fields,
-    ...(groupLayouts && { groupLayouts })
-  }
-}
-
-// --- Shared helpers ---
-
-/**
- * Build group layout overrides from fieldGroups configuration.
- * Only includes groups that have an explicit layout property.
- */
-function buildGroupLayouts(
-  fieldGroups: Record<string, FieldGroup>
-): Record<string, unknown> | undefined {
-  const layouts: Record<string, unknown> = {}
-  for (const [key, group] of Object.entries(fieldGroups)) {
-    const g = group as unknown as Record<string, unknown>
-    if (g.layout) {
-      layouts[key] = g.layout
-    }
-  }
-  return Object.keys(layouts).length > 0 ? layouts : undefined
-}
-
-/**
- * Build a select field definition from a transformer config.
- * Used for `type: 'select'` association transformers.
- */
-function buildSelectFromTransformer(
-  name: string,
-  transformer: TransformerEntry,
-  groupKey: string
-): AppFormFieldDefinition {
-  return {
-    name,
-    label: humanize(name.replace(/_link$/, '')),
-    group: groupKey,
-    required: false,
-    type: 'select',
-    association: {
-      endpoint: pluralize(transformer.source.model!),
-      labelField: ((transformer as Record<string, unknown>).labelField as string) || 'name',
-      valueField: transformer.valueField || 'id'
-    }
   }
 }
 
@@ -310,11 +152,9 @@ function buildField(
       field.type = 'number'
     }
   } else if (attr.type === 'array' && attr.enumValues) {
-    // Array with fixed options (e.g., formats: ['physical', 'ebook', 'pdf'])
     field.type = 'checkbox_group'
     field.options = attr.enumValues.map((v) => ({ value: v, label: humanize(v) }))
   } else if (attr.type === 'array') {
-    // Array without enumValues -- likely an association (e.g., tag_ids)
     field.type = 'multiselect'
     const assocName = name.replace(/_ids$/, 's')
     const assoc = ModelClass.associations?.hasMany?.[assocName]
@@ -339,27 +179,22 @@ function buildField(
     field.type = getKind(attr.type, attr.format).htmlInputType
   }
 
-  // Validation constraints
   if (attr.validation) {
     field.validation = { ...attr.validation }
   }
 
-  // Description as help text
   if (attr.description) {
     field.description = attr.description
   }
 
-  // Placeholder from first example
   if (attr.examples && attr.examples.length > 0) {
     field.placeholder = `e.g. ${attr.examples[0]}`
   }
 
-  // Default value (for non-enum types that have defaults)
   if (attr.default !== undefined && !field.default) {
     field.default = attr.default
   }
 
-  // Conditional visibility
   if (attr.visibleWhen) {
     field.visibleWhen = { ...attr.visibleWhen }
   }

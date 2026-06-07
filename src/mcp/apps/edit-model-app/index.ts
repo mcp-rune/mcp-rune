@@ -50,8 +50,11 @@ interface FormAppOptions {
   formClasses: Record<
     string,
     {
-      fields?: string[]
-      fieldsets?: Record<string, unknown>
+      fields: string[]
+      fieldsets?: Record<
+        string,
+        { title?: string; description?: string; required?: boolean; fields?: string[] }
+      >
       associations?: Array<string | Record<string, unknown>>
       [key: string]: unknown
     }

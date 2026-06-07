@@ -23,10 +23,26 @@ export function validateAppForm(
   ModelClass: ModelClassLike
 ): Issue[] {
   const issues: Issue[] = []
-  const validNames = collectValidFieldNames(ModelClass)
-  const declared = new Set(FormClass.fields ?? [])
+  const fields = FormClass.fields ?? []
 
-  for (const fieldName of FormClass.fields ?? []) {
+  if (fields.length === 0) {
+    issues.push({
+      level: 'error',
+      scope: 'form',
+      model: modelName,
+      message: `AppFormClass for "${modelName}" has no fields — define a non-empty static fields array`,
+      hint: 'a form with zero fields cannot render; remove the form class or list at least one renderable attribute'
+    })
+    return issues
+  }
+
+  const validNames = collectValidFieldNames(ModelClass)
+  const declared = new Set(fields)
+  const attrs = ModelClass.attributes ?? {}
+  let validCount = 0
+  let renderableCount = 0
+
+  for (const fieldName of fields) {
     if (!validNames.has(fieldName)) {
       const suggestion = closestMatch(fieldName, validNames)
       issues.push({
@@ -39,7 +55,20 @@ export function validateAppForm(
           ? `did you mean "${suggestion}"?`
           : `Known attributes: ${[...validNames].join(', ')}`
       })
+      continue
     }
+    validCount++
+    if (attrs[fieldName]?.prompt_visible !== false) renderableCount++
+  }
+
+  if (validCount > 0 && renderableCount === 0) {
+    issues.push({
+      level: 'error',
+      scope: 'form',
+      model: modelName,
+      message: `AppFormClass for "${modelName}" has no renderable fields — every entry in fields is prompt_visible: false`,
+      hint: 'list at least one attribute whose definition does not set prompt_visible: false'
+    })
   }
 
   for (const [fsKey, fs] of Object.entries(FormClass.fieldsets ?? {})) {
