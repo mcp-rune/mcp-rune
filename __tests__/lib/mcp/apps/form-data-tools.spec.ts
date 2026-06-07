@@ -1,5 +1,5 @@
-import { FormDataStore } from '../../../../src/mcp/apps/lib/form-data-store.js'
-import { createFormDataTools } from '../../../../src/mcp/apps/lib/form-data-tools.js'
+import { AppFormDataStore as FormDataStore } from '../../../../src/mcp/apps/lib/app-form-data-store.js'
+import { createAppFormDataTools as createFormDataTools } from '../../../../src/mcp/apps/lib/app-form-data-tools.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 

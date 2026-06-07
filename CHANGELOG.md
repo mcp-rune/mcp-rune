@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.87.1] - 2026-06-07
+
+### Added
+
+- `src/mcp/apps/lib/app-form-entities.ts` — new single source of truth for all public `AppForm*` interfaces. Consolidates `AppFormFieldsetConfig`, `AppFormAssociationEntry`, `AppFormPostCreateConfig` (moved from `base-app-form.ts`) alongside the new `AppFormAssociation`, `AppFormAssociationInstruction`, `AppFormAssociationResolution`, and `AppFormPicker` types.
+- `AppFormPicker = 'autocomplete' | 'list'` union type replaces raw `string` on all picker fields, making valid values self-documenting in TypeScript.
+
+### Changed
+
+- `base-app-form.ts` — form-level interface definitions moved to `app-form-entities.ts`; file now imports and re-exports them so existing importers see no change.
+- `app-form-associations.ts` — `ResolvedAssociation`, `AssociationInstruction`, `ResolveResult` removed; replaced by `AppFormAssociation`, `AppFormAssociationInstruction`, `AppFormAssociationResolution` from entities. Module header rewritten to focus on its role (resolution + instructions), delegating lifecycle docs to the entities file.
+- `app-form-entities.ts` module header — four-stage annotated walkthrough with real code snippets explaining each type's role, what's shared between model and form declarations, what's model-only vs. form-only, and why three interfaces exist instead of one progressively-filled type.
+
+### Fixed
+
+- Test imports in `__tests__/lib/mcp/apps/` still pointing to the pre-`#250` paths (`form-associations.js`, `form-data-store.js`, `form-data-tools.js`, `form-schema.js`, `form-validator.js`) and the renamed `validateFormClass`/`FormDataStore` symbols — all updated to current names.
+
 ## [0.87.0] - 2026-06-07
 
 > **BREAKING.** Renames all app-form symbols and files from the unqualified `Form*` / `BaseForm` prefix to the qualified `AppForm*` / `BaseAppForm` prefix. Removes the dead `DisplayAdapter` class. No back-compat shims — call sites import the new names.
