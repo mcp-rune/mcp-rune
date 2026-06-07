@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 >
 > - `src/mcp/prompts/strategies/` → `src/mcp/prompts/form-strategies/` (files renamed `*-strategy.ts` → `*-form-strategy.ts`)
 > - `src/mcp/tools/prompts/` → `src/mcp/tools/form-strategies/` (`base-strategy-tool.ts` → `base-form-strategy-tool.ts`)
+> - **New `src/mcp/prompt-layer/` folder** holds the runtime consumers — `form-strategies/`, `prompt-registry.ts`, `prompt-validator.ts`, `prompt-cache.ts`, `api-conventions.ts`. `src/mcp/prompts/` keeps the declarative side only: `base-prompt.ts`, `prompt-definitions.ts`, `prompt-content-builder.ts`, `association-transformers.ts`, `generators/`. Same `models/` vs `model-layer/` dichotomy applied to prompts. Public package exports under `@mcp-rune/mcp-rune/prompts` are unchanged.
 >
 > **Log envelope** changes (Loki/Promtail queries need updating):
 >
@@ -43,6 +44,7 @@ Unifies the naming on both halves of the form-handling pattern (definitions and 
 - **Strategy logging cleanup**: every public static method on `HybridFormStrategy` and `StatefulFormStrategy` uses a module-scoped `logger.child({ service: 'form-strategy', formStrategy: '<type>' })`. Side-effect-free derivation methods (`getDocumentation`, `getNextSection`, `getDefaults`) no longer emit trace logs at all; `generateSummary` keeps only the completion log. Validation and progress methods (`validateFields`, `validateSection`, `getProgress`) keep their entry/exit pair — they're the methods you actually tail during an incident. Per-iteration debugs inside loops are removed. The `service: 'strategy'` envelope key becomes `service: 'form-strategy'`; the log field `strategy: '<type>'` becomes `formStrategy: '<type>'`.
 - **`models/base-model.ts`** imports `ApiConfig` / `AttributesConfig` / `AssociationConfig` from the consolidated `model-definitions.js` instead of three separate files. `data-layer/model-service/endpoint-resolver.ts` follows for `EndpointOverrides`.
 - **`form-strategies/README.md`** rewritten in the new vocabulary (folder layout, class names, import paths, log envelope keys).
+- **`AGENTS.md` — "Layer discipline" folder-layout block** now lists `prompt-layer/` as a peer of `data-layer/` / `model-layer/` / `analysis-layer/`, and documents `prompts/` as the declarative twin (mirroring `models/`). ESLint `no-restricted-imports` glob updated from `src/mcp/prompts/**` to `src/mcp/prompt-layer/**`; boot-time validator exemption updated to `src/mcp/prompt-layer/prompt-validator.ts`.
 
 ### Removed
 
