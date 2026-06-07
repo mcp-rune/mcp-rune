@@ -40,4 +40,31 @@ describe('form-validator: validateFormClass', () => {
     expect(issues).toHaveLength(1)
     expect(issues[0]!.message).toContain('not in AppFormClass.fields')
   })
+
+  it('errors when fields is missing', () => {
+    const issues = validateFormClass('book', {}, BookModel)
+    expect(issues).toHaveLength(1)
+    expect(issues[0]!.message).toContain('has no fields')
+  })
+
+  it('errors when fields is empty', () => {
+    const issues = validateFormClass('book', { fields: [] }, BookModel)
+    expect(issues).toHaveLength(1)
+    expect(issues[0]!.message).toContain('has no fields')
+  })
+
+  it('errors when every listed field is prompt_visible: false', () => {
+    const Model = {
+      modelName: 'book',
+      api: { endpoint: 'books' },
+      attributes: {
+        id: { type: 'string' as const, prompt_visible: false },
+        created_at: { type: 'datetime' as const, prompt_visible: false }
+      },
+      associations: {}
+    }
+    const issues = validateFormClass('book', { fields: ['id', 'created_at'] }, Model)
+    expect(issues).toHaveLength(1)
+    expect(issues[0]!.message).toContain('no renderable fields')
+  })
 })

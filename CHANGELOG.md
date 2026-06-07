@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.88.0] - 2026-06-07
+
+> **BREAKING.** Removes the legacy Prompt-based path from `generateAppFormSchema` (`src/mcp/apps/lib/app-form-schema.ts`). The function now accepts a single `AppFormClassLike` and throws when `fields` is missing or empty — no silent empty-schema fallback. Part of the `src/mcp/apps/` architecture epic (#255), axis A1 (#256).
+
+### Removed
+
+- `generateAppFormSchema`'s second-mode Prompt branch — `PromptClassLike`, `generateFromPrompt`, `buildSelectFromTransformer`, `buildGroupLayouts`. Callers must pass an `AppFormClassLike` with a non-empty `fields` array.
+- Imports of `prompts/association-transformers.js` and `prompts/prompt-definitions.js` from `app-form-schema.ts`. The schema generator no longer depends on `prompts/`.
+
+### Changed
+
+- `generateAppFormSchema(ModelClass, FormClass, opts)` — `FormClass` is now required; throws with a clear message if `fields` is missing or empty (belt-and-braces for callers that bypass `validateRegistries`).
+- `validateAppForm` (`app-form-validator.ts`) — now raises `error`-level issues when `AppFormClass.fields` is missing, empty, or every entry points to a `prompt_visible: false` attribute. The validator is the single source of truth; runtime no longer carries a fallback.
+- `FormAppOptions.formClasses[*]` in `new-model-app/index.ts` and `edit-model-app/index.ts` — `fields` tightened from optional to required to match the new contract.
+
 ## [0.87.2] - 2026-06-07
 
 ### Added
