@@ -1,84 +1,44 @@
 /**
  * app-form association resolution
  *
- * Resolves which associations declared on a form class have been provided via prefill,
- * and builds LLM-actionable instructions for the ones that haven't.
- * See app-form-entities.ts for the full lifecycle with annotated code examples.
+ * Splits a bound form's declared associations into resolved vs unresolved
+ * based on the current prefill, and builds LLM-actionable instructions
+ * for the unresolved bucket. The model↔form merge that used to happen
+ * inline here is now performed once by `bindAppForm`; this module
+ * focuses solely on prefill-driven resolution.
  *
- * Field name resolution (which prefill key counts as "resolved") is fully delegated
- * to the API convention — no _link/_id/_ids patterns appear here.
+ * Field name resolution (which prefill key counts as "resolved") is
+ * fully delegated to the API convention — no `_link` / `_id` patterns
+ * appear here.
  */
 
 import type { BaseConvention } from '#src/mcp/data-layer/api-conventions/base-convention.js'
 
 import type {
   AppFormAssociation,
-  AppFormAssociationEntry,
   AppFormAssociationInstruction,
-  AppFormAssociationResolution,
-  AppFormPicker
+  AppFormAssociationResolution
 } from './app-form-entities.js'
-import type { AppModelClass } from './app-shared-entities.js'
+import type { BoundAppForm } from './bind-app-form.js'
 
-interface NormalizedEntry {
-  name: string
-  dependsOn: string | null
-  targetModel: string | null
-  required: boolean | null
-  picker: AppFormPicker | null
-}
-
-/** Normalize an association entry to a consistent shape. */
-function normalizeEntry(entry: string | AppFormAssociationEntry): NormalizedEntry {
-  if (typeof entry === 'string') {
-    return { name: entry, dependsOn: null, targetModel: null, required: null, picker: null }
-  }
-  return {
-    name: entry.name,
-    dependsOn: entry.dependsOn ?? null,
-    targetModel: entry.targetModel ?? null,
-    required: entry.required ?? null,
-    picker: entry.picker ?? null
-  }
-}
-
-/** Check which form associations are resolved based on prefill values. */
+/**
+ * Split the bound form's associations into resolved vs unresolved based
+ * on prefill values.
+ */
 export function resolveFormAssociations(
-  associations: Array<string | AppFormAssociationEntry>,
-  ModelClass: AppModelClass,
+  boundForm: BoundAppForm,
   prefill: Record<string, unknown> = {}
 ): AppFormAssociationResolution {
-  const convention = ModelClass.api?.convention as BaseConvention | undefined
-  const belongsTo = ModelClass.associations?.belongsTo || {}
-  const hasMany = ModelClass.associations?.hasMany || {}
+  const convention = boundForm.modelClass.api?.convention as BaseConvention | undefined
+  const belongsTo = boundForm.modelClass.associations?.belongsTo ?? {}
+  const hasMany = boundForm.modelClass.associations?.hasMany ?? {}
   const resolved: AppFormAssociation[] = []
   const unresolved: AppFormAssociation[] = []
 
-  for (const rawEntry of associations) {
-    const normalized = normalizeEntry(rawEntry)
-    const { name, dependsOn, picker } = normalized
-    const assocConfig = belongsTo[name] || hasMany[name]
-    const many = !!hasMany[name]
-
-    // Resolve targetModel and required:
-    // 1. Model's belongsTo or hasMany (source of truth for model associations)
-    // 2. Inline config on the form entry (for navigation associations not in model)
-    const targetModel = assocConfig?.target_model || normalized.targetModel
-    if (!targetModel) continue
-
-    const required = normalized.required !== null ? normalized.required : !!assocConfig?.required
-
-    const entry: AppFormAssociation = {
-      association: name,
-      required,
-      targetModel,
-      ...(many && { many }),
-      ...(dependsOn && { dependsOn }),
-      ...(picker && { picker })
-    }
-
-    const relConfig = { ...assocConfig, many }
-    if (isAssociationResolved(name, convention, prefill, relConfig)) {
+  for (const entry of boundForm.associations) {
+    const assocConfig = belongsTo[entry.association] || hasMany[entry.association]
+    const relConfig = { ...assocConfig, many: !!entry.many }
+    if (isAssociationResolved(entry.association, convention, prefill, relConfig)) {
       resolved.push(entry)
     } else {
       unresolved.push(entry)

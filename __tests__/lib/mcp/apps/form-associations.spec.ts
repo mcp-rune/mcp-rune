@@ -3,6 +3,7 @@ import {
   isAssociationResolved,
   resolveFormAssociations
 } from '../../../../src/mcp/apps/lib/app-form-associations.js'
+import { bindAppForm } from '../../../../src/mcp/apps/lib/bind-app-form.js'
 import { flatConvention } from '../../../__fixtures__/flat-convention.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
@@ -18,6 +19,10 @@ const MockModel = {
   }
 }
 
+function boundFor(associations, model = MockModel) {
+  return bindAppForm({ fields: [], associations }, model)
+}
+
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
 describe('lib/mcp/apps/form-associations', () => {
@@ -25,8 +30,7 @@ describe('lib/mcp/apps/form-associations', () => {
     it('returns all resolved when all required associations prefilled via _id', () => {
       const prefill = { linear_channel_id: 25, title_id: 123 }
       const result = resolveFormAssociations(
-        ['linear_channel', 'title', 'asset'],
-        MockModel,
+        boundFor(['linear_channel', 'title', 'asset']),
         prefill
       )
 
@@ -42,7 +46,7 @@ describe('lib/mcp/apps/form-associations', () => {
         linear_channel_link: 'https://api/linear_channels/25',
         title_link: 'https://api/titles/123'
       }
-      const result = resolveFormAssociations(['linear_channel', 'title'], MockModel, prefill)
+      const result = resolveFormAssociations(boundFor(['linear_channel', 'title']), prefill)
 
       expect(result.hasUnresolvedRequired).toBe(false)
       expect(result.resolved).toHaveLength(2)
@@ -51,8 +55,7 @@ describe('lib/mcp/apps/form-associations', () => {
     it('returns hasUnresolvedRequired when a required association is missing', () => {
       const prefill = { linear_channel_id: 25 } // title missing
       const result = resolveFormAssociations(
-        ['linear_channel', 'title', 'asset'],
-        MockModel,
+        boundFor(['linear_channel', 'title', 'asset']),
         prefill
       )
 
@@ -64,8 +67,7 @@ describe('lib/mcp/apps/form-associations', () => {
     it('does not block when only optional associations are missing', () => {
       const prefill = { linear_channel_id: 25, title_id: 123 }
       const result = resolveFormAssociations(
-        ['linear_channel', 'title', 'asset'],
-        MockModel,
+        boundFor(['linear_channel', 'title', 'asset']),
         prefill
       )
 
@@ -75,8 +77,7 @@ describe('lib/mcp/apps/form-associations', () => {
     it('includes optional resolved associations in resolved list', () => {
       const prefill = { linear_channel_id: 25, title_id: 123, asset_id: 456 }
       const result = resolveFormAssociations(
-        ['linear_channel', 'title', 'asset'],
-        MockModel,
+        boundFor(['linear_channel', 'title', 'asset']),
         prefill
       )
 
@@ -87,8 +88,7 @@ describe('lib/mcp/apps/form-associations', () => {
     it('skips association names not found in model', () => {
       const prefill = { linear_channel_id: 25, title_id: 123 }
       const result = resolveFormAssociations(
-        ['linear_channel', 'title', 'nonexistent'],
-        MockModel,
+        boundFor(['linear_channel', 'title', 'nonexistent']),
         prefill
       )
 
@@ -97,7 +97,7 @@ describe('lib/mcp/apps/form-associations', () => {
     })
 
     it('returns empty when no associations declared', () => {
-      const result = resolveFormAssociations([], MockModel, {})
+      const result = resolveFormAssociations(boundFor([]), {})
 
       expect(result.resolved).toHaveLength(0)
       expect(result.unresolved).toHaveLength(0)
@@ -170,7 +170,7 @@ describe('lib/mcp/apps/form-associations', () => {
     it('handles mixed string and object entries', () => {
       const associations = ['linear_channel', 'title', { name: 'asset', dependsOn: 'title' }]
       const prefill = { linear_channel_id: 25, title_id: 123 }
-      const result = resolveFormAssociations(associations, MockModel, prefill)
+      const result = resolveFormAssociations(boundFor(associations), prefill)
 
       expect(result.resolved).toHaveLength(2)
       expect(result.unresolved).toHaveLength(1)
@@ -181,7 +181,7 @@ describe('lib/mcp/apps/form-associations', () => {
     it('resolves dependent association when prefilled', () => {
       const associations = ['title', { name: 'asset', dependsOn: 'title' }]
       const prefill = { title_id: 123, asset_id: 456 }
-      const result = resolveFormAssociations(associations, MockModel, prefill)
+      const result = resolveFormAssociations(boundFor(associations), prefill)
 
       expect(result.resolved).toHaveLength(2)
       expect(result.resolved[1].dependsOn).toBe('title')
@@ -191,14 +191,14 @@ describe('lib/mcp/apps/form-associations', () => {
   describe('picker support', () => {
     it('propagates picker in unresolved entries', () => {
       const associations = [{ name: 'title', picker: 'autocomplete' }]
-      const result = resolveFormAssociations(associations, MockModel, {})
+      const result = resolveFormAssociations(boundFor(associations), {})
 
       expect(result.unresolved[0].picker).toBe('autocomplete')
     })
 
     it('propagates picker in resolved entries', () => {
       const associations = [{ name: 'title', picker: 'autocomplete' }]
-      const result = resolveFormAssociations(associations, MockModel, { title_id: 123 })
+      const result = resolveFormAssociations(boundFor(associations), { title_id: 123 })
 
       expect(result.resolved[0].picker).toBe('autocomplete')
     })
@@ -214,7 +214,7 @@ describe('lib/mcp/apps/form-associations', () => {
 
     it('omits picker from entries when not specified', () => {
       const associations = ['title']
-      const result = resolveFormAssociations(associations, MockModel, {})
+      const result = resolveFormAssociations(boundFor(associations), {})
 
       expect(result.unresolved[0]).not.toHaveProperty('picker')
     })
@@ -235,7 +235,7 @@ describe('lib/mcp/apps/form-associations', () => {
         { name: 'title', targetModel: 'title', required: true, picker: 'autocomplete' },
         { name: 'asset', dependsOn: 'title', picker: 'list' }
       ]
-      const result = resolveFormAssociations(associations, RenditionModel, {
+      const result = resolveFormAssociations(boundFor(associations, RenditionModel), {
         title_id: 1,
         asset_id: 2
       })
@@ -252,7 +252,7 @@ describe('lib/mcp/apps/form-associations', () => {
         { name: 'title', targetModel: 'title', required: true, picker: 'autocomplete' },
         { name: 'asset', dependsOn: 'title', picker: 'list' }
       ]
-      const result = resolveFormAssociations(associations, RenditionModel, {})
+      const result = resolveFormAssociations(boundFor(associations, RenditionModel), {})
 
       expect(result.hasUnresolvedRequired).toBe(true)
       expect(result.unresolved).toHaveLength(2)
@@ -262,7 +262,7 @@ describe('lib/mcp/apps/form-associations', () => {
 
     it('uses inline required over model config', () => {
       const associations = [{ name: 'title', targetModel: 'title', required: true }]
-      const result = resolveFormAssociations(associations, RenditionModel, {})
+      const result = resolveFormAssociations(boundFor(associations, RenditionModel), {})
 
       // title is NOT in RenditionModel.belongsTo, required comes from inline config
       expect(result.unresolved[0].required).toBe(true)

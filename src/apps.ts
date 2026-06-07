@@ -6,6 +6,12 @@ export { generateAppFormSchema } from './mcp/apps/lib/app-form-schema.js'
 export { validateAppForm } from './mcp/apps/lib/app-form-validator.js'
 export { BaseAppForm } from './mcp/apps/lib/base-app-form.js'
 export type {
+  BoundAppForm,
+  BoundAppFormField,
+  BoundAppFormFieldAssociation
+} from './mcp/apps/lib/bind-app-form.js'
+export { bindAppForm } from './mcp/apps/lib/bind-app-form.js'
+export type {
   DefaultAppName,
   DefaultAppRegistryOptions
 } from './mcp/apps/lib/create-default-registry.js'
