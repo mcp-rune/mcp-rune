@@ -13,26 +13,17 @@
  *   2. Scalar phase -- render the form with only the `fields` attributes
  */
 
-export interface AppFormFieldsetConfig {
-  title?: string
-  description?: string
-  required?: boolean
-  fields?: string[]
-}
+export type {
+  AppFormAssociationEntry,
+  AppFormFieldsetConfig,
+  AppFormPostCreateConfig
+} from './app-form-entities.js'
 
-export interface AppFormAssociationEntry {
-  name: string
-  dependsOn?: string
-  targetModel?: string
-  required?: boolean
-  picker?: string
-}
-
-export interface AppFormPostCreateConfig {
-  model: string
-  parentPath: string
-  attributeMap: Record<string, string>
-}
+import type {
+  AppFormAssociationEntry,
+  AppFormFieldsetConfig,
+  AppFormPostCreateConfig
+} from './app-form-entities.js'
 
 export class BaseAppForm {
   /** Fields the form renders (attribute names from the model) */

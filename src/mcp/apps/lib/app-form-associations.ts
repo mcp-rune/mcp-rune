@@ -1,32 +1,22 @@
 /**
- * Form Association Resolution
+ * app-form association resolution
  *
- * Resolves which associations declared on a Form class have been provided
- * via prefill. Used by model-form to gate the scalar form until required
- * associations are satisfied.
+ * Resolves which associations declared on a form class have been provided via prefill,
+ * and builds LLM-actionable instructions for the ones that haven't.
+ * See app-form-entities.ts for the full lifecycle with annotated code examples.
  *
- * Associations support three formats:
- *   'title'                                    -- simple, looked up in belongsTo
- *   { name: 'asset', dependsOn: 'title' }     -- dependent, looked up in belongsTo
- *   { name: 'title', targetModel: 'title',    -- navigation (not in belongsTo)
- *     required: true, picker: 'autocomplete' }
- *
- * hasMany associations are also supported -- looked up in ModelClass.associations.hasMany.
- * Use the plural key from the model (e.g., 'books' matches hasMany.books).
- *
- * Field name resolution is always delegated to the API convention -- no
- * convention-specific patterns (e.g., _link, _id, _ids) appear here.
- *
- * The `required` flag defaults from the model's association config (single source
- * of truth) but can be overridden inline for navigation associations.
- *
- * The `picker` property specifies which UI to use:
- *   'autocomplete' -- search/type-ahead (large catalogs)
- *   'list'         -- browse all scoped records (small sets)
+ * Field name resolution (which prefill key counts as "resolved") is fully delegated
+ * to the API convention — no _link/_id/_ids patterns appear here.
  */
 
 import type { BaseConvention } from '#src/mcp/data-layer/api-conventions/base-convention.js'
 
+import type {
+  AppFormAssociation,
+  AppFormAssociationInstruction,
+  AppFormAssociationResolution,
+  AppFormPicker
+} from './app-form-entities.js'
 import type { AppModelClass } from './types.js'
 
 interface NormalizedEntry {
@@ -34,32 +24,7 @@ interface NormalizedEntry {
   dependsOn: string | null
   targetModel: string | null
   required: boolean | null
-  picker: string | null
-}
-
-interface ResolvedAssociation {
-  association: string
-  required: boolean
-  targetModel: string
-  many?: boolean
-  dependsOn?: string
-  picker?: string
-}
-
-export interface AssociationInstruction {
-  association: string
-  targetModel: string
-  required: boolean
-  many?: boolean
-  message: string
-  picker?: string
-  dependsOn?: string
-}
-
-export interface ResolveResult {
-  resolved: ResolvedAssociation[]
-  unresolved: ResolvedAssociation[]
-  hasUnresolvedRequired: boolean
+  picker: AppFormPicker | null
 }
 
 /** Normalize an association entry to a consistent shape. */
@@ -72,7 +37,7 @@ function normalizeEntry(entry: string | Record<string, unknown>): NormalizedEntr
     dependsOn: (entry.dependsOn as string) || null,
     targetModel: (entry.targetModel as string) || null,
     required: (entry.required as boolean) ?? null,
-    picker: (entry.picker as string) || null
+    picker: (entry.picker as AppFormPicker) || null
   }
 }
 
@@ -81,12 +46,12 @@ export function resolveFormAssociations(
   associations: Array<string | Record<string, unknown>>,
   ModelClass: AppModelClass,
   prefill: Record<string, unknown> = {}
-): ResolveResult {
+): AppFormAssociationResolution {
   const convention = ModelClass.api?.convention as BaseConvention | undefined
   const belongsTo = ModelClass.associations?.belongsTo || {}
   const hasMany = ModelClass.associations?.hasMany || {}
-  const resolved: ResolvedAssociation[] = []
-  const unresolved: ResolvedAssociation[] = []
+  const resolved: AppFormAssociation[] = []
+  const unresolved: AppFormAssociation[] = []
 
   for (const rawEntry of associations) {
     const normalized = normalizeEntry(rawEntry)
@@ -102,7 +67,7 @@ export function resolveFormAssociations(
 
     const required = normalized.required !== null ? normalized.required : !!assocConfig?.required
 
-    const entry: ResolvedAssociation = {
+    const entry: AppFormAssociation = {
       association: name,
       required,
       targetModel,
@@ -148,11 +113,11 @@ export function isAssociationResolved(
 
 /** Build LLM-actionable instructions for unresolved associations. */
 export function buildAssociationInstructions(
-  unresolved: ResolvedAssociation[]
-): AssociationInstruction[] {
+  unresolved: AppFormAssociation[]
+): AppFormAssociationInstruction[] {
   return unresolved.map((entry) => {
     const label = entry.association.replace(/_/g, ' ')
-    const instruction: AssociationInstruction = {
+    const instruction: AppFormAssociationInstruction = {
       association: entry.association,
       targetModel: entry.targetModel,
       required: entry.required,

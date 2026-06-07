@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { validateFormClass } from '../../../../src/mcp/apps/lib/form-validator.js'
+import { validateAppForm as validateFormClass } from '../../../../src/mcp/apps/lib/app-form-validator.js'
 
 const BookModel = {
   modelName: 'book',
@@ -38,6 +38,6 @@ describe('form-validator: validateFormClass', () => {
       BookModel
     )
     expect(issues).toHaveLength(1)
-    expect(issues[0]!.message).toContain('not in FormClass.fields')
+    expect(issues[0]!.message).toContain('not in AppFormClass.fields')
   })
 })

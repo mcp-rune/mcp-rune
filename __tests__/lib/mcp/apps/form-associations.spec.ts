@@ -2,7 +2,7 @@ import {
   buildAssociationInstructions,
   isAssociationResolved,
   resolveFormAssociations
-} from '../../../../src/mcp/apps/lib/form-associations.js'
+} from '../../../../src/mcp/apps/lib/app-form-associations.js'
 import { flatConvention } from '../../../__fixtures__/flat-convention.js'
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
