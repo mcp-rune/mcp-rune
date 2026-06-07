@@ -14,13 +14,13 @@
 
 import type { FieldGroup } from '#src/mcp/prompts/prompt-definitions.js'
 
-import { humanize, pluralize } from './helpers.js'
 import type {
   AppAttributeDefinition,
   AppModelClass,
   DetailFieldDefinition,
   DetailSchema
-} from './types.js'
+} from './app-shared-entities.js'
+import { humanize, pluralize } from './helpers.js'
 
 interface PromptClassLike {
   fieldGroups?: Record<string, FieldGroup>

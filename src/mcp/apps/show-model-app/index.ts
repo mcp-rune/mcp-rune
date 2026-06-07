@@ -23,8 +23,12 @@ import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
 import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 import * as logger from '#src/runtime/logger.js'
 
+import type {
+  AppModelClass,
+  DetailFieldDefinition,
+  ToolResult
+} from '../lib/app-shared-entities.js'
 import type { SelectionStore } from '../lib/selection-store.js'
-import type { AppModelClass, DetailFieldDefinition, ToolResult } from '../lib/types.js'
 
 const DIST_DIR = path.resolve(import.meta.dirname, '..', 'dist')
 const HTML_PATH = path.join(DIST_DIR, 'show-model-app.html')

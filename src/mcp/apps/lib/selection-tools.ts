@@ -13,12 +13,23 @@
  *      `clear_selection`, `materialize_selection` — returned by every call
  *      and deduplicated identically. Available via `createSharedSelectionTools()`
  *      for callers that want only the shared surface (no per-app select tool).
+ *
+ * Usage (inside an app factory):
+ *
+ *   const resourceUri = `ui://${namespace}/multi-pick-model-app`
+ *   const selectionTools = createSelectionTools(
+ *     'select_multi_records',   // per-app select tool name
+ *     resourceUri,              // host enforces app-only access
+ *     modelNames,               // enum constraint for the model arg
+ *     { getHtml }               // shared with the main app tool
+ *   )
+ *   return [multiSelectTool, ...selectionTools]
  */
 
 import { z } from 'zod'
 
+import type { AppModelClass, AppToolContext, ToolResult } from './app-shared-entities.js'
 import { type SelectionEntry, SelectionMergeError } from './selection-store.js'
-import type { AppModelClass, AppToolContext, ToolResult } from './types.js'
 
 interface AppToolDefinition {
   resourceUri?: string

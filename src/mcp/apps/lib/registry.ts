@@ -42,8 +42,8 @@ import * as logger from '#src/runtime/logger.js'
 
 import type { FormSubmitMode } from '../../extensions/tool-flow.js'
 import type { AppFormDataStore } from './app-form-data-store.js'
+import type { ApiClient, ToolResult } from './app-shared-entities.js'
 import type { SelectionStore } from './selection-store.js'
-import type { ApiClient, ToolResult } from './types.js'
 
 export interface AppDefinition {
   resourceUri?: string

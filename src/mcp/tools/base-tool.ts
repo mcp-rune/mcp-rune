@@ -13,9 +13,11 @@ import {
   createModelLayerFactory,
   type ModelLayerFactory
 } from '#src/mcp/model-layer/model-layer.js'
-import type { ApiConfig } from '#src/mcp/models/api-config.js'
-import type { AssociationConfig } from '#src/mcp/models/association-config.js'
-import type { AttributeDefinition } from '#src/mcp/models/attribute-definition.js'
+import type {
+  ApiConfig,
+  AssociationConfig,
+  AttributeDefinition
+} from '#src/mcp/models/model-definitions.js'
 import { storeOperation } from '#src/runtime/vector-storage.js'
 
 import { defaultConvention } from '../data-layer/api-conventions/index.js'

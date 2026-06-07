@@ -8,9 +8,11 @@
 
 import type { BaseConvention } from '#src/mcp/data-layer/api-conventions/base-convention.js'
 import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
-import type { ApiConfig } from '#src/mcp/models/api-config.js'
-import type { AssociationConfig } from '#src/mcp/models/association-config.js'
-import type { AttributeDefinition } from '#src/mcp/models/attribute-definition.js'
+import type {
+  ApiConfig,
+  AssociationConfig,
+  AttributeDefinition
+} from '#src/mcp/models/model-definitions.js'
 
 import type { AppFormDataStore } from './app-form-data-store.js'
 import type { SelectionStore } from './selection-store.js'

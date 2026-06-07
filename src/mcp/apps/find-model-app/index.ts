@@ -32,7 +32,7 @@ import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 import type { ModelLayerFactory } from '#src/mcp/model-layer/model-layer.js'
 import * as logger from '#src/runtime/logger.js'
 
-import type { AppModelClass, ListSchema, ToolResult } from '../lib/types.js'
+import type { AppModelClass, ListSchema, ToolResult } from '../lib/app-shared-entities.js'
 
 const MAX_PER_PAGE = 20
 const DIST_DIR = path.resolve(import.meta.dirname, '..', 'dist')

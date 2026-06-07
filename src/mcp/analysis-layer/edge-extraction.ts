@@ -26,7 +26,7 @@
  * after PR2.
  */
 
-import type { AssociationConfig } from '#src/mcp/models/association-config.js'
+import type { AssociationConfig } from '#src/mcp/models/model-definitions.js'
 
 export interface Edge {
   src_model: string

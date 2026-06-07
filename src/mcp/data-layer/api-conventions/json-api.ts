@@ -9,10 +9,7 @@
  */
 
 import type { FieldDefinition } from '#src/mcp/model-layer/field-definition.js'
-import type {
-  BelongsToAssociation,
-  HasManyAssociation
-} from '#src/mcp/models/association-config.js'
+import type { BelongsToAssociation, HasManyAssociation } from '#src/mcp/models/model-definitions.js'
 
 import type { ErrorResponse, NormalizedListResponse } from './base-convention.js'
 import { BaseConvention } from './base-convention.js'

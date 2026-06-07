@@ -5,7 +5,7 @@
  * names the wire field (e.g. `author_id`) and carries its derived metadata.
  */
 
-import type { CompletionConfig } from '#src/mcp/models/attribute-definition.js'
+import type { CompletionConfig } from '#src/mcp/models/model-definitions.js'
 
 export interface FieldDefinition {
   name: string

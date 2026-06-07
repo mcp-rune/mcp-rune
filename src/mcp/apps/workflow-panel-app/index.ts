@@ -13,8 +13,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
+import type { ToolResult } from '../lib/app-shared-entities.js'
 import type { AppDefinition } from '../lib/registry.js'
-import type { ToolResult } from '../lib/types.js'
 
 const DIST_DIR = path.resolve(import.meta.dirname, '..', 'dist')
 const HTML_PATH = path.join(DIST_DIR, 'workflow-panel-app.html')
