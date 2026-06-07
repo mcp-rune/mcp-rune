@@ -13,7 +13,7 @@
 import type { Request, Response } from 'express'
 import { Router } from 'express'
 
-import type { PromptRegistry } from '#src/mcp/prompts/prompt-registry.js'
+import type { PromptRegistry } from '#src/mcp/prompt-layer/prompt-registry.js'
 
 export interface StatusRouterConfig {
   serviceName: string

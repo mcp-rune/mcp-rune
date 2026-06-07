@@ -4,6 +4,56 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.86.0] - 2026-06-07
+
+> **BREAKING.** Renames the form-handling strategy surface from unqualified `Strategy` to qualified `FormStrategy`, moves the folders accordingly, and consolidates the per-strategy type vocabularies into a single `form-strategy-definitions.ts`. Parallel consolidation in `models/`: three definition files (`api-config`, `association-config`, `attribute-definition`) merge into `model-definitions.ts`. No back-compat shims — call sites import the new names.
+>
+> **Public-API renames** (consumers must update imports):
+>
+> - `BaseStrategy` → `BaseFormStrategy`, `BaseStrategyTool` → `BaseFormStrategyTool`
+> - `StatelessStrategy` / `HybridStrategy` / `StatefulStrategy` → `…FormStrategy`
+> - `getStrategy` → `getFormStrategy`, `StrategyType` → `FormStrategyType`, `STRATEGY_TOOL_CLASSES` → `FORM_STRATEGY_TOOL_CLASSES`
+> - `BasePrompt.strategy` (static) → `BasePrompt.formStrategy`; `FormSchema.strategy` → `FormSchema.formStrategy`; `PromptClassLike.strategy` → `PromptClassLike.formStrategy`
+>
+> **Folder/file moves**:
+>
+> - `src/mcp/prompts/strategies/` → `src/mcp/prompts/form-strategies/` (files renamed `*-strategy.ts` → `*-form-strategy.ts`)
+> - `src/mcp/tools/prompts/` → `src/mcp/tools/form-strategies/` (`base-strategy-tool.ts` → `base-form-strategy-tool.ts`)
+> - **New `src/mcp/prompt-layer/` folder** holds the runtime consumers — `form-strategies/`, `prompt-registry.ts`, `prompt-validator.ts`, `prompt-cache.ts`, `api-conventions.ts`. `src/mcp/prompts/` keeps the declarative side only: `base-prompt.ts`, `prompt-definitions.ts`, `prompt-content-builder.ts`, `association-transformers.ts`, `generators/`. Same `models/` vs `model-layer/` dichotomy applied to prompts. Public package exports under `@mcp-rune/mcp-rune/prompts` are unchanged.
+>
+> **Log envelope** changes (Loki/Promtail queries need updating):
+>
+> - `service: 'strategy'` → `service: 'form-strategy'`
+> - field name `strategy:` → `formStrategy:` in strategy debug/error logs
+
+Unifies the naming on both halves of the form-handling pattern (definitions and the tools that dispatch to them), eliminates the `tools/prompts/` ↔ top-level `prompts/` name collision, and applies the same definition-from-consumption split to models that PR #241 applied to prompts.
+
+### Added
+
+- **`src/mcp/prompts/form-strategies/form-strategy-definitions.ts`** — new module holding the shared form-strategy type vocabulary: `ValidationContext`, `ValidationError`, `ValidationResult`, `TechnicalSummary`, `SummaryResult`, `HybridPromptClass`, `SectionValidationResult`, `SectionProgress`, `ProgressResult`, `StatefulValidationResult`, `StatefulSummaryResult`, `SectionMetadata`, `StatefulPromptClass`, plus the new `FormSummaryRenderer` interface. Mirrors `prompt-definitions.ts`. Removes the wrong-direction `import type … from './hybrid-form-strategy.js'` that `stateful-form-strategy.ts` previously needed.
+- **`FormSummaryRenderer` interface + `DefaultFormSummaryRenderer`** at `src/mcp/prompts/form-strategies/default-form-summary-renderer.ts`. The default renderer owns the current markdown layout (human summary) and the current API-payload shape (technical summary). Deployers wanting a different format (i18n, alternate markup, custom technical envelope) supply their own implementation via the new registry option below instead of subclassing the strategy. Exported from `@mcp-rune/mcp-rune/prompts`.
+- **`summaryRenderer?` config option on `ToolRegistry`.** Forwarded into `ToolDependencies.summaryRenderer` and consumed by `BaseFormStrategyTool` subclasses. Falls back to `defaultFormSummaryRenderer` when omitted. Mirrors the `defaultConvention` / `namespace` precedent — customization path is visible end-to-end from `ToolRegistryConfig` to `BaseFormStrategyTool.summaryRenderer` to the renderer call in `GetFormSummaryTool`.
+- **`src/mcp/models/model-definitions.ts`** — new module consolidating the model type vocabulary (`ApiConfig`, `EndpointOverrides`, `AttributesConfig`, `AttributeDefinition`, `CompletionConfig`, `AssociationConfig`, `BelongsToAssociation`, `HasManyAssociation`). Replaces three smaller files. Mirrors the prompt/form-strategy precedent: definitions in one place, consumption next door.
+
+### Changed
+
+- **`prompts/strategies/` → `prompts/form-strategies/`** and **`tools/prompts/` → `tools/form-strategies/`** with every file renamed to the `*-form-strategy[-tool].ts` form. Public exports re-exported from `@mcp-rune/mcp-rune/prompts` and `@mcp-rune/mcp-rune/tools` under the new names.
+- **Per-prompt-class declaration**: `static strategy = '…'` becomes `static formStrategy = '…'`. The string variant tags (`'stateless' | 'hybrid' | 'stateful'`) are unchanged.
+- **`HybridFormStrategy.generateSummary` / `StatefulFormStrategy.generateSummary`** take an optional 4th `renderer: FormSummaryRenderer` argument that defaults to `defaultFormSummaryRenderer`. The strategy now owns "which prompt + fields are summarizable" while the renderer owns "how to format them" — a clean separation that was previously entangled in the strategy class.
+- **Local `PromptClassLike` interfaces** in the strategy files renamed to `HybridPromptClass` / `StatefulPromptClass` so they no longer shadow the global `PromptClassLike` in `prompt-definitions.ts`.
+- **Strategy logging cleanup**: every public static method on `HybridFormStrategy` and `StatefulFormStrategy` uses a module-scoped `logger.child({ service: 'form-strategy', formStrategy: '<type>' })`. Side-effect-free derivation methods (`getDocumentation`, `getNextSection`, `getDefaults`) no longer emit trace logs at all; `generateSummary` keeps only the completion log. Validation and progress methods (`validateFields`, `validateSection`, `getProgress`) keep their entry/exit pair — they're the methods you actually tail during an incident. Per-iteration debugs inside loops are removed. The `service: 'strategy'` envelope key becomes `service: 'form-strategy'`; the log field `strategy: '<type>'` becomes `formStrategy: '<type>'`.
+- **`models/base-model.ts`** imports `ApiConfig` / `AttributesConfig` / `AssociationConfig` from the consolidated `model-definitions.js` instead of three separate files. `data-layer/model-service/endpoint-resolver.ts` follows for `EndpointOverrides`.
+- **`form-strategies/README.md`** rewritten in the new vocabulary (folder layout, class names, import paths, log envelope keys).
+- **`AGENTS.md` — "Layer discipline" folder-layout block** now lists `prompt-layer/` as a peer of `data-layer/` / `model-layer/` / `analysis-layer/`, and documents `prompts/` as the declarative twin (mirroring `models/`). ESLint `no-restricted-imports` glob updated from `src/mcp/prompts/**` to `src/mcp/prompt-layer/**`; boot-time validator exemption updated to `src/mcp/prompt-layer/prompt-validator.ts`.
+
+### Removed
+
+- **`src/mcp/models/api-config.ts`**, **`association-config.ts`**, **`attribute-definition.ts`** — contents merged into `model-definitions.ts`. No re-export shims.
+- **`HybridFormStrategy.generateHumanSummary` / `HybridFormStrategy.generateTechnicalSummary`** static methods — their bodies live in `DefaultFormSummaryRenderer` now. Callers that imported them directly should use a renderer instance.
+- **`BasePrompt.generateTechnicalSummary`** static method — dead code with no callers; its (different) JSON-string implementation has been unreachable since the form-strategy split. Use the renderer for technical summaries.
+
+[0.86.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.85.0...v0.86.0
+
 ## [0.85.0] - 2026-06-07
 
 > **BREAKING (adapter authors only).** The `DataLayer` interface gains a required `readonly defaultConvention: BaseConvention` property. Any custom adapter implementing `DataLayer` must now expose this field. The bundled adapters (`ModelService`, `InMemoryDataLayer`, `SearchEnabledDataLayer`) are updated. No changes required for code that only _consumes_ a `DataLayer`.

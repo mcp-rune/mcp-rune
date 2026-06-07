@@ -7,11 +7,11 @@
  * `BasePrompt` class and `PromptContentBuilder` are consumers.
  */
 
-import type { CompletionConfig } from '#src/mcp/models/attribute-definition.js'
+import type { CompletionConfig } from '#src/mcp/models/model-definitions.js'
 
 import type { ExtractionExample } from './generators/helpers.js'
 
-export type StrategyType = 'stateless' | 'hybrid' | 'stateful'
+export type FormStrategyType = 'stateless' | 'hybrid' | 'stateful'
 
 export interface Section {
   title: string
@@ -97,7 +97,7 @@ export interface FormSchema {
   title: string
   description: string
   modelName: string | null
-  strategy: string
+  formStrategy: string
   fieldDefinitions: Record<string, FormSchemaFieldDefinition>
   fieldGroups: Record<string, FieldGroup>
   sections: Record<string, Section>
@@ -109,7 +109,7 @@ export interface FormSchema {
  * Consumed by generator functions that receive `{ promptClass: ... }` context.
  */
 export interface PromptClassLike {
-  strategy: StrategyType
+  formStrategy: FormStrategyType
   sections: Record<string, Section>
   fieldGroups: Record<string, FieldGroup>
   fieldDefinitions: Record<string, PromptFieldDefinition>

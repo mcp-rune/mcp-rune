@@ -9,9 +9,7 @@
  * 2. Instantiated with record data: new BookModel(record).displayValue
  */
 
-import type { ApiConfig } from './api-config.js'
-import type { AssociationConfig } from './association-config.js'
-import type { AttributesConfig } from './attribute-definition.js'
+import type { ApiConfig, AssociationConfig, AttributesConfig } from './model-definitions.js'
 
 export interface ModelData {
   id?: string | number
@@ -23,10 +21,10 @@ export interface ModelData {
 
 export class BaseModel {
   static modelName?: string
-  static attributes: AttributesConfig = {}
   static description: string = ''
-  static api: ApiConfig = { endpoint: '' }
+  static attributes: AttributesConfig = {}
   static associations: AssociationConfig = {}
+  static api: ApiConfig = { endpoint: '' }
   /**
    * Opt-in extension configs, keyed by extension name.
    *

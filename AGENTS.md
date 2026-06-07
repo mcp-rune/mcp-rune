@@ -2,7 +2,7 @@
 
 ## Layer discipline
 
-mcp-rune's projection layer — everything under `src/mcp/apps/`, `src/mcp/tools/`, `src/mcp/prompts/`, and `src/mcp/data-layer/api-extensions/` — reaches model machinery, analysis machinery, and the backend exclusively through three peer interfaces. **Never bypass these interfaces by importing internal helpers directly.** If a method you need doesn't exist on the relevant interface, **extend the interface** rather than reaching past it.
+mcp-rune's projection layer — everything under `src/mcp/apps/`, `src/mcp/tools/`, `src/mcp/prompt-layer/`, and `src/mcp/data-layer/api-extensions/` — reaches model machinery, analysis machinery, and the backend exclusively through three peer interfaces. **Never bypass these interfaces by importing internal helpers directly.** If a method you need doesn't exist on the relevant interface, **extend the interface** rather than reaching past it.
 
 ### `DataLayer` — backend I/O
 
@@ -28,7 +28,7 @@ Never import `extractEdgesFromRecord`, `buildEmbeddingText`, `expandHops`, or an
 
 ### Enforcement
 
-The rules above are enforced by a `no-restricted-imports` block in `eslint.config.js`, scoped to `src/mcp/apps/**`, `src/mcp/tools/**`, `src/mcp/prompts/**`, and `src/mcp/data-layer/api-extensions/**`. Boot-time validators (`src/mcp/apps/lib/form-validator.ts` and `src/mcp/prompts/prompt-validator.ts`) are exempt because they run before any factory is constructed; any new boot-time validator that needs a helper directly should be added to the exemption list rather than left to break the build.
+The rules above are enforced by a `no-restricted-imports` block in `eslint.config.js`, scoped to `src/mcp/apps/**`, `src/mcp/tools/**`, `src/mcp/prompt-layer/**`, and `src/mcp/data-layer/api-extensions/**`. Boot-time validators (`src/mcp/apps/lib/form-validator.ts` and `src/mcp/prompt-layer/prompt-validator.ts`) are exempt because they run before any factory is constructed; any new boot-time validator that needs a helper directly should be added to the exemption list rather than left to break the build.
 
 ### Folder layout that supports the rule
 
@@ -37,7 +37,9 @@ The three layers sit at the same depth under `src/mcp/`, separated from the **de
 - `src/mcp/data-layer/` — backend I/O seam
 - `src/mcp/model-layer/` — generic, per-model-bound model-config consumers
 - `src/mcp/analysis-layer/` — analysis-domain consumers
+- `src/mcp/prompt-layer/` — prompt-runtime consumers (registry, cache, validator, form-strategies, api-conventions)
 - `src/mcp/models/` — **what a model IS**: `base-model.ts` and the `kinds/` registry. _Never_ dump helpers that consume a model into this folder; they belong in `model-layer/` or `analysis-layer/`.
+- `src/mcp/prompts/` — **what a prompt IS**: `base-prompt.ts`, `prompt-definitions.ts`, `prompt-content-builder.ts`, `association-transformers.ts`, and `generators/`. Same dichotomy as `models/` vs `model-layer/` — runtime that consumes a prompt belongs in `prompt-layer/`.
 
 When introducing a new domain seam later (e.g. an auth-layer, a workflow-layer), the same dichotomy applies: a sibling top-level folder for the layer; the declarative side stays in its own folder.
 
@@ -61,6 +63,14 @@ Data tools take the action-verb shape (`create_model`, `update_model`, `delete_m
 ## Never name downstream implementors
 
 mcp-rune is the open-source framework; the projects that consume it are deployers/implementors and stay anonymous in this repo. **Do not mention any specific downstream consumer (private or public) by name in source, comments, docs, plans, commit messages, or PR descriptions.** When you need to illustrate a usage pattern, describe the _shape_ of the consumer ("a deployer that exports `MODEL_CLASSES`", "a prompt whose parent is fixed at construction") — never the identity. This applies even when you learned the pattern by reading a specific consumer's code.
+
+## Examples in comments use the examples-repo domain
+
+When a docstring, JSDoc, or inline comment needs an illustrative `Prompt` / `Model` / `App` example, draw it from the domains in `@mcp-rune/mcp-rune-examples` (locally `~/Code/mcp-rune-examples`) whenever the API surface permits. Today that means **bookshelf** (`Book`, `Author`, `Genre`) and **tasks** (`Project`, `Task`, `Tag`). Reusing these domains keeps framework docs anchored to runnable code a reader can open, and avoids inventing one-off names that don't exist anywhere else in the ecosystem.
+
+Pick the smallest example domain that exercises the feature being documented — e.g. a single-field `TagPrompt` for trivial cases, `BookPrompt` when you need a natural enum-gated conditional (`status: 'completed'` → rating/notes). Only invent a fictional model when no examples-repo domain can express the feature without distortion, and note why in the comment.
+
+The mcp-rune source API is the source of truth for the example's _syntax_ (e.g. `static formStrategy`, `static fieldDefinitions`); the examples repo is the source of truth only for the _domain vocabulary_. If the two diverge, the framework wins — don't propagate stale examples-repo syntax into framework comments.
 
 ## Roadmap
 

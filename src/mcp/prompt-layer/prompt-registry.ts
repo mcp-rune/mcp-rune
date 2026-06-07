@@ -17,7 +17,7 @@
  * the standard register-by-name pattern with collision detection.
  */
 
-import type { BasePrompt } from './base-prompt.js'
+import type { BasePrompt } from '../prompts/base-prompt.js'
 
 /**
  * Handle for a prompt — the class itself, carrying both its constructor and

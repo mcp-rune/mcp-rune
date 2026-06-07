@@ -10,9 +10,9 @@ import { z } from 'zod'
 
 import type { ToolResult } from '#src/mcp/tools/base-tool.js'
 
-import { BaseStrategyTool } from './base-strategy-tool.js'
+import { BaseFormStrategyTool } from './base-form-strategy-tool.js'
 
-export class GetPromptGuideTool extends BaseStrategyTool {
+export class GetPromptGuideTool extends BaseFormStrategyTool {
   get name(): string {
     return 'get_prompt_guide'
   }

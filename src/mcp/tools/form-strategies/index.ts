@@ -9,11 +9,11 @@ import { GetFormSummaryTool } from './get-form-summary-tool.js'
 import { GetPromptGuideTool } from './get-prompt-guide-tool.js'
 import { ValidateFormTool } from './validate-form-tool.js'
 
-export { BaseStrategyTool } from './base-strategy-tool.js'
+export { BaseFormStrategyTool } from './base-form-strategy-tool.js'
 export { GetFormSummaryTool, GetPromptGuideTool, ValidateFormTool }
 
 /** All strategy tool classes mapped by tool name */
-export const STRATEGY_TOOL_CLASSES: Record<
+export const FORM_STRATEGY_TOOL_CLASSES: Record<
   string,
   typeof GetPromptGuideTool | typeof ValidateFormTool | typeof GetFormSummaryTool
 > = {

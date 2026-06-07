@@ -9,11 +9,12 @@ import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
 import { coerceToObject } from '#src/core/helpers.js'
+import type { FormSummaryRenderer } from '#src/mcp/prompt-layer/form-strategies/form-strategy-definitions.js'
 import type { ToolResult } from '#src/mcp/tools/base-tool.js'
 
-import { BaseStrategyTool } from './base-strategy-tool.js'
+import { BaseFormStrategyTool } from './base-form-strategy-tool.js'
 
-export class GetFormSummaryTool extends BaseStrategyTool {
+export class GetFormSummaryTool extends BaseFormStrategyTool {
   get name(): string {
     return 'get_form_summary'
   }
@@ -63,8 +64,8 @@ Not supported by: Stateless strategy models`
     }
 
     // Get the strategy for this prompt
-    const strategy = this.getStrategy(
-      promptClass as { strategy?: 'stateless' | 'hybrid' | 'stateful' }
+    const strategy = this.getFormStrategy(
+      promptClass as { formStrategy?: 'stateless' | 'hybrid' | 'stateful' }
     )
 
     // Check if summary generation is supported
@@ -73,17 +74,19 @@ Not supported by: Stateless strategy models`
       return this.formatOperationError(check.error!)
     }
 
-    // Generate summary
+    // Generate summary — thread the registry-supplied renderer through so
+    // deployers can customize the human/technical format without subclassing.
     const generateSummary = (
       strategy as unknown as {
         generateSummary: (
           pc: unknown,
           f: Record<string, unknown>,
-          ctx: Record<string, unknown>
+          ctx: Record<string, unknown>,
+          renderer: FormSummaryRenderer
         ) => Record<string, unknown>
       }
     ).generateSummary.bind(strategy)
-    const result = generateSummary(promptClass, fields || {}, { model })
+    const result = generateSummary(promptClass, fields || {}, { model }, this.summaryRenderer)
 
     if (this.logger) {
       this.logger.info('get_form_summary result', {

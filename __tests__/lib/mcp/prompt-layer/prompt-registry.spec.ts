@@ -12,8 +12,8 @@
 
 import { describe, expect, it } from 'vitest'
 
+import { BasePromptRegistry } from '../../../../src/mcp/prompt-layer/prompt-registry.js'
 import { BasePrompt } from '../../../../src/mcp/prompts/base-prompt.js'
-import { BasePromptRegistry } from '../../../../src/mcp/prompts/prompt-registry.js'
 
 class BookPrompt extends BasePrompt {
   override get promptContent(): never[] {

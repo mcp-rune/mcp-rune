@@ -39,7 +39,7 @@ import { createRequestIdMiddleware } from './middleware/request-id.js'
 import { createRequestLoggerMiddleware } from './middleware/request-logger.js'
 import { createSecurityHeadersMiddleware } from './middleware/security-headers.js'
 import { createStatusRouter } from './middleware/status-router.js'
-import type { PromptRegistry } from './prompts/prompt-registry.js'
+import type { PromptRegistry } from './prompt-layer/prompt-registry.js'
 import { SessionManager } from './session-manager.js'
 
 interface McpConfig {

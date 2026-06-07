@@ -9,10 +9,12 @@
  * Examples: get_prompt_guide, validate_form, get_form_summary, get_form_progress
  */
 
-import type { PromptClassLike, StrategyType } from '#src/mcp/prompts/prompt-definitions.js'
-import type { BaseStrategy } from '#src/mcp/prompts/strategies/base-strategy.js'
-import { getStrategy } from '#src/mcp/prompts/strategies/index.js'
-import type { ToolAnnotations, ToolResult } from '#src/mcp/tools/base-tool.js'
+import type { BaseFormStrategy } from '#src/mcp/prompt-layer/form-strategies/base-form-strategy.js'
+import { defaultFormSummaryRenderer } from '#src/mcp/prompt-layer/form-strategies/default-form-summary-renderer.js'
+import type { FormSummaryRenderer } from '#src/mcp/prompt-layer/form-strategies/form-strategy-definitions.js'
+import { getFormStrategy } from '#src/mcp/prompt-layer/form-strategies/index.js'
+import type { FormStrategyType, PromptClassLike } from '#src/mcp/prompts/prompt-definitions.js'
+import type { ToolAnnotations, ToolDependencies, ToolResult } from '#src/mcp/tools/base-tool.js'
 import { BaseTool } from '#src/mcp/tools/base-tool.js'
 
 /** Error info returned by checkOperation */
@@ -21,12 +23,12 @@ interface OperationCheckResult {
   error?: {
     error: string
     hint: string
-    strategy: string
+    formStrategy: string
     supported_operations: string[]
   }
 }
 
-export class BaseStrategyTool extends BaseTool {
+export class BaseFormStrategyTool extends BaseTool {
   static override requiresAuth = false
   static override requiresPromptRegistry = true
   static override defaultAnnotations: ToolAnnotations = {
@@ -36,10 +38,23 @@ export class BaseStrategyTool extends BaseTool {
     openWorldHint: false
   }
 
-  /** Get strategy for a prompt class */
-  getStrategy(promptClass: { strategy?: StrategyType }): typeof BaseStrategy {
-    const strategyType = promptClass.strategy || 'stateless'
-    return getStrategy(strategyType)
+  /**
+   * Renderer used by `get_form_summary` for human + technical summary halves.
+   * Threaded in from `ToolRegistryConfig.summaryRenderer` via
+   * `ToolDependencies`. Falls back to `defaultFormSummaryRenderer` for ad-hoc
+   * tool instantiations.
+   */
+  readonly summaryRenderer: FormSummaryRenderer
+
+  constructor(dependencies: ToolDependencies = {}) {
+    super(dependencies)
+    this.summaryRenderer = dependencies.summaryRenderer ?? defaultFormSummaryRenderer
+  }
+
+  /** Get form-strategy for a prompt class */
+  getFormStrategy(promptClass: { formStrategy?: FormStrategyType }): typeof BaseFormStrategy {
+    const strategyType = promptClass.formStrategy || 'stateless'
+    return getFormStrategy(strategyType)
   }
 
   /** Get prompt class by model name */
@@ -60,7 +75,7 @@ export class BaseStrategyTool extends BaseTool {
 
   /** Helper to check if strategy supports an operation */
   checkOperation(
-    strategy: typeof BaseStrategy,
+    strategy: typeof BaseFormStrategy,
     operation: string,
     model: string
   ): OperationCheckResult {
@@ -69,9 +84,9 @@ export class BaseStrategyTool extends BaseTool {
       return {
         supported: false,
         error: {
-          error: `Model "${model}" uses ${strategyType} strategy which doesn't support ${operation}`,
+          error: `Model "${model}" uses ${strategyType} form-strategy which doesn't support ${operation}`,
           hint: this._getOperationHint(operation),
-          strategy: strategyType,
+          formStrategy: strategyType,
           supported_operations: strategy.getSupportedOperations()
         }
       }

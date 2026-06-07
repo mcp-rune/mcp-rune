@@ -54,6 +54,7 @@ import {
   createModelLayerFactory,
   type ModelLayerFactory
 } from '#src/mcp/model-layer/model-layer.js'
+import type { FormSummaryRenderer } from '#src/mcp/prompt-layer/form-strategies/form-strategy-definitions.js'
 import * as logger from '#src/runtime/logger.js'
 import * as tracing from '#src/runtime/tracing.js'
 
@@ -102,7 +103,7 @@ const SENTINEL_MODEL_SERVICE: ModelService = (() => {
  * - `requiresPromptRegistry` — skip registration when no `promptRegistry` was passed.
  *
  * All are declared on `BaseTool` with safe defaults; family bases
- * (`BaseStrategyTool`, `BaseAnalysisTool`, `BaseOperationsTool`,
+ * (`BaseFormStrategyTool`, `BaseAnalysisTool`, `BaseOperationsTool`,
  * `BaseDomainTool`) override declaratively.
  */
 export interface ToolClass {
@@ -175,6 +176,16 @@ export interface ToolRegistryConfig {
   defaultConvention?: BaseConvention
 
   /**
+   * Renderer used by the `get_form_summary` tool for the human and technical
+   * summary halves. Mirrors the `defaultConvention` seam: forwarded into
+   * `ToolDependencies.summaryRenderer` and consumed by `BaseFormStrategyTool`
+   * subclasses. Falls back to `defaultFormSummaryRenderer` when omitted.
+   * Subclassing a form-strategy is no longer required to customize summary
+   * format — supply a renderer here instead.
+   */
+  summaryRenderer?: FormSummaryRenderer
+
+  /**
    * Whether vector storage (pgvector) is available. Tools with
    * `static requiresVectorStorage = true` are skipped when false.
    *
@@ -225,6 +236,7 @@ export class ToolRegistry {
   private _dataLayerFactory: DataLayerFactory
   private _namespace: string | undefined
   private _defaultConvention: BaseConvention | undefined
+  private _summaryRenderer: FormSummaryRenderer | undefined
   private _vectorStorageEnabled: boolean
   private _interceptors: ToolInterceptor[]
   private _enabledTools: Set<string> | null = null
@@ -245,6 +257,7 @@ export class ToolRegistry {
     this._createApiClient = config.createApiClient
     this._namespace = config.namespace
     this._defaultConvention = config.defaultConvention
+    this._summaryRenderer = config.summaryRenderer
     this._vectorStorageEnabled = config.vectorStorageEnabled ?? false
     this._interceptors = config.interceptors ?? []
     this.serverContext = (config.serverContext as Record<string, unknown>) ?? {}
@@ -472,7 +485,8 @@ export class ToolRegistry {
       promptRegistry: this._promptRegistry,
       serverContext: this.serverContext as ServerContext,
       domainRegistry: this._domainRegistry,
-      summaryStrategies: this._summaryStrategies
+      summaryStrategies: this._summaryStrategies,
+      summaryRenderer: this._summaryRenderer
     })
   }
 
@@ -508,7 +522,8 @@ export class ToolRegistry {
       promptRegistry: this._promptRegistry,
       serverContext: this.serverContext as ServerContext,
       domainRegistry: this._domainRegistry,
-      summaryStrategies: this._summaryStrategies
+      summaryStrategies: this._summaryStrategies,
+      summaryRenderer: this._summaryRenderer
     })
   }
 }

@@ -2,9 +2,9 @@
  * API Convention Adapter Tests
  */
 
-import { jsonApiConvention } from '../../../../src/mcp/prompts/api-conventions.js'
+import { jsonApiConvention } from '../../../../src/mcp/prompt-layer/api-conventions.js'
 
-describe('lib/mcp/prompts/api-conventions', () => {
+describe('lib/mcp/prompt-layer/api-conventions', () => {
   const relConfig = {
     rel: 'licensor',
     target_model: 'licensor'

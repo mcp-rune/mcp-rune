@@ -14,7 +14,7 @@ export interface GuidanceContext {
 }
 
 export function generateGuidance(context: GuidanceContext): string {
-  if (context.promptClass.strategy !== 'stateful') return ''
+  if (context.promptClass.formStrategy !== 'stateful') return ''
 
   const modelName = context.modelName
   const fieldGroupNames = Object.keys(context.promptClass.fieldGroups)

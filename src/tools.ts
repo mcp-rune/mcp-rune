@@ -40,6 +40,13 @@ export {
   SuggestWorkflowTool
 } from './mcp/tools/domain/index.js'
 export {
+  BaseFormStrategyTool,
+  FORM_STRATEGY_TOOL_CLASSES,
+  GetFormSummaryTool,
+  GetPromptGuideTool,
+  ValidateFormTool
+} from './mcp/tools/form-strategies/index.js'
+export {
   errorInterceptor,
   loggingInterceptor,
   tracingInterceptor
@@ -51,13 +58,6 @@ export {
   FindSimilarOperationsTool,
   OPERATIONS_TOOL_CLASSES
 } from './mcp/tools/operations/index.js'
-export {
-  BaseStrategyTool,
-  GetFormSummaryTool,
-  GetPromptGuideTool,
-  STRATEGY_TOOL_CLASSES,
-  ValidateFormTool
-} from './mcp/tools/prompts/index.js'
 export { SaveModelBaseTool } from './mcp/tools/save-model-base-tool.js'
 export type { ToolContext, ToolHandler, ToolInterceptor } from './mcp/tools/tool-pipeline.js'
 export { wrapToolHandler } from './mcp/tools/tool-pipeline.js'

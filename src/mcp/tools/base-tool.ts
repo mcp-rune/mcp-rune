@@ -20,10 +20,11 @@ import { storeOperation } from '#src/runtime/vector-storage.js'
 
 import { defaultConvention } from '../data-layer/api-conventions/index.js'
 import type { DomainRegistry } from '../domain/registry.js'
-import type { PromptRegistry } from '../prompts/prompt-registry.js'
+import type { FormSummaryRenderer } from '../prompt-layer/form-strategies/form-strategy-definitions.js'
+import type { PromptRegistry } from '../prompt-layer/prompt-registry.js'
 
 export type { DomainRegistry } from '../domain/registry.js'
-export type { PromptRegistry } from '../prompts/prompt-registry.js'
+export type { PromptRegistry } from '../prompt-layer/prompt-registry.js'
 
 // ============================================================================
 // Types
@@ -121,6 +122,14 @@ export interface ToolDependencies {
    * (which fall back to a process-wide default seeded with built-ins).
    */
   summaryStrategies?: SummaryStrategyRegistry
+  /**
+   * Renderer for form-strategy summaries (`get_form_summary` tool). Consumed
+   * by `BaseFormStrategyTool` subclasses; ignored by every other tool family.
+   * Forwarded by `ToolRegistry` from the same-named option on
+   * `ToolRegistryConfig`. Falls back to `defaultFormSummaryRenderer` when
+   * omitted. Mirrors the `defaultConvention` seam.
+   */
+  summaryRenderer?: FormSummaryRenderer
 }
 
 /** Tool response content item */
@@ -169,7 +178,7 @@ interface HttpError extends Error {
 /**
  * Base class for MCP tool implementations
  *
- * All tools extend this class (directly or via a family base — `BaseStrategyTool`,
+ * All tools extend this class (directly or via a family base — `BaseFormStrategyTool`,
  * `BaseAnalysisTool`, `BaseOperationsTool`, `BaseDomainTool`) and provide:
  * - name: Tool name
  * - baseDescription: Base tool description (description getter adds sections)
@@ -183,7 +192,7 @@ interface HttpError extends Error {
  * Static metadata fields drive registry behavior. `BaseTool` itself defaults
  * to the (former DATA) "needs API auth, no special services" profile —
  * extending it directly is correct for any CRUD-style tool. Family bases
- * override the defaults declaratively (e.g. `BaseStrategyTool` sets
+ * override the defaults declaratively (e.g. `BaseFormStrategyTool` sets
  * `requiresAuth = false`).
  */
 export class BaseTool {
@@ -212,7 +221,7 @@ export class BaseTool {
 
   /**
    * Whether this tool requires a prompt registry to be configured. Implicit
-   * for `BaseStrategyTool` subclasses.
+   * for `BaseFormStrategyTool` subclasses.
    */
   static requiresPromptRegistry: boolean = false
 
