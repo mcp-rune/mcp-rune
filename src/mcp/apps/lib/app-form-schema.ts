@@ -1,70 +1,63 @@
 /**
  * App Form Schema Generator
  *
- * Generates an app form schema from `AppFormClass.fields` (+ optional
- * `AppFormClass.fieldsets`) merged with `ModelClass.attributes`. Pure data:
- * no API calls, no side effects. Association fields are marked with an
- * `association` property so the app's handleToolCall can fetch options
- * from the API separately.
+ * Generates an app form schema from a `BoundAppForm` — the merged view
+ * of an `AppFormClass` and its `AppModelClass` produced by
+ * `bindAppForm`. Field-name → association mapping (belongsTo / hasMany)
+ * is already resolved on each bound field, so this module never has to
+ * guess from `_id` / `_ids` suffixes; the convention drove that
+ * decision during binding.
  *
- * Boot-time `validateAppForm` guarantees every registered FormClass has at
- * least one renderable field. The runtime throw at the head of this
- * function is belt-and-braces for callers that bypass `validateRegistries`.
+ * Pure data: no API calls, no side effects. Association fields are
+ * marked with an `association` property so the app's handleToolCall can
+ * fetch options from the API separately.
+ *
+ * Boot-time `validateAppForm` guarantees every registered FormClass has
+ * at least one renderable field. The runtime throw at the head of this
+ * function is belt-and-braces for callers that bypass
+ * `validateRegistries`.
  */
 
 import { getKind } from '#src/mcp/models/kinds/index.js'
 
 import type {
-  AppAttributeDefinition,
   AppFormFieldDefinition,
   AppFormFieldsetDefinition,
   AppFormSchema,
   AppModelClass
 } from './app-shared-entities.js'
+import type { BoundAppForm, BoundAppFormField } from './bind-app-form.js'
 import { humanize, pluralize } from './helpers.js'
 
-interface AppFormSchemaOptions {
+export interface AppFormSchemaOptions {
+  /** Other model classes — used to detect nested associations. */
   allModelClasses?: Record<string, AppModelClass>
 }
 
-interface AppFormClassLike {
-  fields: string[]
-  fieldsets?: Record<
-    string,
-    { title?: string; description?: string; required?: boolean; fields?: string[] }
-  >
-  [key: string]: unknown
-}
-
-/** Generate an app form schema from model and form configuration. */
+/** Generate an app form schema from a bound form. */
 export function generateAppFormSchema(
-  ModelClass: AppModelClass,
-  FormClass: AppFormClassLike,
+  boundForm: BoundAppForm,
   { allModelClasses }: AppFormSchemaOptions = {}
 ): AppFormSchema {
-  if (!Array.isArray(FormClass?.fields) || FormClass.fields.length === 0) {
+  if (boundForm.fields.length === 0) {
     throw new Error(
-      `app-form-schema: ${ModelClass.singularName} has no AppFormClass.fields. ` +
+      `app-form-schema: ${boundForm.modelClass.singularName} bound form has no renderable fields. ` +
         `Call validateRegistries() at server boot to catch this earlier.`
     )
   }
 
   const groupKey = 'default'
+  const ModelClass = boundForm.modelClass
 
   const fields: AppFormFieldDefinition[] = []
-  for (const fieldName of FormClass.fields) {
-    const attr = ModelClass.attributes[fieldName]
-    if (!attr) continue
-    if (attr.prompt_visible === false) continue
-
-    const field = buildField(fieldName, attr, ModelClass, groupKey, allModelClasses)
-    if (field) fields.push(field)
+  for (const boundField of boundForm.fields) {
+    fields.push(buildField(boundField, ModelClass, groupKey, allModelClasses))
   }
 
   let fieldsets: AppFormFieldsetDefinition[]
-  if (FormClass.fieldsets && Object.keys(FormClass.fieldsets).length > 0) {
+  if (boundForm.fieldsets && Object.keys(boundForm.fieldsets).length > 0) {
     const fieldsByName = new Map(fields.map((f) => [f.name, f]))
-    for (const [fsKey, fsConfig] of Object.entries(FormClass.fieldsets)) {
+    for (const [fsKey, fsConfig] of Object.entries(boundForm.fieldsets)) {
       for (const name of fsConfig.fields || []) {
         const field = fieldsByName.get(name)
         if (field) field.group = fsKey
@@ -76,7 +69,7 @@ export function generateAppFormSchema(
       ;(fieldsByGroup[f.group] = fieldsByGroup[f.group] || []).push(f)
     }
 
-    fieldsets = Object.entries(FormClass.fieldsets)
+    fieldsets = Object.entries(boundForm.fieldsets)
       .map(([key, fs]) => ({
         key,
         title: fs.title || humanize(key),
@@ -105,14 +98,14 @@ export function generateAppFormSchema(
   }
 }
 
-/** Build a single field definition from model attribute config */
+/** Build a single field definition from a bound field. */
 function buildField(
-  name: string,
-  attr: AppAttributeDefinition,
+  boundField: BoundAppFormField,
   ModelClass: AppModelClass,
   groupKey: string,
   allModelClasses?: Record<string, AppModelClass>
 ): AppFormFieldDefinition {
+  const { name, attribute: attr, association } = boundField
   const field: AppFormFieldDefinition = {
     name,
     label: attr.label || humanize(name),
@@ -124,15 +117,18 @@ function buildField(
   }
 
   // Determine field type -- order matters: associations override base types
-  if (name.endsWith('_id')) {
-    const assocName = name.replace(/_id$/, '')
-    const assoc = ModelClass.associations?.belongsTo?.[assocName]
-    if (assoc) {
-      field.type = 'select'
-      field.association = { endpoint: pluralize(assoc.target_model), labelField: 'name' }
+  if (association) {
+    field.type = association.many ? 'multiselect' : 'select'
+    field.association = {
+      endpoint: pluralize(association.targetModel),
+      labelField: 'name'
+    }
 
-      // Detect nested associations (e.g., categories nested under themes)
-      const targetModel = allModelClasses?.[assoc.target_model]
+    // Detect nested associations (e.g., categories nested under themes).
+    // Only applies to single-value belongsTo selectors — hasMany
+    // multiselects don't currently route through a parent endpoint.
+    if (!association.many) {
+      const targetModel = allModelClasses?.[association.targetModel]
       if (targetModel?.api?.standalone === false && targetModel.api?.parent) {
         const parentNames = Array.isArray(targetModel.api.parent)
           ? targetModel.api.parent
@@ -144,23 +140,13 @@ function buildField(
             parentModel: parentName,
             childEndpoint: targetModel.api.endpoint
           }
-          // Override endpoint to be the parent's endpoint (used for path construction)
           field.association.endpoint = parentModelClass.api.endpoint
         }
       }
-    } else {
-      field.type = 'number'
     }
   } else if (attr.type === 'array' && attr.enumValues) {
     field.type = 'checkbox_group'
     field.options = attr.enumValues.map((v) => ({ value: v, label: humanize(v) }))
-  } else if (attr.type === 'array') {
-    field.type = 'multiselect'
-    const assocName = name.replace(/_ids$/, 's')
-    const assoc = ModelClass.associations?.hasMany?.[assocName]
-    if (assoc) {
-      field.association = { endpoint: pluralize(assoc.target_model), labelField: 'name' }
-    }
   } else if (attr.type === 'enum' || attr.enumValues) {
     if (!Array.isArray(attr.enumValues) || attr.enumValues.length === 0) {
       // Belt-and-braces: validateRegistries() should have caught this at

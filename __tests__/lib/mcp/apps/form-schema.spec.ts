@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { generateAppFormSchema as generateFormSchema } from '../../../../src/mcp/apps/lib/app-form-schema.js'
+import { generateAppFormSchema } from '../../../../src/mcp/apps/lib/app-form-schema.js'
+import { bindAppForm } from '../../../../src/mcp/apps/lib/bind-app-form.js'
+
+function generateFormSchema(ModelClass, FormClass, opts) {
+  const form = FormClass ?? { fields: [] }
+  return generateAppFormSchema(bindAppForm(form, ModelClass), opts)
+}
 
 const MockModel = {
   api: { endpoint: 'books' },
@@ -407,12 +413,12 @@ describe('lib/mcp/apps/form-schema', () => {
 
       it('throws when FormClass.fields is empty', () => {
         expect(() => generateFormSchema(SimpleModel, { fields: [] })).toThrow(
-          /no AppFormClass\.fields/
+          /no renderable fields/
         )
       })
 
       it('throws when FormClass is missing', () => {
-        expect(() => generateFormSchema(SimpleModel)).toThrow(/no AppFormClass\.fields/)
+        expect(() => generateFormSchema(SimpleModel)).toThrow(/no renderable fields/)
       })
     })
 

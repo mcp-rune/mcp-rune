@@ -33,6 +33,7 @@ import {
   resolveAssociationOptions
 } from './app-form-helpers.js'
 import type { AppModelClass, DataLayer, ToolResult } from './app-shared-entities.js'
+import { bindAppForm } from './bind-app-form.js'
 import { createHtmlLoader } from './html-loader.js'
 import type { AppDefinition } from './registry.js'
 
@@ -160,10 +161,11 @@ function buildCreateApp(ctx: BuildContext): AppDefinition {
         ...(prefill as Record<string, unknown>)
       }
 
-      if (FormClass?.associations && FormClass.associations.length > 0) {
+      const boundForm = bindAppForm(FormClass, ModelClass)
+
+      if (boundForm.associations.length > 0) {
         const { unresolved, hasUnresolvedRequired } = resolveFormAssociations(
-          FormClass.associations,
-          ModelClass,
+          boundForm,
           prefillArgs
         )
 
@@ -186,7 +188,7 @@ function buildCreateApp(ctx: BuildContext): AppDefinition {
         }
       }
 
-      const schema = generateAppFormSchema(ModelClass, FormClass, { allModelClasses: eligible })
+      const schema = generateAppFormSchema(boundForm, { allModelClasses: eligible })
       schema.title = `Create ${humanize(ModelClass.api.endpoint)}`
 
       const defaults: Record<string, unknown> = PromptClass
@@ -285,7 +287,8 @@ function buildUpdateApp(ctx: BuildContext): AppDefinition {
       const FormClass = formClasses[model as string]!
       const PromptClass = promptClasses[model as string]
 
-      const schema = generateAppFormSchema(ModelClass, FormClass, { allModelClasses: eligible })
+      const boundForm = bindAppForm(FormClass, ModelClass)
+      const schema = generateAppFormSchema(boundForm, { allModelClasses: eligible })
       schema.title = `Edit ${humanize(ModelClass.singularName)}`
 
       let defaults: Record<string, unknown>

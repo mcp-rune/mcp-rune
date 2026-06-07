@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.91.0] - 2026-06-07
+
+> **BREAKING.** Introduces `bindAppForm(FormClass, ModelClass): BoundAppForm` and reshapes the schema generator and association resolver around it. Per-field association detection is now convention-aware — the hardcoded `name.endsWith('_id')` / `name.replace(/_ids$/, 's')` guesses in `buildField` are gone. Part of the `src/mcp/apps/` architecture epic (#255), axes A4 + A6 (#262).
+
+### Added
+
+- `src/mcp/apps/lib/bind-app-form.ts` — single-pass merge of an `AppFormClass` and its `AppModelClass`. The `BoundAppForm` shape is `{ modelClass, fields: BoundAppFormField[], fieldsets?, associations: AppFormAssociation[] }`. Each `BoundAppFormField` carries the resolved `attribute` and (when applicable) a `BoundAppFormFieldAssociation = { name, targetModel, many }`.
+- The field-name → association map is built by inverting `convention.resolveAssociationFields(name, config)` calls on every belongsTo and hasMany. Deployments on non-JSON-API conventions (HAL `_link`, nested relations) get correct field-type derivation out of the box. With no convention present the fallback mirrors the JSON-API shapes `buildField` used to assume.
+- `BoundAppForm`, `BoundAppFormField`, `BoundAppFormFieldAssociation`, and `bindAppForm` are re-exported from `@mcp-rune/mcp-rune/apps`.
+
+### Changed
+
+- `generateAppFormSchema(boundForm, opts?): AppFormSchema` — now takes a `BoundAppForm` instead of `(ModelClass, FormClass, opts)`. `buildField` consumes `boundField.association` directly; no more `_id` / `_ids` heuristics.
+- `resolveFormAssociations(boundForm, prefill): AppFormAssociationResolution` — now takes a `BoundAppForm`. The form↔model merge that used to happen inline here lives in `bindAppForm`; this function focuses on prefill-driven resolution and still delegates field-name pattern matching to `convention.resolveAssociationFields`.
+- `createModelFormApp` calls `bindAppForm(FormClass, ModelClass)` once per request and threads the result to both consumers.
+
+### Removed
+
+- The duplicate model↔form merge logic that lived in both `app-form-associations.ts:normalizeEntry` + the schema generator's `buildField`. Single source of truth via `bindAppForm`.
+
 ## [0.90.0] - 2026-06-07
 
 > **BREAKING.** Replaces the implicit `effectiveFormClasses = formClasses ?? (modelClasses as unknown as Record<string, unknown>)` cast in `createDefaultAppRegistry` with explicit per-model synthesis. Tightens `DefaultAppRegistryOptions.formClasses` from `Record<string, unknown>` to `Record<string, AppFormClass>`. Restores the "every model gets a form by default" affordance that the v0.88.0 throw on missing `fields` had broken. Part of the `src/mcp/apps/` architecture epic (#255), axis A3 (#260).
