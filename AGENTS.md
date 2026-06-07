@@ -62,6 +62,14 @@ Data tools take the action-verb shape (`create_model`, `update_model`, `delete_m
 
 mcp-rune is the open-source framework; the projects that consume it are deployers/implementors and stay anonymous in this repo. **Do not mention any specific downstream consumer (private or public) by name in source, comments, docs, plans, commit messages, or PR descriptions.** When you need to illustrate a usage pattern, describe the _shape_ of the consumer ("a deployer that exports `MODEL_CLASSES`", "a prompt whose parent is fixed at construction") — never the identity. This applies even when you learned the pattern by reading a specific consumer's code.
 
+## Examples in comments use the examples-repo domain
+
+When a docstring, JSDoc, or inline comment needs an illustrative `Prompt` / `Model` / `App` example, draw it from the domains in `@mcp-rune/mcp-rune-examples` (locally `~/Code/mcp-rune-examples`) whenever the API surface permits. Today that means **bookshelf** (`Book`, `Author`, `Genre`) and **tasks** (`Project`, `Task`, `Tag`). Reusing these domains keeps framework docs anchored to runnable code a reader can open, and avoids inventing one-off names that don't exist anywhere else in the ecosystem.
+
+Pick the smallest example domain that exercises the feature being documented — e.g. a single-field `TagPrompt` for trivial cases, `BookPrompt` when you need a natural enum-gated conditional (`status: 'completed'` → rating/notes). Only invent a fictional model when no examples-repo domain can express the feature without distortion, and note why in the comment.
+
+The mcp-rune source API is the source of truth for the example's _syntax_ (e.g. `static formStrategy`, `static fieldDefinitions`); the examples repo is the source of truth only for the _domain vocabulary_. If the two diverge, the framework wins — don't propagate stale examples-repo syntax into framework comments.
+
 ## Roadmap
 
 Workflow for the public Roadmap (milestones, `area:*` / `status:*` / `shipped-in:*` labels, theme convergence) lives in the local `roadmap` skill at `.claude/skills/roadmap/SKILL.md`. Invoke it explicitly with `/roadmap` when you're about to open, label, close, or milestone-manage a Roadmap-relevant issue. It is intentionally opt-in (not auto-loaded) while the project is in heavy BREAKING-changes phase, since almost any issue could plausibly be Roadmap-relevant and auto-firing would defeat the extraction.

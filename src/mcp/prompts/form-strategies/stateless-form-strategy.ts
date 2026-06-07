@@ -14,15 +14,15 @@
  *
  *     import { BasePrompt } from '#src/mcp/prompts/base-prompt.js'
  *
- *     export class FeaturePrompt extends BasePrompt {
+ *     export class TagPrompt extends BasePrompt {
  *       static formStrategy = 'stateless'
  *
  *       static fieldDefinitions = {
- *         name: { type: 'string', required: true, description: 'Feature name' }
+ *         name: { type: 'string', required: true, description: 'Tag name' }
  *       }
  *
  *       get promptContent() {
- *         return `# Create a feature\n\nCollect the name and call create_model.`
+ *         return `# Create a tag\n\nCollect the name and call create_model.`
  *       }
  *     }
  *

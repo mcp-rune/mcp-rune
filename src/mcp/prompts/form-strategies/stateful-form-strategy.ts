@@ -13,40 +13,45 @@
  *
  * ## Configure on a Prompt class
  *
- *     export class RulePrompt extends BasePrompt {
+ *     export class BookPrompt extends BasePrompt {
  *       static formStrategy = 'stateful'
  *
  *       static fieldDefinitions = {
- *         name: { type: 'string', required: true },
- *         transmission: { type: 'enum', enumValues: ['always', 'conditional'] },
- *         condition: { type: 'string' }
+ *         title: { type: 'string', required: true },
+ *         author: { type: 'string', required: true },
+ *         status: {
+ *           type: 'enum',
+ *           enumValues: ['unread', 'reading', 'completed'],
+ *           default: 'unread'
+ *         },
+ *         rating: { type: 'integer', validation: { minimum: 1, maximum: 5 } },
+ *         notes: { type: 'text' }
  *       }
  *
  *       // Sections are the user-facing structure (numbered steps in the doc).
  *       static sections = {
- *         basics: { title: 'Basics', groups: ['identity'], required: true },
- *         transmission_config: {
- *           title: 'Transmission',
- *           groups: ['transmission_fields'],
- *           required: true
- *         }
+ *         basics: { title: 'Book Identity', groups: ['identity'], required: true },
+ *         progress: { title: 'Reading Status', groups: ['progress_fields'], required: true },
+ *         review: { title: 'Review', groups: ['review_fields'], required: false }
  *       }
  *
  *       // Field groups are the validation buckets a section maps to.
  *       // A section can span multiple groups.
  *       static fieldGroups = {
- *         identity: { fields: ['name'], context: 'Identity', required: true },
- *         transmission_fields: {
- *           fields: ['transmission', 'condition'],
- *           context: 'Transmission',
- *           required: true,
- *           // Gate this group by an earlier field's value:
- *           conditional: { transmission: 'conditional' }
+ *         identity: { fields: ['title', 'author'], context: 'Identity', required: true },
+ *         progress_fields: { fields: ['status'], context: 'Reading Status', required: true },
+ *         review_fields: {
+ *           fields: ['rating', 'notes'],
+ *           context: 'Review',
+ *           required: false,
+ *           // Gate this group by an earlier field's value — only ask for a
+ *           // rating once the book has actually been finished:
+ *           conditional: { status: 'completed' }
  *         }
  *       }
  *
  *       get promptContent() {
- *         return PromptContentBuilder.for(RulePrompt, 'rule').standard().build()
+ *         return PromptContentBuilder.for(BookPrompt, 'book').standard().build()
  *       }
  *     }
  *

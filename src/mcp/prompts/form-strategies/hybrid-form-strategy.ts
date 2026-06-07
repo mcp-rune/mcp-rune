@@ -13,17 +13,23 @@
  *
  * ## Configure on a Prompt class
  *
- *     export class SeriesPrompt extends BasePrompt {
+ *     export class ProjectPrompt extends BasePrompt {
  *       static formStrategy = 'hybrid'
  *
  *       static fieldDefinitions = {
- *         title: { type: 'string', required: true, description: 'Series title' },
- *         runtime: { type: 'integer', validation: { minimum: 1 } }
+ *         name: { type: 'string', required: true, description: 'Project name' },
+ *         description: { type: 'text', description: 'What this project is for' },
+ *         status: {
+ *           type: 'enum',
+ *           enumValues: ['active', 'archived'],
+ *           default: 'active'
+ *         }
  *       }
  *
  *       // Optional: groups bucket fields for the human summary's layout.
  *       static fieldGroups = {
- *         basics: { fields: ['title', 'runtime'], context: 'Basics', required: true }
+ *         identity: { fields: ['name', 'description'], context: 'Identity', required: true },
+ *         lifecycle: { fields: ['status'], context: 'Lifecycle', required: false }
  *       }
  *
  *       // Optional: cross-field rules that can't be expressed per-field.
@@ -32,7 +38,7 @@
  *       }
  *
  *       get promptContent() {
- *         return PromptContentBuilder.for(SeriesPrompt, 'series').standard().build()
+ *         return PromptContentBuilder.for(ProjectPrompt, 'project').standard().build()
  *       }
  *     }
  *
