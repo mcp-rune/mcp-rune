@@ -20,10 +20,12 @@ import { createMultiPickModelApp } from '../multi-pick-model-app/index.js'
 import { createPickModelApp } from '../pick-model-app/index.js'
 import { createShowModelApp } from '../show-model-app/index.js'
 import { createViewSelectionApp } from '../view-selection-app/index.js'
+import type { AppFormClass } from './app-form-entities.js'
 import type { ApiClient, AppModelClass } from './app-shared-entities.js'
 import { createModelFormApp } from './create-model-form-app.js'
 import type { AppDefinition, KindExtension, ThemeOverrides } from './registry.js'
 import { AppRegistry } from './registry.js'
+import { synthesizeDefaultFormClass } from './synthesize-form-class.js'
 
 export type DefaultAppName =
   | 'pick-model-app'
@@ -36,8 +38,15 @@ export type DefaultAppName =
 
 export interface DefaultAppRegistryOptions {
   modelClasses: Record<string, AppModelClass>
-  /** Per-model form config; defaults to `modelClasses` (every model gets a form). */
-  formClasses?: Record<string, unknown>
+  /**
+   * Per-model form classes. Each entry satisfies the {@link AppFormClass}
+   * shape (`BaseAppForm` subclasses and structurally-compatible literals
+   * both work). When a model is absent from this dictionary the registry
+   * synthesizes a default form class from `ModelClass.attributes` —
+   * every attribute whose definition does not set `prompt_visible: false`
+   * becomes a field, in declaration order.
+   */
+  formClasses?: Record<string, AppFormClass>
   /** Per-model PromptClass for form defaults; optional. */
   promptClasses?: Record<string, unknown>
   namespace: string
@@ -98,7 +107,23 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
     }
   }
 
-  const effectiveFormClasses = formClasses ?? (modelClasses as unknown as Record<string, unknown>)
+  // Build the effective per-model form-class dictionary. Deployer-supplied
+  // entries pass through verbatim; missing entries fall back to a
+  // synthesized default (every prompt-visible attribute, in order).
+  // Models that would synthesize to an empty fields list are skipped so
+  // the form apps simply don't list them as eligible.
+  const formClassesForApps: Record<string, AppFormClass> = {}
+  for (const [name, ModelClass] of Object.entries(modelClasses)) {
+    const explicit = formClasses?.[name]
+    if (explicit) {
+      formClassesForApps[name] = explicit
+      continue
+    }
+    const synthesized = synthesizeDefaultFormClass(ModelClass)
+    if (synthesized.fields.length > 0) {
+      formClassesForApps[name] = synthesized
+    }
+  }
 
   // `searchGroups` here describes the AppRegistry-level SearchService routing,
   // a different shape from the pick-model-app's group config. The default
@@ -121,7 +146,7 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
     createModelFormApp({
       mode: 'create',
       modelClasses,
-      formClasses: effectiveFormClasses as never,
+      formClasses: formClassesForApps,
       ...(promptClasses && { promptClasses: promptClasses as never }),
       namespace
     })
@@ -131,7 +156,7 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
     createModelFormApp({
       mode: 'update',
       modelClasses,
-      formClasses: effectiveFormClasses as never,
+      formClasses: formClassesForApps,
       ...(promptClasses && { promptClasses: promptClasses as never }),
       namespace
     })

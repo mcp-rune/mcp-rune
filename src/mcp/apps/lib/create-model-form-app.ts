@@ -26,6 +26,7 @@ import { errorMeta, humanize } from '#src/mcp/apps/lib/helpers.js'
 import * as logger from '#src/runtime/logger.js'
 
 import type { FormSubmitMode } from '../../extensions/tool-flow.js'
+import type { AppFormClass } from './app-form-entities.js'
 import {
   buildDefaultsFromModel,
   filterEmpty,
@@ -35,16 +36,6 @@ import type { AppModelClass, DataLayer, ToolResult } from './app-shared-entities
 import { createHtmlLoader } from './html-loader.js'
 import type { AppDefinition } from './registry.js'
 
-interface FormClassLike {
-  fields: string[]
-  fieldsets?: Record<
-    string,
-    { title?: string; description?: string; required?: boolean; fields?: string[] }
-  >
-  associations?: Array<string | Record<string, unknown>>
-  [key: string]: unknown
-}
-
 interface PromptClassLike {
   new (args: Record<string, unknown>): { getDefaultFormState(): Record<string, unknown> }
   [key: string]: unknown
@@ -53,7 +44,7 @@ interface PromptClassLike {
 export interface CreateModelFormAppOptions {
   mode: 'create' | 'update'
   modelClasses: Record<string, AppModelClass>
-  formClasses: Record<string, FormClassLike>
+  formClasses: Record<string, AppFormClass>
   promptClasses?: Record<string, PromptClassLike>
   namespace: string
 }
@@ -62,7 +53,7 @@ interface BuildContext {
   modelClasses: Record<string, AppModelClass>
   eligible: Record<string, AppModelClass>
   modelNames: [string, ...string[]]
-  formClasses: Record<string, FormClassLike>
+  formClasses: Record<string, AppFormClass>
   promptClasses: Record<string, PromptClassLike>
   namespace: string
 }

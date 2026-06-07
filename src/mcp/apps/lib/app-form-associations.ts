@@ -13,6 +13,7 @@ import type { BaseConvention } from '#src/mcp/data-layer/api-conventions/base-co
 
 import type {
   AppFormAssociation,
+  AppFormAssociationEntry,
   AppFormAssociationInstruction,
   AppFormAssociationResolution,
   AppFormPicker
@@ -28,22 +29,22 @@ interface NormalizedEntry {
 }
 
 /** Normalize an association entry to a consistent shape. */
-function normalizeEntry(entry: string | Record<string, unknown>): NormalizedEntry {
+function normalizeEntry(entry: string | AppFormAssociationEntry): NormalizedEntry {
   if (typeof entry === 'string') {
     return { name: entry, dependsOn: null, targetModel: null, required: null, picker: null }
   }
   return {
-    name: entry.name as string,
-    dependsOn: (entry.dependsOn as string) || null,
-    targetModel: (entry.targetModel as string) || null,
-    required: (entry.required as boolean) ?? null,
-    picker: (entry.picker as AppFormPicker) || null
+    name: entry.name,
+    dependsOn: entry.dependsOn ?? null,
+    targetModel: entry.targetModel ?? null,
+    required: entry.required ?? null,
+    picker: entry.picker ?? null
   }
 }
 
 /** Check which form associations are resolved based on prefill values. */
 export function resolveFormAssociations(
-  associations: Array<string | Record<string, unknown>>,
+  associations: Array<string | AppFormAssociationEntry>,
   ModelClass: AppModelClass,
   prefill: Record<string, unknown> = {}
 ): AppFormAssociationResolution {

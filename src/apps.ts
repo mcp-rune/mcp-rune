@@ -1,6 +1,7 @@
 // mcp-rune/apps — registry, factories, schema generators
 export { createFindModelApp } from './mcp/apps/find-model-app/index.js'
 export { createAppFormDataTools } from './mcp/apps/lib/app-form-data-tools.js'
+export type { AppFormClass } from './mcp/apps/lib/app-form-entities.js'
 export { generateAppFormSchema } from './mcp/apps/lib/app-form-schema.js'
 export { validateAppForm } from './mcp/apps/lib/app-form-validator.js'
 export { BaseAppForm } from './mcp/apps/lib/base-app-form.js'

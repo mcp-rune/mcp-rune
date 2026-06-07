@@ -117,6 +117,23 @@ export interface AppFormPostCreateConfig {
 }
 
 /**
+ * Canonical runtime shape for an MCP App form class.
+ *
+ * Authors typically extend `BaseAppForm`; this structural alias lets
+ * deployers also use plain object literals or hand-built form classes.
+ * `fields` is required — `validateAppForm` raises at boot if it is
+ * missing or empty, and `generateAppFormSchema` throws if anything slips
+ * past the validator.
+ */
+export interface AppFormClass {
+  fields: string[]
+  fieldsets?: Record<string, AppFormFieldsetConfig>
+  associations?: Array<string | AppFormAssociationEntry>
+  postCreate?: AppFormPostCreateConfig[]
+  [key: string]: unknown
+}
+
+/**
  * A single association after resolution: normalized from AppFormAssociationEntry and merged
  * with the model's belongsTo / hasMany metadata.
  *

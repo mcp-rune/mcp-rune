@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.90.0] - 2026-06-07
+
+> **BREAKING.** Replaces the implicit `effectiveFormClasses = formClasses ?? (modelClasses as unknown as Record<string, unknown>)` cast in `createDefaultAppRegistry` with explicit per-model synthesis. Tightens `DefaultAppRegistryOptions.formClasses` from `Record<string, unknown>` to `Record<string, AppFormClass>`. Restores the "every model gets a form by default" affordance that the v0.88.0 throw on missing `fields` had broken. Part of the `src/mcp/apps/` architecture epic (#255), axis A3 (#260).
+
+### Added
+
+- `src/mcp/apps/lib/synthesize-form-class.ts` — `synthesizeDefaultFormClass(ModelClass): AppFormClass` builds a default form class from a model's attributes, in declaration order, skipping `prompt_visible: false` entries.
+- `AppFormClass` interface in `src/mcp/apps/lib/app-form-entities.ts` — the canonical structural shape for an MCP App form class. `BaseAppForm` subclasses and plain object literals both satisfy it. Re-exported from `@mcp-rune/mcp-rune/apps`.
+
+### Changed
+
+- `createDefaultAppRegistry` builds an explicit `formClassesForApps` dictionary: deployer-supplied entries pass through verbatim; missing entries fall back to a synthesized default. Models that would synthesize to zero renderable fields are skipped so the form apps simply do not list them as eligible.
+- `DefaultAppRegistryOptions.formClasses` is now typed as `Record<string, AppFormClass>`. Deployers passing Prompt-shaped values (a dead path since v0.88.0) get a TypeScript error pointing them at the right shape.
+- `resolveFormAssociations` and `normalizeEntry` (`app-form-associations.ts`) now accept `Array<string | AppFormAssociationEntry>` instead of `Array<string | Record<string, unknown>>`. No runtime behavior change.
+
+### Removed
+
+- The `effectiveFormClasses` line and all `as never` / `as unknown as Record<string, unknown>` casts on the form-app wiring in `create-default-registry.ts`.
+
 ## [0.89.0] - 2026-06-07
 
 > **BREAKING.** Consolidates `new_model_app` and `edit_model_app` into a single `createModelFormApp({mode, …})` factory. Replaces the per-app `_cachedHtml` boilerplate across every app with a shared `createHtmlLoader`. Fixes the edit-form schema title from `"Create <Endpoint>"` to `"Edit <Singular>"`. Part of the `src/mcp/apps/` architecture epic (#255), axes A2 / A5 / A9 / A10 (#258).
