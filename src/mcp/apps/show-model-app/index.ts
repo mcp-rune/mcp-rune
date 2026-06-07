@@ -12,9 +12,6 @@
  * Build: npm run build:engineer:apps
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
-
 import { z } from 'zod'
 
 import { generateDetailSchema } from '#src/mcp/apps/lib/detail-schema.js'
@@ -28,13 +25,11 @@ import type {
   DetailFieldDefinition,
   ToolResult
 } from '../lib/app-shared-entities.js'
+import { createHtmlLoader } from '../lib/html-loader.js'
 import type { SelectionStore } from '../lib/selection-store.js'
 
-const DIST_DIR = path.resolve(import.meta.dirname, '..', 'dist')
-const HTML_PATH = path.join(DIST_DIR, 'show-model-app.html')
 const MAX_RECORDS = 20
-
-let _cachedHtml: string | null = null
+const getHtml = createHtmlLoader('show-model-app')
 
 /**
  * Resolve association field IDs to human-readable labels across multiple records.
@@ -101,13 +96,6 @@ async function resolveAssociationLabelsBatch(
       }
     }
   }
-}
-
-function getHtml(): string {
-  if (!_cachedHtml) {
-    _cachedHtml = fs.readFileSync(HTML_PATH, 'utf-8')
-  }
-  return _cachedHtml
 }
 
 interface RecordDetailOptions {

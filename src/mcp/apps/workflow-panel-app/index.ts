@@ -10,23 +10,11 @@
  * client-side from each workflow's `tags`.
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
-
 import type { ToolResult } from '../lib/app-shared-entities.js'
+import { createHtmlLoader } from '../lib/html-loader.js'
 import type { AppDefinition } from '../lib/registry.js'
 
-const DIST_DIR = path.resolve(import.meta.dirname, '..', 'dist')
-const HTML_PATH = path.join(DIST_DIR, 'workflow-panel-app.html')
-
-let _cachedHtml: string | null = null
-
-function getHtml(): string {
-  if (!_cachedHtml) {
-    _cachedHtml = fs.readFileSync(HTML_PATH, 'utf-8')
-  }
-  return _cachedHtml
-}
+const getHtml = createHtmlLoader('workflow-panel-app')
 
 export interface WorkflowPanelEntry {
   /** Stable identifier passed back to `suggest_workflow` on click. */

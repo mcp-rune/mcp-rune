@@ -11,9 +11,6 @@
  * Build: npm run build:apps:lib
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
-
 import { z } from 'zod'
 
 import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
@@ -23,18 +20,9 @@ import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 import * as logger from '#src/runtime/logger.js'
 
 import type { AppModelClass, ToolResult } from '../lib/app-shared-entities.js'
+import { createHtmlLoader } from '../lib/html-loader.js'
 
-const DIST_DIR = path.resolve(import.meta.dirname, '..', 'dist')
-const HTML_PATH = path.join(DIST_DIR, 'pick-model-app.html')
-
-let _cachedHtml: string | null = null
-
-function getHtml(): string {
-  if (!_cachedHtml) {
-    _cachedHtml = fs.readFileSync(HTML_PATH, 'utf-8')
-  }
-  return _cachedHtml
-}
+const getHtml = createHtmlLoader('pick-model-app')
 
 /**
  * Build a typeToModel mapping from modelClasses.

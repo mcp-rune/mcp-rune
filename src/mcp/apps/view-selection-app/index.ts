@@ -17,9 +17,6 @@
  * Build: npm run build:apps:view-selection-app
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
-
 import { z } from 'zod'
 
 import { appResponseMeta, formatAppSummary } from '#src/mcp/apps/lib/format-summary.js'
@@ -40,18 +37,9 @@ import type { ModelLayerFactory } from '#src/mcp/model-layer/model-layer.js'
 import * as logger from '#src/runtime/logger.js'
 
 import type { AppModelClass, ListSchema, ToolResult } from '../lib/app-shared-entities.js'
+import { createHtmlLoader } from '../lib/html-loader.js'
 
-const DIST_DIR = path.resolve(import.meta.dirname, '..', 'dist')
-const HTML_PATH = path.join(DIST_DIR, 'view-selection-app.html')
-
-let _cachedHtml: string | null = null
-
-function getHtml(): string {
-  if (!_cachedHtml) {
-    _cachedHtml = fs.readFileSync(HTML_PATH, 'utf-8')
-  }
-  return _cachedHtml
-}
+const getHtml = createHtmlLoader('view-selection-app')
 
 interface ViewSelectionOptions {
   modelClasses: Record<string, AppModelClass>

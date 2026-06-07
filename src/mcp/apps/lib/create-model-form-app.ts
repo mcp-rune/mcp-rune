@@ -1,21 +1,19 @@
 /**
- * new_model_app — MCP App tool for creating a new record interactively.
+ * Consolidated factory for the new_model_app and edit_model_app MCP Apps.
  *
- * Renders a form generated from the FormClass (fields + fieldsets) and
- * ModelClass (attributes + associations). PromptClass is optional -- used
- * only for default values when available.
+ * The two apps share ~70% of their setup: eligibility filter, schema
+ * generation, defaults composition, association-options resolution, and
+ * the iframe HTML bundle (src/mcp/apps/shared/model-form/main.js). This
+ * factory parameterizes the diverging concerns by mode:
  *
- * Association options (belongsTo selects, hasMany multiselects) are the ONLY
- * thing fetched from the API, using the user's access token at form-open time.
+ *   create  — `new_model_app` tool; requires mode: "form" arg; runs the
+ *             association pre-check; computes hiddenValues + parentContext;
+ *             schema title is "Create <Endpoint>".
  *
- * The new and edit form apps share their iframe UI through
- * `src/mcp/apps/shared/model-form/main.js`; each app builds its own bundle
- * (`new-model-app.html` / `edit-model-app.html`) but the rendered DOM is the
- * same.
+ *   update  — `edit_model_app` tool; requires record_id; pre-fills from
+ *             the fetched record; skips the association pre-check;
+ *             schema title is "Edit <Singular>".
  */
-
-import fs from 'node:fs'
-import path from 'node:path'
 
 import { z } from 'zod'
 
@@ -24,7 +22,7 @@ import {
   resolveFormAssociations
 } from '#src/mcp/apps/lib/app-form-associations.js'
 import { generateAppFormSchema } from '#src/mcp/apps/lib/app-form-schema.js'
-import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
+import { errorMeta, humanize } from '#src/mcp/apps/lib/helpers.js'
 import * as logger from '#src/runtime/logger.js'
 
 import type { FormSubmitMode } from '../../extensions/tool-flow.js'
@@ -32,72 +30,68 @@ import {
   buildDefaultsFromModel,
   filterEmpty,
   resolveAssociationOptions
-} from '../lib/app-form-helpers.js'
-import type { AppModelClass, DataLayer, ToolResult } from '../lib/app-shared-entities.js'
+} from './app-form-helpers.js'
+import type { AppModelClass, DataLayer, ToolResult } from './app-shared-entities.js'
+import { createHtmlLoader } from './html-loader.js'
+import type { AppDefinition } from './registry.js'
 
-const DIST_DIR = path.resolve(import.meta.dirname, '..', 'dist')
-const HTML_PATH = path.join(DIST_DIR, 'new-model-app.html')
-
-let _cachedHtml: string | null = null
-
-function getHtml(): string {
-  if (!_cachedHtml) {
-    _cachedHtml = fs.readFileSync(HTML_PATH, 'utf-8')
-  }
-  return _cachedHtml
+interface FormClassLike {
+  fields: string[]
+  fieldsets?: Record<
+    string,
+    { title?: string; description?: string; required?: boolean; fields?: string[] }
+  >
+  associations?: Array<string | Record<string, unknown>>
+  [key: string]: unknown
 }
 
-interface FormAppOptions {
+interface PromptClassLike {
+  new (args: Record<string, unknown>): { getDefaultFormState(): Record<string, unknown> }
+  [key: string]: unknown
+}
+
+export interface CreateModelFormAppOptions {
+  mode: 'create' | 'update'
   modelClasses: Record<string, AppModelClass>
-  formClasses: Record<
-    string,
-    {
-      fields: string[]
-      fieldsets?: Record<
-        string,
-        { title?: string; description?: string; required?: boolean; fields?: string[] }
-      >
-      associations?: Array<string | Record<string, unknown>>
-      [key: string]: unknown
-    }
-  >
-  promptClasses?: Record<
-    string,
-    {
-      new (args: Record<string, unknown>): { getDefaultFormState(): Record<string, unknown> }
-      [key: string]: unknown
-    }
-  >
+  formClasses: Record<string, FormClassLike>
+  promptClasses?: Record<string, PromptClassLike>
   namespace: string
 }
 
-interface AppDefinition {
-  resourceUri: string
-  toolName: string
-  needsAuth: boolean
-  name: string
-  description: string
-  toolDescription: string
-  toolInputSchema: Record<string, z.ZodTypeAny>
-  handleToolCall(
-    args: Record<string, unknown>,
-    context: { dataLayer?: DataLayer; formSubmitMode?: FormSubmitMode }
-  ): Promise<ToolResult>
-  getHtml: () => string
+interface BuildContext {
+  modelClasses: Record<string, AppModelClass>
+  eligible: Record<string, AppModelClass>
+  modelNames: [string, ...string[]]
+  formClasses: Record<string, FormClassLike>
+  promptClasses: Record<string, PromptClassLike>
+  namespace: string
 }
 
-/** Create the new_model_app MCP App. */
-export function createNewModelApp({
-  modelClasses,
-  formClasses,
-  promptClasses = {},
-  namespace
-}: FormAppOptions): AppDefinition {
-  // Convention: only models with a form class are eligible
+const getNewAppHtml = createHtmlLoader('new-model-app')
+const getEditAppHtml = createHtmlLoader('edit-model-app')
+
+export function createModelFormApp(options: CreateModelFormAppOptions): AppDefinition {
+  const { mode, modelClasses, formClasses, promptClasses = {}, namespace } = options
+
   const eligible = Object.fromEntries(
     Object.entries(modelClasses).filter(([name]) => name in formClasses)
   )
   const modelNames = Object.keys(eligible) as [string, ...string[]]
+
+  const ctx: BuildContext = {
+    modelClasses,
+    eligible,
+    modelNames,
+    formClasses,
+    promptClasses,
+    namespace
+  }
+
+  return mode === 'create' ? buildCreateApp(ctx) : buildUpdateApp(ctx)
+}
+
+function buildCreateApp(ctx: BuildContext): AppDefinition {
+  const { modelClasses, eligible, modelNames, formClasses, promptClasses, namespace } = ctx
 
   return {
     resourceUri: `ui://${namespace}/new-model-app`,
@@ -132,17 +126,14 @@ export function createNewModelApp({
 
     async handleToolCall(
       args: Record<string, unknown> = {},
-      {
-        dataLayer,
-        formSubmitMode = 'direct'
-      }: {
-        dataLayer?: DataLayer
-        formSubmitMode?: FormSubmitMode
-      } = {}
-    ) {
-      const { model, mode, prefill, ...extraArgs } = args
+      context: Record<string, unknown> = {}
+    ): Promise<ToolResult> {
+      const dataLayer = context.dataLayer as DataLayer | undefined
+      const formSubmitMode = (context.formSubmitMode as FormSubmitMode | undefined) ?? 'direct'
 
-      if (mode !== 'form') {
+      const { model, mode: openMode, prefill, ...extraArgs } = args
+
+      if (openMode !== 'form') {
         return {
           content: [
             {
@@ -178,7 +169,6 @@ export function createNewModelApp({
         ...(prefill as Record<string, unknown>)
       }
 
-      // Check form associations before rendering
       if (FormClass?.associations && FormClass.associations.length > 0) {
         const { unresolved, hasUnresolvedRequired } = resolveFormAssociations(
           FormClass.associations,
@@ -206,6 +196,7 @@ export function createNewModelApp({
       }
 
       const schema = generateAppFormSchema(ModelClass, FormClass, { allModelClasses: eligible })
+      schema.title = `Create ${humanize(ModelClass.api.endpoint)}`
 
       const defaults: Record<string, unknown> = PromptClass
         ? new PromptClass(prefillArgs).getDefaultFormState()
@@ -216,7 +207,6 @@ export function createNewModelApp({
         await resolveAssociationOptions(schema.fields, dataLayer, defaults)
       }
 
-      // Separate prefill args into rendered fields (defaults) and non-rendered (hiddenValues)
       const renderedFieldNames = new Set(schema.fields.map((f) => f.name))
       const hiddenValues: Record<string, unknown> = {}
       for (const [key, val] of Object.entries(prefillArgs)) {
@@ -225,11 +215,9 @@ export function createNewModelApp({
         }
       }
 
-      // Resolve a parent-context banner when the model is nested and we
-      // know the parent id. The parent typically has no form of its own
-      // (e.g. `domain` is the parent of `subdomain` but isn't authored
-      // through this form factory), so we pass the full modelClasses map —
-      // not the eligible subset.
+      // Parent context uses the full modelClasses map: the parent often has
+      // no form of its own (e.g. `domain` parents `subdomain` but isn't
+      // authored through this factory).
       const parentContext = await resolveParentContext(
         ModelClass,
         modelClasses,
@@ -255,16 +243,101 @@ export function createNewModelApp({
       }
     },
 
-    getHtml
+    getHtml: getNewAppHtml
+  }
+}
+
+function buildUpdateApp(ctx: BuildContext): AppDefinition {
+  const { eligible, modelNames, formClasses, promptClasses, namespace } = ctx
+
+  return {
+    resourceUri: `ui://${namespace}/edit-model-app`,
+    toolName: 'edit_model_app',
+    needsAuth: true,
+    name: 'Edit Record',
+    description: 'Interactive form for editing an existing record',
+
+    toolDescription:
+      `Show an interactive form for editing an existing record. ` +
+      `The form pre-fills with current values and submits changes via update_model. ` +
+      `Use this when the user wants to edit a record interactively. ` +
+      `Available models: ${modelNames.join(', ')}.`,
+
+    toolInputSchema: {
+      model: z.enum(modelNames).describe('Model to edit'),
+      record_id: z.string().describe('ID of the record to edit')
+    },
+
+    async handleToolCall(
+      args: Record<string, unknown> = {},
+      context: Record<string, unknown> = {}
+    ): Promise<ToolResult> {
+      const dataLayer = context.dataLayer as DataLayer | undefined
+      const formSubmitMode = (context.formSubmitMode as FormSubmitMode | undefined) ?? 'direct'
+
+      const { model, record_id, ...prefillArgs } = args
+
+      if (!model || !eligible[model as string]) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: `Unknown model: ${model}. Available: ${modelNames.join(', ')}`
+              })
+            }
+          ]
+        }
+      }
+
+      const ModelClass = eligible[model as string]!
+      const FormClass = formClasses[model as string]!
+      const PromptClass = promptClasses[model as string]
+
+      const schema = generateAppFormSchema(ModelClass, FormClass, { allModelClasses: eligible })
+      schema.title = `Edit ${humanize(ModelClass.singularName)}`
+
+      let defaults: Record<string, unknown>
+      if (record_id && dataLayer) {
+        defaults = await fetchRecord(dataLayer, ModelClass.api.endpoint, record_id as string)
+      } else if (PromptClass) {
+        defaults = new PromptClass(prefillArgs).getDefaultFormState()
+        Object.assign(defaults, filterEmpty(prefillArgs))
+      } else {
+        defaults = buildDefaultsFromModel(ModelClass, FormClass)
+        Object.assign(defaults, filterEmpty(prefillArgs))
+      }
+
+      if (dataLayer) {
+        await resolveAssociationOptions(schema.fields, dataLayer, defaults)
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              schema,
+              defaults,
+              mode: 'update',
+              submitMode: formSubmitMode,
+              ...(record_id ? { recordId: record_id } : {})
+            })
+          }
+        ]
+      }
+    },
+
+    getHtml: getEditAppHtml
   }
 }
 
 /**
  * When the form is for a nested model (e.g. `subdomain` under `domains/`),
  * resolve the parent record so the client can render a context banner
- * (`"Adding subdomain to Software Engineering"`). Returns `null` when
- * the model is standalone, the parent id isn't known, or fetching fails —
- * the banner is a UX nicety, not a hard requirement.
+ * (`"Adding subdomain to Software Engineering"`). Returns `null` when the
+ * model is standalone, the parent id isn't known, or fetching fails — the
+ * banner is a UX nicety, not a hard requirement.
  */
 async function resolveParentContext(
   ModelClass: AppModelClass,
@@ -309,4 +382,23 @@ async function resolveParentContext(
     }
   }
   return null
+}
+
+async function fetchRecord(
+  dataLayer: DataLayer,
+  endpoint: string,
+  recordId: string
+): Promise<Record<string, unknown>> {
+  try {
+    const data = await dataLayer.dispatch('GET', `${endpoint}/${recordId}`)
+    return (data.data as Record<string, unknown>) || data
+  } catch (err) {
+    logger.warn('Failed to fetch record for form', {
+      service: 'mcp-app',
+      model: endpoint,
+      recordId,
+      ...errorMeta(err)
+    })
+    return {}
+  }
 }

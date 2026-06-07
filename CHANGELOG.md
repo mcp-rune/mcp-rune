@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.89.0] - 2026-06-07
+
+> **BREAKING.** Consolidates `new_model_app` and `edit_model_app` into a single `createModelFormApp({mode, …})` factory. Replaces the per-app `_cachedHtml` boilerplate across every app with a shared `createHtmlLoader`. Fixes the edit-form schema title from `"Create <Endpoint>"` to `"Edit <Singular>"`. Part of the `src/mcp/apps/` architecture epic (#255), axes A2 / A5 / A9 / A10 (#258).
+
+### Added
+
+- `src/mcp/apps/lib/create-model-form-app.ts` — `createModelFormApp({mode: 'create' | 'update', modelClasses, formClasses, promptClasses?, namespace})` returns one `AppDefinition`. Eligibility, schema generation, defaults composition, association-options resolution, parent-context lookup, and the iframe HTML bundle are now bound once and parameterized by mode.
+- `src/mcp/apps/lib/html-loader.ts` — `createHtmlLoader(appName)` produces a lazy, cached HTML reader for the vite-bundled `dist/<appName>.html`. Adopted across all eight apps.
+
+### Changed
+
+- `createDefaultAppRegistry` calls `createModelFormApp` twice — once per mode — in place of the deleted `createNewModelApp` / `createEditModelApp`.
+- The `edit_model_app` schema payload now ships `title: "Edit <Singular>"` instead of `"Create <Endpoint>"`.
+- All app entry files (`pick-model-app`, `multi-pick-model-app`, `find-model-app`, `show-model-app`, `view-selection-app`, `workflow-panel-app`, plus the new form factory) import `createHtmlLoader` instead of redeclaring `DIST_DIR` / `HTML_PATH` / `_cachedHtml`.
+
+### Removed
+
+- `src/mcp/apps/new-model-app/index.ts` and `src/mcp/apps/edit-model-app/index.ts`. The `ui/` folders remain — vite still bundles them as `dist/new-model-app.html` and `dist/edit-model-app.html`.
+- `createNewModelApp` and `createEditModelApp` exports from `@mcp-rune/mcp-rune/apps`. Compose with `createModelFormApp({mode, …})` instead.
+
 ## [0.88.0] - 2026-06-07
 
 > **BREAKING.** Removes the legacy Prompt-based path from `generateAppFormSchema` (`src/mcp/apps/lib/app-form-schema.ts`). The function now accepts a single `AppFormClassLike` and throws when `fields` is missing or empty — no silent empty-schema fallback. Part of the `src/mcp/apps/` architecture epic (#255), axis A1 (#256).
