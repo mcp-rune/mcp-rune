@@ -41,7 +41,7 @@ import type { ModelsRegistry } from '#src/mcp/tools/base-tool.js'
 import * as logger from '#src/runtime/logger.js'
 
 import type { FormSubmitMode } from '../../extensions/tool-flow.js'
-import type { FormDataStore } from './form-data-store.js'
+import type { AppFormDataStore } from './app-form-data-store.js'
 import type { SelectionStore } from './selection-store.js'
 import type { ApiClient, ToolResult } from './types.js'
 
@@ -160,7 +160,7 @@ interface RegistryOptions {
 interface RegisterToolsOptions {
   getAccessToken?: () => Promise<string>
   selectionStore?: SelectionStore
-  formDataStore?: FormDataStore
+  formDataStore?: AppFormDataStore
   /**
    * Extra context values to merge into every app tool handler's context
    * object. Populated by `ToolFlowExtension.provideContext(...)` and threaded

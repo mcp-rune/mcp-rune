@@ -21,7 +21,7 @@ import path from 'node:path'
 
 import { z } from 'zod'
 
-import { generateFormSchema } from '#src/mcp/apps/lib/form-schema.js'
+import { generateAppFormSchema } from '#src/mcp/apps/lib/app-form-schema.js'
 import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
 import * as logger from '#src/runtime/logger.js'
 
@@ -30,7 +30,7 @@ import {
   buildDefaultsFromModel,
   filterEmpty,
   resolveAssociationOptions
-} from '../lib/form-app-helpers.js'
+} from '../lib/app-form-helpers.js'
 import type { AppModelClass, DataLayer, ToolResult } from '../lib/types.js'
 
 const DIST_DIR = path.resolve(import.meta.dirname, '..', 'dist')
@@ -141,7 +141,7 @@ export function createEditModelApp({
       const FormClass = formClasses[model as string]!
       const PromptClass = promptClasses[model as string]
 
-      const schema = generateFormSchema(ModelClass, FormClass, { allModelClasses: eligible })
+      const schema = generateAppFormSchema(ModelClass, FormClass, { allModelClasses: eligible })
 
       let defaults: Record<string, unknown>
       if (record_id && dataLayer) {

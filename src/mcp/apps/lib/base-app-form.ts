@@ -1,11 +1,11 @@
 /**
- * BaseForm -- base class for interactive form definitions.
+ * BaseAppForm -- base class for interactive app form definitions.
  *
- * Each Form class declares which fields an interactive form renders,
+ * Each AppForm class declares which fields an interactive form renders,
  * optional fieldset layout, associations (resolved via pickers before
  * the form opens), and post-create steps (child records created after).
  *
- * Presence of a Form class in the FormRegistry = "Interactive Form"
+ * Presence of an AppForm class in the FormRegistry = "Interactive Form"
  * option is available for that model.
  *
  * Interactive creation has two phases:
@@ -13,14 +13,14 @@
  *   2. Scalar phase -- render the form with only the `fields` attributes
  */
 
-export interface FieldsetConfig {
+export interface AppFormFieldsetConfig {
   title?: string
   description?: string
   required?: boolean
   fields?: string[]
 }
 
-export interface FormAssociationEntry {
+export interface AppFormAssociationEntry {
   name: string
   dependsOn?: string
   targetModel?: string
@@ -28,18 +28,18 @@ export interface FormAssociationEntry {
   picker?: string
 }
 
-export interface PostCreateConfig {
+export interface AppFormPostCreateConfig {
   model: string
   parentPath: string
   attributeMap: Record<string, string>
 }
 
-export class BaseForm {
+export class BaseAppForm {
   /** Fields the form renders (attribute names from the model) */
   static fields: string[] = []
 
   /** Optional fieldset layout -- null = single default fieldset */
-  static fieldsets: Record<string, FieldsetConfig> | null = null
+  static fieldsets: Record<string, AppFormFieldsetConfig> | null = null
 
   /**
    * Association names to resolve before the form opens.
@@ -50,8 +50,8 @@ export class BaseForm {
    *
    * Example: ['linear_channel', 'title', 'asset']
    */
-  static associations: Array<string | FormAssociationEntry> | null = null
+  static associations: Array<string | AppFormAssociationEntry> | null = null
 
   /** Child records created after the main record is submitted */
-  static postCreate: PostCreateConfig[] | null = null
+  static postCreate: AppFormPostCreateConfig[] | null = null
 }

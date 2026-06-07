@@ -12,8 +12,8 @@
  * returned as data structures; the caller decides how to render them.
  */
 
-import type { FormClassLike } from '#src/mcp/apps/lib/form-validator.js'
-import { validateFormClass } from '#src/mcp/apps/lib/form-validator.js'
+import type { AppFormClassLike } from '#src/mcp/apps/lib/app-form-validator.js'
+import { validateAppForm } from '#src/mcp/apps/lib/app-form-validator.js'
 import { validateModelClass } from '#src/mcp/model-layer/model-validator.js'
 import type { PromptClassLike } from '#src/mcp/prompt-layer/prompt-validator.js'
 import { validatePromptClass } from '#src/mcp/prompt-layer/prompt-validator.js'
@@ -24,7 +24,7 @@ export interface RegistriesInput {
   /** Plain map of model name → ModelClass, matching how deployers export MODEL_CLASSES. */
   models: Record<string, ModelClassLike>
   /** Optional map of model name → FormClass. */
-  forms?: Record<string, FormClassLike>
+  forms?: Record<string, AppFormClassLike>
   /** Optional map of model name → PromptClass. */
   prompts?: Record<string, PromptClassLike>
 }
@@ -57,7 +57,7 @@ export function validateRegistries(input: RegistriesInput): ValidationReport {
         })
         continue
       }
-      push(validateFormClass(modelName, FormClass, ModelClass), errors, warnings)
+      push(validateAppForm(modelName, FormClass, ModelClass), errors, warnings)
     }
   }
 

@@ -12,7 +12,7 @@ import type { ApiConfig } from '#src/mcp/models/api-config.js'
 import type { AssociationConfig } from '#src/mcp/models/association-config.js'
 import type { AttributeDefinition } from '#src/mcp/models/attribute-definition.js'
 
-import type { FormDataStore } from './form-data-store.js'
+import type { AppFormDataStore } from './app-form-data-store.js'
 import type { SelectionStore } from './selection-store.js'
 
 // Re-exported for AppRegistry consumers wiring up the createApiClient factory.
@@ -66,7 +66,7 @@ export interface ToolResult {
 export interface AppToolContext {
   dataLayer?: DataLayer
   selectionStore?: SelectionStore
-  formDataStore?: FormDataStore
+  formDataStore?: AppFormDataStore
 }
 
 /** Column definition for list/search schemas */
@@ -82,8 +82,8 @@ export interface ColumnDefinition {
   format?: string
 }
 
-/** Field definition for form schemas */
-export interface FormFieldDefinition {
+/** Field definition for app form schemas */
+export interface AppFormFieldDefinition {
   name: string
   label: string
   group: string
@@ -126,8 +126,8 @@ export interface DetailFieldDefinition {
   }
 }
 
-/** Fieldset definition for form/detail schemas */
-export interface FieldsetDefinition {
+/** Fieldset definition for app form/detail schemas */
+export interface AppFormFieldsetDefinition {
   key: string
   title: string
   description: string
@@ -144,12 +144,12 @@ export interface ListSchema {
   searchFields: string[]
 }
 
-/** Form schema shape */
-export interface FormSchema {
+/** App form schema shape */
+export interface AppFormSchema {
   model: string
   title: string
-  fieldsets: FieldsetDefinition[]
-  fields: FormFieldDefinition[]
+  fieldsets: AppFormFieldsetDefinition[]
+  fields: AppFormFieldDefinition[]
   groupLayouts?: Record<string, unknown>
 }
 

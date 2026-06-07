@@ -37,7 +37,7 @@ interface AppToolDefinition {
  * `getHtml` — by convention `new_model_app`'s, since both bundles wrap the
  * same `shared/model-form/main.js` and render identically.
  */
-export function createFormDataTools(
+export function createAppFormDataTools(
   resourceUri: string,
   modelNames: [string, ...string[]],
   { getHtml }: { getHtml: () => string }

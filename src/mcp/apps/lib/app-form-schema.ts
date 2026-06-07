@@ -1,10 +1,10 @@
 /**
- * Form Schema Generator
+ * App Form Schema Generator
  *
- * Generates form schemas from model configuration. Supports two modes:
+ * Generates app form schemas from model configuration. Supports two modes:
  *
- * 1. **FormClass mode** (preferred): Reads `FormClass.fields` for field list
- *    and optional `FormClass.fieldsets` for layout. No Prompt dependency needed.
+ * 1. **AppFormClass mode** (preferred): Reads `AppFormClass.fields` for field list
+ *    and optional `AppFormClass.fieldsets` for layout. No Prompt dependency needed.
  *
  * 2. **Prompt mode** (legacy): Reads `PromptClass.fieldGroups/sections` for field
  *    list and layout, with `associationTransformers` for association handling.
@@ -25,17 +25,17 @@ import type { FieldGroup, Section } from '#src/mcp/prompts/prompt-definitions.js
 import { humanize, pluralize } from './helpers.js'
 import type {
   AppAttributeDefinition,
-  AppModelClass,
-  FieldsetDefinition,
-  FormFieldDefinition,
-  FormSchema
+  AppFormFieldDefinition,
+  AppFormFieldsetDefinition,
+  AppFormSchema,
+  AppModelClass
 } from './types.js'
 
-interface FormSchemaOptions {
+interface AppFormSchemaOptions {
   allModelClasses?: Record<string, AppModelClass>
 }
 
-interface FormClassLike {
+interface AppFormClassLike {
   fields?: string[]
   fieldsets?: Record<
     string,
@@ -53,21 +53,21 @@ interface PromptClassLike {
 }
 
 /**
- * Generate a form schema from model and optional form/prompt configuration.
+ * Generate an app form schema from model and optional form/prompt configuration.
  *
- * Priority: FormClass > PromptClass > empty schema.
+ * Priority: AppFormClass > PromptClass > empty schema.
  */
-export function generateFormSchema(
+export function generateAppFormSchema(
   ModelClass: AppModelClass,
-  FormOrPromptClass?: FormClassLike | PromptClassLike,
-  { allModelClasses }: FormSchemaOptions = {}
-): FormSchema {
-  // FormClass path: has static fields array
+  FormOrPromptClass?: AppFormClassLike | PromptClassLike,
+  { allModelClasses }: AppFormSchemaOptions = {}
+): AppFormSchema {
+  // AppFormClass path: has static fields array
   if (
-    Array.isArray((FormOrPromptClass as FormClassLike)?.fields) &&
-    (FormOrPromptClass as FormClassLike).fields!.length > 0
+    Array.isArray((FormOrPromptClass as AppFormClassLike)?.fields) &&
+    (FormOrPromptClass as AppFormClassLike).fields!.length > 0
   ) {
-    return generateFromFormClass(ModelClass, FormOrPromptClass as FormClassLike, {
+    return generateFromFormClass(ModelClass, FormOrPromptClass as AppFormClassLike, {
       allModelClasses
     })
   }
@@ -88,16 +88,16 @@ export function generateFormSchema(
   }
 }
 
-// --- FormClass-based generation ---
+// --- AppFormClass-based generation ---
 
 function generateFromFormClass(
   ModelClass: AppModelClass,
-  FormClass: FormClassLike,
-  { allModelClasses }: FormSchemaOptions = {}
-): FormSchema {
+  FormClass: AppFormClassLike,
+  { allModelClasses }: AppFormSchemaOptions = {}
+): AppFormSchema {
   const groupKey = 'default'
 
-  const fields: FormFieldDefinition[] = []
+  const fields: AppFormFieldDefinition[] = []
   for (const fieldName of FormClass.fields!) {
     const attr = ModelClass.attributes[fieldName]
     if (!attr) continue
@@ -108,7 +108,7 @@ function generateFromFormClass(
   }
 
   // Use FormClass.fieldsets if provided, otherwise create a single default fieldset
-  let fieldsets: FieldsetDefinition[]
+  let fieldsets: AppFormFieldsetDefinition[]
   if (FormClass.fieldsets && Object.keys(FormClass.fieldsets).length > 0) {
     // Assign fields to their declared fieldset groups
     const fieldsByName = new Map(fields.map((f) => [f.name, f]))
@@ -120,7 +120,7 @@ function generateFromFormClass(
     }
 
     // Index rendered fields by group for empty-fieldset filtering
-    const fieldsByGroup: Record<string, FormFieldDefinition[]> = {}
+    const fieldsByGroup: Record<string, AppFormFieldDefinition[]> = {}
     for (const f of fields) {
       ;(fieldsByGroup[f.group] = fieldsByGroup[f.group] || []).push(f)
     }
@@ -159,9 +159,9 @@ function generateFromFormClass(
 function generateFromPrompt(
   ModelClass: AppModelClass,
   PromptClass: PromptClassLike,
-  { allModelClasses }: FormSchemaOptions = {}
-): FormSchema {
-  const fields: FormFieldDefinition[] = []
+  { allModelClasses }: AppFormSchemaOptions = {}
+): AppFormSchema {
+  const fields: AppFormFieldDefinition[] = []
   const fieldGroups = PromptClass.fieldGroups || {}
   const sections = PromptClass.sections || {}
   const transformers = PromptClass.associationTransformers || {}
@@ -194,13 +194,13 @@ function generateFromPrompt(
   }
 
   // Index rendered fields by group for empty-fieldset filtering
-  const fieldsByGroup: Record<string, FormFieldDefinition[]> = {}
+  const fieldsByGroup: Record<string, AppFormFieldDefinition[]> = {}
   for (const f of fields) {
     ;(fieldsByGroup[f.group] = fieldsByGroup[f.group] || []).push(f)
   }
 
   // Build fieldsets from sections, filtering out those with zero rendered fields
-  const fieldsets: FieldsetDefinition[] = Object.entries(sections)
+  const fieldsets: AppFormFieldsetDefinition[] = Object.entries(sections)
     .map(([key, section]) => ({
       key,
       title: section.title,
@@ -248,7 +248,7 @@ function buildSelectFromTransformer(
   name: string,
   transformer: TransformerEntry,
   groupKey: string
-): FormFieldDefinition {
+): AppFormFieldDefinition {
   return {
     name,
     label: humanize(name.replace(/_link$/, '')),
@@ -270,8 +270,8 @@ function buildField(
   ModelClass: AppModelClass,
   groupKey: string,
   allModelClasses?: Record<string, AppModelClass>
-): FormFieldDefinition {
-  const field: FormFieldDefinition = {
+): AppFormFieldDefinition {
+  const field: AppFormFieldDefinition = {
     name,
     label: attr.label || humanize(name),
     group: groupKey,
@@ -328,7 +328,7 @@ function buildField(
       // app, test with hand-built schema). Fail loudly with the model and
       // attribute name so the source is obvious.
       throw new Error(
-        `form-schema: ${ModelClass.singularName}.${name} has type "enum" but no enumValues. ` +
+        `app-form-schema: ${ModelClass.singularName}.${name} has type "enum" but no enumValues. ` +
           `Call validateRegistries() at server boot to catch this earlier.`
       )
     }
