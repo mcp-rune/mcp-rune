@@ -1,25 +1,105 @@
 /**
- * StatefulFormStrategy - Full progressive validation with sections
+ * StatefulFormStrategy — section-aware validation with progress tracking.
  *
- * This strategy provides complete state management with:
- * - Section-by-section validation
- * - Progress tracking
- * - Conditional section handling
- * - Next section suggestions
+ * Extends `HybridFormStrategy` with the ability to validate one section at
+ * a time and report progress per section. Despite the name, the **server
+ * holds no persistent state** across calls — "stateful" here refers to the
+ * LLM-server protocol exposing section identity and progress, not to
+ * server-side session storage. See "State" below.
  *
- * Operations:
- * - getDocumentation() - Returns guidance with section info
- * - validateSection(section, fields) - Validates one section
- * - validateFields(fields) - Validates all fields
- * - getProgress(fields) - Returns completion status per section
- * - generateSummary(fields) - Server-generated summary
- * - getDefaults() - Returns default form state
+ * Best for prompts with 20+ fields, many conditional sections, or field
+ * dependencies that mean the LLM should validate as it goes rather than
+ * all at once at the end.
  *
- * Flow: get_prompt -> [validate_section]* -> validate_form -> create_model
+ * ## Configure on a Prompt class
  *
- * Best for: Complex forms (20+ fields), many conditionals, field dependencies
+ *     export class RulePrompt extends BasePrompt {
+ *       static formStrategy = 'stateful'
  *
- * Example models: Rule, Right, Deal
+ *       static fieldDefinitions = {
+ *         name: { type: 'string', required: true },
+ *         transmission: { type: 'enum', enumValues: ['always', 'conditional'] },
+ *         condition: { type: 'string' }
+ *       }
+ *
+ *       // Sections are the user-facing structure (numbered steps in the doc).
+ *       static sections = {
+ *         basics: { title: 'Basics', groups: ['identity'], required: true },
+ *         transmission_config: {
+ *           title: 'Transmission',
+ *           groups: ['transmission_fields'],
+ *           required: true
+ *         }
+ *       }
+ *
+ *       // Field groups are the validation buckets a section maps to.
+ *       // A section can span multiple groups.
+ *       static fieldGroups = {
+ *         identity: { fields: ['name'], context: 'Identity', required: true },
+ *         transmission_fields: {
+ *           fields: ['transmission', 'condition'],
+ *           context: 'Transmission',
+ *           required: true,
+ *           // Gate this group by an earlier field's value:
+ *           conditional: { transmission: 'conditional' }
+ *         }
+ *       }
+ *
+ *       get promptContent() {
+ *         return PromptContentBuilder.for(RulePrompt, 'rule').standard().build()
+ *       }
+ *     }
+ *
+ * Conditional groups (`conditional: { field: value }`) are skipped
+ * automatically by `validateSection`, `getProgress`, and `getNextSection`
+ * when the gating value doesn't match.
+ *
+ * ## MCP tools activated
+ *
+ * | Tool                         | Behavior                                                |
+ * | ---------------------------- | ------------------------------------------------------- |
+ * | `get_prompt_guide`           | Returns `promptContent` (typically section-aware)       |
+ * | `validate_form`              | Validates all fields + attaches per-section progress    |
+ * | `validate_form` *(`section:`)* | Validates just that section, returns `next_section`   |
+ * | `get_form_summary`           | Human + technical via renderer, with progress appended  |
+ * | `get_form_progress`          | Returns completion status per section                   |
+ *
+ * Expected LLM flow:
+ *
+ *   1. `get_prompt_guide` — read the section list.
+ *   2. For each applicable section: gather its fields, call `validate_form`
+ *      with `section:` set, fix any errors, advance to the `next_section`
+ *      from the response.
+ *   3. Once `validate_form` (no section) returns `ready_to_submit: true`,
+ *      call `create_model`.
+ *
+ * As with hybrid, the prompt's documentation must explicitly instruct the
+ * LLM to call `validate_form` per section — nothing forces it.
+ *
+ * ## State
+ *
+ * The server keeps **no** persistent state between calls. The LLM is the
+ * stateholder: it remembers the values it has gathered and resubmits the
+ * full field set (or the section slice) on every validation call. Each
+ * `validate_form` and `get_form_progress` call is a pure function of the
+ * fields the caller passes in.
+ *
+ * `get_form_progress` therefore reflects only what the caller has
+ * surfaced — it has no memory of what was filled "earlier" if the LLM
+ * doesn't include those fields in the request.
+ *
+ * ## Delegation to HybridFormStrategy
+ *
+ * `validateFields` and `generateSummary` delegate to `HybridFormStrategy`
+ * for the field-level work, then enrich the result with `progress`. The
+ * summary renderer (configured via `ToolRegistry({ summaryRenderer })`)
+ * applies the same way for both strategies — section progress is appended
+ * by stateful after the renderer has produced human + technical halves.
+ *
+ * Flow:
+ *
+ *     get_prompt_guide → [ validate_form(section:) ]* →
+ *     validate_form → get_form_summary (optional) → create_model
  */
 
 import * as logger from '#src/runtime/logger.js'

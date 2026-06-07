@@ -1,20 +1,74 @@
 /**
- * HybridFormStrategy - Documentation + validation before submit
+ * HybridFormStrategy — docs + one validation pass before submit.
  *
- * This strategy provides documentation and validates all fields
- * before submission, but doesn't track progress by section.
+ * Adds a single server-side validation step to the stateless flow. The LLM
+ * gathers every field, calls `validate_form` once with all fields, and
+ * receives back errors, warnings, computed defaults, and a
+ * `ready_to_submit` flag. If `ready_to_submit: true`, the LLM proceeds to
+ * `create_model`; otherwise it fixes errors and re-validates.
  *
- * Operations:
- * - getDocumentation() - Returns guidance
- * - validateFields(fields) - Validates all fields at once
- * - generateSummary(fields) - Server-generated summary (via injected renderer)
+ * Best for prompts in the ~10–20-field range, with some conditionals, where
+ * you want a safety net before `create_model` but don't need
+ * section-by-section progress.
  *
- * Flow: get_prompt -> LLM guides -> validate_form -> create_model
+ * ## Configure on a Prompt class
  *
- * Best for: Medium complexity (10-20 fields), some conditionals,
- *           want validation without full state management
+ *     export class SeriesPrompt extends BasePrompt {
+ *       static formStrategy = 'hybrid'
  *
- * Example models: Series, Episode
+ *       static fieldDefinitions = {
+ *         title: { type: 'string', required: true, description: 'Series title' },
+ *         runtime: { type: 'integer', validation: { minimum: 1 } }
+ *       }
+ *
+ *       // Optional: groups bucket fields for the human summary's layout.
+ *       static fieldGroups = {
+ *         basics: { fields: ['title', 'runtime'], context: 'Basics', required: true }
+ *       }
+ *
+ *       // Optional: cross-field rules that can't be expressed per-field.
+ *       static crossSectionValidation(fields, errors, warnings) {
+ *         // Push into errors / warnings as needed.
+ *       }
+ *
+ *       get promptContent() {
+ *         return PromptContentBuilder.for(SeriesPrompt, 'series').standard().build()
+ *       }
+ *     }
+ *
+ * ## MCP tools activated
+ *
+ * | Tool                | Behavior                                                            |
+ * | ------------------- | ------------------------------------------------------------------- |
+ * | `get_prompt_guide`  | Returns `promptContent`                                             |
+ * | `validate_form`     | Validates all fields; returns errors + computed + `ready_to_submit` |
+ * | `get_form_summary`  | Human (markdown) + technical (payload) via the injected renderer    |
+ * | `get_form_progress` | Not supported                                                       |
+ *
+ * The LLM is expected to call `validate_form` exactly once after gathering
+ * fields, before calling `create_model`. The prompt's `promptContent` must
+ * tell it to do so — nothing invokes `validate_form` automatically.
+ *
+ * ## State
+ *
+ * None on the server. Each `validate_form` call is independent; the LLM
+ * passes the full field set every time. The server applies defaults and
+ * returns them in `computed` so the LLM can adopt them on `create_model`.
+ *
+ * ## Customizing the summary
+ *
+ * The human and technical summary halves are produced by a
+ * `FormSummaryRenderer` injected via `ToolRegistry({ summaryRenderer })`.
+ * The default `DefaultFormSummaryRenderer` emits markdown for the human
+ * half and a JSON-API-ish payload for the technical half. To customize the
+ * format (i18n, alternate markup, custom technical envelope), implement
+ * `FormSummaryRenderer` and pass an instance to the registry — no
+ * subclassing required.
+ *
+ * Flow:
+ *
+ *     get_prompt_guide → LLM gathers fields → validate_form →
+ *     get_form_summary (optional) → create_model
  */
 
 import * as logger from '#src/runtime/logger.js'
