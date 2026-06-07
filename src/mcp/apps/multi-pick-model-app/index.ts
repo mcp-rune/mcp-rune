@@ -19,7 +19,7 @@ import { getSearchConfig } from '#src/mcp/data-layer/api-extensions/search/index
 import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 import * as logger from '#src/runtime/logger.js'
 
-import type { AppModelClass, ToolResult } from '../lib/types.js'
+import type { AppModelClass, ToolResult } from '../lib/app-shared-entities.js'
 
 const MAX_RECORDS = 200
 const DIST_DIR = path.resolve(import.meta.dirname, '..', 'dist')

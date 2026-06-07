@@ -31,7 +31,7 @@ import {
   filterEmpty,
   resolveAssociationOptions
 } from '../lib/app-form-helpers.js'
-import type { AppModelClass, DataLayer, ToolResult } from '../lib/types.js'
+import type { AppModelClass, DataLayer, ToolResult } from '../lib/app-shared-entities.js'
 
 const DIST_DIR = path.resolve(import.meta.dirname, '..', 'dist')
 const HTML_PATH = path.join(DIST_DIR, 'edit-model-app.html')

@@ -10,8 +10,8 @@
 import { normalizeListWithConvention } from '#src/mcp/data-layer/model-service/model-service.js'
 import * as logger from '#src/runtime/logger.js'
 
+import type { AppFormFieldDefinition, AppModelClass, DataLayer } from './app-shared-entities.js'
 import { errorMeta } from './helpers.js'
-import type { AppFormFieldDefinition, AppModelClass, DataLayer } from './types.js'
 
 /**
  * Fetch association options from the API for fields that declare associations.

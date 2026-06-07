@@ -9,8 +9,8 @@
 
 import { getSearchConfig } from '#src/mcp/data-layer/api-extensions/search/index.js'
 
+import type { AppModelClass, ColumnDefinition, ListSchema } from './app-shared-entities.js'
 import { humanize } from './helpers.js'
-import type { AppModelClass, ColumnDefinition, ListSchema } from './types.js'
 
 /**
  * Infer which columns to show in a list view from model attributes.

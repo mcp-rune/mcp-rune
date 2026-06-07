@@ -83,8 +83,11 @@ export interface AppFormFieldsetConfig {
 
 /**
  * Valid picker UIs for association selectors.
- *   autocomplete — search-as-you-type, suited for large catalogs
- *   list         — browse all scoped records, suited for small sets
+ *   autocomplete — search-as-you-type, large catalogs (→ pick_model_app)
+ *   list         — browse all scoped records, small sets (→ multi_pick_model_app)
+ *
+ * The enum names the UX pattern. The mapping to picker tools lives in
+ * src/mcp/prompts/association-transformers.ts.
  */
 export type AppFormPicker = 'autocomplete' | 'list'
 

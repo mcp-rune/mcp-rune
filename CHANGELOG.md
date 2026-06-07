@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.87.2] - 2026-06-07
+
+### Added
+
+- `src/mcp/apps/lib/app-shared-entities.ts` — rename of `types.ts`; the cross-cutting shared surface for all MCP App modules (`AppModelClass`, `AppToolContext`, `ToolResult`, schema shapes). Name now mirrors the `*-entities.ts` convention established by `app-form-entities.ts`.
+- `selection-tools.ts` module header — inline usage example showing the canonical `createSelectionTools(...)` call pattern.
+- `AppFormPicker` JSDoc — annotates which picker tool each value resolves to (`autocomplete` → `pick_model_app`, `list` → `multi_pick_model_app`) and points at the mapping in `association-transformers.ts`.
+
+### Fixed
+
+- Dead import paths `#src/mcp/models/{api-config,association-config,attribute-definition}.js` replaced with `#src/mcp/models/model-definitions.js` across 11 source files (`tools/base-tool.ts`, `schema/types.ts`, `model-layer/*`, `data-layer/api-conventions/*`, `data-layer/model-service/*`, `analysis-layer/*`, `apps/lib/app-shared-entities.ts`). These paths had no source files; `tsc` was silently resolving them through stale `dist/` artifacts via the `package.json` imports map.
+
 ## [0.87.1] - 2026-06-07
 
 ### Added

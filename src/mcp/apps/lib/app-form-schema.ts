@@ -22,14 +22,14 @@ import type {
 import { buildFieldTransformerMap } from '#src/mcp/prompts/association-transformers.js'
 import type { FieldGroup, Section } from '#src/mcp/prompts/prompt-definitions.js'
 
-import { humanize, pluralize } from './helpers.js'
 import type {
   AppAttributeDefinition,
   AppFormFieldDefinition,
   AppFormFieldsetDefinition,
   AppFormSchema,
   AppModelClass
-} from './types.js'
+} from './app-shared-entities.js'
+import { humanize, pluralize } from './helpers.js'
 
 interface AppFormSchemaOptions {
   allModelClasses?: Record<string, AppModelClass>

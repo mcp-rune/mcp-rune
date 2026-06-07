@@ -17,7 +17,7 @@ import type {
   AppFormAssociationResolution,
   AppFormPicker
 } from './app-form-entities.js'
-import type { AppModelClass } from './types.js'
+import type { AppModelClass } from './app-shared-entities.js'
 
 interface NormalizedEntry {
   name: string

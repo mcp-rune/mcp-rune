@@ -16,7 +16,7 @@
 
 import { z } from 'zod'
 
-import type { AppToolContext, ToolResult } from './types.js'
+import type { AppToolContext, ToolResult } from './app-shared-entities.js'
 
 interface AppToolDefinition {
   resourceUri?: string

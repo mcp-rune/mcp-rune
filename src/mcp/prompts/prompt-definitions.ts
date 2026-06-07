@@ -1,7 +1,7 @@
 /**
  * Prompt definitions — the type vocabulary describing what a prompt IS.
  *
- * Mirrors the role of `src/mcp/models/attribute-definition.ts` for models:
+ * Mirrors the role of `src/mcp/models/model-definitions.ts` for models:
  * holds the interfaces consumed by `BasePrompt`, strategies, generators,
  * `PromptContentBuilder`, and the registry. Definition lives here; the
  * `BasePrompt` class and `PromptContentBuilder` are consumers.

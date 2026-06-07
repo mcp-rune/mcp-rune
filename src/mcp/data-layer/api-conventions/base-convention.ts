@@ -19,7 +19,7 @@ import type {
   AssociationConfig,
   BelongsToAssociation,
   HasManyAssociation
-} from '#src/mcp/models/association-config.js'
+} from '#src/mcp/models/model-definitions.js'
 export type { NormalizedListResponse, PaginationInfo } from '#src/mcp/data-layer/types.js'
 
 /** HTTP error response shape passed to convention error parsing */

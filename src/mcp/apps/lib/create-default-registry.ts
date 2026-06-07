@@ -22,9 +22,9 @@ import { createNewModelApp } from '../new-model-app/index.js'
 import { createPickModelApp } from '../pick-model-app/index.js'
 import { createShowModelApp } from '../show-model-app/index.js'
 import { createViewSelectionApp } from '../view-selection-app/index.js'
+import type { ApiClient, AppModelClass } from './app-shared-entities.js'
 import type { AppDefinition, KindExtension, ThemeOverrides } from './registry.js'
 import { AppRegistry } from './registry.js'
-import type { ApiClient, AppModelClass } from './types.js'
 
 export type DefaultAppName =
   | 'pick-model-app'
