@@ -109,29 +109,6 @@ export class BasePrompt {
     return null
   }
 
-  /** Generate technical summary (API attributes). */
-  static generateTechnicalSummary(
-    formState: Record<string, unknown>,
-    context: { model?: string } = {}
-  ): string {
-    const attributes: Record<string, unknown> = {}
-
-    for (const [fieldName, value] of Object.entries(formState)) {
-      if (value !== undefined && value !== null && value !== '') {
-        attributes[fieldName] = value
-      }
-    }
-
-    return JSON.stringify(
-      {
-        model: context.model || 'unknown',
-        attributes
-      },
-      null,
-      2
-    )
-  }
-
   /**
    * Serialize prompt class metadata into a transport-safe form schema.
    * Used by the custom `prompts/getFormSchema` MCP handler.

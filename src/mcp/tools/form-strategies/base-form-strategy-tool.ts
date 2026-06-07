@@ -10,9 +10,11 @@
  */
 
 import type { BaseFormStrategy } from '#src/mcp/prompts/form-strategies/base-form-strategy.js'
+import { defaultFormSummaryRenderer } from '#src/mcp/prompts/form-strategies/default-form-summary-renderer.js'
+import type { FormSummaryRenderer } from '#src/mcp/prompts/form-strategies/form-strategy-definitions.js'
 import { getFormStrategy } from '#src/mcp/prompts/form-strategies/index.js'
 import type { FormStrategyType, PromptClassLike } from '#src/mcp/prompts/prompt-definitions.js'
-import type { ToolAnnotations, ToolResult } from '#src/mcp/tools/base-tool.js'
+import type { ToolAnnotations, ToolDependencies, ToolResult } from '#src/mcp/tools/base-tool.js'
 import { BaseTool } from '#src/mcp/tools/base-tool.js'
 
 /** Error info returned by checkOperation */
@@ -34,6 +36,19 @@ export class BaseFormStrategyTool extends BaseTool {
     destructiveHint: false,
     idempotentHint: false,
     openWorldHint: false
+  }
+
+  /**
+   * Renderer used by `get_form_summary` for human + technical summary halves.
+   * Threaded in from `ToolRegistryConfig.summaryRenderer` via
+   * `ToolDependencies`. Falls back to `defaultFormSummaryRenderer` for ad-hoc
+   * tool instantiations.
+   */
+  readonly summaryRenderer: FormSummaryRenderer
+
+  constructor(dependencies: ToolDependencies = {}) {
+    super(dependencies)
+    this.summaryRenderer = dependencies.summaryRenderer ?? defaultFormSummaryRenderer
   }
 
   /** Get form-strategy for a prompt class */

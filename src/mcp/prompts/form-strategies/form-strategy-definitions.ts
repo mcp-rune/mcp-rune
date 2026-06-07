@@ -120,6 +120,22 @@ export interface SectionMetadata {
 }
 
 /**
+ * Renderer for the human and technical halves of a form summary. The default
+ * implementation lives in `default-form-summary-renderer.ts`. Deployers can
+ * supply their own via `ToolRegistry({ summaryRenderer })` to customize the
+ * markdown layout, API-payload shape, i18n, or alternate output formats
+ * without subclassing the strategy.
+ */
+export interface FormSummaryRenderer {
+  renderHuman(promptClass: HybridPromptClass, fields: Record<string, unknown>): string
+  renderTechnical(
+    promptClass: HybridPromptClass,
+    fields: Record<string, unknown>,
+    context: Record<string, unknown>
+  ): TechnicalSummary
+}
+
+/**
  * Narrow structural shape of a prompt class as seen by `StatefulFormStrategy`.
  * Extends `HybridPromptClass` with section-aware fields.
  */

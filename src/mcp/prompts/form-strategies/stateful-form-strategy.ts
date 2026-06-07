@@ -25,7 +25,9 @@
 import * as logger from '#src/runtime/logger.js'
 
 import { BaseFormStrategy } from './base-form-strategy.js'
+import { defaultFormSummaryRenderer } from './default-form-summary-renderer.js'
 import type {
+  FormSummaryRenderer,
   ProgressResult,
   SectionMetadata,
   SectionValidationResult,
@@ -56,14 +58,7 @@ export class StatefulFormStrategy extends BaseFormStrategy {
     promptContent: string
     constructor: { name: string }
   }): string {
-    log.debug('getDocumentation called', {
-      promptClass: promptInstance.constructor.name
-    })
-    const promptContent = promptInstance.promptContent
-    log.debug('getDocumentation complete', {
-      promptContentLength: promptContent?.length || 0
-    })
-    return promptContent
+    return promptInstance.promptContent
   }
 
   /** Validate a specific section */
@@ -191,11 +186,6 @@ export class StatefulFormStrategy extends BaseFormStrategy {
     const fieldGroups = promptClass.fieldGroups || {}
     const groupNames = Object.keys(fieldGroups)
     const currentIndex = groupNames.indexOf(currentSection)
-    log.debug('getNextSection called', {
-      currentSection,
-      currentIndex,
-      totalSections: groupNames.length
-    })
 
     for (let i = currentIndex + 1; i < groupNames.length; i++) {
       const groupName = groupNames[i]!
@@ -212,17 +202,9 @@ export class StatefulFormStrategy extends BaseFormStrategy {
         }
       }
 
-      log.debug('getNextSection complete', {
-        currentSection,
-        nextSection: groupName
-      })
       return groupName
     }
 
-    log.debug('getNextSection complete', {
-      currentSection,
-      nextSection: null
-    })
     return null // All sections complete
   }
 
@@ -341,24 +323,25 @@ export class StatefulFormStrategy extends BaseFormStrategy {
     return progress
   }
 
-  /** Generate summary (delegates to HybridFormStrategy) */
+  /**
+   * Build a summary by delegating to `HybridFormStrategy` and adding
+   * section-level progress on top. The renderer arg is threaded through to
+   * the hybrid strategy; progress itself is a strategy concern, not a
+   * renderer one.
+   */
   static generateSummary(
     promptClass: StatefulPromptClass,
     fields: Record<string, unknown>,
-    context: Record<string, unknown> = {}
+    context: Record<string, unknown> = {},
+    renderer: FormSummaryRenderer = defaultFormSummaryRenderer
   ): StatefulSummaryResult {
-    log.debug('generateSummary called', {
-      fieldCount: Object.keys(fields).length,
-      model: context.model
-    })
-
     const summary = HybridFormStrategy.generateSummary(
       promptClass,
       fields,
-      context
+      context,
+      renderer
     ) as StatefulSummaryResult
 
-    // Add progress to summary
     summary.progress = this.getProgress(promptClass, fields)
 
     log.debug('generateSummary complete', {
@@ -373,22 +356,12 @@ export class StatefulFormStrategy extends BaseFormStrategy {
   /** Get default values for all fields */
   static getDefaults(promptClass: StatefulPromptClass): Record<string, unknown> {
     const fieldDefs = promptClass.fieldDefinitions || {}
-    log.debug('getDefaults called', {
-      totalFields: Object.keys(fieldDefs).length
-    })
-
     const defaults: Record<string, unknown> = {}
     for (const [name, def] of Object.entries(fieldDefs)) {
       if (def.default !== undefined) {
         defaults[name] = def.default
       }
     }
-
-    log.debug('getDefaults complete', {
-      defaultsCount: Object.keys(defaults).length,
-      defaultFields: Object.keys(defaults)
-    })
-
     return defaults
   }
 

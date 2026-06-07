@@ -7,7 +7,7 @@
  * Operations:
  * - getDocumentation() - Returns guidance
  * - validateFields(fields) - Validates all fields at once
- * - generateSummary(fields) - Server-generated summary
+ * - generateSummary(fields) - Server-generated summary (via injected renderer)
  *
  * Flow: get_prompt -> LLM guides -> validate_form -> create_model
  *
@@ -17,14 +17,14 @@
  * Example models: Series, Episode
  */
 
-import { getKind } from '#src/mcp/models/kinds/index.js'
 import * as logger from '#src/runtime/logger.js'
 
 import { BaseFormStrategy } from './base-form-strategy.js'
+import { defaultFormSummaryRenderer } from './default-form-summary-renderer.js'
 import type {
+  FormSummaryRenderer,
   HybridPromptClass,
   SummaryResult,
-  TechnicalSummary,
   ValidationError,
   ValidationResult
 } from './form-strategy-definitions.js'
@@ -43,14 +43,7 @@ export class HybridFormStrategy extends BaseFormStrategy {
     promptContent: string
     constructor: { name: string }
   }): string {
-    log.debug('getDocumentation called', {
-      promptClass: promptInstance.constructor.name
-    })
-    const promptContent = promptInstance.promptContent
-    log.debug('getDocumentation complete', {
-      promptContentLength: promptContent?.length || 0
-    })
-    return promptContent
+    return promptInstance.promptContent
   }
 
   /** Validate all fields at once */
@@ -137,99 +130,27 @@ export class HybridFormStrategy extends BaseFormStrategy {
     }
   }
 
-  /** Generate human and technical summary */
+  /**
+   * Build a summary by delegating to the injected renderer. The strategy owns
+   * "which prompt + fields are summarizable"; the renderer owns "how to format
+   * them." Defaults to `defaultFormSummaryRenderer` for callers that don't
+   * thread one through.
+   */
   static generateSummary(
     promptClass: HybridPromptClass,
     fields: Record<string, unknown>,
-    context: Record<string, unknown> = {}
+    context: Record<string, unknown> = {},
+    renderer: FormSummaryRenderer = defaultFormSummaryRenderer
   ): SummaryResult {
-    log.debug('generateSummary called', {
-      fieldCount: Object.keys(fields).length,
-      model: context.model
-    })
-
-    const humanSummary = this.generateHumanSummary(promptClass, fields)
-    const technicalSummary = this.generateTechnicalSummary(promptClass, fields, context)
+    const human = renderer.renderHuman(promptClass, fields)
+    const technical = renderer.renderTechnical(promptClass, fields, context)
 
     log.debug('generateSummary complete', {
-      humanSummaryLength: humanSummary?.length || 0,
-      technicalAttributeCount: Object.keys(technicalSummary?.attributes || {}).length
+      humanSummaryLength: human?.length || 0,
+      technicalAttributeCount: Object.keys(technical?.attributes || {}).length
     })
 
-    return {
-      human: humanSummary,
-      technical: technicalSummary
-    }
-  }
-
-  /** Generate human-readable summary */
-  static generateHumanSummary(
-    promptClass: HybridPromptClass,
-    fields: Record<string, unknown>
-  ): string {
-    const fieldDefs = promptClass.fieldDefinitions || {}
-    const fieldGroups = promptClass.fieldGroups || {}
-    const lines: string[] = []
-
-    // Group fields by their groups if available
-    if (Object.keys(fieldGroups).length > 0) {
-      for (const [, group] of Object.entries(fieldGroups)) {
-        const groupValues = group.fields
-          .filter((f) => fields[f] !== undefined && fields[f] !== '')
-          .map((f) => {
-            const def = fieldDefs[f]
-            const rendered = def?.type
-              ? getKind(def.type, def.format).describe(fields[f], {
-                  format: def.format,
-                  enumValues: def.enumValues
-                })
-              : String(fields[f])
-            return `  - ${def?.description || f}: ${rendered}`
-          })
-
-        if (groupValues.length > 0) {
-          lines.push(`\n**${group.context}:**`)
-          lines.push(...groupValues)
-        }
-      }
-    } else {
-      // No groups, just list all fields
-      for (const [name, value] of Object.entries(fields)) {
-        if (value !== undefined && value !== '') {
-          const def = fieldDefs[name]
-          const rendered = def?.type
-            ? getKind(def.type, def.format).describe(value, {
-                format: def.format,
-                enumValues: def.enumValues
-              })
-            : String(value)
-          lines.push(`- ${def?.description || name}: ${rendered}`)
-        }
-      }
-    }
-
-    return lines.join('\n')
-  }
-
-  /** Generate technical summary (API-ready) */
-  static generateTechnicalSummary(
-    _promptClass: HybridPromptClass,
-    fields: Record<string, unknown>,
-    context: Record<string, unknown> = {}
-  ): TechnicalSummary {
-    const attributes: Record<string, unknown> = {}
-
-    for (const [name, value] of Object.entries(fields)) {
-      if (value !== undefined && value !== null && value !== '') {
-        attributes[name] = value
-      }
-    }
-
-    return {
-      model: (context.model as string) || 'unknown',
-      parent_path: (context.parent_path as string) || undefined,
-      attributes
-    }
+    return { human, technical }
   }
 
   static getDescription(): string {
