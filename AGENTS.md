@@ -2,7 +2,7 @@
 
 ## Layer discipline
 
-mcp-rune's projection layer — everything under `src/mcp/apps/`, `src/mcp/tools/`, `src/mcp/prompts/`, and `src/mcp/data-layer/api-extensions/` — reaches model machinery, analysis machinery, and the backend exclusively through three peer interfaces. **Never bypass these interfaces by importing internal helpers directly.** If a method you need doesn't exist on the relevant interface, **extend the interface** rather than reaching past it.
+mcp-rune's projection layer — everything under `src/mcp/apps/`, `src/mcp/tools/`, `src/mcp/prompt-layer/`, and `src/mcp/data-layer/api-extensions/` — reaches model machinery, analysis machinery, and the backend exclusively through three peer interfaces. **Never bypass these interfaces by importing internal helpers directly.** If a method you need doesn't exist on the relevant interface, **extend the interface** rather than reaching past it.
 
 ### `DataLayer` — backend I/O
 
@@ -28,7 +28,7 @@ Never import `extractEdgesFromRecord`, `buildEmbeddingText`, `expandHops`, or an
 
 ### Enforcement
 
-The rules above are enforced by a `no-restricted-imports` block in `eslint.config.js`, scoped to `src/mcp/apps/**`, `src/mcp/tools/**`, `src/mcp/prompts/**`, and `src/mcp/data-layer/api-extensions/**`. Boot-time validators (`src/mcp/apps/lib/form-validator.ts` and `src/mcp/prompts/prompt-validator.ts`) are exempt because they run before any factory is constructed; any new boot-time validator that needs a helper directly should be added to the exemption list rather than left to break the build.
+The rules above are enforced by a `no-restricted-imports` block in `eslint.config.js`, scoped to `src/mcp/apps/**`, `src/mcp/tools/**`, `src/mcp/prompt-layer/**`, and `src/mcp/data-layer/api-extensions/**`. Boot-time validators (`src/mcp/apps/lib/form-validator.ts` and `src/mcp/prompt-layer/prompt-validator.ts`) are exempt because they run before any factory is constructed; any new boot-time validator that needs a helper directly should be added to the exemption list rather than left to break the build.
 
 ### Folder layout that supports the rule
 
@@ -37,7 +37,9 @@ The three layers sit at the same depth under `src/mcp/`, separated from the **de
 - `src/mcp/data-layer/` — backend I/O seam
 - `src/mcp/model-layer/` — generic, per-model-bound model-config consumers
 - `src/mcp/analysis-layer/` — analysis-domain consumers
+- `src/mcp/prompt-layer/` — prompt-runtime consumers (registry, cache, validator, form-strategies, api-conventions)
 - `src/mcp/models/` — **what a model IS**: `base-model.ts` and the `kinds/` registry. _Never_ dump helpers that consume a model into this folder; they belong in `model-layer/` or `analysis-layer/`.
+- `src/mcp/prompts/` — **what a prompt IS**: `base-prompt.ts`, `prompt-definitions.ts`, `prompt-content-builder.ts`, `association-transformers.ts`, and `generators/`. Same dichotomy as `models/` vs `model-layer/` — runtime that consumes a prompt belongs in `prompt-layer/`.
 
 When introducing a new domain seam later (e.g. an auth-layer, a workflow-layer), the same dichotomy applies: a sibling top-level folder for the layer; the declarative side stays in its own folder.
 

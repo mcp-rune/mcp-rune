@@ -7,7 +7,11 @@
  * extend each other's contracts without importing across behavior files.
  */
 
-import type { FieldGroup, PromptFieldDefinition, Section } from '../prompt-definitions.js'
+import type {
+  FieldGroup,
+  PromptFieldDefinition,
+  Section
+} from '../../prompts/prompt-definitions.js'
 
 /** Context object threaded through field-level validation callbacks. */
 export interface ValidationContext {

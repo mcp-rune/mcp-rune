@@ -25,7 +25,7 @@
 
 import { getKind } from '#src/mcp/models/kinds/index.js'
 
-import type { PromptFieldDefinition } from '../prompt-definitions.js'
+import type { PromptFieldDefinition } from '../../prompts/prompt-definitions.js'
 import type { ValidationContext } from './form-strategy-definitions.js'
 
 export class BaseFormStrategy {

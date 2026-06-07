@@ -20,11 +20,11 @@ import { storeOperation } from '#src/runtime/vector-storage.js'
 
 import { defaultConvention } from '../data-layer/api-conventions/index.js'
 import type { DomainRegistry } from '../domain/registry.js'
-import type { FormSummaryRenderer } from '../prompts/form-strategies/form-strategy-definitions.js'
-import type { PromptRegistry } from '../prompts/prompt-registry.js'
+import type { FormSummaryRenderer } from '../prompt-layer/form-strategies/form-strategy-definitions.js'
+import type { PromptRegistry } from '../prompt-layer/prompt-registry.js'
 
 export type { DomainRegistry } from '../domain/registry.js'
-export type { PromptRegistry } from '../prompts/prompt-registry.js'
+export type { PromptRegistry } from '../prompt-layer/prompt-registry.js'
 
 // ============================================================================
 // Types

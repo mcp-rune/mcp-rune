@@ -15,8 +15,8 @@
 import type { FormClassLike } from '#src/mcp/apps/lib/form-validator.js'
 import { validateFormClass } from '#src/mcp/apps/lib/form-validator.js'
 import { validateModelClass } from '#src/mcp/model-layer/model-validator.js'
-import type { PromptClassLike } from '#src/mcp/prompts/prompt-validator.js'
-import { validatePromptClass } from '#src/mcp/prompts/prompt-validator.js'
+import type { PromptClassLike } from '#src/mcp/prompt-layer/prompt-validator.js'
+import { validatePromptClass } from '#src/mcp/prompt-layer/prompt-validator.js'
 
 import type { Issue, ModelClassLike, ValidationReport } from './types.js'
 

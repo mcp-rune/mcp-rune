@@ -9,7 +9,7 @@ import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
 import { coerceToObject } from '#src/core/helpers.js'
-import type { FormSummaryRenderer } from '#src/mcp/prompts/form-strategies/form-strategy-definitions.js'
+import type { FormSummaryRenderer } from '#src/mcp/prompt-layer/form-strategies/form-strategy-definitions.js'
 import type { ToolResult } from '#src/mcp/tools/base-tool.js'
 
 import { BaseFormStrategyTool } from './base-form-strategy-tool.js'
