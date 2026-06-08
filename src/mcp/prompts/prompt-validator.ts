@@ -9,12 +9,8 @@
 
 import { closestMatch } from '#src/core/suggestions.js'
 import { collectValidFieldNames } from '#src/mcp/model-layer/field-names.js'
+import type { PromptClassLike } from '#src/mcp/prompts/prompt-definitions.js'
 import type { Issue, ModelClassLike } from '#src/mcp/schema/types.js'
-
-export interface PromptClassLike {
-  fieldGroups?: Record<string, { fields: string[] }>
-  sections?: Record<string, { groups?: string[] }>
-}
 
 export function validatePromptClass(
   modelName: string,
@@ -23,9 +19,9 @@ export function validatePromptClass(
 ): Issue[] {
   const issues: Issue[] = []
   const validNames = collectValidFieldNames(ModelClass)
-  const groupKeys = new Set(Object.keys(PromptClass.fieldGroups ?? {}))
+  const groupKeys = new Set(Object.keys(PromptClass.fieldGroups))
 
-  for (const [gKey, group] of Object.entries(PromptClass.fieldGroups ?? {})) {
+  for (const [gKey, group] of Object.entries(PromptClass.fieldGroups)) {
     for (const fieldName of group.fields ?? []) {
       if (!validNames.has(fieldName)) {
         const suggestion = closestMatch(fieldName, validNames)
@@ -43,8 +39,8 @@ export function validatePromptClass(
     }
   }
 
-  for (const [sKey, section] of Object.entries(PromptClass.sections ?? {})) {
-    for (const groupName of section.groups ?? []) {
+  for (const [sKey, section] of Object.entries(PromptClass.sections)) {
+    for (const groupName of section.groups) {
       if (!groupKeys.has(groupName)) {
         const suggestion = closestMatch(groupName, groupKeys)
         issues.push({

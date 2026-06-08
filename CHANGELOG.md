@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.95.1] - 2026-06-08
+
+Consolidates `PromptClassLike` to a single source of truth (epic #268, axis 4, sub-issue #274).
+
+### Changed
+
+- `src/mcp/prompts/prompt-validator.ts` — delete the local narrower `PromptClassLike` declaration; import the canonical from `prompt-definitions.ts`. Drops `?? {}` fallbacks (canonical makes `fieldGroups`/`sections` required).
+- `src/mcp/schema/validate-registries.ts` — `PromptClassLike` import now points at `prompt-definitions.ts` (was `prompt-validator.ts`).
+
+[0.95.1]: https://github.com/mcp-rune/mcp-rune/compare/v0.95.0...v0.95.1
+
 ## [0.95.0] - 2026-06-08
 
 > **BREAKING.** Resolves the `FilterSchema` name collision (epic #268, axis #2) and re-homes request-time validation onto `DataLayer`. The four standalone request-time validators are removed from the public surface — callers go through `dataLayer.validateFilters` / `normalizeFilters` / `validateNestedResource` instead. `FilterSchema` is renamed `FilterableAttribute` with a single canonical definition.
