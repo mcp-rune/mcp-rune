@@ -37,7 +37,7 @@ import {
 } from '#src/mcp/model-layer/model-layer.js'
 import type { KindDescriptor, KindRenderHint } from '#src/mcp/models/kinds/index.js'
 import { registerKind } from '#src/mcp/models/kinds/index.js'
-import type { ModelsRegistry } from '#src/mcp/tools/base-tool.js'
+import type { ModelsRegistry } from '#src/mcp/models/model-definitions.js'
 import * as logger from '#src/runtime/logger.js'
 
 import type { FormSubmitMode } from '../../extensions/tool-flow.js'

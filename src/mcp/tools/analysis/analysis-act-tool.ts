@@ -1,13 +1,14 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
+import type { ModelConfig } from '#src/mcp/models/model-definitions.js'
 import {
   getIngestedRecordCount,
   getIngestedRecordDryRun,
   getIngestedRecordIdsFiltered
 } from '#src/runtime/vector-storage.js'
 
-import type { ModelConfig, ToolAnnotations, ToolResult } from '../base-tool.js'
+import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { SaveModelBaseTool } from '../save-model-base-tool.js'
 
 /** Max records per internal batch. Higher than bulk_action_models (25) because

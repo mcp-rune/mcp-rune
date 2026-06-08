@@ -27,7 +27,8 @@ import {
 import type { NormalizedListResponse } from '#src/mcp/data-layer/types.js'
 import type { AssociationConfig } from '#src/mcp/models/model-definitions.js'
 
-import type { ModelConfig, ModelsRegistry, ToolLogger } from '../../tools/base-tool.js'
+import type { ModelConfig, ModelsRegistry } from '../../models/model-definitions.js'
+import type { ToolLogger } from '../../tools/base-tool.js'
 import type { BaseConvention } from '../api-conventions/base-convention.js'
 import { defaultConvention, jsonApiConvention } from '../api-conventions/index.js'
 import type { CrudAction, EndpointResolverConfig } from './endpoint-resolver.js'

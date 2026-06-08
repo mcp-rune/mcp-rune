@@ -9,7 +9,7 @@
  * consumer above it already routes through this module.
  */
 
-import type { ModelsRegistry } from '#src/mcp/tools/base-tool.js'
+import type { ModelsRegistry } from '#src/mcp/models/model-definitions.js'
 
 import type { SearchConfig } from './types.js'
 

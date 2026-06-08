@@ -29,8 +29,8 @@
  */
 
 import { getKind, type KindDescriptor } from '#src/mcp/models/kinds/index.js'
+import type { ModelsRegistry } from '#src/mcp/models/model-definitions.js'
 import type { ModelClassLike } from '#src/mcp/schema/types.js'
-import type { ModelsRegistry } from '#src/mcp/tools/base-tool.js'
 
 import { resolveDerivedFields as resolveDerivedFieldsImpl } from './derived-fields.js'
 import { collectValidFieldNames } from './field-names.js'

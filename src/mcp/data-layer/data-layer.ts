@@ -37,10 +37,8 @@ import type {
   PaginationParams
 } from '#src/mcp/data-layer/model-service/model-service.js'
 import type { NormalizedListResponse } from '#src/mcp/data-layer/types.js'
-// These types describe the contract surface; they live in non-core modules
-// today, but the interface they describe is core. Re-exported below so
-// consumers import everything DataLayer-related from one place.
-import type { ModelConfig, ModelsRegistry, ToolLogger } from '#src/mcp/tools/base-tool.js'
+import type { ModelConfig, ModelsRegistry } from '#src/mcp/models/model-definitions.js'
+import type { ToolLogger } from '#src/mcp/tools/base-tool.js'
 
 import type { ApiClient, RequestOptions } from '../../core/api-client.js'
 

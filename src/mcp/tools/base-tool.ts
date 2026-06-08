@@ -13,11 +13,7 @@ import {
   createModelLayerFactory,
   type ModelLayerFactory
 } from '#src/mcp/model-layer/model-layer.js'
-import type {
-  ApiConfig,
-  AssociationConfig,
-  AttributeDefinition
-} from '#src/mcp/models/model-definitions.js'
+import type { ModelConfig, ModelsRegistry } from '#src/mcp/models/model-definitions.js'
 import { storeOperation } from '#src/runtime/vector-storage.js'
 
 import { defaultConvention } from '../data-layer/api-conventions/index.js'
@@ -50,36 +46,6 @@ export interface ServerContext {
   name?: string
   sessionId?: string
 }
-
-/**
- * Model configuration as stored in the models registry. Aligned with the
- * static shape of `BaseModel` so `typeof MyModel` (a `BaseModel` subclass)
- * is directly assignable to `ModelConfig` without an explicit cast — this
- * is what every integrator does in practice.
- */
-export interface ModelConfig {
-  attributes?: Record<string, AttributeDefinition>
-  description?: string
-  api: ApiConfig
-  associations?: AssociationConfig & {
-    custom?: Record<string, Record<string, unknown>>
-  }
-  /**
-   * Opt-in extension configs, keyed by extension name. Read by each registered
-   * `ApiExtension` via its typed `get<X>Config(modelConfig)` helper.
-   * See `docs/guides/api-extensions.md`.
-   */
-  extensions?: Record<string, unknown>
-  /** Optional override of the singular form used in API payloads. */
-  modelName?: string
-  /** Names of required attributes — `BaseModel` derives this from `attributes`. */
-  required?: readonly string[]
-  /** Singular form of the model name used in API payloads — `BaseModel` derives. */
-  singularName?: string
-}
-
-/** Models registry: model name to model config */
-export type ModelsRegistry = Record<string, ModelConfig>
 
 /** Dependencies injected into tool constructors */
 export interface ToolDependencies {

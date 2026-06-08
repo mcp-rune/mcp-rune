@@ -20,7 +20,7 @@
  */
 
 import type { EndpointOverrides } from '../../models/model-definitions.js'
-import type { ModelConfig } from '../../tools/base-tool.js'
+import type { ModelConfig } from '../../models/model-definitions.js'
 
 export type { EndpointOverrides } from '../../models/model-definitions.js'
 

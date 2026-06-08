@@ -54,13 +54,13 @@ import {
   createModelLayerFactory,
   type ModelLayerFactory
 } from '#src/mcp/model-layer/model-layer.js'
+import type { ModelsRegistry } from '#src/mcp/models/model-definitions.js'
 import type { FormSummaryRenderer } from '#src/mcp/prompts/form-strategies/form-strategy-definitions.js'
 import * as logger from '#src/runtime/logger.js'
 import * as tracing from '#src/runtime/tracing.js'
 
 import type {
   DomainRegistry,
-  ModelsRegistry,
   PromptRegistry,
   ServerContext,
   ToolDependencies,

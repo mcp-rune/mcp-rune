@@ -16,6 +16,7 @@ import type {
   NestedValidationSuccess
 } from '#src/mcp/data-layer/data-layer.js'
 import { buildCollectionPath } from '#src/mcp/data-layer/model-service/compound-id.js'
+import type { ModelConfig } from '#src/mcp/models/model-definitions.js'
 import {
   getEdgesForSources,
   getEmbeddingsForRecords,
@@ -26,7 +27,7 @@ import {
   storeIngestedRecords
 } from '#src/runtime/vector-storage.js'
 
-import type { DataLayer, ModelConfig, ToolAnnotations, ToolResult } from '../base-tool.js'
+import type { DataLayer, ToolAnnotations, ToolResult } from '../base-tool.js'
 import { BaseAnalysisTool } from './base-analysis-tool.js'
 
 /** Max pages allowed when ingest_all is true */
