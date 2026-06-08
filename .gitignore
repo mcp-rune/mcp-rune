@@ -28,6 +28,9 @@ Thumbs.db
 dist/
 *.tsbuildinfo
 
+# Local npm pack output (e.g. mcp-rune-mcp-rune-X.Y.Z.tgz)
+*.tgz
+
 # AI
 .claude/settings.local.json
 .claude/workspaces
