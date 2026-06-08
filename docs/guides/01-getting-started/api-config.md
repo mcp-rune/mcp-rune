@@ -2,9 +2,9 @@
 
 This guide covers the `static api` configuration on models and the services that consume it: EndpointResolver and ModelService. It is the single reference for configuring how a model maps to API endpoints, HTTP methods, and payload conventions.
 
-> **Custom actions (non-CRUD verbs) moved to the [`custom-actions` ApiExtension](../09-extensions/api-extensions.md) in v0.44.0.** Sections in this guide that reference `api.actions`, `ActionDefinition`, or `ModelActionTool` describe behavior that now lives in the extension. The configuration shape is unchanged — only the registration site moved. Register `customActionsExtension()` on `ToolRegistry` and declare actions on `static extensions['custom-actions']` via the `customActionsConfig()` helper.
+> **Custom actions (non-CRUD verbs) moved to the [`custom-actions` ApiExtension](../10-extensions/api-extensions.md) in v0.44.0.** Sections in this guide that reference `api.actions`, `ActionDefinition`, or `ModelActionTool` describe behavior that now lives in the extension. The configuration shape is unchanged — only the registration site moved. Register `customActionsExtension()` on `ToolRegistry` and declare actions on `static extensions['custom-actions']` via the `customActionsConfig()` helper.
 >
-> **The `search_records` and `get_filters_guide` MCP tools moved to the [`search` ApiExtension](../09-extensions/api-extensions.md) in v0.45.0.** Register `searchExtension()` on `ToolRegistry` to expose them.
+> **The `search_records` and `get_filters_guide` MCP tools moved to the [`search` ApiExtension](../10-extensions/api-extensions.md) in v0.45.0.** Register `searchExtension()` on `ToolRegistry` to expose them.
 >
 > **`SearchService` and all search-related types moved to the search extension in v0.47.0** (`@mcp-rune/mcp-rune/api-extensions/search`); import from there.
 >

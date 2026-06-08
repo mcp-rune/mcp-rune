@@ -160,20 +160,20 @@ To wire to a real backend, replace `createInMemoryDataLayer({ fixtures })`
 in `config.ts` with the default `ModelService` + `ApiClient` factory and
 provide a real `createApiClient`. The seam is one line; tools, prompts, and
 apps don't change. See
-[Data layer](../08-adapters/data-layer.md) ("Swapping the Adapter") and
-[API client](../08-adapters/api-client.md) for the full pattern.
+[Data layer](../06-the-three-layers-up-close/data-layer.md) ("Swapping the Adapter") and
+[API client](../06-the-three-layers-up-close/api-client.md) for the full pattern.
 
 ## Next
 
-- [Analysis Quickstart](../05-retrieval-graphrag/analysis-quickstart.md) — Part 2: bring up
+- [Analysis Quickstart](../09-retrieval-and-graphrag/analysis-quickstart.md) — Part 2: bring up
   pgvector with one `docker compose` block, point the bookshelf at the
   5,000-book dataset, and exercise every summary strategy through
   `analysis_ingest` + `analysis_summarize`.
 - [Project structure](./project-structure.md) — where models, prompts,
   tools, apps, and the domain registry live in a generated mcp-rune project.
-- [Prompt creation](../02-prompt-dsl/prompt-creation.md) — the DSL that turns model
+- [Prompt creation](../03-the-prompt/prompt-creation.md) — the DSL that turns model
   attributes into agent-fillable forms.
-- [MCP apps](../04-apps-search-forms/mcp-apps.md) — interactive HTML UIs rendered inside
+- [MCP apps](../05-apps/mcp-apps.md) — interactive HTML UIs rendered inside
   Claude Desktop.
-- [Data layer](../08-adapters/data-layer.md) — the seam between the projection
+- [Data layer](../06-the-three-layers-up-close/data-layer.md) — the seam between the projection
   layer and any concrete data backend (in-memory, HTTP, custom).
