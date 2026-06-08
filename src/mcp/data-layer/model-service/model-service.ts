@@ -13,7 +13,17 @@
  */
 
 import type { ApiClient, RequestOptions } from '#src/core/api-client.js'
-import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
+import type {
+  DataLayer,
+  FilterValidationResult,
+  NestedValidationResult
+} from '#src/mcp/data-layer/data-layer.js'
+import {
+  checkFiltersAgainstAttributes,
+  checkLinkAgainstAssociations,
+  normalizeFiltersAgainstAttributes,
+  resolveFilterableAttributes
+} from '#src/mcp/data-layer/request-validators.js'
 import type { NormalizedListResponse } from '#src/mcp/data-layer/types.js'
 import type { AssociationConfig } from '#src/mcp/models/model-definitions.js'
 
@@ -304,6 +314,30 @@ export class ModelService implements DataLayer {
     this._log('info', 'Model updated successfully', { model, recordId })
 
     return data
+  }
+
+  /** Validate request filters against the model's filterable attributes. */
+  validateFilters(
+    model: string,
+    filters: Record<string, unknown> | undefined
+  ): FilterValidationResult {
+    return checkFiltersAgainstAttributes(model, filters, this._models)
+  }
+
+  /** Normalize comma-separated enum strings per the model's filterable attributes. */
+  normalizeFilters(
+    model: string,
+    filters: Record<string, unknown> | undefined
+  ): Record<string, unknown> | undefined {
+    return normalizeFiltersAgainstAttributes(
+      filters,
+      resolveFilterableAttributes(model, this._models)
+    )
+  }
+
+  /** Validate a nested-resource link against the parent model's associations. */
+  validateNestedResource(parentModel: string, childResource: string): NestedValidationResult {
+    return checkLinkAgainstAssociations(parentModel, childResource, this._models)
   }
 
   /** Delete a record. Supports compound IDs. */

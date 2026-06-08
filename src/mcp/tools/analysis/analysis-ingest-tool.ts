@@ -11,6 +11,10 @@ import {
   createSearchService,
   getSearchConfig
 } from '#src/mcp/data-layer/api-extensions/search/index.js'
+import type {
+  NestedValidationError,
+  NestedValidationSuccess
+} from '#src/mcp/data-layer/data-layer.js'
 import { buildCollectionPath } from '#src/mcp/data-layer/model-service/compound-id.js'
 import {
   getEdgesForSources,
@@ -23,8 +27,6 @@ import {
 } from '#src/runtime/vector-storage.js'
 
 import type { DataLayer, ModelConfig, ToolAnnotations, ToolResult } from '../base-tool.js'
-import type { NestedValidationError, NestedValidationSuccess } from '../validators.js'
-import { validateFilterParams, validateNestedResource } from '../validators.js'
 import { BaseAnalysisTool } from './base-analysis-tool.js'
 
 /** Max pages allowed when ingest_all is true */
@@ -321,7 +323,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       // Validate filters if provided
       let normalizedFilters = filters
       if (filters && Object.keys(filters).length > 0) {
-        const validation = validateFilterParams(model, filters, this.models)
+        const validation = dataLayer.validateFilters(model, filters)
         if (!validation.valid) {
           return {
             content: [{ type: 'text', text: `${validation.error}\n\n${validation.suggestion}` }],
@@ -668,7 +670,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     this.validateModel(parentModel)
 
     // Validate the nested resource exists on the parent model
-    const validation = validateNestedResource(parentModel, childResource, this.models)
+    const validation = dataLayer.validateNestedResource(parentModel, childResource)
     if (!validation.valid) {
       const err = validation as NestedValidationError
       if (this.logger) {

@@ -18,8 +18,6 @@ import { pickFields } from '#src/core/helpers.js'
 import type { ApiExtension } from '#src/mcp/data-layer/api-extensions/types.js'
 import type { ModelConfig, ToolAnnotations, ToolResult } from '#src/mcp/tools/base-tool.js'
 import { BaseTool } from '#src/mcp/tools/base-tool.js'
-import type { FilterSchema } from '#src/mcp/tools/validators.js'
-import { normalizeFilterValues, validateFilterValues } from '#src/mcp/tools/validators.js'
 
 import { getSearchableModelNames, getSearchConfig } from './capabilities.js'
 import { createSearchService } from './factory.js'
@@ -236,10 +234,7 @@ Call get_filters_guide first to learn available filters for the target model.`
 
       const ModelClass = this.models[model]!
 
-      const modelFilters = getSearchConfig(ModelClass)?.filters as
-        | Record<string, FilterSchema>
-        | undefined
-      if (!modelFilters) {
+      if (!getSearchConfig(ModelClass)?.filters) {
         const searchable = getSearchableModelNames(this.models)
         return {
           content: [
@@ -252,12 +247,12 @@ Call get_filters_guide first to learn available filters for the target model.`
         }
       }
 
-      const filters = normalizeFilterValues(rawFilters, modelFilters)!
+      const filters = dataLayer.normalizeFilters(model, rawFilters) ?? {}
 
-      const validationError = this._validateFilters(model, filters, modelFilters)
-      if (validationError) {
+      const validation = dataLayer.validateFilters(model, filters)
+      if (!validation.valid) {
         return {
-          content: [{ type: 'text', text: validationError }],
+          content: [{ type: 'text', text: `${validation.error}\n\n${validation.suggestion}` }],
           isError: true
         }
       }
@@ -320,20 +315,6 @@ Call get_filters_guide first to learn available filters for the target model.`
     const ids = records.slice(0, 3).map((r) => r.id)
     const idPreview = ids.join(', ') + (records.length > 3 ? '...' : '')
     return `${records.length} ${model} records (page ${pagination.page}/${pagination.total_pages}, IDs: ${idPreview})`
-  }
-
-  private _validateFilters(
-    model: string,
-    filters: Record<string, unknown>,
-    filterSchema: Record<string, FilterSchema>
-  ): string | null {
-    const unknownFilters = Object.keys(filters).filter((f) => !filterSchema[f])
-    if (unknownFilters.length > 0) {
-      const available = Object.keys(filterSchema).join(', ')
-      return `Unknown filter(s) for ${model}: ${unknownFilters.join(', ')}\n\nAvailable filters: ${available}\n\nCall get_filters_guide("${model}") to see filter documentation.`
-    }
-
-    return validateFilterValues(model, filters, filterSchema)
   }
 
   private _buildSchema(ModelClass: ModelConfig): Record<string, unknown> {

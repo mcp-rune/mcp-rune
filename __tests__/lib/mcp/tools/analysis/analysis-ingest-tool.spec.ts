@@ -62,7 +62,7 @@ describe('AnalysisIngestTool — nested resource ingestion', () => {
 
     tool = new AnalysisIngestTool({
       models: mockModels,
-      dataLayer: new ModelService({ apiClient: mockApi, models: {} }),
+      dataLayer: new ModelService({ apiClient: mockApi, models: mockModels }),
       logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
     })
   })
@@ -372,7 +372,7 @@ describe('AnalysisIngestTool — nested resource ingestion', () => {
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
     const loggedTool = new AnalysisIngestTool({
       models: mockModels,
-      dataLayer: new ModelService({ apiClient: mockApi, models: {} }),
+      dataLayer: new ModelService({ apiClient: mockApi, models: mockModels }),
       logger
     })
 
@@ -418,7 +418,7 @@ describe('AnalysisIngestTool — nested resource ingestion', () => {
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
     const loggedTool = new AnalysisIngestTool({
       models: mockModels,
-      dataLayer: new ModelService({ apiClient: mockApi, models: {} }),
+      dataLayer: new ModelService({ apiClient: mockApi, models: mockModels }),
       logger
     })
 
@@ -541,7 +541,7 @@ describe('AnalysisIngestTool — association ID preservation', () => {
 
     tool = new AnalysisIngestTool({
       models: halModels,
-      dataLayer: new ModelService({ apiClient: mockApi, models: {} }),
+      dataLayer: new ModelService({ apiClient: mockApi, models: halModels }),
       logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
     })
   })
@@ -686,7 +686,7 @@ describe('AnalysisIngestTool — resume and progress', () => {
 
     tool = new AnalysisIngestTool({
       models,
-      dataLayer: new ModelService({ apiClient: mockApi, models: {} }),
+      dataLayer: new ModelService({ apiClient: mockApi, models }),
       logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
     })
   })
