@@ -1,58 +1,16 @@
-// Mock the vendor module
-vi.mock('../../../src/runtime/vendor/pgvector/index.js', () => ({
-  initialize: vi.fn(() => true),
-  isConfigured: vi.fn(() => true),
-  getPool: vi.fn(() => ({})),
-  flush: vi.fn(() => Promise.resolve()),
-  close: vi.fn(() => Promise.resolve())
-}))
-
-// Mock the operations module
-vi.mock('../../../src/runtime/vendor/pgvector/tool-memories.js', () => ({
-  storeOperation: vi.fn(() => Promise.resolve('uuid-123')),
-  findSimilar: vi.fn(() =>
-    Promise.resolve([
-      {
-        id: '1',
-        similarity: 0.9,
-        summary: 'create_model deal',
-        tool_name: 'create_model',
-        tool_args: { model: 'deal' }
-      }
-    ])
-  ),
-  detectGaps: vi.fn(() =>
-    Promise.resolve([{ step: 'Set platforms', confidence: 0.2, status: 'missing' }])
-  ),
-  getClusters: vi.fn(() => Promise.resolve({ clusters: [], outliers: [] })),
-  getStats: vi.fn(() => Promise.resolve([]))
-}))
-
-// Mock the analysis memories module
-vi.mock('../../../src/runtime/vendor/pgvector/analysis-memories.js', () => ({
-  storeMemory: vi.fn(() => Promise.resolve('analysis-uuid-123')),
-  recallMemories: vi.fn(() =>
-    Promise.resolve([
-      {
-        id: 'a1',
-        analysisId: 'analysis-1',
-        finding: 'Test finding',
-        createdAt: new Date()
-      }
-    ])
-  ),
-  clearMemories: vi.fn(() => Promise.resolve(3))
-}))
-
-// Mock the embeddings module
 vi.mock('../../../src/runtime/embeddings.js', () => ({
   embed: vi.fn(() => Promise.resolve(new Float32Array(384).fill(0.1))),
   embedBatch: vi.fn((texts) => Promise.resolve(texts.map(() => new Float32Array(384).fill(0.1))))
 }))
 
-// Mock the tool output adapters module
 vi.mock('../../../src/runtime/tool-output-adapters.js', () => ({
   adaptToolOutput: vi.fn(() => null)
+}))
+
+vi.mock('../../../src/runtime/logger.js', () => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn()
 }))
 
 import { embed, embedBatch } from '../../../src/runtime/embeddings.js'
@@ -69,40 +27,204 @@ import {
   isVectorStorageEnabled,
   recallAnalysisMemories,
   storeAnalysisMemory,
-  storeOperation
+  storeOperation,
+  type VectorStorageAdapter
 } from '../../../src/runtime/vector-storage.js'
-import * as analysisMemories from '../../../src/runtime/vendor/pgvector/analysis-memories.js'
-import * as vendor from '../../../src/runtime/vendor/pgvector/index.js'
-import * as operations from '../../../src/runtime/vendor/pgvector/tool-memories.js'
+
+function makeMockAdapter(): VectorStorageAdapter {
+  return {
+    toolMemories: {
+      storeOperation: vi.fn(() => Promise.resolve('uuid-123')),
+      findSimilar: vi.fn(() =>
+        Promise.resolve([
+          {
+            id: '1',
+            similarity: 0.9,
+            summary: 'create_model deal',
+            tool_name: 'create_model',
+            tool_args: { model: 'deal' }
+          }
+        ])
+      ),
+      detectGaps: vi.fn(() =>
+        Promise.resolve([{ step: 'Set platforms', confidence: 0.2, status: 'missing' }])
+      ),
+      getClusters: vi.fn(() => Promise.resolve({ clusters: [], outliers: [] })),
+      getStats: vi.fn(() => Promise.resolve([])),
+      cleanupExpired: vi.fn(() => Promise.resolve(0))
+    },
+    analysisMemories: {
+      storeMemory: vi.fn(() => Promise.resolve('analysis-uuid-123')),
+      recallMemories: vi.fn(() =>
+        Promise.resolve([
+          {
+            id: 'a1',
+            analysisId: 'analysis-1',
+            finding: 'Test finding',
+            createdAt: new Date()
+          }
+        ])
+      ),
+      clearMemories: vi.fn(() => Promise.resolve(3)),
+      cleanupExpired: vi.fn(() => Promise.resolve(0))
+    },
+    ingestedRecords: {
+      storeRecords: vi.fn(() => Promise.resolve(0)),
+      queryRecords: vi.fn(() => Promise.resolve([])),
+      getEmbeddingsForRecords: vi.fn(() => Promise.resolve(new Map())),
+      getRecordsWithoutEmbeddings: vi.fn(() => Promise.resolve([])),
+      updateRecordEmbeddings: vi.fn(() => Promise.resolve(0)),
+      getSessionGraphInfo: vi.fn(() =>
+        Promise.resolve({ edgeTypes: [], embeddedRecordCount: 0, totalRecordCount: 0 })
+      ),
+      describeSession: vi.fn(() => Promise.resolve(null)),
+      getRecordCount: vi.fn(() => Promise.resolve(0)),
+      getRecordIds: vi.fn(() => Promise.resolve([])),
+      getRecordIdsFiltered: vi.fn(() => Promise.resolve([])),
+      getRecordsForDryRun: vi.fn(() =>
+        Promise.resolve({
+          matchedCount: 0,
+          sampleIds: [],
+          sampleData: [],
+          earliestIngestedAt: null,
+          latestIngestedAt: null
+        })
+      ),
+      clearRecords: vi.fn(() => Promise.resolve(0)),
+      cleanupExpired: vi.fn(() => Promise.resolve(0))
+    },
+    ingestedEdges: {
+      storeEdges: vi.fn(() => Promise.resolve(0)),
+      getEdgesFrom: vi.fn(() => Promise.resolve([])),
+      getEdgesForSources: vi.fn(() => Promise.resolve([])),
+      clearEdges: vi.fn(() => Promise.resolve(0)),
+      cleanupExpired: vi.fn(() => Promise.resolve(0))
+    },
+    flush: vi.fn(() => Promise.resolve()),
+    close: vi.fn(() => Promise.resolve())
+  }
+}
 
 describe('lib/services/vector-storage', () => {
-  beforeEach(() => {
+  let adapter: VectorStorageAdapter
+
+  beforeEach(async () => {
     vi.clearAllMocks()
-    vendor.isConfigured.mockReturnValue(true)
-    vendor.getPool.mockReturnValue({})
+    await closeVectorStorage()
+    adapter = makeMockAdapter()
+    initVectorStorage({ adapter })
+  })
+
+  afterEach(async () => {
+    await closeVectorStorage()
   })
 
   describe('initVectorStorage', () => {
-    it('should delegate to vendor.initialize', () => {
-      const options = { serviceName: 'test', version: '1.0.0', retentionDays: 30 }
-      const result = initVectorStorage(options)
+    it('enables vector storage when an adapter is provided', () => {
+      // beforeEach already initialized; verify enabled.
+      expect(isVectorStorageEnabled()).toBe(true)
+    })
 
-      expect(vendor.initialize).toHaveBeenCalledWith(options)
-      expect(result).toBe(true)
+    it('returns false and stays disabled without an adapter', async () => {
+      await closeVectorStorage()
+      const result = initVectorStorage({})
+      expect(result).toBe(false)
+      expect(isVectorStorageEnabled()).toBe(false)
+    })
+
+    it('runs a boot-time cleanup sweep across every sub-adapter', async () => {
+      await closeVectorStorage()
+      const freshAdapter = makeMockAdapter()
+      initVectorStorage({ adapter: freshAdapter })
+
+      await vi.waitFor(() => {
+        expect(freshAdapter.toolMemories.cleanupExpired).toHaveBeenCalled()
+        expect(freshAdapter.analysisMemories.cleanupExpired).toHaveBeenCalled()
+        expect(freshAdapter.ingestedRecords.cleanupExpired).toHaveBeenCalled()
+        expect(freshAdapter.ingestedEdges.cleanupExpired).toHaveBeenCalled()
+      })
+    })
+  })
+
+  describe('background cleanup interval', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(async () => {
+      vi.useRealTimers()
+      await closeVectorStorage()
+    })
+
+    it('does not schedule an interval by default', async () => {
+      await closeVectorStorage()
+      const freshAdapter = makeMockAdapter()
+      initVectorStorage({ adapter: freshAdapter })
+
+      // Drain the boot sweep so the call count is stable.
+      await vi.waitFor(() => {
+        expect(freshAdapter.toolMemories.cleanupExpired).toHaveBeenCalledTimes(1)
+      })
+      const before = (freshAdapter.toolMemories.cleanupExpired as ReturnType<typeof vi.fn>).mock
+        .calls.length
+
+      vi.advanceTimersByTime(60_000)
+
+      expect(
+        (freshAdapter.toolMemories.cleanupExpired as ReturnType<typeof vi.fn>).mock.calls.length
+      ).toBe(before)
+    })
+
+    it('fires periodic sweeps when backgroundCleanupIntervalMs is set', async () => {
+      await closeVectorStorage()
+      const freshAdapter = makeMockAdapter()
+      initVectorStorage({ adapter: freshAdapter, backgroundCleanupIntervalMs: 5_000 })
+
+      await vi.waitFor(() => {
+        expect(freshAdapter.ingestedRecords.cleanupExpired).toHaveBeenCalledTimes(1)
+      })
+
+      vi.advanceTimersByTime(5_000)
+      await vi.waitFor(() => {
+        expect(freshAdapter.ingestedRecords.cleanupExpired).toHaveBeenCalledTimes(2)
+      })
+
+      vi.advanceTimersByTime(5_000)
+      await vi.waitFor(() => {
+        expect(freshAdapter.ingestedRecords.cleanupExpired).toHaveBeenCalledTimes(3)
+      })
+    })
+
+    it('closeVectorStorage clears the interval', async () => {
+      await closeVectorStorage()
+      const freshAdapter = makeMockAdapter()
+      initVectorStorage({ adapter: freshAdapter, backgroundCleanupIntervalMs: 5_000 })
+
+      await vi.waitFor(() => {
+        expect(freshAdapter.ingestedRecords.cleanupExpired).toHaveBeenCalledTimes(1)
+      })
+
+      await closeVectorStorage()
+      const before = (freshAdapter.ingestedRecords.cleanupExpired as ReturnType<typeof vi.fn>).mock
+        .calls.length
+
+      vi.advanceTimersByTime(15_000)
+      expect(
+        (freshAdapter.ingestedRecords.cleanupExpired as ReturnType<typeof vi.fn>).mock.calls.length
+      ).toBe(before)
     })
   })
 
   describe('isVectorStorageEnabled', () => {
-    it('should delegate to vendor.isConfigured', () => {
-      const result = isVectorStorageEnabled()
-
-      expect(vendor.isConfigured).toHaveBeenCalled()
-      expect(result).toBe(true)
+    it('reflects whether an adapter is currently bound', async () => {
+      expect(isVectorStorageEnabled()).toBe(true)
+      await closeVectorStorage()
+      expect(isVectorStorageEnabled()).toBe(false)
     })
   })
 
   describe('storeOperation', () => {
-    it('should embed summary and store with metadata', async () => {
+    it('embeds the summary and delegates to the toolMemories adapter', async () => {
       const result = await storeOperation({
         toolName: 'create_model',
         toolArgs: { model: 'deal', attributes: { name: 'BBC Drama', right_type: 'catchup' } },
@@ -110,8 +232,7 @@ describe('lib/services/vector-storage', () => {
       })
 
       expect(embed).toHaveBeenCalledWith(expect.stringContaining('create_model deal'))
-      expect(operations.storeOperation).toHaveBeenCalledWith(
-        expect.anything(),
+      expect(adapter.toolMemories.storeOperation).toHaveBeenCalledWith(
         expect.any(Float32Array),
         expect.objectContaining({
           toolName: 'create_model',
@@ -122,8 +243,8 @@ describe('lib/services/vector-storage', () => {
       expect(result).toBe('uuid-123')
     })
 
-    it('should return null when memory storage is disabled', async () => {
-      vendor.isConfigured.mockReturnValue(false)
+    it('returns null when vector storage is disabled', async () => {
+      await closeVectorStorage()
 
       const result = await storeOperation({
         toolName: 'create_model',
@@ -134,20 +255,9 @@ describe('lib/services/vector-storage', () => {
       expect(embed).not.toHaveBeenCalled()
     })
 
-    it('should return null when pool is not available', async () => {
-      vendor.getPool.mockReturnValue(null)
-
-      const result = await storeOperation({
-        toolName: 'create_model',
-        toolArgs: { model: 'deal' }
-      })
-
-      expect(result).toBeNull()
-    })
-
-    it('should pass toolOutput through adapter and to vendor', async () => {
+    it('passes adapted toolOutput through to the adapter', async () => {
       const adaptedOutput = { id: '999', name: 'Adapted' }
-      adaptToolOutput.mockReturnValue(adaptedOutput)
+      ;(adaptToolOutput as ReturnType<typeof vi.fn>).mockReturnValue(adaptedOutput)
 
       await storeOperation({
         toolName: 'create_model',
@@ -160,23 +270,21 @@ describe('lib/services/vector-storage', () => {
         { id: '999', name: 'Adapted', extra: 'ignored' },
         { model: 'deal' }
       )
-      expect(operations.storeOperation).toHaveBeenCalledWith(
-        expect.anything(),
+      expect(adapter.toolMemories.storeOperation).toHaveBeenCalledWith(
         expect.any(Float32Array),
         expect.objectContaining({ toolOutput: adaptedOutput })
       )
     })
 
-    it('should pass null toolOutput when adapter returns null', async () => {
-      adaptToolOutput.mockReturnValue(null)
+    it('passes null toolOutput when the adapter returns null', async () => {
+      ;(adaptToolOutput as ReturnType<typeof vi.fn>).mockReturnValue(null)
 
       await storeOperation({
         toolName: 'delete_model',
         toolArgs: { model: 'deal', id: '123' }
       })
 
-      expect(operations.storeOperation).toHaveBeenCalledWith(
-        expect.anything(),
+      expect(adapter.toolMemories.storeOperation).toHaveBeenCalledWith(
         expect.any(Float32Array),
         expect.objectContaining({ toolOutput: null })
       )
@@ -184,12 +292,11 @@ describe('lib/services/vector-storage', () => {
   })
 
   describe('findSimilarOperations', () => {
-    it('should embed query and search', async () => {
+    it('embeds the query and delegates to findSimilar', async () => {
       const results = await findSimilarOperations('deals for BBC', { toolName: 'create_model' })
 
       expect(embed).toHaveBeenCalledWith('deals for BBC')
-      expect(operations.findSimilar).toHaveBeenCalledWith(
-        expect.anything(),
+      expect(adapter.toolMemories.findSimilar).toHaveBeenCalledWith(
         expect.any(Float32Array),
         { toolName: 'create_model' },
         {}
@@ -197,8 +304,8 @@ describe('lib/services/vector-storage', () => {
       expect(results).toHaveLength(1)
     })
 
-    it('should return empty array when disabled', async () => {
-      vendor.isConfigured.mockReturnValue(false)
+    it('returns empty array when disabled', async () => {
+      await closeVectorStorage()
 
       const results = await findSimilarOperations('test query')
 
@@ -208,20 +315,17 @@ describe('lib/services/vector-storage', () => {
   })
 
   describe('detectOperationGaps', () => {
-    it('should embed steps and detect gaps', async () => {
+    it('batch-embeds steps and delegates to detectGaps', async () => {
       const steps = ['Create deal', 'Set platforms', 'Activate deal']
-      const gaps = await detectOperationGaps(steps, {
-        recordId: '123',
-        modelName: 'deal'
-      })
+      const gaps = await detectOperationGaps(steps, { recordId: '123', modelName: 'deal' })
 
       expect(embedBatch).toHaveBeenCalledWith(steps)
-      expect(operations.detectGaps).toHaveBeenCalled()
+      expect(adapter.toolMemories.detectGaps).toHaveBeenCalled()
       expect(gaps).toHaveLength(1)
     })
 
-    it('should return empty array when disabled', async () => {
-      vendor.isConfigured.mockReturnValue(false)
+    it('returns empty array when disabled', async () => {
+      await closeVectorStorage()
 
       const gaps = await detectOperationGaps(['step'], {})
 
@@ -230,15 +334,15 @@ describe('lib/services/vector-storage', () => {
   })
 
   describe('getOperationClusters', () => {
-    it('should delegate to operations.getClusters', async () => {
+    it('delegates to the toolMemories adapter', async () => {
       const result = await getOperationClusters({ days: 7 })
 
-      expect(operations.getClusters).toHaveBeenCalledWith(expect.anything(), { days: 7 }, {})
+      expect(adapter.toolMemories.getClusters).toHaveBeenCalledWith({ days: 7 }, {})
       expect(result).toEqual({ clusters: [], outliers: [] })
     })
 
-    it('should return empty result when disabled', async () => {
-      vendor.isConfigured.mockReturnValue(false)
+    it('returns an empty result when disabled', async () => {
+      await closeVectorStorage()
 
       const result = await getOperationClusters()
 
@@ -247,14 +351,14 @@ describe('lib/services/vector-storage', () => {
   })
 
   describe('getOperationStats', () => {
-    it('should delegate to operations.getStats', async () => {
+    it('delegates to the toolMemories adapter', async () => {
       await getOperationStats({ days: 14 })
 
-      expect(operations.getStats).toHaveBeenCalledWith(expect.anything(), { days: 14 })
+      expect(adapter.toolMemories.getStats).toHaveBeenCalledWith({ days: 14 })
     })
 
-    it('should return empty array when disabled', async () => {
-      vendor.isConfigured.mockReturnValue(false)
+    it('returns an empty array when disabled', async () => {
+      await closeVectorStorage()
 
       const result = await getOperationStats()
 
@@ -263,33 +367,33 @@ describe('lib/services/vector-storage', () => {
   })
 
   describe('lifecycle methods', () => {
-    it('should delegate flushVectorStorage to vendor.flush', async () => {
+    it('flushVectorStorage delegates to adapter.flush', async () => {
       await flushVectorStorage(3000)
 
-      expect(vendor.flush).toHaveBeenCalledWith(3000)
+      expect(adapter.flush).toHaveBeenCalledWith(3000)
     })
 
-    it('should use default timeout for flush', async () => {
+    it('flushVectorStorage uses a default timeout', async () => {
       await flushVectorStorage()
 
-      expect(vendor.flush).toHaveBeenCalledWith(5000)
+      expect(adapter.flush).toHaveBeenCalledWith(5000)
     })
 
-    it('should delegate closeVectorStorage to vendor.close', async () => {
+    it('closeVectorStorage delegates to adapter.close', async () => {
       await closeVectorStorage(10000)
 
-      expect(vendor.close).toHaveBeenCalledWith(10000)
+      expect(adapter.close).toHaveBeenCalledWith(10000)
     })
 
-    it('should use default timeout for close', async () => {
+    it('closeVectorStorage uses a default timeout', async () => {
       await closeVectorStorage()
 
-      expect(vendor.close).toHaveBeenCalledWith(5000)
+      expect(adapter.close).toHaveBeenCalledWith(5000)
     })
   })
 
   describe('storeAnalysisMemory', () => {
-    it('should embed finding and store with metadata', async () => {
+    it('embeds the finding and delegates to the adapter', async () => {
       const result = await storeAnalysisMemory({
         analysisId: 'analysis-1',
         finding: 'Pattern detected in deal creation',
@@ -298,8 +402,7 @@ describe('lib/services/vector-storage', () => {
       })
 
       expect(embed).toHaveBeenCalledWith('Pattern detected in deal creation')
-      expect(analysisMemories.storeMemory).toHaveBeenCalledWith(
-        expect.anything(),
+      expect(adapter.analysisMemories.storeMemory).toHaveBeenCalledWith(
         expect.any(Float32Array),
         expect.objectContaining({
           analysisId: 'analysis-1',
@@ -311,62 +414,47 @@ describe('lib/services/vector-storage', () => {
       expect(result).toBe('analysis-uuid-123')
     })
 
-    it('should return null when disabled', async () => {
-      vendor.isConfigured.mockReturnValue(false)
+    it('returns null when disabled', async () => {
+      await closeVectorStorage()
 
-      const result = await storeAnalysisMemory({
-        analysisId: 'analysis-1',
-        finding: 'test'
-      })
+      const result = await storeAnalysisMemory({ analysisId: 'analysis-1', finding: 'test' })
 
       expect(result).toBeNull()
       expect(embed).not.toHaveBeenCalled()
-    })
-
-    it('should return null when pool is not available', async () => {
-      vendor.getPool.mockReturnValue(null)
-
-      const result = await storeAnalysisMemory({
-        analysisId: 'analysis-1',
-        finding: 'test'
-      })
-
-      expect(result).toBeNull()
     })
   })
 
   describe('recallAnalysisMemories', () => {
-    it('should recall by analysis ID without embedding', async () => {
+    it('recalls by analysis ID without embedding when no query is given', async () => {
       const results = await recallAnalysisMemories({ analysisId: 'analysis-1' })
 
       expect(embed).not.toHaveBeenCalled()
-      expect(analysisMemories.recallMemories).toHaveBeenCalledWith(
-        expect.anything(),
-        { analysisId: 'analysis-1' },
+      expect(adapter.analysisMemories.recallMemories).toHaveBeenCalledWith(
+        expect.objectContaining({ analysisId: 'analysis-1' }),
         {}
       )
       expect(results).toHaveLength(1)
     })
 
-    it('should embed query for semantic recall', async () => {
+    it('embeds the query for semantic recall and replaces it with `embedding`', async () => {
       await recallAnalysisMemories({ query: 'deal patterns', category: 'patterns' })
 
       expect(embed).toHaveBeenCalledWith('deal patterns')
-      expect(analysisMemories.recallMemories).toHaveBeenCalledWith(
-        expect.anything(),
+      expect(adapter.analysisMemories.recallMemories).toHaveBeenCalledWith(
         expect.objectContaining({
           embedding: expect.any(Float32Array),
           category: 'patterns'
         }),
         {}
       )
-      // query should be removed from filters
-      const callFilters = analysisMemories.recallMemories.mock.calls[0][1]
+
+      const callFilters = (adapter.analysisMemories.recallMemories as ReturnType<typeof vi.fn>).mock
+        .calls[0][0] as Record<string, unknown>
       expect(callFilters.query).toBeUndefined()
     })
 
-    it('should return empty array when disabled', async () => {
-      vendor.isConfigured.mockReturnValue(false)
+    it('returns empty array when disabled', async () => {
+      await closeVectorStorage()
 
       const results = await recallAnalysisMemories({ analysisId: 'analysis-1' })
 
@@ -375,23 +463,15 @@ describe('lib/services/vector-storage', () => {
   })
 
   describe('clearAnalysisMemories', () => {
-    it('should delegate to analysisMemories.clearMemories', async () => {
+    it('delegates to analysisMemories.clearMemories', async () => {
       const result = await clearAnalysisMemories('analysis-1')
 
-      expect(analysisMemories.clearMemories).toHaveBeenCalledWith(expect.anything(), 'analysis-1')
+      expect(adapter.analysisMemories.clearMemories).toHaveBeenCalledWith('analysis-1')
       expect(result).toBe(3)
     })
 
-    it('should return 0 when disabled', async () => {
-      vendor.isConfigured.mockReturnValue(false)
-
-      const result = await clearAnalysisMemories('analysis-1')
-
-      expect(result).toBe(0)
-    })
-
-    it('should return 0 when pool is not available', async () => {
-      vendor.getPool.mockReturnValue(null)
+    it('returns 0 when disabled', async () => {
+      await closeVectorStorage()
 
       const result = await clearAnalysisMemories('analysis-1')
 
@@ -400,8 +480,8 @@ describe('lib/services/vector-storage', () => {
   })
 
   describe('operationToText (via storeOperation)', () => {
-    it('should generate create_model summary with fields', async () => {
-      adaptToolOutput.mockReturnValue(null)
+    it('generates a create_model summary with fields', async () => {
+      ;(adaptToolOutput as ReturnType<typeof vi.fn>).mockReturnValue(null)
 
       await storeOperation({
         toolName: 'create_model',
@@ -411,8 +491,8 @@ describe('lib/services/vector-storage', () => {
       expect(embed).toHaveBeenCalledWith(expect.stringContaining("create_model brand 'Test Brand'"))
     })
 
-    it('should append -> id: suffix for create_model when toolOutput has id', async () => {
-      adaptToolOutput.mockReturnValue({ id: 'new-id-999' })
+    it('appends -> id: suffix when toolOutput has an id', async () => {
+      ;(adaptToolOutput as ReturnType<typeof vi.fn>).mockReturnValue({ id: 'new-id-999' })
 
       await storeOperation({
         toolName: 'create_model',
@@ -423,7 +503,7 @@ describe('lib/services/vector-storage', () => {
       expect(embed).toHaveBeenCalledWith(expect.stringContaining('-> id: new-id-999'))
     })
 
-    it('should generate update_model summary', async () => {
+    it('generates an update_model summary', async () => {
       await storeOperation({
         toolName: 'update_model',
         toolArgs: { model: 'deal', id: '123', attributes: { status: 'active', end_offset: 14 } }
@@ -432,7 +512,7 @@ describe('lib/services/vector-storage', () => {
       expect(embed).toHaveBeenCalledWith(expect.stringContaining("update_model deal '123'"))
     })
 
-    it('should generate delete_model summary', async () => {
+    it('generates a delete_model summary', async () => {
       await storeOperation({
         toolName: 'delete_model',
         toolArgs: { model: 'rule', id: '456' }
@@ -441,7 +521,7 @@ describe('lib/services/vector-storage', () => {
       expect(embed).toHaveBeenCalledWith(expect.stringContaining("delete_model rule '456'"))
     })
 
-    it('should generate generic summary for unknown tools', async () => {
+    it('generates a generic summary for unknown tools', async () => {
       await storeOperation({
         toolName: 'find_similar_operations',
         toolArgs: { query: 'test' }

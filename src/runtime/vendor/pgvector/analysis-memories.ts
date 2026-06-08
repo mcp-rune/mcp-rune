@@ -1,34 +1,20 @@
 /**
  * pgvector Analysis Memories - Store, Recall, and Cleanup
  *
- * Supports the map-reduce pattern for large-scale qualitative analysis.
- * Findings are stored with embeddings for semantic recall and can be
- * ephemeral (auto-expire after 1 hour) or persistent.
- *
- * All functions receive the pg pool as the first argument.
+ * Implements the AnalysisMemoriesAdapter contract defined in
+ * `src/runtime/vector-storage-definitions.ts`. Supports the map-reduce
+ * pattern for large-scale qualitative analysis: findings are stored with
+ * embeddings for semantic recall and can be ephemeral (auto-expire after
+ * 1 hour) or persistent.
  */
 
 import type { Pool } from 'pg'
 
-export interface AnalysisMemoryMetadata {
-  analysisId: string
-  finding: string
-  category?: string
-  metadata?: Record<string, unknown>
-  persistent?: boolean
-}
-
-export interface RecallFilters {
-  analysisId?: string
-  category?: string
-  embedding?: Float32Array
-}
-
-export interface RecallOptions {
-  topK?: number
-  threshold?: number
-  includeSimilarity?: boolean
-}
+import type {
+  AnalysisMemoryMetadata,
+  RecallFilters,
+  RecallOptions
+} from '#src/runtime/vector-storage-definitions.js'
 
 interface AnalysisMemoryRow {
   id: string

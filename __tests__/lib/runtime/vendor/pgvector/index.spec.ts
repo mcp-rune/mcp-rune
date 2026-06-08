@@ -1,208 +1,248 @@
-// Mock logger to prevent console output during tests
-vi.mock('../../../../../src/runtime/logger.js', () => ({
-  info: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn()
-}))
-
-// Mock all three table modules to prevent real DB calls
+// Mock the four impl modules so we can verify the factory wires them with
+// the bound pool and retention values.
 vi.mock('../../../../../src/runtime/vendor/pgvector/tool-memories.js', () => ({
+  storeOperation: vi.fn(() => Promise.resolve('tm-1')),
+  findSimilar: vi.fn(() => Promise.resolve([])),
+  detectGaps: vi.fn(() => Promise.resolve([])),
+  getClusters: vi.fn(() => Promise.resolve({ clusters: [], outliers: [] })),
+  getStats: vi.fn(() => Promise.resolve([])),
+  cleanupExpired: vi.fn(() => Promise.resolve(0))
+}))
+vi.mock('../../../../../src/runtime/vendor/pgvector/analysis-memories.js', () => ({
+  storeMemory: vi.fn(() => Promise.resolve('am-1')),
+  recallMemories: vi.fn(() => Promise.resolve([])),
+  clearMemories: vi.fn(() => Promise.resolve(0)),
   cleanupExpired: vi.fn(() => Promise.resolve(0))
 }))
 vi.mock('../../../../../src/runtime/vendor/pgvector/ingested-records.js', () => ({
-  cleanupExpired: vi.fn(() => Promise.resolve(0)),
-  setRetentionDays: vi.fn()
+  storeRecords: vi.fn(() => Promise.resolve(0)),
+  queryRecords: vi.fn(() => Promise.resolve([])),
+  getEmbeddingsForRecords: vi.fn(() => Promise.resolve(new Map())),
+  getRecordsWithoutEmbeddings: vi.fn(() => Promise.resolve([])),
+  updateRecordEmbeddings: vi.fn(() => Promise.resolve(0)),
+  getSessionGraphInfo: vi.fn(() =>
+    Promise.resolve({ edgeTypes: [], embeddedRecordCount: 0, totalRecordCount: 0 })
+  ),
+  describeSession: vi.fn(() => Promise.resolve(null)),
+  getRecordCount: vi.fn(() => Promise.resolve(0)),
+  getRecordIds: vi.fn(() => Promise.resolve([])),
+  getRecordIdsFiltered: vi.fn(() => Promise.resolve([])),
+  getRecordsForDryRun: vi.fn(() =>
+    Promise.resolve({
+      matchedCount: 0,
+      sampleIds: [],
+      sampleData: [],
+      earliestIngestedAt: null,
+      latestIngestedAt: null
+    })
+  ),
+  clearRecords: vi.fn(() => Promise.resolve(0)),
+  cleanupExpired: vi.fn(() => Promise.resolve(0))
 }))
-vi.mock('../../../../../src/runtime/vendor/pgvector/analysis-memories.js', () => ({
+vi.mock('../../../../../src/runtime/vendor/pgvector/ingested-edges.js', () => ({
+  storeEdges: vi.fn(() => Promise.resolve(0)),
+  getEdgesFrom: vi.fn(() => Promise.resolve([])),
+  getEdgesForSources: vi.fn(() => Promise.resolve([])),
+  clearEdges: vi.fn(() => Promise.resolve(0)),
   cleanupExpired: vi.fn(() => Promise.resolve(0))
 }))
 
-// Must import after mocks
-const pgvectorModule = await import('../../../../../src/runtime/vendor/pgvector/index.js')
-const { isConfigured, initialize, close, getPool } = pgvectorModule
+import * as analysisMemories from '../../../../../src/runtime/vendor/pgvector/analysis-memories.js'
+import { createPgvectorAdapter } from '../../../../../src/runtime/vendor/pgvector/index.js'
+import * as ingestedEdges from '../../../../../src/runtime/vendor/pgvector/ingested-edges.js'
+import * as ingestedRecords from '../../../../../src/runtime/vendor/pgvector/ingested-records.js'
+import * as toolMemories from '../../../../../src/runtime/vendor/pgvector/tool-memories.js'
 
-describe('lib/services/vendor/pgvector/index', () => {
-  const mockPool = {
-    query: vi.fn(),
-    connect: vi.fn()
-  }
+describe('lib/services/vendor/pgvector/index — createPgvectorAdapter', () => {
+  const mockPool = { query: vi.fn(), connect: vi.fn() } as any
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks()
-    // Reset state between tests
-    await close()
   })
 
-  describe('isConfigured', () => {
-    it('should return false when no pool is set', () => {
-      expect(isConfigured()).toBe(false)
-    })
+  it('returns an adapter exposing the four sub-adapters', () => {
+    const adapter = createPgvectorAdapter({ pool: mockPool })
 
-    it('should return true after pool injection', () => {
-      initialize({ pool: mockPool, serviceName: 'test' })
-
-      expect(isConfigured()).toBe(true)
-    })
+    expect(adapter.toolMemories).toBeDefined()
+    expect(adapter.analysisMemories).toBeDefined()
+    expect(adapter.ingestedRecords).toBeDefined()
+    expect(adapter.ingestedEdges).toBeDefined()
+    expect(typeof adapter.flush).toBe('function')
+    expect(typeof adapter.close).toBe('function')
   })
 
-  describe('initialize', () => {
-    it('should return false when no pool provided', () => {
-      const result = initialize({ serviceName: 'test' })
+  describe('toolMemories wiring', () => {
+    it('binds the pool and forwards method arguments', async () => {
+      const adapter = createPgvectorAdapter({ pool: mockPool })
+      const embedding = new Float32Array(384).fill(0.1)
 
-      expect(result).toBe(false)
-      expect(isConfigured()).toBe(false)
-    })
+      await adapter.toolMemories.storeOperation(embedding, {
+        toolName: 'create_model',
+        summary: 'create_model deal'
+      })
 
-    it('should return true with injected pool', () => {
-      const result = initialize({ pool: mockPool, serviceName: 'test', version: '1.0.0' })
-
-      expect(result).toBe(true)
-      expect(isConfigured()).toBe(true)
-      expect(getPool()).toBe(mockPool)
-    })
-
-    it('should run async cleanup on init', async () => {
-      const { cleanupExpired } =
-        await import('../../../../../src/runtime/vendor/pgvector/tool-memories.js')
-
-      initialize({ pool: mockPool, serviceName: 'test', retentionDays: 14 })
-
-      // cleanupExpired is called asynchronously
-      await vi.waitFor(() => {
-        expect(cleanupExpired).toHaveBeenCalledWith(mockPool, 14)
+      expect(toolMemories.storeOperation).toHaveBeenCalledWith(mockPool, embedding, {
+        toolName: 'create_model',
+        summary: 'create_model deal'
       })
     })
 
-    it('should sweep all three tables on boot', async () => {
-      const toolMemories =
-        await import('../../../../../src/runtime/vendor/pgvector/tool-memories.js')
-      const ingested =
-        await import('../../../../../src/runtime/vendor/pgvector/ingested-records.js')
-      const memories =
-        await import('../../../../../src/runtime/vendor/pgvector/analysis-memories.js')
-
-      initialize({ pool: mockPool, serviceName: 'test' })
-
-      await vi.waitFor(() => {
-        expect(toolMemories.cleanupExpired).toHaveBeenCalledWith(mockPool, 30)
-        expect(ingested.cleanupExpired).toHaveBeenCalledWith(mockPool)
-        expect(memories.cleanupExpired).toHaveBeenCalledWith(mockPool)
-      })
-    })
-
-    it('should configure ingestedRecords retention from options', async () => {
-      const ingested =
-        await import('../../../../../src/runtime/vendor/pgvector/ingested-records.js')
-
-      initialize({
+    it('passes the configured retention window to cleanupExpired', async () => {
+      const adapter = createPgvectorAdapter({
         pool: mockPool,
-        serviceName: 'test',
+        toolMemoriesRetentionDays: 14
+      })
+
+      await adapter.toolMemories.cleanupExpired()
+
+      expect(toolMemories.cleanupExpired).toHaveBeenCalledWith(mockPool, 14)
+    })
+
+    it('defaults toolMemoriesRetentionDays to 30', async () => {
+      const adapter = createPgvectorAdapter({ pool: mockPool })
+
+      await adapter.toolMemories.cleanupExpired()
+
+      expect(toolMemories.cleanupExpired).toHaveBeenCalledWith(mockPool, 30)
+    })
+  })
+
+  describe('analysisMemories wiring', () => {
+    it('binds the pool and forwards method arguments', async () => {
+      const adapter = createPgvectorAdapter({ pool: mockPool })
+      const embedding = new Float32Array(384).fill(0.2)
+
+      await adapter.analysisMemories.storeMemory(embedding, {
+        analysisId: 'a1',
+        finding: 'Test finding'
+      })
+
+      expect(analysisMemories.storeMemory).toHaveBeenCalledWith(mockPool, embedding, {
+        analysisId: 'a1',
+        finding: 'Test finding'
+      })
+    })
+
+    it('forwards cleanupExpired with no extra args (row-level TTL)', async () => {
+      const adapter = createPgvectorAdapter({ pool: mockPool })
+
+      await adapter.analysisMemories.cleanupExpired()
+
+      expect(analysisMemories.cleanupExpired).toHaveBeenCalledWith(mockPool)
+    })
+  })
+
+  describe('ingestedRecords wiring', () => {
+    it('passes the configured retention window to storeRecords', async () => {
+      const adapter = createPgvectorAdapter({
+        pool: mockPool,
         ingestedRecordsRetentionDays: 14
       })
 
-      expect(ingested.setRetentionDays).toHaveBeenCalledWith(14)
-    })
+      await adapter.ingestedRecords.storeRecords({
+        analysisId: 'a1',
+        model: 'deal',
+        records: [{ id: 'd-1', data: { id: 'd-1' } }]
+      })
 
-    it('should default ingestedRecords retention to 7 days', async () => {
-      const ingested =
-        await import('../../../../../src/runtime/vendor/pgvector/ingested-records.js')
-
-      initialize({ pool: mockPool, serviceName: 'test' })
-
-      expect(ingested.setRetentionDays).toHaveBeenCalledWith(7)
-    })
-  })
-
-  describe('background cleanup interval', () => {
-    beforeEach(() => {
-      vi.useFakeTimers()
-    })
-
-    afterEach(async () => {
-      vi.useRealTimers()
-      await close()
-    })
-
-    it('should not schedule an interval by default', async () => {
-      initialize({ pool: mockPool, serviceName: 'test' })
-
-      const toolMemories =
-        await import('../../../../../src/runtime/vendor/pgvector/tool-memories.js')
-      const beforeCalls = (toolMemories.cleanupExpired as ReturnType<typeof vi.fn>).mock.calls
-        .length
-
-      vi.advanceTimersByTime(60_000)
-
-      expect((toolMemories.cleanupExpired as ReturnType<typeof vi.fn>).mock.calls.length).toBe(
-        beforeCalls
+      expect(ingestedRecords.storeRecords).toHaveBeenCalledWith(
+        mockPool,
+        expect.objectContaining({ analysisId: 'a1', model: 'deal' }),
+        14
       )
     })
 
-    it('should schedule periodic sweeps when backgroundCleanupIntervalMs is set', async () => {
-      const ingested =
-        await import('../../../../../src/runtime/vendor/pgvector/ingested-records.js')
+    it('defaults ingestedRecordsRetentionDays to 7', async () => {
+      const adapter = createPgvectorAdapter({ pool: mockPool })
 
-      initialize({
-        pool: mockPool,
-        serviceName: 'test',
-        backgroundCleanupIntervalMs: 5000
+      await adapter.ingestedRecords.storeRecords({
+        analysisId: 'a1',
+        model: 'deal',
+        records: [{ id: 'd-1', data: { id: 'd-1' } }]
       })
 
-      // Drain the async boot sweep (queued via Promise.all in runCleanupSweep)
-      await vi.waitFor(() => {
-        expect(ingested.cleanupExpired).toHaveBeenCalledTimes(1)
-      })
-
-      vi.advanceTimersByTime(5000)
-      await vi.waitFor(() => {
-        expect(ingested.cleanupExpired).toHaveBeenCalledTimes(2)
-      })
-
-      vi.advanceTimersByTime(5000)
-      await vi.waitFor(() => {
-        expect(ingested.cleanupExpired).toHaveBeenCalledTimes(3)
-      })
+      expect(ingestedRecords.storeRecords).toHaveBeenCalledWith(
+        mockPool,
+        expect.objectContaining({ analysisId: 'a1' }),
+        7
+      )
     })
 
-    it('close() should clear the interval', async () => {
-      const ingested =
-        await import('../../../../../src/runtime/vendor/pgvector/ingested-records.js')
+    it('forwards queryRecords with the bound pool', async () => {
+      const adapter = createPgvectorAdapter({ pool: mockPool })
 
-      initialize({
+      await adapter.ingestedRecords.queryRecords('a1', { mode: 'filter', where: { id: 'x' } })
+
+      expect(ingestedRecords.queryRecords).toHaveBeenCalledWith(mockPool, 'a1', {
+        mode: 'filter',
+        where: { id: 'x' }
+      })
+    })
+  })
+
+  describe('ingestedEdges wiring', () => {
+    it('passes the configured retention window to storeEdges', async () => {
+      const adapter = createPgvectorAdapter({
         pool: mockPool,
-        serviceName: 'test',
-        backgroundCleanupIntervalMs: 5000
+        ingestedEdgesRetentionDays: 3
       })
 
-      await vi.waitFor(() => {
-        expect(ingested.cleanupExpired).toHaveBeenCalledTimes(1)
+      await adapter.ingestedEdges.storeEdges({
+        analysisId: 'a1',
+        edges: [
+          {
+            src_model: 'book',
+            src_id: 'b1',
+            dst_model: 'author',
+            dst_id: 'auth-1',
+            edge_type: 'belongsTo:author'
+          }
+        ]
       })
 
-      await close()
+      expect(ingestedEdges.storeEdges).toHaveBeenCalledWith(
+        mockPool,
+        expect.objectContaining({ analysisId: 'a1' }),
+        3
+      )
+    })
 
-      const callsBeforeAdvance = (ingested.cleanupExpired as ReturnType<typeof vi.fn>).mock.calls
-        .length
-      vi.advanceTimersByTime(15000)
-      expect((ingested.cleanupExpired as ReturnType<typeof vi.fn>).mock.calls.length).toBe(
-        callsBeforeAdvance
+    it('falls back to ingestedRecordsRetentionDays when ingestedEdgesRetentionDays is unset', async () => {
+      const adapter = createPgvectorAdapter({
+        pool: mockPool,
+        ingestedRecordsRetentionDays: 9
+      })
+
+      await adapter.ingestedEdges.storeEdges({
+        analysisId: 'a1',
+        edges: [
+          {
+            src_model: 'book',
+            src_id: 'b1',
+            dst_model: 'author',
+            dst_id: 'auth-1',
+            edge_type: 'belongsTo:author'
+          }
+        ]
+      })
+
+      expect(ingestedEdges.storeEdges).toHaveBeenCalledWith(
+        mockPool,
+        expect.objectContaining({ analysisId: 'a1' }),
+        9
       )
     })
   })
 
-  describe('close', () => {
-    it('should null the pool reference', async () => {
-      initialize({ pool: mockPool, serviceName: 'test' })
-      expect(getPool()).toBe(mockPool)
-
-      await close()
-
-      expect(getPool()).toBeNull()
-      expect(isConfigured()).toBe(false)
+  describe('lifecycle', () => {
+    it('flush is a no-op (pg pool has no flush concept)', async () => {
+      const adapter = createPgvectorAdapter({ pool: mockPool })
+      await expect(adapter.flush(1000)).resolves.toBeUndefined()
     })
 
-    it('should be a no-op when already closed', async () => {
-      await close() // no error
-      expect(isConfigured()).toBe(false)
+    it('close is a no-op (pool lifecycle owned by integrator)', async () => {
+      const adapter = createPgvectorAdapter({ pool: mockPool })
+      await expect(adapter.close(1000)).resolves.toBeUndefined()
     })
   })
 })

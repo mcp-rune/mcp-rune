@@ -1,11 +1,11 @@
 /**
  * pgvector Ingested Records - Store, Query, and Cleanup
  *
- * Supports the analysis_ingest → analysis_query → analysis_clear pattern
- * for large-scale dataset analysis. Records are stored as JSONB for
- * structured queries (aggregation, filtering, sampling).
- *
- * All functions receive the pg pool as the first argument.
+ * Implements the IngestedRecordsAdapter contract defined in
+ * `src/runtime/vector-storage-definitions.ts`. Supports the
+ * analysis_ingest → analysis_query → analysis_clear pattern for large-scale
+ * dataset analysis. Records are stored as JSONB for structured queries
+ * (aggregation, filtering, sampling).
  */
 
 import type { Pool } from 'pg'
@@ -17,71 +17,18 @@ import {
   type ParamRef,
   type StratifierFragment
 } from '#src/mcp/analysis-layer/graph-stratifiers.js'
-
-export type GraphStratifierSpec =
-  | { kind: 'concept'; concept: string; targetModels: ReadonlyArray<string> }
-  | { kind: 'edge'; edge_type: string; bucket?: 'present' | 'count' }
-  | { kind: 'cluster'; k: number }
-
-export interface RecordEmbedding {
-  /** Index into the `records` array this embedding corresponds to. */
-  recordIndex: number
-  /** 384-dim MiniLM vector. */
-  vector: Float32Array
-  /** The textification fed to the embedding model — persisted for audit/recall. */
-  text: string
-}
-
-export interface IngestParams {
-  analysisId: string
-  model: string
-  records: Array<{ id?: string; data: Record<string, unknown> }>
-  /** Optional per-record embeddings; when absent, embedding columns stay NULL. */
-  embeddings?: ReadonlyArray<RecordEmbedding>
-}
-
-export interface AggregateQuery {
-  mode: 'aggregate'
-  groupBy: string
-}
-
-export interface FilterQuery {
-  mode: 'filter'
-  where: Record<string, unknown>
-  limit?: number
-}
-
-export interface ProximityParams {
-  /** Date/datetime field to center the proximity window on */
-  field: string
-  /** Center date in ISO 8601 format (e.g., "2026-03-15") */
-  origin: string
-  /** Time window around origin, e.g., "7 days", "2 weeks", "1 month" */
-  window: string
-  /** Bucket interval for stratification within the window (e.g., "1 day", "1 week") */
-  bucket?: string
-}
-
-export interface SampleQuery {
-  mode: 'sample'
-  sampleSize?: number
-  stratifyBy?: string
-  where?: Record<string, unknown>
-  proximity?: ProximityParams
-  /**
-   * Graph-aware partition dimensions composed with `where` / `proximity`
-   * / `stratifyBy`. Up to 3 to bound the cross-product. See
-   * {@link GraphStratifierSpec} for the discriminated union.
-   */
-  stratifiers?: ReadonlyArray<GraphStratifierSpec>
-}
-
-export type IngestedQuery = AggregateQuery | FilterQuery | SampleQuery
-
-export interface SessionDescriptor {
-  model: string
-  totalRecords: number
-}
+import type {
+  AggregateQuery,
+  DryRunResult,
+  FilterQuery,
+  GraphStratifierSpec,
+  IngestedDataQuery,
+  IngestParams,
+  RecordEmbedding,
+  SampleQuery,
+  SessionDescriptor,
+  SessionGraphInfo
+} from '#src/runtime/vector-storage-definitions.js'
 
 interface IngestedRow {
   id: string
@@ -90,20 +37,6 @@ interface IngestedRow {
   record_id: string | null
   data: Record<string, unknown>
   created_at: string
-}
-
-/**
- * Retention window for ingested records (in days). Set at init time via
- * setRetentionDays(); multiplied to ms at the INSERT site.
- */
-let retentionDays = 7
-
-/** Configure how long newly-ingested records survive before eviction. */
-export function setRetentionDays(days: number): void {
-  if (!Number.isFinite(days) || days <= 0) {
-    throw new Error(`Invalid retentionDays: ${days}. Must be a positive number.`)
-  }
-  retentionDays = days
 }
 
 // --- Comparison operator support for range queries ---
@@ -210,7 +143,11 @@ function buildWhereConditions(
 }
 
 /** Store a batch of ingested records, optionally with per-record embeddings. */
-export async function storeRecords(pool: Pool, params: IngestParams): Promise<number> {
+export async function storeRecords(
+  pool: Pool,
+  params: IngestParams,
+  retentionDays: number
+): Promise<number> {
   if (params.records.length === 0) return 0
 
   const expiresAt = new Date(Date.now() + retentionDays * 86_400_000)
@@ -364,7 +301,7 @@ export async function updateRecordEmbeddings(
 export async function queryRecords(
   pool: Pool,
   analysisId: string,
-  query: IngestedQuery
+  query: IngestedDataQuery
 ): Promise<Record<string, unknown>[]> {
   // Evict expired rows on access
   await cleanupExpired(pool)
@@ -699,12 +636,6 @@ async function querySampleStratified(
   return (result.rows as IngestedRow[]).map((row) => row.data)
 }
 
-export interface SessionGraphInfo {
-  edgeTypes: string[]
-  embeddedRecordCount: number
-  totalRecordCount: number
-}
-
 /**
  * Surface graph dimensions for `analysis_query mode:"describe"`: which edge
  * types are present in the session, and how many records have embeddings.
@@ -826,14 +757,6 @@ export async function getRecordIdsFiltered(
     params
   )
   return (result.rows as Array<{ record_id: string }>).map((r) => r.record_id)
-}
-
-export interface DryRunResult {
-  matchedCount: number
-  sampleIds: string[]
-  sampleData: Array<Record<string, unknown> & { ingestedAt: string }>
-  earliestIngestedAt: string | null
-  latestIngestedAt: string | null
 }
 
 /**

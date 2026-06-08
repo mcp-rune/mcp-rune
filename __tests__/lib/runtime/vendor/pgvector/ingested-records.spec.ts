@@ -2,7 +2,6 @@ import {
   getRecordIdsFiltered,
   getRecordsForDryRun,
   queryRecords,
-  setRetentionDays,
   storeRecords
 } from '../../../../../src/runtime/vendor/pgvector/ingested-records.js'
 
@@ -364,7 +363,7 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
     })
   })
 
-  describe('setRetentionDays', () => {
+  describe('storeRecords retentionDays', () => {
     let originalDateNow: () => number
 
     beforeEach(() => {
@@ -375,41 +374,38 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
 
     afterEach(() => {
       Date.now = originalDateNow
-      // Restore default for isolation across describe blocks
-      setRetentionDays(7)
     })
 
-    it('rejects non-positive values', () => {
-      expect(() => setRetentionDays(0)).toThrow(/Invalid retentionDays/)
-      expect(() => setRetentionDays(-1)).toThrow(/Invalid retentionDays/)
-      expect(() => setRetentionDays(Number.NaN)).toThrow(/Invalid retentionDays/)
-    })
-
-    it('affects expires_at on subsequent storeRecords inserts', async () => {
+    it('uses the passed retentionDays for expires_at', async () => {
       mockPool.query.mockResolvedValueOnce({})
 
-      setRetentionDays(14)
-      await storeRecords(mockPool as any, {
-        analysisId: 'a',
-        model: 'deal',
-        records: [{ id: 'd-1', data: { id: 'd-1' } }]
-      })
+      await storeRecords(
+        mockPool as any,
+        {
+          analysisId: 'a',
+          model: 'deal',
+          records: [{ id: 'd-1', data: { id: 'd-1' } }]
+        },
+        14
+      )
 
       const params = mockPool.query.mock.calls[0][1] as unknown[]
       const expiresAt = params[4] as Date
-      const expectedMs = Date.now() + 14 * 86_400_000
-      expect(expiresAt.getTime()).toBe(expectedMs)
+      expect(expiresAt.getTime()).toBe(Date.now() + 14 * 86_400_000)
     })
 
-    it('defaults to 7 days', async () => {
+    it('honors a different retention on a second call', async () => {
       mockPool.query.mockResolvedValueOnce({})
 
-      setRetentionDays(7)
-      await storeRecords(mockPool as any, {
-        analysisId: 'a',
-        model: 'deal',
-        records: [{ id: 'd-1', data: { id: 'd-1' } }]
-      })
+      await storeRecords(
+        mockPool as any,
+        {
+          analysisId: 'a',
+          model: 'deal',
+          records: [{ id: 'd-1', data: { id: 'd-1' } }]
+        },
+        7
+      )
 
       const params = mockPool.query.mock.calls[0][1] as unknown[]
       const expiresAt = params[4] as Date
