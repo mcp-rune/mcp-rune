@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.97.0] - 2026-06-08
+
+> **BREAKING.** Bundles axis #5 and axis #9 of epic #268: renames the colliding `ValidationResult` interfaces to subject-specific names, and stops re-exporting layer factories from `src/mcp/tools/base-tool.ts`. Also realigns the test tree after the earlier `prompts/strategies/` → `prompts/form-strategies/` rename and the `display-adapter` removal (so `npm test` is green again).
+
+### Changed
+
+- `src/mcp/model-layer/validators.ts`, `src/mcp/model-layer/model-layer.ts` — `ValidationResult` (`{ valid, missing }`) renamed to `MissingFieldsResult`; `ModelLayer.checkRequired` return type updated.
+- `src/mcp/prompts/form-strategies/form-strategy-definitions.ts`, `hybrid-form-strategy.ts`, `README.md` — `ValidationResult` (the form envelope `{ valid, ready_to_submit, errors, warnings, computed, fields }`) renamed to `FormValidationResult`; `StatefulValidationResult` extends the renamed base; `HybridFormStrategy.validateFields` return type updated.
+- `src/mcp/tools/tool-registry.ts` — `DomainRegistry`, `PromptRegistry` now imported from `domain/registry.js` and `prompts/prompt-registry.js` (not via `base-tool.ts`).
+- `src/mcp/tools/analysis/analysis-ingest-tool.ts`, `src/mcp/analysis-layer/multi-hop-fetch.ts` — `DataLayer` imported from `data-layer/data-layer.js`.
+
+### Removed
+
+- `src/mcp/tools/base-tool.ts` — `DataLayer`, `ModelLayerFactory`, `AnalysisLayerFactory`, `DomainRegistry`, `PromptRegistry` re-exports removed. None of those symbols were defined in `base-tool.ts`; importers must use the canonical layer files. Downstream forks verified clean.
+- `ValidationResult` type names — no shim, per pre-1.0 no-back-compat policy. Importers update to `MissingFieldsResult` or `FormValidationResult`.
+
+### Fixed
+
+- `npm test` runs green against current master. Test cleanup:
+  - Delete `__tests__/lib/mcp/apps/display-adapter.spec.ts` (source removed in `6246ae7`).
+  - Move `__tests__/lib/mcp/prompts/strategies/` → `prompts/form-strategies/`; rename `BaseStrategy` → `BaseFormStrategy`, `HybridStrategy` → `HybridFormStrategy`; rewrite hybrid spec to call `generateSummary(...).human`.
+  - Move `__tests__/lib/mcp/prompts/tools/` → `__tests__/lib/mcp/tools/form-strategies/`; rename `BaseStrategyTool` → `BaseFormStrategyTool`, `getStrategy` → `getFormStrategy`; switch mock prompts and error-field name from `strategy` to `formStrategy`.
+  - `base-prompt.spec.ts` — mock prompts use `static formStrategy`; drop removed `generateTechnicalSummary` block; fix `schema.strategy` → `schema.formStrategy` expectation.
+  - `prompt-content-builder.spec.ts` — mock prompt uses `static formStrategy = 'stateful'` (guidance generator gates on `formStrategy`).
+
+[0.97.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.96.0...v0.97.0
+
 ## [0.96.0] - 2026-06-08
 
 > **BREAKING.** Moves `ModelConfig` and `ModelsRegistry` out of `tools/base-tool.ts` into their canonical home in `src/mcp/models/model-definitions.ts` (epic #268, axis 7, sub-issue #276). Import from the public barrel (`@mcp-rune/mcp-rune/tools`) is unchanged. Direct importers from `base-tool.js` must update to `model-definitions.js`.

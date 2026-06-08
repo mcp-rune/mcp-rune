@@ -3,7 +3,7 @@
  *
  * Covers the production surface that survived the rendering-helper purge:
  *   - the four static config maps and their defaults
- *   - getDefaults, getSectionForGroup, generateTechnicalSummary, toFormSchema
+ *   - getDefaults, getSectionForGroup, toFormSchema
  *
  * Rendering (flow diagrams, guidance, sections, summary template, attribute
  * reference, etc.) is exercised through `prompt-content-builder.spec.ts`
@@ -13,7 +13,7 @@
 import { BasePrompt } from '../../../../src/mcp/prompts/base-prompt.js'
 
 class MockStatefulPrompt extends BasePrompt {
-  static strategy = 'stateful' as const
+  static formStrategy = 'stateful' as const
 
   static sections = {
     identification: {
@@ -75,17 +75,17 @@ class MockStatefulPrompt extends BasePrompt {
 }
 
 class MockMinimalPrompt extends BasePrompt {
-  static strategy = 'stateless' as const
+  static formStrategy = 'stateless' as const
 }
 
 class MockHybridPrompt extends BasePrompt {
-  static strategy = 'hybrid' as const
+  static formStrategy = 'hybrid' as const
 }
 
 describe('BasePrompt', () => {
   describe('Static Properties', () => {
-    test('has default strategy of stateless', () => {
-      expect(BasePrompt.strategy).toBe('stateless')
+    test('has default formStrategy of stateless', () => {
+      expect(BasePrompt.formStrategy).toBe('stateless')
     })
 
     test('has empty sections by default', () => {
@@ -138,7 +138,7 @@ describe('BasePrompt', () => {
 
     test('falls back to stateless intro for unknown strategy', () => {
       class UnknownStrategyPrompt extends BasePrompt {
-        static strategy = 'unknown_strategy' as unknown as 'stateless'
+        static formStrategy = 'unknown_strategy' as unknown as 'stateless'
       }
       expect(UnknownStrategyPrompt.getStrategyIntro()).toBe('Guide for creating')
     })
@@ -157,43 +157,6 @@ describe('BasePrompt', () => {
 
     test('returns null for unknown group', () => {
       expect(MockStatefulPrompt.getSectionForGroup('unknown_group')).toBeNull()
-    })
-  })
-
-  describe('generateTechnicalSummary', () => {
-    test('generates JSON with model and attributes', () => {
-      const summary = MockStatefulPrompt.generateTechnicalSummary(
-        { name: 'test', type: 'basic' },
-        { model: 'item' }
-      )
-
-      const parsed = JSON.parse(summary)
-      expect(parsed.model).toBe('item')
-      expect(parsed.attributes.name).toBe('test')
-      expect(parsed.attributes.type).toBe('basic')
-    })
-
-    test('excludes null and empty values', () => {
-      const summary = MockStatefulPrompt.generateTechnicalSummary({
-        name: 'test',
-        type: null,
-        subtype: ''
-      })
-
-      const parsed = JSON.parse(summary)
-      expect(parsed.attributes.name).toBe('test')
-      expect(parsed.attributes.type).toBeUndefined()
-      expect(parsed.attributes.subtype).toBeUndefined()
-    })
-
-    test('falls back to model "unknown" when context omitted', () => {
-      const summary = MockStatefulPrompt.generateTechnicalSummary({ name: 'x' })
-      expect(JSON.parse(summary).model).toBe('unknown')
-    })
-
-    test('handles empty form state', () => {
-      const summary = MockStatefulPrompt.generateTechnicalSummary({})
-      expect(JSON.parse(summary).attributes).toEqual({})
     })
   })
 
@@ -231,7 +194,7 @@ describe('BasePrompt', () => {
 
       const schema = FormPrompt.toFormSchema()
       expect(schema.name).toBe('FormPrompt')
-      expect(schema.strategy).toBe('stateless')
+      expect(schema.formStrategy).toBe('stateless')
       expect(schema.fieldDefinitions.name!.label).toBe('Full Name')
       expect(schema.fieldDefinitions.name!.examples).toEqual(['Alice'])
       expect(schema.fieldDefinitions.name!.format).toBe('text')

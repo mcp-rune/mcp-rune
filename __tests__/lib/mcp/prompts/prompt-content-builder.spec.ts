@@ -9,7 +9,7 @@ import { PromptContentBuilder } from '../../../../src/mcp/prompts/prompt-content
 
 // Minimal mock prompt class with required static methods
 class MockPrompt {
-  static strategy = 'stateful'
+  static formStrategy = 'stateful'
 
   static sections = {
     identity: {
@@ -168,7 +168,7 @@ describe('PromptContentBuilder', () => {
   describe('multi-group sections (per-group sub-sections)', () => {
     // Mock prompt with a multi-group section where groups have context + content
     class MockMultiGroupPrompt {
-      static strategy = 'stateful'
+      static formStrategy = 'stateful'
 
       static sections = {
         identity: {
@@ -307,7 +307,7 @@ describe('PromptContentBuilder', () => {
 
     it('falls back to title-cased name when context is absent', () => {
       class MockNoContextPrompt {
-        static strategy = 'stateful'
+        static formStrategy = 'stateful'
         static sections = {
           multi: {
             title: 'Multi',
@@ -352,7 +352,7 @@ describe('PromptContentBuilder', () => {
 
     it('renders enum tables for groups with enumDescriptions in multi-group section', () => {
       class MockEnumGroupPrompt {
-        static strategy = 'stateful'
+        static formStrategy = 'stateful'
         static sections = {
           combined: {
             title: 'Combined',
@@ -420,7 +420,7 @@ describe('PromptContentBuilder', () => {
 
     it('renders extraction examples in multi-group section', () => {
       class MockExtractionPrompt {
-        static strategy = 'stateful'
+        static formStrategy = 'stateful'
         static sections = {
           tx: {
             title: 'Transmission',
@@ -494,7 +494,7 @@ describe('PromptContentBuilder', () => {
 
     it('section() method skips when generateSectionDocumentation returns empty', () => {
       class MockEmptySectionPrompt {
-        static strategy = 'stateful'
+        static formStrategy = 'stateful'
         static sections = {}
         static fieldGroups = {}
         static fieldDefinitions = {}
@@ -512,7 +512,7 @@ describe('PromptContentBuilder', () => {
 
     it('allSections supports customSections generator', () => {
       class MockCustomSectionsPrompt {
-        static strategy = 'stateful'
+        static formStrategy = 'stateful'
         static sections = {
           identity: {
             title: 'Identity',
@@ -570,7 +570,7 @@ describe('PromptContentBuilder', () => {
 
     it('renders groups without content as just a field table', () => {
       class MockBareGroupPrompt {
-        static strategy = 'stateful'
+        static formStrategy = 'stateful'
         static sections = {
           multi: {
             title: 'Multi',
@@ -649,7 +649,7 @@ describe('PromptContentBuilder', () => {
   describe('transformer auto-detection in pipeline', () => {
     // Mock prompt with associationTransformers and a single-group section
     class MockTransformerPrompt {
-      static strategy = 'stateful'
+      static formStrategy = 'stateful'
 
       static associationTransformers = {
         licensor: {
@@ -773,7 +773,7 @@ describe('PromptContentBuilder', () => {
 
   describe('transformer auto-detection in multi-group sections', () => {
     class MockMultiGroupTransformerPrompt {
-      static strategy = 'stateful'
+      static formStrategy = 'stateful'
 
       static associationTransformers = {
         content_selection: {
@@ -891,7 +891,7 @@ describe('PromptContentBuilder', () => {
 
     it('skips transformer intro when no transformers exist', () => {
       class NoTransformerPrompt {
-        static strategy = 'stateful'
+        static formStrategy = 'stateful'
         static sections = {
           plain: {
             title: 'Plain',

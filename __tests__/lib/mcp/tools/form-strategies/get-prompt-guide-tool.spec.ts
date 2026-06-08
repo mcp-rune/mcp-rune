@@ -1,11 +1,11 @@
-import { BaseStrategyTool } from '../../../../../src/mcp/prompts/tools/base-strategy-tool.js'
-import { GetPromptGuideTool } from '../../../../../src/mcp/prompts/tools/get-prompt-guide-tool.js'
+import { BaseFormStrategyTool } from '../../../../../src/mcp/tools/form-strategies/base-form-strategy-tool.js'
+import { GetPromptGuideTool } from '../../../../../src/mcp/tools/form-strategies/get-prompt-guide-tool.js'
 
-describe('lib/mcp/prompts/tools/get-prompt-guide-tool', () => {
+describe('lib/mcp/tools/form-strategies/get-prompt-guide-tool', () => {
   describe('inheritance', () => {
-    it('should extend BaseStrategyTool', () => {
+    it('should extend BaseFormStrategyTool', () => {
       const tool = new GetPromptGuideTool({})
-      expect(tool).toBeInstanceOf(BaseStrategyTool)
+      expect(tool).toBeInstanceOf(BaseFormStrategyTool)
     })
   })
 
