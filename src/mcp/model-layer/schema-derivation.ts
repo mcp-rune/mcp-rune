@@ -44,7 +44,7 @@ import type { FieldDefinition } from './field-definition.js'
  * Aligned with `typeof BaseModel` so both inline configs and class
  * constructors are accepted without a cast — `derivePromptSchema(Book, …)`.
  */
-export interface ModelConfig {
+export interface DerivationModelConfig {
   attributes?: Record<string, AttributeDefinition>
   required?: string[]
   associations?: AssociationConfig
@@ -95,7 +95,10 @@ const promptSchemaCache = new Map<string, DerivedSchema>()
  * Generate a stable cache key from inputs.
  * Uses JSON stringify to create a deterministic key from all inputs.
  */
-function generateCacheKey(modelConfig: ModelConfig, options: DeriveSchemaOptions = {}): string {
+function generateCacheKey(
+  modelConfig: DerivationModelConfig,
+  options: DeriveSchemaOptions = {}
+): string {
   const modelKey = JSON.stringify({
     endpoint: modelConfig?.api?.endpoint,
     attributes: modelConfig?.attributes ? Object.keys(modelConfig.attributes).sort() : [],
@@ -154,7 +157,7 @@ export function getSchemaCacheStats(): CacheStats {
  * @param options.promptOnly - Only include fields marked as prompt_visible (default: true)
  */
 export function deriveFieldDefinitions(
-  modelConfig: ModelConfig,
+  modelConfig: DerivationModelConfig,
   options: DeriveFieldOptions = {}
 ): Record<string, PromptFieldDefinition> {
   const {
@@ -312,7 +315,7 @@ function addAssociationFields(
  * @param options.promptOnly - Only include prompt-visible fields (default: true)
  */
 export function derivePromptSchema(
-  modelConfig: ModelConfig,
+  modelConfig: DerivationModelConfig,
   options: DeriveSchemaOptions = {}
 ): DerivedSchema {
   // Check cache
@@ -360,9 +363,9 @@ export function derivePromptSchema(
  * Helper to add prompt-specific metadata to existing model configuration.
  */
 export function enhanceModelConfig(
-  modelConfig: ModelConfig,
+  modelConfig: DerivationModelConfig,
   promptMetadata: Record<string, Partial<AttributeDefinition>>
-): ModelConfig {
+): DerivationModelConfig {
   const enhanced = { ...modelConfig }
 
   enhanced.attributes = { ...enhanced.attributes }

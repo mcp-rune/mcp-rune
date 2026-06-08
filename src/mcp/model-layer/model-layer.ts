@@ -35,10 +35,10 @@ import type { ModelClassLike } from '#src/mcp/schema/types.js'
 import { resolveDerivedFields as resolveDerivedFieldsImpl } from './derived-fields.js'
 import { collectValidFieldNames } from './field-names.js'
 import {
+  type DerivationModelConfig,
   type DerivedSchema,
   derivePromptSchema as derivePromptSchemaImpl,
-  type DeriveSchemaOptions,
-  type ModelConfig as SchemaModelConfig
+  type DeriveSchemaOptions
 } from './schema-derivation.js'
 import { validateRequired, type ValidationResult } from './validators.js'
 
@@ -111,7 +111,7 @@ export function createModelLayer(model: ModelClassLike): ModelLayer {
       // ModelClassLike is the loose schema-validator type; the bound model is
       // really a ModelConfig from the registry. Cast at the layer boundary so
       // schema derivation sees the fields it needs (associations, required).
-      return derivePromptSchemaImpl(model as unknown as SchemaModelConfig, options)
+      return derivePromptSchemaImpl(model as unknown as DerivationModelConfig, options)
     },
     checkRequired(params) {
       const required = (model as ModelClassLike & { required?: readonly string[] }).required ?? []
