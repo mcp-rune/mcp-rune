@@ -4,6 +4,55 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.98.0] - 2026-06-08
+
+> **BREAKING.** Introduces a vendor-agnostic `VectorStorageAdapter` contract (closes #279 as a side-effect). `vector-storage.ts` no longer hard-imports pgvector — integrators construct an adapter via `createPgvectorAdapter({ pool })` and pass it to `initVectorStorage({ adapter })`. Makes a future Qdrant backend a drop-in alongside pgvector, and unblocks the `mcp-rune-cli` "advanced setup" choice between the two.
+
+### Migration
+
+```ts
+// Before
+import { initVectorStorage } from '@mcp-rune/mcp-rune/runtime'
+initVectorStorage({ pool, retentionDays: 30, ingestedRecordsRetentionDays: 7 })
+
+// After
+import { initVectorStorage } from '@mcp-rune/mcp-rune/runtime'
+import { createPgvectorAdapter } from '@mcp-rune/mcp-rune/runtime/vendor/pgvector'
+
+initVectorStorage({
+  adapter: createPgvectorAdapter({
+    pool,
+    toolMemoriesRetentionDays: 30,
+    ingestedRecordsRetentionDays: 7
+  }),
+  backgroundCleanupIntervalMs: 60_000
+})
+```
+
+### Added
+
+- `src/runtime/vector-storage-definitions.ts` — new home for the `VectorStorageAdapter` contract and every shared param/result type. Single source of truth, mirroring `model-definitions.ts` / `prompt-definitions.ts`. Composes four sub-adapter interfaces: `ToolMemoriesAdapter`, `AnalysisMemoriesAdapter`, `IngestedRecordsAdapter`, `IngestedEdgesAdapter`.
+- `createPgvectorAdapter(opts: PgvectorAdapterOptions): VectorStorageAdapter` — factory that binds the `Pool` and per-table retention windows (`toolMemoriesRetentionDays` default 30, `ingestedRecordsRetentionDays` default 7, `ingestedEdgesRetentionDays` falls back to records).
+
+### Changed
+
+- `src/runtime/vector-storage.ts` — facade is now pool-blind: holds an `activeAdapter` and dispatches every public call through it. Owns embedding generation, summary text, and the boot-time + periodic cleanup-sweep schedule; everything else lives in the adapter. Public function signatures unchanged.
+- `VectorStorageOptions` — `pool?: Pool` replaced by `adapter?: VectorStorageAdapter`. `retentionDays` and `ingestedRecordsRetentionDays` move to `PgvectorAdapterOptions` (each vendor owns its own retention semantics).
+- `src/runtime/vendor/pgvector/{tool-memories,analysis-memories,ingested-records,ingested-edges}.ts` — now import every shared type from `vector-storage-definitions.ts` instead of redeclaring them (the silent-drift hazard #279 called out). `storeRecords`/`storeEdges` take `retentionDays` as a third arg; module-level retention state and `setRetentionDays(days)` removed.
+- `recallAnalysisMemories(filters)` — the user-facing filter type is now `AnalysisRecallFilters` (`{ analysisId?; category?; query?: string }`). The adapter contract's `RecallFilters` uses `embedding?: Float32Array` (the facade embeds `query` before delegating).
+
+### Removed
+
+- `vendor/pgvector/index.ts` — `initialize`, `isConfigured`, `getPool`, `flush`, `close`, `PgvectorOptions`, module-level `pool` and `cleanupInterval` state. Replaced by the single `createPgvectorAdapter` factory; lifecycle hooks live on the returned adapter.
+- `vendor/pgvector/{ingested-records,ingested-edges}.ts` — `setRetentionDays(days)`. Retention is bound at adapter construction.
+- Nine duplicated interface declarations between `vector-storage.ts` and the pgvector modules (`StoreEdgesParams`, `GapFilters`, `GapOptions`, `ClusterFilters`, `ClusterOptions`, `ClusterResult`, `RecallFilters`, `RecallOptions`, plus the `EdgeRow` facade re-export shape) — closes #279.
+
+### Notes for downstream forks
+
+`engineer-mcp` and `mcp-servers-mgx` both call `initVectorStorage({ pool })` from their own bootstraps. They must switch to the `createPgvectorAdapter({ pool })` form shown in the Migration section above. No shim is provided (pre-1.0 no-back-compat policy).
+
+[0.98.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.97.0...v0.98.0
+
 ## [0.97.0] - 2026-06-08
 
 > **BREAKING.** Bundles axis #5 and axis #9 of epic #268: renames the colliding `ValidationResult` interfaces to subject-specific names, and stops re-exporting layer factories from `src/mcp/tools/base-tool.ts`. Also realigns the test tree after the earlier `prompts/strategies/` → `prompts/form-strategies/` rename and the `display-adapter` removal (so `npm test` is green again).

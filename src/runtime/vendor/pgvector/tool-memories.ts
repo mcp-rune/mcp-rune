@@ -1,78 +1,32 @@
 /**
  * pgvector Tool Memories - Store, Query, and Cleanup
  *
- * Implements the vendor contract that vector-storage.ts delegates to.
- * All functions receive the pg pool as the first argument.
+ * Implements the ToolMemoriesAdapter contract defined in
+ * `src/runtime/vector-storage-definitions.ts`. All functions receive the pg
+ * pool as the first argument; the adapter factory in `./index.ts` binds it.
  */
 
 import type { Pool } from 'pg'
 
+import type {
+  ClusterFilters,
+  ClusterOptions,
+  ClusterResult,
+  GapFilters,
+  GapOptions,
+  GapResult,
+  OperationFilters,
+  OperationMetadata,
+  QueryOptions,
+  TemplateEmbedding
+} from '#src/runtime/vector-storage-definitions.js'
+
 import { cosineSimilarity } from '../../cosine-similarity.js'
-
-export interface OperationMetadata {
-  toolName: string
-  toolArgs?: Record<string, unknown>
-  toolOutput?: Record<string, unknown> | null
-  userId?: string
-  sessionId?: string
-  summary: string
-}
-
-export interface FindFilters {
-  toolName?: string
-  days?: number
-  sessionId?: string
-}
-
-export interface FindOptions {
-  topK?: number
-  threshold?: number
-}
-
-export interface TemplateEmbedding {
-  label: string
-  embedding: Float32Array
-}
-
-export interface GapFilters {
-  recordId?: string
-  modelName?: string
-}
-
-export interface GapOptions {
-  threshold?: number
-}
-
-export interface GapResult {
-  step: string
-  confidence: number
-  status: string
-}
-
-export interface ClusterFilters {
-  toolName?: string
-  days?: number
-}
-
-export interface ClusterOptions {
-  minClusterSize?: number
-  similarityThreshold?: number
-}
 
 interface ClusterEntry {
   representative: string
   toolName: string
   operations: Array<Record<string, unknown>>
-}
-
-export interface ClusterResult {
-  clusters: Array<{
-    representative: string
-    toolName: string
-    count: number
-    operations: Array<Record<string, unknown>>
-  }>
-  outliers: Array<Record<string, unknown>>
 }
 
 interface ToolMemoryRow {
@@ -118,8 +72,8 @@ export async function storeOperation(
 export async function findSimilar(
   pool: Pool,
   embedding: Float32Array,
-  filters: FindFilters = {},
-  options: FindOptions = {}
+  filters: OperationFilters = {},
+  options: QueryOptions = {}
 ): Promise<Record<string, unknown>[]> {
   const topK = options.topK || 10
   const threshold = options.threshold || 0.5
@@ -166,7 +120,7 @@ export async function findSimilar(
  */
 export async function detectGaps(
   pool: Pool,
-  templateEmbeddings: TemplateEmbedding[],
+  templateEmbeddings: ReadonlyArray<TemplateEmbedding>,
   filters: GapFilters = {},
   options: GapOptions = {}
 ): Promise<GapResult[]> {

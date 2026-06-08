@@ -1,129 +1,107 @@
 /**
- * pgvector Vendor Implementation - SDK Lifecycle
+ * pgvector Adapter Factory
  *
- * Manages pgvector vector storage via an injected PostgreSQL pool.
- * This module should only be imported by services/vector-storage.ts
+ * Bundles the four pgvector impl modules into a single object that satisfies
+ * `VectorStorageAdapter` (see `src/runtime/vector-storage-definitions.ts`).
+ * The pool and per-table retention windows are bound at construction; the
+ * returned object is opaque to the facade — it just calls methods.
  *
- * Pool injection only — never creates pools or reads env vars.
- * DDL is managed by scripts/db-migrate.js.
+ * The integrator owns the pool's lifecycle: this factory never creates pools,
+ * never reads env vars, never calls `pool.end()`. DDL is managed separately
+ * by `scripts/db-migrate.js`.
  */
 
 import type { Pool } from 'pg'
 
-import * as logger from '../../logger.js'
+import type { VectorStorageAdapter } from '#src/runtime/vector-storage-definitions.js'
+
 import * as analysisMemories from './analysis-memories.js'
+import * as ingestedEdges from './ingested-edges.js'
 import * as ingestedRecords from './ingested-records.js'
-import * as operations from './tool-memories.js'
+import * as toolMemories from './tool-memories.js'
 
-let pool: Pool | null = null
-let cleanupInterval: ReturnType<typeof setInterval> | null = null
-
-/** Check if pgvector is configured (pool injected) */
-export function isConfigured(): boolean {
-  return !!pool
-}
-
-/** Get the connection pool (for use by operations module) */
-export function getPool(): Pool | null {
-  return pool
-}
-
-export interface PgvectorOptions {
-  pool?: Pool
-  serviceName?: string
-  version?: string
-  /** Retention for tool_memories (operations feature). Default 30 days. */
-  retentionDays?: number
-  /** Retention for ingested_records (analysis feature). Default 7 days. */
+export interface PgvectorAdapterOptions {
+  /** Postgres pool. Lifecycle stays with the integrator. */
+  pool: Pool
+  /** Retention for tool_memories. Default 30 days. */
+  toolMemoriesRetentionDays?: number
+  /** Retention for ingested_records. Default 7 days. */
   ingestedRecordsRetentionDays?: number
-  /**
-   * If set, run cleanup across all three tables every N ms. Default off so
-   * tests and short-lived processes aren't affected. setInterval's native
-   * unit is ms; sub-minute intervals are useful for tests.
-   */
-  backgroundCleanupIntervalMs?: number
+  /** Retention for ingested_edges. Defaults to ingestedRecordsRetentionDays. */
+  ingestedEdgesRetentionDays?: number
 }
 
 /**
- * Initialize pgvector with an injected connection pool
- */
-export function initialize(options: PgvectorOptions = {}): boolean {
-  if (!options.pool) {
-    if (!process.env.VITEST) {
-      logger.warn('pgvector: no pool provided, vector storage disabled', {
-        service: 'pgvector'
-      })
-    }
-    return false
-  }
-
-  pool = options.pool
-
-  const retentionDays = options.retentionDays || 30
-  const ingestedRetention = options.ingestedRecordsRetentionDays ?? 7
-  ingestedRecords.setRetentionDays(ingestedRetention)
-
-  // Boot-time sweep across all three tables (async, non-blocking).
-  runCleanupSweep(pool, retentionDays).catch((err: Error) => {
-    logger.error('pgvector boot cleanup failed', {
-      service: 'pgvector',
-      error: err.message
-    })
-  })
-
-  if (options.backgroundCleanupIntervalMs && options.backgroundCleanupIntervalMs > 0) {
-    cleanupInterval = setInterval(() => {
-      const currentPool = pool
-      if (!currentPool) return
-      runCleanupSweep(currentPool, retentionDays).catch((err: Error) => {
-        logger.error('pgvector periodic cleanup failed', {
-          service: 'pgvector',
-          error: err.message
-        })
-      })
-    }, options.backgroundCleanupIntervalMs)
-    if (typeof cleanupInterval.unref === 'function') cleanupInterval.unref()
-  }
-
-  logger.info('pgvector initialized', {
-    service: 'pgvector',
-    serviceName: options.serviceName,
-    version: options.version,
-    retentionDays,
-    ingestedRecordsRetentionDays: ingestedRetention,
-    backgroundCleanupIntervalMs: options.backgroundCleanupIntervalMs ?? null
-  })
-
-  return true
-}
-
-async function runCleanupSweep(p: Pool, toolMemoriesRetentionDays: number): Promise<void> {
-  await Promise.all([
-    operations.cleanupExpired(p, toolMemoriesRetentionDays),
-    ingestedRecords.cleanupExpired(p),
-    analysisMemories.cleanupExpired(p)
-  ])
-}
-
-/** Flush pending writes (drain pool) */
-export async function flush(_timeout = 5000): Promise<void> {
-  // pg pool doesn't have a flush concept; this is a noop
-  // Writes are synchronous from the pool's perspective
-}
-
-/**
- * Close the vector storage reference
+ * Build a `VectorStorageAdapter` backed by Postgres + pgvector.
  *
- * Nulls the pool reference but never calls pool.end() —
- * the pool is owned by src/engineer/db.js.
+ * @example
+ * import { createPgvectorAdapter } from '@mcp-rune/mcp-rune/runtime/vendor/pgvector'
+ * import { initVectorStorage } from '@mcp-rune/mcp-rune/runtime'
+ *
+ * initVectorStorage({
+ *   adapter: createPgvectorAdapter({ pool }),
+ *   backgroundCleanupIntervalMs: 60_000
+ * })
  */
-export async function close(_timeout = 5000): Promise<void> {
-  if (cleanupInterval) {
-    clearInterval(cleanupInterval)
-    cleanupInterval = null
-  }
-  if (!pool) return
+export function createPgvectorAdapter(options: PgvectorAdapterOptions): VectorStorageAdapter {
+  const { pool } = options
+  const toolRetention = options.toolMemoriesRetentionDays ?? 30
+  const recordsRetention = options.ingestedRecordsRetentionDays ?? 7
+  const edgesRetention = options.ingestedEdgesRetentionDays ?? recordsRetention
 
-  pool = null
-  logger.info('pgvector connection pool closed', { service: 'pgvector' })
+  return {
+    toolMemories: {
+      storeOperation: (embedding, metadata) =>
+        toolMemories.storeOperation(pool, embedding, metadata),
+      findSimilar: (embedding, filters, options) =>
+        toolMemories.findSimilar(pool, embedding, filters, options),
+      detectGaps: (templateEmbeddings, filters, options) =>
+        toolMemories.detectGaps(pool, templateEmbeddings, filters, options),
+      getClusters: (filters, options) => toolMemories.getClusters(pool, filters, options),
+      getStats: (filters) => toolMemories.getStats(pool, filters),
+      cleanupExpired: () => toolMemories.cleanupExpired(pool, toolRetention)
+    },
+    analysisMemories: {
+      storeMemory: (embedding, metadata) => analysisMemories.storeMemory(pool, embedding, metadata),
+      recallMemories: (filters, options) => analysisMemories.recallMemories(pool, filters, options),
+      clearMemories: (analysisId) => analysisMemories.clearMemories(pool, analysisId),
+      cleanupExpired: () => analysisMemories.cleanupExpired(pool)
+    },
+    ingestedRecords: {
+      storeRecords: (params) => ingestedRecords.storeRecords(pool, params, recordsRetention),
+      queryRecords: (analysisId, query) => ingestedRecords.queryRecords(pool, analysisId, query),
+      getEmbeddingsForRecords: (analysisId, model, recordIds) =>
+        ingestedRecords.getEmbeddingsForRecords(pool, analysisId, model, recordIds),
+      getRecordsWithoutEmbeddings: (analysisId, model, limit) =>
+        ingestedRecords.getRecordsWithoutEmbeddings(pool, analysisId, model, limit),
+      updateRecordEmbeddings: (analysisId, model, updates) =>
+        ingestedRecords.updateRecordEmbeddings(pool, analysisId, model, updates),
+      getSessionGraphInfo: (analysisId) => ingestedRecords.getSessionGraphInfo(pool, analysisId),
+      describeSession: (analysisId) => ingestedRecords.describeSession(pool, analysisId),
+      getRecordCount: (analysisId, model) =>
+        ingestedRecords.getRecordCount(pool, analysisId, model),
+      getRecordIds: (analysisId, model) => ingestedRecords.getRecordIds(pool, analysisId, model),
+      getRecordIdsFiltered: (analysisId, model, where) =>
+        ingestedRecords.getRecordIdsFiltered(pool, analysisId, model, where),
+      getRecordsForDryRun: (analysisId, model, where, sampleLimit) =>
+        ingestedRecords.getRecordsForDryRun(pool, analysisId, model, where, sampleLimit),
+      clearRecords: (analysisId) => ingestedRecords.clearRecords(pool, analysisId),
+      cleanupExpired: () => ingestedRecords.cleanupExpired(pool)
+    },
+    ingestedEdges: {
+      storeEdges: (params) => ingestedEdges.storeEdges(pool, params, edgesRetention),
+      getEdgesFrom: (analysisId, srcModel, srcId) =>
+        ingestedEdges.getEdgesFrom(pool, analysisId, srcModel, srcId),
+      getEdgesForSources: (analysisId, srcModel, srcIds) =>
+        ingestedEdges.getEdgesForSources(pool, analysisId, srcModel, srcIds),
+      clearEdges: (analysisId) => ingestedEdges.clearEdges(pool, analysisId),
+      cleanupExpired: () => ingestedEdges.cleanupExpired(pool)
+    },
+    async flush() {
+      // pg pool has no flush concept; writes are synchronous from the pool's perspective.
+    },
+    async close() {
+      // The pool's lifecycle is owned by the integrator. Nothing to release here.
+    }
+  }
 }

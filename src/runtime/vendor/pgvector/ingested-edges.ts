@@ -1,34 +1,23 @@
 /**
  * pgvector Ingested Edges — Store, Query, and Cleanup
  *
- * Companion to ingested-records.ts. Persists the relationship graph
- * extracted during analysis_ingest so Phase 2 graph stratifiers and
- * Phase 3 relationship summaries can join records by edge type without
- * scanning JSONB.
+ * Implements the IngestedEdgesAdapter contract defined in
+ * `src/runtime/vector-storage-definitions.ts`. Companion to ingested-records:
+ * persists the relationship graph extracted during analysis_ingest so Phase 2
+ * graph stratifiers and Phase 3 relationship summaries can join records by
+ * edge type without scanning JSONB.
  */
 
 import type { Pool } from 'pg'
 
-import type { Edge } from '#src/mcp/analysis-layer/edge-extraction.js'
-
-export interface StoreEdgesParams {
-  analysisId: string
-  edges: ReadonlyArray<Edge>
-  hopDepth?: number
-}
-
-let retentionDays = 7
-
-/** Configure how long newly-stored edges survive before eviction. */
-export function setRetentionDays(days: number): void {
-  if (!Number.isFinite(days) || days <= 0) {
-    throw new Error(`Invalid retentionDays: ${days}. Must be a positive number.`)
-  }
-  retentionDays = days
-}
+import type { EdgeRow, StoreEdgesParams } from '#src/runtime/vector-storage-definitions.js'
 
 /** Store a batch of edges. ON CONFLICT updates hop_depth to the shallower discovery. */
-export async function storeEdges(pool: Pool, params: StoreEdgesParams): Promise<number> {
+export async function storeEdges(
+  pool: Pool,
+  params: StoreEdgesParams,
+  retentionDays: number
+): Promise<number> {
   if (params.edges.length === 0) return 0
 
   const expiresAt = new Date(Date.now() + retentionDays * 86_400_000)
@@ -66,15 +55,6 @@ export async function storeEdges(pool: Pool, params: StoreEdgesParams): Promise<
   )
 
   return params.edges.length
-}
-
-export interface EdgeRow {
-  src_model: string
-  src_id: string
-  dst_model: string
-  dst_id: string
-  edge_type: string
-  hop_depth: number
 }
 
 /** Edges originating from a given (model, id) within a session. */

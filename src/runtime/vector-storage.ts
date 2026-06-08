@@ -1,57 +1,94 @@
 /**
  * Vector Storage Service - Vendor-Agnostic Public API
  *
- * Shared pgvector backend for analysis and operations tool categories.
- * Stores semantic embeddings for tool operations, analysis findings,
- * and ingested records.
+ * Public facade for tool-operation memories, analysis memories, ingested
+ * records, and ingested edges. Delegates all storage to a
+ * `VectorStorageAdapter` (see `vector-storage-definitions.ts`) injected at
+ * startup. The facade itself owns embedding generation, summary text, and
+ * the periodic cleanup-sweep schedule — everything else lives in the adapter.
  *
- * Mirrors the facade pattern of tracing.js and error-tracking.js.
- * To switch vendors, update the import below.
- *
- * When not configured (no env vars), all functions become no-ops.
+ * When no adapter is provided, every call becomes a no-op.
  *
  * @example
- * import { initVectorStorage, storeOperation } from '#src/runtime/vector-storage.js'
+ * import { initVectorStorage } from '#src/runtime/vector-storage.js'
+ * import { createPgvectorAdapter } from '#src/runtime/vendor/pgvector/index.js'
  *
- * // Initialize once at startup
- * initVectorStorage({ serviceName: 'mcp-server-mod', retentionDays: 30 })
- *
- * // Store after tool operations (fire-and-forget)
- * storeOperation({ toolName: 'create_model', toolArgs: { model: 'deal', attributes: { ... } } })
+ * initVectorStorage({
+ *   adapter: createPgvectorAdapter({ pool }),
+ *   serviceName: 'mcp-server-mod',
+ *   backgroundCleanupIntervalMs: 60_000
+ * })
  */
-
-import type { Pool } from 'pg'
 
 import type { Edge } from '#src/mcp/analysis-layer/edge-extraction.js'
 import { buildEmbeddingText } from '#src/mcp/analysis-layer/edge-extraction.js'
 
-// Vendor implementation - change this import to switch vendors
 import { embed, embedBatch } from './embeddings.js'
+import * as logger from './logger.js'
 import { adaptToolOutput } from './tool-output-adapters.js'
-import * as analysisMemories from './vendor/pgvector/analysis-memories.js'
-import * as vendor from './vendor/pgvector/index.js'
-import * as ingestedEdges from './vendor/pgvector/ingested-edges.js'
-import * as ingestedRecords from './vendor/pgvector/ingested-records.js'
-import * as operations from './vendor/pgvector/tool-memories.js'
+import type {
+  ClusterFilters,
+  ClusterOptions,
+  ClusterResult,
+  EdgeRow,
+  GapFilters,
+  GapOptions,
+  GapResult,
+  IngestedDataQuery,
+  OperationFilters,
+  QueryOptions,
+  RecallOptions,
+  RecordEmbedding,
+  VectorStorageAdapter
+} from './vector-storage-definitions.js'
+
+export type {
+  AggregateQuery,
+  AnalysisMemoriesAdapter,
+  AnalysisMemoryMetadata,
+  ClusterFilters,
+  ClusterOptions,
+  ClusterResult,
+  DryRunResult,
+  EdgeRow,
+  FilterQuery,
+  GapFilters,
+  GapOptions,
+  GapResult,
+  GraphStratifierSpec,
+  IngestedDataQuery,
+  IngestedEdgesAdapter,
+  IngestedRecordsAdapter,
+  IngestParams,
+  OperationFilters,
+  OperationMetadata,
+  ProximityParams,
+  QueryOptions,
+  RecallOptions,
+  RecordEmbedding,
+  SampleQuery,
+  SessionDescriptor,
+  SessionGraphInfo,
+  StoreEdgesParams,
+  TemplateEmbedding,
+  ToolMemoriesAdapter,
+  VectorStorageAdapter
+} from './vector-storage-definitions.js'
 
 /** Batch size for record embedding during ingest. */
 const EMBED_BATCH_SIZE = 64
 
 export interface VectorStorageOptions {
   /**
-   * Optional Postgres pool injected at startup. Without one, vector storage
-   * stays disabled and every vector-storage call becomes a no-op. The same
-   * pool used by the integrator's database layer should be passed in so
-   * connection limits and lifecycle are shared.
+   * Adapter implementing the `VectorStorageAdapter` contract. Without one,
+   * vector storage stays disabled and every call becomes a no-op. Build the
+   * adapter using a vendor factory (e.g. `createPgvectorAdapter({ pool })`)
+   * — the facade is intentionally pool/vendor-blind.
    */
-  pool?: Pool
+  adapter?: VectorStorageAdapter
   serviceName?: string
   version?: string
-  /** Retention for tool_memories (operations feature). Default 30 days. */
-  retentionDays?: number
-  /** Retention for ingested_records (analysis feature). Default 7 days. */
-  ingestedRecordsRetentionDays?: number
-  /** When set, periodic cleanup across all three tables fires on this interval (ms). */
+  /** When set, periodic cleanup across every sub-adapter fires on this interval (ms). */
   backgroundCleanupIntervalMs?: number
 }
 
@@ -63,45 +100,6 @@ export interface StoreOperationParams {
   userId?: string
 }
 
-export interface OperationFilters {
-  toolName?: string
-  days?: number
-  sessionId?: string
-}
-
-export interface QueryOptions {
-  topK?: number
-  threshold?: number
-}
-
-export interface GapFilters {
-  recordId?: string
-  modelName?: string
-}
-
-export interface GapOptions {
-  threshold?: number
-}
-
-export interface ClusterFilters {
-  days?: number
-  toolName?: string
-}
-
-export interface ClusterOptions {
-  minClusterSize?: number
-}
-
-export interface ClusterResult {
-  clusters: Array<{
-    representative: string
-    toolName: string
-    count: number
-    operations: Array<Record<string, unknown>>
-  }>
-  outliers: Array<Record<string, unknown>>
-}
-
 export interface AnalysisMemoryParams {
   analysisId: string
   finding: string
@@ -110,153 +108,14 @@ export interface AnalysisMemoryParams {
   persistent?: boolean
 }
 
-export interface RecallFilters {
+/**
+ * Facade-facing recall filters. The `query` field is a raw text query that
+ * the facade embeds before delegating to the adapter (which sees `embedding`).
+ */
+export interface AnalysisRecallFilters {
   analysisId?: string
   category?: string
   query?: string
-}
-
-export interface RecallOptions {
-  topK?: number
-  threshold?: number
-}
-
-/**
- * Initialize memory storage service
- *
- * Call once at server startup. No-op if env vars not set.
- */
-export function initVectorStorage(options: VectorStorageOptions = {}): boolean {
-  return vendor.initialize(options)
-}
-
-/** Check if vector storage is configured and enabled */
-export function isVectorStorageEnabled(): boolean {
-  return vendor.isConfigured()
-}
-
-/**
- * Store a tool operation embedding
- *
- * Converts the operation to natural language, generates an embedding,
- * and stores both in the vector database. Fire-and-forget from callers.
- */
-export async function storeOperation(operation: StoreOperationParams): Promise<string | null> {
-  if (!vendor.isConfigured()) return null
-
-  const pool = vendor.getPool()
-  if (!pool) return null
-
-  const toolOutput = adaptToolOutput(operation.toolName, operation.toolOutput, operation.toolArgs)
-  const summary = operationToText(operation, toolOutput)
-  const embedding = await embed(summary)
-
-  return operations.storeOperation(pool, embedding, {
-    toolName: operation.toolName,
-    toolArgs: operation.toolArgs,
-    toolOutput,
-    userId: operation.userId,
-    sessionId: operation.sessionId,
-    summary
-  })
-}
-
-/**
- * Find operations similar to a query
- */
-export async function findSimilarOperations(
-  query: string,
-  filters: OperationFilters = {},
-  options: QueryOptions = {}
-): Promise<Record<string, unknown>[]> {
-  if (!vendor.isConfigured()) return []
-
-  const pool = vendor.getPool()
-  if (!pool) return []
-
-  const embedding = await embed(query)
-  return operations.findSimilar(pool, embedding, filters, options)
-}
-
-/**
- * Detect gaps in operations for a record
- */
-export async function detectOperationGaps(
-  expectedSteps: string[],
-  filters: GapFilters = {},
-  options: GapOptions = {}
-): Promise<Array<{ step: string; confidence: number; status: string }>> {
-  if (!vendor.isConfigured()) return []
-
-  const pool = vendor.getPool()
-  if (!pool) return []
-
-  const embeddings = await embedBatch(expectedSteps)
-  const templateEmbeddings = expectedSteps.map((label, i) => ({
-    label,
-    embedding: embeddings[i]!
-  }))
-
-  return operations.detectGaps(pool, templateEmbeddings, filters, options)
-}
-
-/** Get operation clusters grouped by semantic similarity */
-export async function getOperationClusters(
-  filters: ClusterFilters = {},
-  options: ClusterOptions = {}
-): Promise<ClusterResult> {
-  if (!vendor.isConfigured()) return { clusters: [], outliers: [] }
-
-  const pool = vendor.getPool()
-  if (!pool) return { clusters: [], outliers: [] }
-
-  return operations.getClusters(pool, filters, options)
-}
-
-/** Get operation statistics */
-export async function getOperationStats(
-  filters: Record<string, unknown> = {}
-): Promise<Record<string, unknown>[]> {
-  if (!vendor.isConfigured()) return []
-
-  const pool = vendor.getPool()
-  if (!pool) return []
-
-  return operations.getStats(pool, filters)
-}
-
-/**
- * Store an analysis memory finding
- */
-export async function storeAnalysisMemory(params: AnalysisMemoryParams): Promise<string | null> {
-  if (!vendor.isConfigured()) return null
-
-  const pool = vendor.getPool()
-  if (!pool) return null
-
-  const embedding = await embed(params.finding)
-  return analysisMemories.storeMemory(pool, embedding, params)
-}
-
-/**
- * Recall analysis memories by filters and/or semantic query
- */
-export async function recallAnalysisMemories(
-  filters: RecallFilters = {},
-  options: RecallOptions = {}
-): Promise<Record<string, unknown>[]> {
-  if (!vendor.isConfigured()) return []
-
-  const pool = vendor.getPool()
-  if (!pool) return []
-
-  const queryFilters: Record<string, unknown> = { ...filters }
-  if (filters.query) {
-    queryFilters.embedding = await embed(filters.query)
-    delete queryFilters.query
-  }
-
-  return analysisMemories.recallMemories(pool, queryFilters, options)
 }
 
 export interface IngestRecordsParams {
@@ -272,43 +131,199 @@ export interface IngestRecordsParams {
   embed?: boolean | { fields?: string[] }
 }
 
-export type IngestedDataQuery =
-  | { mode: 'aggregate'; groupBy: string }
-  | { mode: 'filter'; where: Record<string, unknown>; limit?: number }
-  | {
-      mode: 'sample'
-      sampleSize?: number
-      stratifyBy?: string
-      where?: Record<string, unknown>
-      proximity?: ingestedRecords.ProximityParams
-      stratifiers?: ReadonlyArray<ingestedRecords.GraphStratifierSpec>
-    }
+export interface StoreEdgesFacadeParams {
+  analysisId: string
+  edges: ReadonlyArray<Edge>
+  hopDepth?: number
+}
 
-export type { GraphStratifierSpec } from './vendor/pgvector/ingested-records.js'
+export interface EnsureEmbeddingsOptions {
+  fields?: string[]
+  /** Cap per call. Default 500. */
+  limit?: number
+}
+
+let activeAdapter: VectorStorageAdapter | null = null
+let cleanupInterval: ReturnType<typeof setInterval> | null = null
+
+/**
+ * Initialize vector storage. Call once at server startup with a constructed
+ * adapter (e.g. `createPgvectorAdapter({ pool })`). No-op without one.
+ */
+export function initVectorStorage(options: VectorStorageOptions = {}): boolean {
+  if (!options.adapter) {
+    if (!process.env.VITEST) {
+      logger.warn('vector-storage: no adapter provided, disabled', {
+        service: 'vector-storage'
+      })
+    }
+    return false
+  }
+
+  activeAdapter = options.adapter
+
+  runCleanupSweep().catch((err: Error) => {
+    logger.error('vector-storage boot cleanup failed', {
+      service: 'vector-storage',
+      error: err.message
+    })
+  })
+
+  if (options.backgroundCleanupIntervalMs && options.backgroundCleanupIntervalMs > 0) {
+    cleanupInterval = setInterval(() => {
+      if (!activeAdapter) return
+      runCleanupSweep().catch((err: Error) => {
+        logger.error('vector-storage periodic cleanup failed', {
+          service: 'vector-storage',
+          error: err.message
+        })
+      })
+    }, options.backgroundCleanupIntervalMs)
+    if (typeof cleanupInterval.unref === 'function') cleanupInterval.unref()
+  }
+
+  logger.info('vector-storage initialized', {
+    service: 'vector-storage',
+    serviceName: options.serviceName,
+    version: options.version,
+    backgroundCleanupIntervalMs: options.backgroundCleanupIntervalMs ?? null
+  })
+
+  return true
+}
+
+async function runCleanupSweep(): Promise<void> {
+  if (!activeAdapter) return
+  await Promise.all([
+    activeAdapter.toolMemories.cleanupExpired(),
+    activeAdapter.analysisMemories.cleanupExpired(),
+    activeAdapter.ingestedRecords.cleanupExpired(),
+    activeAdapter.ingestedEdges.cleanupExpired()
+  ])
+}
+
+/** Check if vector storage is configured and enabled */
+export function isVectorStorageEnabled(): boolean {
+  return activeAdapter !== null
+}
+
+/**
+ * Store a tool operation embedding
+ *
+ * Converts the operation to natural language, generates an embedding,
+ * and stores both in the vector database. Fire-and-forget from callers.
+ */
+export async function storeOperation(operation: StoreOperationParams): Promise<string | null> {
+  if (!activeAdapter) return null
+
+  const toolOutput = adaptToolOutput(operation.toolName, operation.toolOutput, operation.toolArgs)
+  const summary = operationToText(operation, toolOutput)
+  const embedding = await embed(summary)
+
+  return activeAdapter.toolMemories.storeOperation(embedding, {
+    toolName: operation.toolName,
+    toolArgs: operation.toolArgs,
+    toolOutput,
+    userId: operation.userId,
+    sessionId: operation.sessionId,
+    summary
+  })
+}
+
+/** Find operations similar to a query */
+export async function findSimilarOperations(
+  query: string,
+  filters: OperationFilters = {},
+  options: QueryOptions = {}
+): Promise<Record<string, unknown>[]> {
+  if (!activeAdapter) return []
+  const embedding = await embed(query)
+  return activeAdapter.toolMemories.findSimilar(embedding, filters, options)
+}
+
+/** Detect gaps in operations for a record */
+export async function detectOperationGaps(
+  expectedSteps: string[],
+  filters: GapFilters = {},
+  options: GapOptions = {}
+): Promise<GapResult[]> {
+  if (!activeAdapter) return []
+
+  const embeddings = await embedBatch(expectedSteps)
+  const templateEmbeddings = expectedSteps.map((label, i) => ({
+    label,
+    embedding: embeddings[i]!
+  }))
+
+  return activeAdapter.toolMemories.detectGaps(templateEmbeddings, filters, options)
+}
+
+/** Get operation clusters grouped by semantic similarity */
+export async function getOperationClusters(
+  filters: ClusterFilters = {},
+  options: ClusterOptions = {}
+): Promise<ClusterResult> {
+  if (!activeAdapter) return { clusters: [], outliers: [] }
+  return activeAdapter.toolMemories.getClusters(filters, options)
+}
+
+/** Get operation statistics */
+export async function getOperationStats(
+  filters: Record<string, unknown> = {}
+): Promise<Record<string, unknown>[]> {
+  if (!activeAdapter) return []
+  return activeAdapter.toolMemories.getStats(filters)
+}
+
+/** Store an analysis memory finding */
+export async function storeAnalysisMemory(params: AnalysisMemoryParams): Promise<string | null> {
+  if (!activeAdapter) return null
+  const embedding = await embed(params.finding)
+  return activeAdapter.analysisMemories.storeMemory(embedding, params)
+}
+
+/** Recall analysis memories by filters and/or semantic query */
+export async function recallAnalysisMemories(
+  filters: AnalysisRecallFilters = {},
+  options: RecallOptions = {}
+): Promise<Record<string, unknown>[]> {
+  if (!activeAdapter) return []
+
+  const adapterFilters: { analysisId?: string; category?: string; embedding?: Float32Array } = {
+    analysisId: filters.analysisId,
+    category: filters.category
+  }
+  if (filters.query) {
+    adapterFilters.embedding = await embed(filters.query)
+  }
+
+  return activeAdapter.analysisMemories.recallMemories(adapterFilters, options)
+}
 
 /** Store ingested records for analysis, optionally embedding them. */
 export async function storeIngestedRecords(params: IngestRecordsParams): Promise<number> {
-  if (!vendor.isConfigured()) return 0
+  if (!activeAdapter) return 0
 
-  const pool = vendor.getPool()
-  if (!pool) return 0
-
-  let embeddings: ingestedRecords.RecordEmbedding[] | undefined
+  let embeddings: RecordEmbedding[] | undefined
   if (params.embed) {
     const fields = typeof params.embed === 'object' ? params.embed.fields : undefined
     embeddings = await _embedRecordBatch(params.records, fields)
   }
 
-  return ingestedRecords.storeRecords(pool, { ...params, embeddings })
+  return activeAdapter.ingestedRecords.storeRecords({
+    analysisId: params.analysisId,
+    model: params.model,
+    records: params.records,
+    embeddings
+  })
 }
 
-/** Embed a batch of records for ingest using buildEmbeddingText + embedBatch. */
 async function _embedRecordBatch(
   records: ReadonlyArray<{ data: Record<string, unknown> }>,
   fields?: string[]
-): Promise<ingestedRecords.RecordEmbedding[]> {
+): Promise<RecordEmbedding[]> {
   const texts: string[] = records.map((r) => buildEmbeddingText(r.data, { fields }))
-  const out: ingestedRecords.RecordEmbedding[] = []
+  const out: RecordEmbedding[] = []
   for (let start = 0; start < texts.length; start += EMBED_BATCH_SIZE) {
     const slice = texts.slice(start, start + EMBED_BATCH_SIZE)
     const vectors = await embedBatch(slice)
@@ -324,58 +339,34 @@ export async function queryIngestedData(
   analysisId: string,
   query: IngestedDataQuery
 ): Promise<Record<string, unknown>[]> {
-  if (!vendor.isConfigured()) return []
-
-  const pool = vendor.getPool()
-  if (!pool) return []
-
-  return ingestedRecords.queryRecords(pool, analysisId, query)
+  if (!activeAdapter) return []
+  return activeAdapter.ingestedRecords.queryRecords(analysisId, query)
 }
 
 /** Surface graph dimensions for describe-mode (edge types + embedding coverage). */
-export async function getSessionGraphInfo(
-  analysisId: string
-): Promise<ingestedRecords.SessionGraphInfo> {
-  if (!vendor.isConfigured()) {
+export async function getSessionGraphInfo(analysisId: string) {
+  if (!activeAdapter) {
     return { edgeTypes: [], embeddedRecordCount: 0, totalRecordCount: 0 }
   }
-
-  const pool = vendor.getPool()
-  if (!pool) return { edgeTypes: [], embeddedRecordCount: 0, totalRecordCount: 0 }
-
-  return ingestedRecords.getSessionGraphInfo(pool, analysisId)
+  return activeAdapter.ingestedRecords.getSessionGraphInfo(analysisId)
 }
 
 /** Describe an analysis session — returns model name and record count */
-export async function describeAnalysisSession(
-  analysisId: string
-): Promise<ingestedRecords.SessionDescriptor | null> {
-  if (!vendor.isConfigured()) return null
-
-  const pool = vendor.getPool()
-  if (!pool) return null
-
-  return ingestedRecords.describeSession(pool, analysisId)
+export async function describeAnalysisSession(analysisId: string) {
+  if (!activeAdapter) return null
+  return activeAdapter.ingestedRecords.describeSession(analysisId)
 }
 
 /** Get count of ingested records for a given analysis session and model */
 export async function getIngestedRecordCount(analysisId: string, model: string): Promise<number> {
-  if (!vendor.isConfigured()) return 0
-
-  const pool = vendor.getPool()
-  if (!pool) return 0
-
-  return ingestedRecords.getRecordCount(pool, analysisId, model)
+  if (!activeAdapter) return 0
+  return activeAdapter.ingestedRecords.getRecordCount(analysisId, model)
 }
 
 /** Get all record IDs for a given analysis session and model */
 export async function getIngestedRecordIds(analysisId: string, model: string): Promise<string[]> {
-  if (!vendor.isConfigured()) return []
-
-  const pool = vendor.getPool()
-  if (!pool) return []
-
-  return ingestedRecords.getRecordIds(pool, analysisId, model)
+  if (!activeAdapter) return []
+  return activeAdapter.ingestedRecords.getRecordIds(analysisId, model)
 }
 
 /**
@@ -390,12 +381,8 @@ export async function getIngestedRecordIdsFiltered(
   model: string,
   where?: Record<string, unknown>
 ): Promise<string[]> {
-  if (!vendor.isConfigured()) return []
-
-  const pool = vendor.getPool()
-  if (!pool) return []
-
-  return ingestedRecords.getRecordIdsFiltered(pool, analysisId, model, where)
+  if (!activeAdapter) return []
+  return activeAdapter.ingestedRecords.getRecordIdsFiltered(analysisId, model, where)
 }
 
 /** Preview a filtered set without mutating — for analysis_act dry_run. */
@@ -404,8 +391,8 @@ export async function getIngestedRecordDryRun(
   model: string,
   where?: Record<string, unknown>,
   sampleLimit?: number
-): Promise<ingestedRecords.DryRunResult> {
-  if (!vendor.isConfigured()) {
+) {
+  if (!activeAdapter) {
     return {
       matchedCount: 0,
       sampleIds: [],
@@ -414,46 +401,20 @@ export async function getIngestedRecordDryRun(
       latestIngestedAt: null
     }
   }
-
-  const pool = vendor.getPool()
-  if (!pool) {
-    return {
-      matchedCount: 0,
-      sampleIds: [],
-      sampleData: [],
-      earliestIngestedAt: null,
-      latestIngestedAt: null
-    }
-  }
-
-  return ingestedRecords.getRecordsForDryRun(pool, analysisId, model, where, sampleLimit)
+  return activeAdapter.ingestedRecords.getRecordsForDryRun(analysisId, model, where, sampleLimit)
 }
 
 /** Clear ingested records by analysis ID */
 export async function clearIngestedRecords(analysisId: string): Promise<number> {
-  if (!vendor.isConfigured()) return 0
-
-  const pool = vendor.getPool()
-  if (!pool) return 0
-
-  return ingestedRecords.clearRecords(pool, analysisId)
-}
-
-export interface StoreEdgesParams {
-  analysisId: string
-  edges: ReadonlyArray<Edge>
-  hopDepth?: number
+  if (!activeAdapter) return 0
+  return activeAdapter.ingestedRecords.clearRecords(analysisId)
 }
 
 /** Persist a batch of relationship edges discovered during ingest. */
-export async function storeIngestedEdges(params: StoreEdgesParams): Promise<number> {
-  if (!vendor.isConfigured()) return 0
+export async function storeIngestedEdges(params: StoreEdgesFacadeParams): Promise<number> {
+  if (!activeAdapter) return 0
   if (params.edges.length === 0) return 0
-
-  const pool = vendor.getPool()
-  if (!pool) return 0
-
-  return ingestedEdges.storeEdges(pool, params)
+  return activeAdapter.ingestedEdges.storeEdges(params)
 }
 
 /** Edges originating from a specific record within a session. */
@@ -461,13 +422,9 @@ export async function getEdgesFrom(
   analysisId: string,
   srcModel: string,
   srcId: string
-): Promise<ingestedEdges.EdgeRow[]> {
-  if (!vendor.isConfigured()) return []
-
-  const pool = vendor.getPool()
-  if (!pool) return []
-
-  return ingestedEdges.getEdgesFrom(pool, analysisId, srcModel, srcId)
+): Promise<EdgeRow[]> {
+  if (!activeAdapter) return []
+  return activeAdapter.ingestedEdges.getEdgesFrom(analysisId, srcModel, srcId)
 }
 
 /** Bulk-load record embeddings keyed by record_id for the given records. */
@@ -476,13 +433,9 @@ export async function getEmbeddingsForRecords(
   model: string,
   recordIds: ReadonlyArray<string>
 ): Promise<Map<string, Float32Array>> {
-  if (!vendor.isConfigured()) return new Map()
+  if (!activeAdapter) return new Map()
   if (recordIds.length === 0) return new Map()
-
-  const pool = vendor.getPool()
-  if (!pool) return new Map()
-
-  return ingestedRecords.getEmbeddingsForRecords(pool, analysisId, model, recordIds)
+  return activeAdapter.ingestedRecords.getEmbeddingsForRecords(analysisId, model, recordIds)
 }
 
 /** Bulk-load edges for many source records of a model. */
@@ -490,30 +443,16 @@ export async function getEdgesForSources(
   analysisId: string,
   srcModel: string,
   srcIds: ReadonlyArray<string>
-): Promise<ingestedEdges.EdgeRow[]> {
-  if (!vendor.isConfigured()) return []
+): Promise<EdgeRow[]> {
+  if (!activeAdapter) return []
   if (srcIds.length === 0) return []
-
-  const pool = vendor.getPool()
-  if (!pool) return []
-
-  return ingestedEdges.getEdgesForSources(pool, analysisId, srcModel, srcIds)
+  return activeAdapter.ingestedEdges.getEdgesForSources(analysisId, srcModel, srcIds)
 }
 
 /** Clear edges by analysis ID. Symmetric with clearIngestedRecords. */
 export async function clearIngestedEdges(analysisId: string): Promise<number> {
-  if (!vendor.isConfigured()) return 0
-
-  const pool = vendor.getPool()
-  if (!pool) return 0
-
-  return ingestedEdges.clearEdges(pool, analysisId)
-}
-
-export interface EnsureEmbeddingsOptions {
-  fields?: string[]
-  /** Cap per call. Default 500. */
-  limit?: number
+  if (!activeAdapter) return 0
+  return activeAdapter.ingestedEdges.clearEdges(analysisId)
 }
 
 /**
@@ -528,13 +467,14 @@ export async function ensureRecordEmbeddings(
   model: string,
   options: EnsureEmbeddingsOptions = {}
 ): Promise<number> {
-  if (!vendor.isConfigured()) return 0
-
-  const pool = vendor.getPool()
-  if (!pool) return 0
+  if (!activeAdapter) return 0
 
   const limit = options.limit ?? 500
-  const pending = await ingestedRecords.getRecordsWithoutEmbeddings(pool, analysisId, model, limit)
+  const pending = await activeAdapter.ingestedRecords.getRecordsWithoutEmbeddings(
+    analysisId,
+    model,
+    limit
+  )
   if (pending.length === 0) return 0
 
   const texts = pending.map((p) => buildEmbeddingText(p.data, { fields: options.fields }))
@@ -552,31 +492,31 @@ export async function ensureRecordEmbeddings(
     }
   }
 
-  return ingestedRecords.updateRecordEmbeddings(pool, analysisId, model, updates)
+  return activeAdapter.ingestedRecords.updateRecordEmbeddings(analysisId, model, updates)
 }
 
 /** Clear analysis memories by analysis ID */
 export async function clearAnalysisMemories(analysisId: string): Promise<number> {
-  if (!vendor.isConfigured()) return 0
-
-  const pool = vendor.getPool()
-  if (!pool) return 0
-
-  return analysisMemories.clearMemories(pool, analysisId)
+  if (!activeAdapter) return 0
+  return activeAdapter.analysisMemories.clearMemories(analysisId)
 }
 
-/**
- * Flush pending memory storage writes
- */
+/** Flush pending vector storage writes */
 export async function flushVectorStorage(timeout = 5000): Promise<void> {
-  return vendor.flush(timeout)
+  if (!activeAdapter) return
+  return activeAdapter.flush(timeout)
 }
 
-/**
- * Close memory storage service
- */
+/** Close vector storage service */
 export async function closeVectorStorage(timeout = 5000): Promise<void> {
-  return vendor.close(timeout)
+  if (cleanupInterval) {
+    clearInterval(cleanupInterval)
+    cleanupInterval = null
+  }
+  if (!activeAdapter) return
+  const adapter = activeAdapter
+  activeAdapter = null
+  return adapter.close(timeout)
 }
 
 /** Convert a tool operation to natural language text for embedding */
