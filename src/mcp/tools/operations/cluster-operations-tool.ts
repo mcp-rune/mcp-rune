@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import { getOperationClusters } from '#src/runtime/vector-storage.js'
 
-import type { ToolResult } from '../base-tool.js'
+import type { ToolResult } from '../tool-result.js'
 import { BaseOperationsTool } from './base-operations-tool.js'
 
 interface ClusterOperation {

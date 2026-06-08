@@ -27,7 +27,8 @@ import {
   storeIngestedRecords
 } from '#src/runtime/vector-storage.js'
 
-import type { DataLayer, ToolAnnotations, ToolResult } from '../base-tool.js'
+import type { DataLayer } from '../base-tool.js'
+import type { ToolAnnotations, ToolResult } from '../tool-result.js'
 import { BaseAnalysisTool } from './base-analysis-tool.js'
 
 /** Max pages allowed when ingest_all is true */

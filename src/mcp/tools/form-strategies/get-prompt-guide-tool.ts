@@ -8,7 +8,7 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
-import type { ToolResult } from '#src/mcp/tools/base-tool.js'
+import type { ToolResult } from '#src/mcp/tools/tool-result.js'
 
 import { BaseFormStrategyTool } from './base-form-strategy-tool.js'
 

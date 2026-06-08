@@ -50,8 +50,8 @@ import type { EndpointResolver } from '#src/mcp/data-layer/model-service/endpoin
 import type { ModelRequestOptions } from '#src/mcp/data-layer/model-service/model-service.js'
 import { UnknownModelError } from '#src/mcp/data-layer/model-service/model-service.js'
 import type { ModelConfig, ModelsRegistry } from '#src/mcp/models/model-definitions.js'
-import type { ToolAnnotations, ToolResult } from '#src/mcp/tools/base-tool.js'
 import { BaseTool } from '#src/mcp/tools/base-tool.js'
+import type { ToolAnnotations, ToolResult } from '#src/mcp/tools/tool-result.js'
 
 // ============================================================================
 // Types

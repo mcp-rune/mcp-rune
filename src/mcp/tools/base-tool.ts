@@ -1,7 +1,7 @@
 import type { ServerNotification, ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
-export type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
+
 import type { RequestOptions } from '#src/core/api-client.js'
 import {
   type AnalysisLayerFactory,
@@ -92,7 +92,6 @@ export interface ToolDependencies {
   summaryRenderer?: FormSummaryRenderer
 }
 
-export type { ToolResult } from './tool-result.js'
 import type { ToolResult } from './tool-result.js'
 
 /** Subset of SDK RequestHandlerExtra exposed to tools via the pipeline */

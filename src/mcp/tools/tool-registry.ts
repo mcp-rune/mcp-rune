@@ -65,13 +65,13 @@ import type {
   ServerContext,
   ToolDependencies,
   ToolHandlerExtra,
-  ToolLogger,
-  ToolResult
+  ToolLogger
 } from './base-tool.js'
 import type { BaseTool } from './base-tool.js'
 import { errorInterceptor, loggingInterceptor } from './interceptors.js'
 import type { ToolInterceptor } from './tool-pipeline.js'
 import { wrapToolHandler } from './tool-pipeline.js'
+import type { ToolResult } from './tool-result.js'
 import { validateToolInputSchema } from './validators.js'
 
 /**

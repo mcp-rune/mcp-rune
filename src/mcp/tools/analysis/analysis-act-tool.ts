@@ -8,8 +8,8 @@ import {
   getIngestedRecordIdsFiltered
 } from '#src/runtime/vector-storage.js'
 
-import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { SaveModelBaseTool } from '../save-model-base-tool.js'
+import type { ToolAnnotations, ToolResult } from '../tool-result.js'
 
 /** Max records per internal batch. Higher than bulk_action_models (25) because
  *  batches are never surfaced to the LLM — only the aggregate response is. */

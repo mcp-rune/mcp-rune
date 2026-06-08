@@ -3,8 +3,8 @@ import { z } from 'zod'
 
 import type { ModelConfig } from '#src/mcp/models/model-definitions.js'
 
-import type { ToolResult } from '../base-tool.js'
 import { SaveModelBaseTool } from '../save-model-base-tool.js'
+import type { ToolResult } from '../tool-result.js'
 
 export const MAX_BATCH_SIZE = 25
 const MAX_CONCURRENCY = 5

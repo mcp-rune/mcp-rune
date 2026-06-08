@@ -10,7 +10,7 @@ import {
   recallAnalysisMemories
 } from '#src/runtime/vector-storage.js'
 
-import type { ToolResult } from '../base-tool.js'
+import type { ToolResult } from '../tool-result.js'
 import { BaseAnalysisTool } from './base-analysis-tool.js'
 import { StratifiersArraySchema, toGraphStratifierSpec } from './stratifier-validator.js'
 

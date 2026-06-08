@@ -14,8 +14,8 @@
 
 import * as logger from '#src/runtime/logger.js'
 
-import type { ToolResult } from './base-tool.js'
 import type { ToolInterceptor } from './tool-pipeline.js'
+import type { ToolResult } from './tool-result.js'
 
 // ============================================================================
 // Logging Interceptor

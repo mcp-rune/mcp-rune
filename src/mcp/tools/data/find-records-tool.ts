@@ -3,8 +3,8 @@ import { z } from 'zod'
 
 import { pickFields } from '#src/core/helpers.js'
 
-import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
+import type { ToolAnnotations, ToolResult } from '../tool-result.js'
 
 /**
  * Tool for finding records by ID or search criteria.

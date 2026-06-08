@@ -1,5 +1,6 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 
+export type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 export type { CallToolResult as ToolResult } from '@modelcontextprotocol/sdk/types.js'
 
 export function textResult(text: string, meta?: Record<string, unknown>): CallToolResult {

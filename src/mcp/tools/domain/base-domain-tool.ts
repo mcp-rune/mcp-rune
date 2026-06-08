@@ -1,7 +1,7 @@
 import type { DomainRegistry } from '#src/mcp/domain/registry.js'
 
-import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
+import type { ToolAnnotations, ToolResult } from '../tool-result.js'
 
 /**
  * Presentation footer appended to all domain tool responses.
