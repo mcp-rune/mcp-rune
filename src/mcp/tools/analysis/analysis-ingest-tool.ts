@@ -15,6 +15,7 @@ import type {
   NestedValidationError,
   NestedValidationSuccess
 } from '#src/mcp/data-layer/data-layer.js'
+import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 import { buildCollectionPath } from '#src/mcp/data-layer/model-service/compound-id.js'
 import type { ModelConfig } from '#src/mcp/models/model-definitions.js'
 import {
@@ -27,7 +28,6 @@ import {
   storeIngestedRecords
 } from '#src/runtime/vector-storage.js'
 
-import type { DataLayer } from '../base-tool.js'
 import type { ToolAnnotations, ToolResult } from '../tool-result.js'
 import { BaseAnalysisTool } from './base-analysis-tool.js'
 
