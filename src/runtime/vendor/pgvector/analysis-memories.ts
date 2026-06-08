@@ -14,7 +14,7 @@ import type {
   AnalysisMemoryMetadata,
   RecallFilters,
   RecallOptions
-} from '#src/runtime/vector-storage-definitions.js'
+} from '#src/runtime/vector-storage-definitions-analysis-memories.js'
 
 interface AnalysisMemoryRow {
   id: string

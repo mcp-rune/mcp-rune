@@ -10,7 +10,10 @@
 
 import type { Pool } from 'pg'
 
-import type { EdgeRow, StoreEdgesParams } from '#src/runtime/vector-storage-definitions.js'
+import type {
+  EdgeRow,
+  StoreEdgesParams
+} from '#src/runtime/vector-storage-definitions-ingested-edges.js'
 
 /** Store a batch of edges. ON CONFLICT updates hop_depth to the shallower discovery. */
 export async function storeEdges(

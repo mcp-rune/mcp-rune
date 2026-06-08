@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.99.0] - 2026-06-08
+
+> **Refactor.** Splits the `vector-storage` runtime layer into focused, single-concern modules — one per adapter sub-contract (tool memories, analysis memories, ingested records, ingested edges). The public API is unchanged; `vector-storage.ts` and `vector-storage-definitions.ts` become re-export barrels that preserve all existing import paths.
+
+### Changed
+
+- `src/runtime/vector-storage.ts` broken into six focused modules: `vector-storage-state.ts` (singleton), `vector-storage-lifecycle.ts` (init/close/flush), `vector-storage-tool-memories.ts`, `vector-storage-analysis-memories.ts`, `vector-storage-ingested-records.ts`, `vector-storage-ingested-edges.ts`. The original file becomes a pure re-export barrel.
+- `src/runtime/vector-storage-definitions.ts` broken into four per-concern definition files (`vector-storage-definitions-tool-memories.ts`, `…-analysis-memories.ts`, `…-ingested-records.ts`, `…-ingested-edges.ts`), each holding the sub-adapter interface and its supporting types. Root file retains only `VectorStorageAdapter` and re-exports the rest.
+- `src/runtime/vendor/pgvector/` sub-modules updated to import from their matching per-concern definition file instead of the monolithic definitions barrel.
+- Test suite reorganised: monolithic `vector-storage.spec.ts` (536 lines) split into `vector-storage-lifecycle.spec.ts`, `vector-storage-tool-memories.spec.ts`, and `vector-storage-analysis-memories.spec.ts`.
+
 ## [0.98.0] - 2026-06-08
 
 > **BREAKING.** Introduces a vendor-agnostic `VectorStorageAdapter` contract (closes #279 as a side-effect). `vector-storage.ts` no longer hard-imports pgvector — integrators construct an adapter via `createPgvectorAdapter({ pool })` and pass it to `initVectorStorage({ adapter })`. Makes a future Qdrant backend a drop-in alongside pgvector, and unblocks the `mcp-rune-cli` "advanced setup" choice between the two.

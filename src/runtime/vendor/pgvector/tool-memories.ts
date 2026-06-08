@@ -19,7 +19,7 @@ import type {
   OperationMetadata,
   QueryOptions,
   TemplateEmbedding
-} from '#src/runtime/vector-storage-definitions.js'
+} from '#src/runtime/vector-storage-definitions-tool-memories.js'
 
 import { cosineSimilarity } from '../../cosine-similarity.js'
 

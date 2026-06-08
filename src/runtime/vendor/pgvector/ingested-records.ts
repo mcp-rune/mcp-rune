@@ -28,7 +28,7 @@ import type {
   SampleQuery,
   SessionDescriptor,
   SessionGraphInfo
-} from '#src/runtime/vector-storage-definitions.js'
+} from '#src/runtime/vector-storage-definitions-ingested-records.js'
 
 interface IngestedRow {
   id: string
