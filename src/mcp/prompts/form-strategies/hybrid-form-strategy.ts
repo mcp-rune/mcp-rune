@@ -83,10 +83,10 @@ import { BaseFormStrategy } from './base-form-strategy.js'
 import { defaultFormSummaryRenderer } from './default-form-summary-renderer.js'
 import type {
   FormSummaryRenderer,
+  FormValidationResult,
   HybridPromptClass,
   SummaryResult,
-  ValidationError,
-  ValidationResult
+  ValidationError
 } from './form-strategy-definitions.js'
 
 const log = logger.child({ service: 'form-strategy', formStrategy: 'hybrid' })
@@ -111,7 +111,7 @@ export class HybridFormStrategy extends BaseFormStrategy {
     promptClass: HybridPromptClass,
     fields: Record<string, unknown>,
     _context: Record<string, unknown> = {}
-  ): ValidationResult {
+  ): FormValidationResult {
     const fieldDefs = promptClass.fieldDefinitions || {}
     log.debug('validateFields called', {
       fieldCount: Object.keys(fields).length,

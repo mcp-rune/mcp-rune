@@ -355,16 +355,16 @@ Check that \`ready_to_submit: true\` before calling \`create_model\`.
 
 ## Files in This Directory
 
-| File                               | Description                                                                              |
-| ---------------------------------- | ---------------------------------------------------------------------------------------- |
-| `index.ts`                         | Form-strategy registry and `getFormStrategy()` function                                  |
-| `form-strategy-definitions.ts`     | Shared type vocabulary (`ValidationResult`, `SummaryResult`, `FormSummaryRenderer`, ...) |
-| `base-form-strategy.ts`            | Abstract base class for all form-strategies                                              |
-| `stateless-form-strategy.ts`       | Simple documentation-only form-strategy                                                  |
-| `hybrid-form-strategy.ts`          | Documentation + validation form-strategy                                                 |
-| `stateful-form-strategy.ts`        | Section-aware validation with progress tracking                                          |
-| `default-form-summary-renderer.ts` | Default `FormSummaryRenderer` — markdown + JSON-API-ish payload                          |
-| `README.md`                        | This documentation                                                                       |
+| File                               | Description                                                                                  |
+| ---------------------------------- | -------------------------------------------------------------------------------------------- |
+| `index.ts`                         | Form-strategy registry and `getFormStrategy()` function                                      |
+| `form-strategy-definitions.ts`     | Shared type vocabulary (`FormValidationResult`, `SummaryResult`, `FormSummaryRenderer`, ...) |
+| `base-form-strategy.ts`            | Abstract base class for all form-strategies                                                  |
+| `stateless-form-strategy.ts`       | Simple documentation-only form-strategy                                                      |
+| `hybrid-form-strategy.ts`          | Documentation + validation form-strategy                                                     |
+| `stateful-form-strategy.ts`        | Section-aware validation with progress tracking                                              |
+| `default-form-summary-renderer.ts` | Default `FormSummaryRenderer` — markdown + JSON-API-ish payload                              |
+| `README.md`                        | This documentation                                                                           |
 
 ---
 
