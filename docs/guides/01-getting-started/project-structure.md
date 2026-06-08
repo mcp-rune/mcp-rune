@@ -23,9 +23,9 @@ your-server/                          (you write this)
 What lives where:
 
 - **`models/`** — One file per model. Each model declares its `attributesConfig` (the source of truth) and its `api` block (endpoint conventions). The framework derives field tables, validators, and JSON schemas from these.
-- **`prompts/`** — One file per prompt. Prompts group model fields into `fieldGroups` and pick a strategy (`stateless`, `hybrid`, or `stateful`). See the [Sections & Field Groups guide](../02-prompt-dsl/sections-groups.md).
+- **`prompts/`** — One file per prompt. Prompts group model fields into `fieldGroups` and pick a strategy (`stateless`, `hybrid`, or `stateful`). See the [Sections & Field Groups guide](../03-the-prompt/sections-groups.md).
 - **`tools/`** — Custom tools that go beyond the generic CRUD set. Most projects need zero — the polymorphic tools cover the common surface.
-- **`domain/`** — Optional. Declarative workflows, business rules, and knowledge entries the LLM can query via `suggest_workflow`, `check_business_rules`, and `get_domain_context`. See the [Domain Knowledge guide](../07-domain-intelligence/domain-knowledge.md).
+- **`domain/`** — Optional. Declarative workflows, business rules, and knowledge entries the LLM can query via `suggest_workflow`, `check_business_rules`, and `get_domain_context`. See the [Domain Knowledge guide](../08-domain-knowledge/domain-knowledge.md).
 - **`servers/local.ts`** / **`remote.ts`** — Entry points. `StdioServer` for stdio transport (Claude Desktop, the Inspector); `HttpServer` for remote MCP with OAuth.
 
 ## The framework
@@ -58,7 +58,7 @@ mcp-rune/                                  (the framework)
 
 These are exposed as subpath exports — `mcp-rune/core`, `mcp-rune/server`, `mcp-rune/tools`, `mcp-rune/api-extensions/search`, etc. — so you only import the surface you need.
 
-> The `api-extensions/*` subpaths are opt-in: importing the _module_ gets you the types and services (`SearchService` etc.), but the contributed MCP tools (`search_records`, `model_action`, `get_filters_guide`) only register when you also pass the extension to `ToolRegistry({ apiExtensions: {...} })`. Pure-REST servers can omit them entirely. See the [Authoring Extensions Guide](../09-extensions/authoring-extensions.md) and [API Extensions Guide](../09-extensions/api-extensions.md).
+> The `api-extensions/*` subpaths are opt-in: importing the _module_ gets you the types and services (`SearchService` etc.), but the contributed MCP tools (`search_records`, `model_action`, `get_filters_guide`) only register when you also pass the extension to `ToolRegistry({ apiExtensions: {...} })`. Pure-REST servers can omit them entirely. See the [Authoring Extensions Guide](../10-extensions/authoring-extensions.md) and [API Extensions Guide](../10-extensions/api-extensions.md).
 
 ## Example: the bookshelf
 
@@ -81,6 +81,6 @@ bookshelf/
 
 ## Next
 
-- [Prompt Creation](../02-prompt-dsl/prompt-creation.md) — declare a prompt with sections, field groups, and a strategy.
-- [Tool Creation](../03-tools-and-services/tool-creation.md) — when (and when not) to write a custom tool.
+- [Prompt Creation](../03-the-prompt/prompt-creation.md) — declare a prompt with sections, field groups, and a strategy.
+- [Tool Creation](../04-tools/tool-creation.md) — when (and when not) to write a custom tool.
 - [Configuring the API](./api-config.md) — point models at a real backend (REST, Rails, Elasticsearch).

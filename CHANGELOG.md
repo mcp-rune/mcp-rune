@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.101.0] - 2026-06-08
+
+> **Docs restructure around the Model.** Reorganises `docs/guides/` into a 11-section "book-shaped" arc that follows the order you build an mcp-rune server: Model → Prompt → Tools → Apps → Three Layers Up Close → Auth & Transport → Domain → Retrieval → Extensions → Reference. Adds a dedicated **The Model** chapter (the framework's foundational concept) and a **Three Layers Up Close** part that documents the `DataLayer` / `ModelLayer` / `AnalysisLayer` DI surface, the eslint guard that enforces it, and the definition-vs-consumption folder split (`models/` vs `model-layer/`, `prompts/` vs `prompt-layer/`). Every chapter now hands off to the next, and every code example is sourced from the `mcp-rune-examples` repo (`tasks`, `bookshelf`, `bookshelf-graph`, `bookshelf-rest`, `bookshelf-remote`).
+
+### Added
+
+- New section **`docs/guides/02-the-model/`** (7 chapters): `index.md`, `defining-a-model.md`, `attributes-and-kinds.md` (migrated from `02-prompt-dsl/`), `associations.md`, `validation-and-defaults.md`, `definition-vs-consumption.md`, `derivation-overview.md`.
+- New chapter **`docs/guides/04-tools/the-three-layers.md`** replacing the old `service-layer.md`. Teaches the three peer per-model interfaces (`DataLayer`, `ModelLayer`, `AnalysisLayer`) every Tool, App, Prompt, and `ApiExtension` consumes via DI, and the `no-restricted-imports` ESLint guard that enforces the boundary.
+- New chapter **`docs/guides/04-tools/polymorphic-tools.md`** documenting the 9 bundled tools (6 CRUD + 3 form-strategy) that serve every model uniformly.
+- New chapters in **`docs/guides/06-the-three-layers-up-close/`**: `model-service.md` (default `DataLayer` implementation), `model-layer.md` (per-model synchronous config reads), `analysis-layer.md` (per-model analysis projections).
+
+### Changed
+
+- Section directory renames (history preserved via `git mv`): `02-prompt-dsl` → `03-the-prompt`, `03-tools-and-services` → `04-tools`, `04-apps-search-forms` → `05-apps`, `05-retrieval-graphrag` → `09-retrieval-and-graphrag`, `06-auth-and-transport` → `07-auth-and-transport`, `07-domain-intelligence` → `08-domain-knowledge`, `08-adapters` → `06-the-three-layers-up-close`, `09-extensions` → `10-extensions`, `10-reference` → `11-reference`.
+- File renames within sections: `service-layer.md` → `the-three-layers.md`, `search-adapter.md` → `search-request-shaper.md` (surfaces the v0.77.0 type rename), `search-filters.md` moved from `05-apps/` to `06-the-three-layers-up-close/`.
+- `00-about/philosophy.md` rewritten: promotes the three-layer architecture and the definition-vs-consumption split to first-class framework values; architecture tree updated to the current `src/mcp/` layout (`models/`, `model-layer/`, `data-layer/`, `analysis-layer/`, `prompts/`, `prompt-layer/`, `apps/`, `tools/`).
+- All section `index.md` files rewritten so each chapter explicitly hands off to the next ("reading like a book" arc).
+- All chapter intros tightened to flow from the previous chapter; example code switched to inline snippets from `mcp-rune-examples` (`tasks`, `bookshelf`, `bookshelf-graph`, `bookshelf-rest`, `bookshelf-remote`) — none authored ad-hoc in the docs themselves.
+- Bulk rename: `src/services/` → `src/runtime/` (surfaces v0.78.0); legacy "Service Layer Guide" cross-references rewritten to "Model service".
+- `00-about/feature-surface.md` audit; `08-domain-knowledge/domain-knowledge.md` title cleanup.
+
+### Fixed
+
+- Cross-reference paths across all 11 sections updated to match the new directory structure (no stale `../02-prompt-dsl/...` style links).
+- Several chapters that referenced now-removed APIs (`BaseForm`, `SearchAdapter`, `src/services/...`) updated to current names (`BaseAppForm`, `SearchRequestShaper`, `src/runtime/...`).
+- The default API convention seam description corrected to reflect the v0.85.0 move from `BaseModel` to the `DataLayer` factory.
+
 ## [0.100.0] - 2026-06-08
 
 > **MCP apps v3 + Filters fixes.** Aligns the generated app theme to the v3 design (chrome-free, richer Filters/Sort toolbar) and fixes two filter-popover bugs surfaced in `find_model_app`. Adds an opt-in `dependsOn` field to filter definitions so relation filters with cascading values can be hidden from the UI until cascading support lands.
