@@ -34,6 +34,12 @@ interface FilterConfig {
   description?: string
   enumValues?: string[]
   relatedModel?: string
+  /**
+   * Name of another filter whose value this one depends on. Filters with
+   * `dependsOn` set are hidden from the find-records app UI until cascading
+   * support lands. See `find-model-app/index.ts`.
+   */
+  dependsOn?: string
   [key: string]: unknown
 }
 

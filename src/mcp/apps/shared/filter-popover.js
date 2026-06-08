@@ -11,9 +11,13 @@
  * which is `getSearchConfig(ModelClass).filters`). The popover does not
  * invent type information — supported shapes:
  *
+ *   - `{ enumValues: [...] }`         → <select> populated from enumValues
+ *                                       (wins regardless of `type`, so a relation
+ *                                       filter that pre-resolves its options
+ *                                       renders as a dropdown)
  *   - `{ type: 'text' }`              → <input type="text">
- *   - `{ type: 'enum', enumValues }`  → <select> from enumValues
- *   - `{ type: 'relation' }`          → <input type="text"> (id string)
+ *   - `{ type: 'relation' }`          → <input type="text"> (id string) when no
+ *                                       enumValues are supplied
  *   - `{ type: 'date_range' }`        → two <input type="date">
  *   - `{ type: 'integer_range' | 'numeric_range' }` → two <input type="number">
  *
@@ -106,7 +110,10 @@ export function createFilterPopover({
     removeBtn.className = 'btn-remove'
     removeBtn.textContent = '×'
     removeBtn.title = 'Remove filter'
-    removeBtn.addEventListener('click', () => row.remove())
+    removeBtn.addEventListener('click', (e) => {
+      e.stopPropagation()
+      row.remove()
+    })
     row.appendChild(removeBtn)
 
     function renderValueInput(filterName) {
@@ -130,7 +137,7 @@ export function createFilterPopover({
   function buildInput(definition, initialValue) {
     const type = definition.type || 'text'
 
-    if (type === 'enum' && Array.isArray(definition.enumValues)) {
+    if (Array.isArray(definition.enumValues)) {
       const select = document.createElement('select')
       select.dataset.kind = 'enum'
       const blank = document.createElement('option')
