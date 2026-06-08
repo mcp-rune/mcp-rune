@@ -15,7 +15,8 @@
  * })
  */
 
-import type { ToolHandlerExtra, ToolResult } from './base-tool.js'
+import type { ToolHandlerExtra } from './base-tool.js'
+import type { ToolResult } from './tool-result.js'
 
 // ============================================================================
 // Types

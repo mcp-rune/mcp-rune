@@ -19,6 +19,7 @@ import {
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { z } from 'zod'
 
+import type { ApiClient } from '#src/core/api-client.js'
 import { createAnalysisLayerFactory } from '#src/mcp/analysis-layer/analysis-layer.js'
 import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
 import type {
@@ -37,12 +38,12 @@ import {
 } from '#src/mcp/model-layer/model-layer.js'
 import type { KindDescriptor, KindRenderHint } from '#src/mcp/models/kinds/index.js'
 import { registerKind } from '#src/mcp/models/kinds/index.js'
-import type { ModelsRegistry } from '#src/mcp/tools/base-tool.js'
+import type { ModelsRegistry } from '#src/mcp/models/model-definitions.js'
+import type { ToolResult } from '#src/mcp/tools/tool-result.js'
 import * as logger from '#src/runtime/logger.js'
 
 import type { FormSubmitMode } from '../../extensions/tool-flow.js'
 import type { AppFormDataStore } from './app-form-data-store.js'
-import type { ApiClient, ToolResult } from './app-shared-entities.js'
 import type { SelectionStore } from './selection-store.js'
 
 export interface AppDefinition {

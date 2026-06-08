@@ -1,4 +1,5 @@
 // mcp-rune/tools — base classes, data, domain, analysis, operations, pipeline, registry
+export type { ModelConfig, ModelsRegistry } from './mcp/models/model-definitions.js'
 export {
   ANALYSIS_TOOL_CLASSES,
   AnalysisActTool,
@@ -9,10 +10,7 @@ export {
   BaseAnalysisTool
 } from './mcp/tools/analysis/index.js'
 export type {
-  ModelConfig,
-  ModelsRegistry,
   ServerContext,
-  ToolAnnotations,
   ToolDependencies,
   ToolHandlerExtra,
   ToolLogger
@@ -64,6 +62,7 @@ export type {
   ToolRegistryConfig
 } from './mcp/tools/tool-registry.js'
 export { ToolRegistry } from './mcp/tools/tool-registry.js'
+export type { ToolAnnotations } from './mcp/tools/tool-result.js'
 export type { ToolResult } from './mcp/tools/tool-result.js'
 export { textError, textResult } from './mcp/tools/tool-result.js'
 export { validateToolInputSchema } from './mcp/tools/validators.js'

@@ -27,9 +27,10 @@ import { createSelectionTools } from '#src/mcp/apps/lib/selection-tools.js'
 import { getSearchConfig } from '#src/mcp/data-layer/api-extensions/search/index.js'
 import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 import type { ModelLayerFactory } from '#src/mcp/model-layer/model-layer.js'
+import type { ToolResult } from '#src/mcp/tools/tool-result.js'
 import * as logger from '#src/runtime/logger.js'
 
-import type { AppModelClass, ListSchema, ToolResult } from '../lib/app-shared-entities.js'
+import type { AppModelClass, ListSchema } from '../lib/app-shared-entities.js'
 import { createHtmlLoader } from '../lib/html-loader.js'
 
 const MAX_PER_PAGE = 20

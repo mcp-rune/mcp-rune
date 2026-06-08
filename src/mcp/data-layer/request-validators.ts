@@ -10,7 +10,7 @@
 
 import { getSearchConfig } from '#src/mcp/data-layer/api-extensions/search/capabilities.js'
 
-import type { ModelsRegistry } from '../tools/base-tool.js'
+import type { ModelsRegistry } from '../models/model-definitions.js'
 import type {
   FilterableAttribute,
   FilterValidationResult,

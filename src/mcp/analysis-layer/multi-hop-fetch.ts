@@ -25,7 +25,8 @@
  * after PR2.
  */
 
-import type { DataLayer, ModelConfig, ModelsRegistry } from '#src/mcp/tools/base-tool.js'
+import type { ModelConfig, ModelsRegistry } from '#src/mcp/models/model-definitions.js'
+import type { DataLayer } from '#src/mcp/tools/base-tool.js'
 
 import { type Edge, extractEdgesFromRecord, type HopFollow } from './edge-extraction.js'
 

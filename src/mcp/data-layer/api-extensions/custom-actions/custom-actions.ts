@@ -49,13 +49,9 @@ import type { ApiExtension, ModelServiceMixin } from '#src/mcp/data-layer/api-ex
 import type { EndpointResolver } from '#src/mcp/data-layer/model-service/endpoint-resolver.js'
 import type { ModelRequestOptions } from '#src/mcp/data-layer/model-service/model-service.js'
 import { UnknownModelError } from '#src/mcp/data-layer/model-service/model-service.js'
-import type {
-  ModelConfig,
-  ModelsRegistry,
-  ToolAnnotations,
-  ToolResult
-} from '#src/mcp/tools/base-tool.js'
+import type { ModelConfig, ModelsRegistry } from '#src/mcp/models/model-definitions.js'
 import { BaseTool } from '#src/mcp/tools/base-tool.js'
+import type { ToolAnnotations, ToolResult } from '#src/mcp/tools/tool-result.js'
 
 // ============================================================================
 // Types

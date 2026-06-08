@@ -28,7 +28,9 @@
 
 import { z } from 'zod'
 
-import type { AppModelClass, AppToolContext, ToolResult } from './app-shared-entities.js'
+import type { ToolResult } from '#src/mcp/tools/tool-result.js'
+
+import type { AppModelClass, AppToolContext } from './app-shared-entities.js'
 import { type SelectionEntry, SelectionMergeError } from './selection-store.js'
 
 interface AppToolDefinition {

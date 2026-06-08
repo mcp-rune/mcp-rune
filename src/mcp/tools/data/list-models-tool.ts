@@ -1,8 +1,8 @@
 import { getActionsConfig } from '#src/mcp/data-layer/api-extensions/custom-actions/custom-actions.js'
 import { getSearchConfig } from '#src/mcp/data-layer/api-extensions/search/index.js'
 
-import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
+import type { ToolAnnotations, ToolResult } from '../tool-result.js'
 
 /**
  * Tool for listing all available API models

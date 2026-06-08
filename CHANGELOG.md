@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.96.0] - 2026-06-08
+
+> **BREAKING.** Moves `ModelConfig` and `ModelsRegistry` out of `tools/base-tool.ts` into their canonical home in `src/mcp/models/model-definitions.ts` (epic #268, axis 7, sub-issue #276). Import from the public barrel (`@mcp-rune/mcp-rune/tools`) is unchanged. Direct importers from `base-tool.js` must update to `model-definitions.js`.
+
+### Changed
+
+- `src/mcp/models/model-definitions.ts` — `ModelConfig` interface and `ModelsRegistry` type added here; they are now defined alongside their own field types (`AttributeDefinition`, `ApiConfig`, `AssociationConfig`).
+- `src/mcp/tools/base-tool.ts` — `ModelConfig` and `ModelsRegistry` removed. The `AttributeDefinition`/`ApiConfig`/`AssociationConfig` imports that only existed to build `ModelConfig` are also removed.
+- 17 import sites updated to point at `model-definitions.ts` (analysis-layer, multi-hop-fetch, apps/registry, custom-actions, search capabilities/extension, api-extensions/types, data-layer, endpoint-resolver, model-service, request-validators, model-layer, analysis tools, bulk-action-models, tool-registry).
+- `src/tools.ts` barrel re-exports `ModelConfig`/`ModelsRegistry` from `model-definitions.ts` — public import path unchanged.
+
+[0.96.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.95.1...v0.96.0
+
 ## [0.95.1] - 2026-06-08
 
 Consolidates `PromptClassLike` to a single source of truth (epic #268, axis 4, sub-issue #274).

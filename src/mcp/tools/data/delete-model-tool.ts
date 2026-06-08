@@ -1,8 +1,8 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
-import type { ToolResult } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
+import type { ToolResult } from '../tool-result.js'
 
 /**
  * Tool for deleting records.

@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import { storeAnalysisMemory } from '#src/runtime/vector-storage.js'
 
-import type { ToolAnnotations, ToolResult } from '../base-tool.js'
+import type { ToolAnnotations, ToolResult } from '../tool-result.js'
 import { BaseAnalysisTool } from './base-analysis-tool.js'
 
 const MAX_BATCH_SIZE = 25

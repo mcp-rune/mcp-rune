@@ -1,7 +1,7 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
-import type { ToolResult } from '../base-tool.js'
+import type { ToolResult } from '../tool-result.js'
 import { BaseDomainTool } from './base-domain-tool.js'
 
 interface ConceptDetail {

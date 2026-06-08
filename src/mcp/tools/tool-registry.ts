@@ -54,24 +54,24 @@ import {
   createModelLayerFactory,
   type ModelLayerFactory
 } from '#src/mcp/model-layer/model-layer.js'
+import type { ModelsRegistry } from '#src/mcp/models/model-definitions.js'
 import type { FormSummaryRenderer } from '#src/mcp/prompts/form-strategies/form-strategy-definitions.js'
 import * as logger from '#src/runtime/logger.js'
 import * as tracing from '#src/runtime/tracing.js'
 
 import type {
   DomainRegistry,
-  ModelsRegistry,
   PromptRegistry,
   ServerContext,
   ToolDependencies,
   ToolHandlerExtra,
-  ToolLogger,
-  ToolResult
+  ToolLogger
 } from './base-tool.js'
 import type { BaseTool } from './base-tool.js'
 import { errorInterceptor, loggingInterceptor } from './interceptors.js'
 import type { ToolInterceptor } from './tool-pipeline.js'
 import { wrapToolHandler } from './tool-pipeline.js'
+import type { ToolResult } from './tool-result.js'
 import { validateToolInputSchema } from './validators.js'
 
 /**

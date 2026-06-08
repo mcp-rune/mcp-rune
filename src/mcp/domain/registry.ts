@@ -6,8 +6,7 @@
  */
 
 import type { EvaluationResult, RuleSet } from './business-rules.js'
-import type { DomainConcept, ModelContext } from './knowledge.js'
-import type { DomainKnowledge } from './knowledge.js'
+import type { DomainConcept, DomainKnowledge, ModelContext } from './knowledge.js'
 import type { WorkflowDefinition, WorkflowRegistry } from './workflows.js'
 
 export interface DomainRegistryConfig {

@@ -16,8 +16,9 @@ import { z } from 'zod'
 
 import { pickFields } from '#src/core/helpers.js'
 import type { ApiExtension } from '#src/mcp/data-layer/api-extensions/types.js'
-import type { ModelConfig, ToolAnnotations, ToolResult } from '#src/mcp/tools/base-tool.js'
+import type { ModelConfig } from '#src/mcp/models/model-definitions.js'
 import { BaseTool } from '#src/mcp/tools/base-tool.js'
+import type { ToolAnnotations, ToolResult } from '#src/mcp/tools/tool-result.js'
 
 import { getSearchableModelNames, getSearchConfig } from './capabilities.js'
 import { createSearchService } from './factory.js'

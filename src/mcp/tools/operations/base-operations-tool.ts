@@ -1,5 +1,5 @@
-import type { ToolAnnotations } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
+import type { ToolAnnotations } from '../tool-result.js'
 
 /**
  * Base class for operations tools (retrospective analysis of past CRUD

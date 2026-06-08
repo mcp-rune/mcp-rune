@@ -1,8 +1,8 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
-import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { SaveModelBaseTool } from '../save-model-base-tool.js'
+import type { ToolAnnotations, ToolResult } from '../tool-result.js'
 
 /**
  * Tool for updating existing records.
