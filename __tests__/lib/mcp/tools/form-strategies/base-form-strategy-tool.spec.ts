@@ -1,74 +1,74 @@
-import { BaseStrategyTool } from '../../../../../src/mcp/prompts/tools/base-strategy-tool.js'
 import { BaseTool } from '../../../../../src/mcp/tools/base-tool.js'
+import { BaseFormStrategyTool } from '../../../../../src/mcp/tools/form-strategies/base-form-strategy-tool.js'
 
-describe('lib/mcp/prompts/tools/base-strategy-tool', () => {
+describe('lib/mcp/tools/form-strategies/base-form-strategy-tool', () => {
   describe('inheritance', () => {
     it('should extend BaseTool', () => {
-      const tool = new BaseStrategyTool({})
+      const tool = new BaseFormStrategyTool({})
       expect(tool).toBeInstanceOf(BaseTool)
     })
   })
 
   describe('capability flags', () => {
     it('does not require auth (strategy tools are public)', () => {
-      expect(BaseStrategyTool.requiresAuth).toBe(false)
+      expect(BaseFormStrategyTool.requiresAuth).toBe(false)
     })
 
     it('declares a prompt-registry requirement', () => {
-      expect(BaseStrategyTool.requiresPromptRegistry).toBe(true)
+      expect(BaseFormStrategyTool.requiresPromptRegistry).toBe(true)
     })
   })
 
-  describe('getStrategy', () => {
-    it('should return stateless strategy by default', () => {
-      const tool = new BaseStrategyTool({})
+  describe('getFormStrategy', () => {
+    it('should return stateless form-strategy by default', () => {
+      const tool = new BaseFormStrategyTool({})
       const mockPromptClass = {}
 
-      const strategy = tool.getStrategy(mockPromptClass)
+      const strategy = tool.getFormStrategy(mockPromptClass)
 
       expect(strategy).toBeDefined()
-      expect(strategy.name).toBe('StatelessStrategy')
+      expect(strategy.name).toBe('StatelessFormStrategy')
     })
 
-    it('should return strategy based on promptClass.strategy', () => {
-      const tool = new BaseStrategyTool({})
-      const mockPromptClass = { strategy: 'hybrid' }
+    it('should return form-strategy based on promptClass.formStrategy', () => {
+      const tool = new BaseFormStrategyTool({})
+      const mockPromptClass = { formStrategy: 'hybrid' }
 
-      const strategy = tool.getStrategy(mockPromptClass)
+      const strategy = tool.getFormStrategy(mockPromptClass)
 
-      expect(strategy.name).toBe('HybridStrategy')
+      expect(strategy.name).toBe('HybridFormStrategy')
     })
 
-    it('should return stateful strategy when specified', () => {
-      const tool = new BaseStrategyTool({})
-      const mockPromptClass = { strategy: 'stateful' }
+    it('should return stateful form-strategy when specified', () => {
+      const tool = new BaseFormStrategyTool({})
+      const mockPromptClass = { formStrategy: 'stateful' }
 
-      const strategy = tool.getStrategy(mockPromptClass)
+      const strategy = tool.getFormStrategy(mockPromptClass)
 
-      expect(strategy.name).toBe('StatefulStrategy')
+      expect(strategy.name).toBe('StatefulFormStrategy')
     })
   })
 
   describe('getPromptClassByModel', () => {
     it('should throw when promptRegistry is not available', () => {
-      const tool = new BaseStrategyTool({})
+      const tool = new BaseFormStrategyTool({})
 
       expect(() => tool.getPromptClassByModel('rule')).toThrow('Prompt registry not available')
     })
 
     it('should throw when getPromptClassByModel method is not available', () => {
-      const tool = new BaseStrategyTool({ promptRegistry: {} })
+      const tool = new BaseFormStrategyTool({ promptRegistry: {} })
 
       expect(() => tool.getPromptClassByModel('rule')).toThrow('Prompt registry not available')
     })
 
     it('should return prompt class from registry', () => {
-      const mockPromptClass = { strategy: 'stateful' }
+      const mockPromptClass = { formStrategy: 'stateful' }
       const mockPromptRegistry = {
         getPromptClassByModel: (model) => (model === 'rule' ? mockPromptClass : null)
       }
 
-      const tool = new BaseStrategyTool({ promptRegistry: mockPromptRegistry })
+      const tool = new BaseFormStrategyTool({ promptRegistry: mockPromptRegistry })
       const result = tool.getPromptClassByModel('rule')
 
       expect(result).toBe(mockPromptClass)
@@ -79,7 +79,7 @@ describe('lib/mcp/prompts/tools/base-strategy-tool', () => {
         getPromptClassByModel: () => null
       }
 
-      const tool = new BaseStrategyTool({ promptRegistry: mockPromptRegistry })
+      const tool = new BaseFormStrategyTool({ promptRegistry: mockPromptRegistry })
       const result = tool.getPromptClassByModel('unknown')
 
       expect(result).toBeNull()
@@ -88,12 +88,12 @@ describe('lib/mcp/prompts/tools/base-strategy-tool', () => {
 
   describe('getPromptNameByModel', () => {
     it('should return null when promptRegistry is not available', () => {
-      const tool = new BaseStrategyTool({})
+      const tool = new BaseFormStrategyTool({})
       expect(tool.getPromptNameByModel('rule')).toBeNull()
     })
 
     it('should return null when getPromptNameByModel method is not available', () => {
-      const tool = new BaseStrategyTool({ promptRegistry: {} })
+      const tool = new BaseFormStrategyTool({ promptRegistry: {} })
       expect(tool.getPromptNameByModel('rule')).toBeNull()
     })
 
@@ -102,14 +102,14 @@ describe('lib/mcp/prompts/tools/base-strategy-tool', () => {
         getPromptNameByModel: (model) => `create_${model}`
       }
 
-      const tool = new BaseStrategyTool({ promptRegistry: mockPromptRegistry })
+      const tool = new BaseFormStrategyTool({ promptRegistry: mockPromptRegistry })
       expect(tool.getPromptNameByModel('rule')).toBe('create_rule')
     })
   })
 
   describe('checkOperation', () => {
     it('should return supported true when operation is supported', () => {
-      const tool = new BaseStrategyTool({})
+      const tool = new BaseFormStrategyTool({})
       const mockStrategy = {
         supportsOperation: (op) => op === 'validateFields'
       }
@@ -121,7 +121,7 @@ describe('lib/mcp/prompts/tools/base-strategy-tool', () => {
     })
 
     it('should return supported false with error when operation not supported', () => {
-      const tool = new BaseStrategyTool({})
+      const tool = new BaseFormStrategyTool({})
       const mockStrategy = {
         name: 'stateless',
         supportsOperation: () => false,
@@ -134,12 +134,12 @@ describe('lib/mcp/prompts/tools/base-strategy-tool', () => {
       expect(result.error).toBeDefined()
       expect(result.error.error).toContain('stateless')
       expect(result.error.error).toContain('validateFields')
-      expect(result.error.strategy).toBe('stateless')
+      expect(result.error.formStrategy).toBe('stateless')
       expect(result.error.supported_operations).toEqual(['getDocumentation'])
     })
 
     it('should include hint for validateFields operation', () => {
-      const tool = new BaseStrategyTool({})
+      const tool = new BaseFormStrategyTool({})
       const mockStrategy = {
         name: 'stateless',
         supportsOperation: () => false,
@@ -152,7 +152,7 @@ describe('lib/mcp/prompts/tools/base-strategy-tool', () => {
     })
 
     it('should include hint for validateSection operation', () => {
-      const tool = new BaseStrategyTool({})
+      const tool = new BaseFormStrategyTool({})
       const mockStrategy = {
         name: 'hybrid',
         supportsOperation: () => false,
@@ -165,7 +165,7 @@ describe('lib/mcp/prompts/tools/base-strategy-tool', () => {
     })
 
     it('should include hint for getProgress operation', () => {
-      const tool = new BaseStrategyTool({})
+      const tool = new BaseFormStrategyTool({})
       const mockStrategy = {
         name: 'hybrid',
         supportsOperation: () => false,
@@ -178,7 +178,7 @@ describe('lib/mcp/prompts/tools/base-strategy-tool', () => {
     })
 
     it('should include hint for generateSummary operation', () => {
-      const tool = new BaseStrategyTool({})
+      const tool = new BaseFormStrategyTool({})
       const mockStrategy = {
         name: 'stateless',
         supportsOperation: () => false,
@@ -191,7 +191,7 @@ describe('lib/mcp/prompts/tools/base-strategy-tool', () => {
     })
 
     it('should include default hint for unknown operation', () => {
-      const tool = new BaseStrategyTool({})
+      const tool = new BaseFormStrategyTool({})
       const mockStrategy = {
         name: 'stateless',
         supportsOperation: () => false,
@@ -206,7 +206,7 @@ describe('lib/mcp/prompts/tools/base-strategy-tool', () => {
 
   describe('formatUnknownModelError', () => {
     it('should return error with hint to check list_models', () => {
-      const tool = new BaseStrategyTool({})
+      const tool = new BaseFormStrategyTool({})
       const result = tool.formatUnknownModelError('unknown_model')
 
       expect(result.isError).toBe(true)
@@ -222,7 +222,7 @@ describe('lib/mcp/prompts/tools/base-strategy-tool', () => {
         getPromptNameByModel: () => 'create_rule'
       }
 
-      const tool = new BaseStrategyTool({ promptRegistry: mockPromptRegistry })
+      const tool = new BaseFormStrategyTool({ promptRegistry: mockPromptRegistry })
       const result = tool.formatUnknownModelError('rule')
 
       const parsed = JSON.parse(result.content[0].text)
@@ -233,11 +233,11 @@ describe('lib/mcp/prompts/tools/base-strategy-tool', () => {
 
   describe('formatOperationError', () => {
     it('should format error info as JSON', () => {
-      const tool = new BaseStrategyTool({})
+      const tool = new BaseFormStrategyTool({})
       const errorInfo = {
         error: 'Operation not supported',
         hint: 'Try another approach',
-        strategy: 'stateless'
+        formStrategy: 'stateless'
       }
 
       const result = tool.formatOperationError(errorInfo)
@@ -247,7 +247,7 @@ describe('lib/mcp/prompts/tools/base-strategy-tool', () => {
       const parsed = JSON.parse(result.content[0].text)
       expect(parsed.error).toBe('Operation not supported')
       expect(parsed.hint).toBe('Try another approach')
-      expect(parsed.strategy).toBe('stateless')
+      expect(parsed.formStrategy).toBe('stateless')
     })
   })
 })

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { BaseStrategy } from '../../../../../src/mcp/prompts/strategies/base-strategy.js'
+import { BaseFormStrategy } from '../../../../../src/mcp/prompts/form-strategies/base-form-strategy.js'
 
-describe('lib/mcp/prompts/strategies/base-strategy', () => {
+describe('lib/mcp/prompts/form-strategies/base-form-strategy', () => {
   describe('validateField - kind-aware checks (via the kinds registry)', () => {
     it('integer rejects non-integers', () => {
-      const errors = BaseStrategy.validateField(
+      const errors = BaseFormStrategy.validateField(
         'age',
         3.14,
         { type: 'integer', required: false, description: 'Age' },
@@ -15,7 +15,7 @@ describe('lib/mcp/prompts/strategies/base-strategy', () => {
     })
 
     it('boolean rejects non-booleans', () => {
-      const errors = BaseStrategy.validateField(
+      const errors = BaseFormStrategy.validateField(
         'active',
         'true',
         { type: 'boolean', required: false, description: 'Active' },
@@ -25,7 +25,7 @@ describe('lib/mcp/prompts/strategies/base-strategy', () => {
     })
 
     it('date rejects malformed input (new coverage)', () => {
-      const errors = BaseStrategy.validateField(
+      const errors = BaseFormStrategy.validateField(
         'published_at',
         'tomorrow',
         { type: 'date', required: false, description: 'Published' },
@@ -35,7 +35,7 @@ describe('lib/mcp/prompts/strategies/base-strategy', () => {
     })
 
     it('datetime rejects malformed input (new coverage)', () => {
-      const errors = BaseStrategy.validateField(
+      const errors = BaseFormStrategy.validateField(
         'created',
         'garbage',
         { type: 'datetime', required: false, description: 'Created' },
@@ -45,7 +45,7 @@ describe('lib/mcp/prompts/strategies/base-strategy', () => {
     })
 
     it('uuid rejects malformed input (new coverage)', () => {
-      const errors = BaseStrategy.validateField(
+      const errors = BaseFormStrategy.validateField(
         'id',
         'not-a-uuid',
         { type: 'uuid', required: false, description: 'ID' },
@@ -55,7 +55,7 @@ describe('lib/mcp/prompts/strategies/base-strategy', () => {
     })
 
     it('email rejects malformed input (new coverage)', () => {
-      const errors = BaseStrategy.validateField(
+      const errors = BaseFormStrategy.validateField(
         'contact',
         'not-an-email',
         { type: 'email', required: false, description: 'Contact' },
@@ -65,7 +65,7 @@ describe('lib/mcp/prompts/strategies/base-strategy', () => {
     })
 
     it('url rejects malformed input (new coverage)', () => {
-      const errors = BaseStrategy.validateField(
+      const errors = BaseFormStrategy.validateField(
         'site',
         'not a url',
         { type: 'url', required: false, description: 'Site' },
@@ -75,7 +75,7 @@ describe('lib/mcp/prompts/strategies/base-strategy', () => {
     })
 
     it('json rejects malformed string (new coverage)', () => {
-      const errors = BaseStrategy.validateField(
+      const errors = BaseFormStrategy.validateField(
         'config',
         'not json',
         { type: 'json', required: false, description: 'Config' },
@@ -85,7 +85,7 @@ describe('lib/mcp/prompts/strategies/base-strategy', () => {
     })
 
     it('string with format: url validates as URL (case-insensitive format hop)', () => {
-      const errors = BaseStrategy.validateField(
+      const errors = BaseFormStrategy.validateField(
         'site',
         'not a url',
         { type: 'string', format: 'URL', required: false, description: 'Site' },
@@ -96,7 +96,7 @@ describe('lib/mcp/prompts/strategies/base-strategy', () => {
 
     it('accepts valid values', () => {
       expect(
-        BaseStrategy.validateField(
+        BaseFormStrategy.validateField(
           'age',
           42,
           { type: 'integer', required: false, description: '' },
@@ -104,7 +104,7 @@ describe('lib/mcp/prompts/strategies/base-strategy', () => {
         )
       ).toEqual([])
       expect(
-        BaseStrategy.validateField(
+        BaseFormStrategy.validateField(
           'site',
           'https://example.com',
           { type: 'url', required: false, description: '' },
@@ -114,7 +114,7 @@ describe('lib/mcp/prompts/strategies/base-strategy', () => {
     })
 
     it('still applies enum, range, length, pattern (orthogonal to kind)', () => {
-      const errors = BaseStrategy.validateField(
+      const errors = BaseFormStrategy.validateField(
         'title',
         'no',
         {
@@ -129,7 +129,7 @@ describe('lib/mcp/prompts/strategies/base-strategy', () => {
     })
 
     it('enum rejects out-of-set values', () => {
-      const errors = BaseStrategy.validateField(
+      const errors = BaseFormStrategy.validateField(
         'status',
         'wat',
         {

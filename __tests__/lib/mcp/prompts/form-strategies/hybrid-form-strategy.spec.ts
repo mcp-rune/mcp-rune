@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { HybridStrategy } from '../../../../../src/mcp/prompts/strategies/hybrid-strategy.js'
+import { HybridFormStrategy } from '../../../../../src/mcp/prompts/form-strategies/hybrid-form-strategy.js'
 
 const promptClass = {
   fieldDefinitions: {
@@ -24,29 +24,29 @@ const promptClass = {
   }
 }
 
-describe('lib/mcp/prompts/strategies/hybrid-strategy', () => {
-  describe('generateHumanSummary - LLM summary mirrors user-facing render', () => {
+describe('lib/mcp/prompts/form-strategies/hybrid-form-strategy', () => {
+  describe('generateSummary.human - LLM summary mirrors user-facing render', () => {
     it('renders booleans as Yes/No (was raw true/false before the kinds registry)', () => {
-      const out = HybridStrategy.generateHumanSummary(promptClass, {
+      const out = HybridFormStrategy.generateSummary(promptClass, {
         title: 'Book',
         is_published: true
-      })
+      }).human
       expect(out).toContain('Published: Yes')
     })
 
     it('renders dates as ISO string (was raw Date toString before)', () => {
-      const out = HybridStrategy.generateHumanSummary(promptClass, {
+      const out = HybridFormStrategy.generateSummary(promptClass, {
         title: 'Book',
         published_at: '2026-05-28'
-      })
+      }).human
       expect(out).toContain('Publish date: 2026-05-28')
     })
 
     it('humanizes enum values (was raw snake_case before)', () => {
-      const out = HybridStrategy.generateHumanSummary(promptClass, {
+      const out = HybridFormStrategy.generateSummary(promptClass, {
         title: 'Book',
         status: 'in_progress'
-      })
+      }).human
       // The string kind delegates to its own describe(), which doesn't humanize.
       // For a true humanized rendering, attributes should use type: 'enum'.
       expect(out).toContain('Status: in_progress')
@@ -64,34 +64,34 @@ describe('lib/mcp/prompts/strategies/hybrid-strategy', () => {
         },
         fieldGroups: { main: { fields: ['status'], context: 'Main' } }
       }
-      const out = HybridStrategy.generateHumanSummary(enumPromptClass, {
+      const out = HybridFormStrategy.generateSummary(enumPromptClass, {
         status: 'in_progress'
-      })
+      }).human
       expect(out).toContain('Status: In Progress')
     })
 
     it('renders base64 as (binary) (was raw 4KB blob before)', () => {
-      const out = HybridStrategy.generateHumanSummary(promptClass, {
+      const out = HybridFormStrategy.generateSummary(promptClass, {
         title: 'Book',
         cover_b64: 'aGVsbG8='
-      })
+      }).human
       expect(out).toContain('Cover image: (binary)')
     })
 
     it('renders array values humanized and comma-joined', () => {
-      const out = HybridStrategy.generateHumanSummary(promptClass, {
+      const out = HybridFormStrategy.generateSummary(promptClass, {
         title: 'Book',
         formats: ['physical', 'pdf']
-      })
+      }).human
       expect(out).toContain('Formats: Physical, Pdf')
     })
 
     it('skips empty and undefined values', () => {
-      const out = HybridStrategy.generateHumanSummary(promptClass, {
+      const out = HybridFormStrategy.generateSummary(promptClass, {
         title: 'Book',
         is_published: undefined,
         status: ''
-      })
+      }).human
       expect(out).not.toContain('Published')
       expect(out).not.toContain('Status')
     })

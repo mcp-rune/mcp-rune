@@ -26,7 +26,7 @@ export interface ValidationError {
 }
 
 /** Result returned by `HybridFormStrategy.validateFields` and stateful equivalents. */
-export interface ValidationResult {
+export interface FormValidationResult {
   valid: boolean
   ready_to_submit: boolean
   errors: ValidationError[]
@@ -103,7 +103,7 @@ export interface ProgressResult {
 }
 
 /** Validation result extended with section progress, for stateful flows. */
-export interface StatefulValidationResult extends ValidationResult {
+export interface StatefulValidationResult extends FormValidationResult {
   progress: ProgressResult
 }
 

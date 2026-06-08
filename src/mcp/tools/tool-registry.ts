@@ -59,14 +59,9 @@ import type { FormSummaryRenderer } from '#src/mcp/prompts/form-strategies/form-
 import * as logger from '#src/runtime/logger.js'
 import * as tracing from '#src/runtime/tracing.js'
 
-import type {
-  DomainRegistry,
-  PromptRegistry,
-  ServerContext,
-  ToolDependencies,
-  ToolHandlerExtra,
-  ToolLogger
-} from './base-tool.js'
+import type { DomainRegistry } from '../domain/registry.js'
+import type { PromptRegistry } from '../prompts/prompt-registry.js'
+import type { ServerContext, ToolDependencies, ToolHandlerExtra, ToolLogger } from './base-tool.js'
 import type { BaseTool } from './base-tool.js'
 import { errorInterceptor, loggingInterceptor } from './interceptors.js'
 import type { ToolInterceptor } from './tool-pipeline.js'

@@ -21,17 +21,11 @@ import type { DomainRegistry } from '../domain/registry.js'
 import type { FormSummaryRenderer } from '../prompts/form-strategies/form-strategy-definitions.js'
 import type { PromptRegistry } from '../prompts/prompt-registry.js'
 
-export type { DomainRegistry } from '../domain/registry.js'
-export type { PromptRegistry } from '../prompts/prompt-registry.js'
-
 // ============================================================================
 // Types
 // ============================================================================
 
 export type { RequestOptions }
-export type { AnalysisLayerFactory } from '#src/mcp/analysis-layer/analysis-layer.js'
-export type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
-export type { ModelLayerFactory } from '#src/mcp/model-layer/model-layer.js'
 
 /** Logger interface expected by tools */
 export interface ToolLogger {

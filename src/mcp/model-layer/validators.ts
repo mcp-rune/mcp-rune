@@ -16,7 +16,7 @@
  * after PR2 will wrap them so callers don't reach in here directly.
  */
 
-export interface ValidationResult {
+export interface MissingFieldsResult {
   valid: boolean
   missing: string[]
 }
@@ -32,7 +32,7 @@ export interface ModelValidationResult {
 export function validateRequired(
   params: Record<string, unknown>,
   required: string[]
-): ValidationResult {
+): MissingFieldsResult {
   const missing = required.filter((field) => {
     const value = params[field]
     return value === undefined || value === null || value === ''

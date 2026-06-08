@@ -1,55 +1,52 @@
-import { BaseStrategyTool } from '../../../../../src/mcp/prompts/tools/base-strategy-tool.js'
-import { ValidateFormTool } from '../../../../../src/mcp/prompts/tools/validate-form-tool.js'
+import { BaseFormStrategyTool } from '../../../../../src/mcp/tools/form-strategies/base-form-strategy-tool.js'
+import { GetFormSummaryTool } from '../../../../../src/mcp/tools/form-strategies/get-form-summary-tool.js'
 
-describe('lib/mcp/prompts/tools/validate-form-tool', () => {
+describe('lib/mcp/tools/form-strategies/get-form-summary-tool', () => {
   describe('inheritance', () => {
-    it('should extend BaseStrategyTool', () => {
-      const tool = new ValidateFormTool({})
-      expect(tool).toBeInstanceOf(BaseStrategyTool)
+    it('should extend BaseFormStrategyTool', () => {
+      const tool = new GetFormSummaryTool({})
+      expect(tool).toBeInstanceOf(BaseFormStrategyTool)
     })
   })
 
   describe('tool definition', () => {
     it('should have correct name', () => {
-      const tool = new ValidateFormTool({})
-      expect(tool.name).toBe('validate_form')
+      const tool = new GetFormSummaryTool({})
+      expect(tool.name).toBe('get_form_summary')
     })
 
-    it('should have base description about validation', () => {
-      const tool = new ValidateFormTool({})
-      expect(tool.baseDescription).toContain('Validate form fields')
-      expect(tool.baseDescription).toContain('Stateless')
-      expect(tool.baseDescription).toContain('Hybrid')
-      expect(tool.baseDescription).toContain('Stateful')
+    it('should have base description about summaries', () => {
+      const tool = new GetFormSummaryTool({})
+      expect(tool.baseDescription).toContain('summary')
+      expect(tool.baseDescription).toContain('human-readable')
+      expect(tool.baseDescription).toContain('technical')
     })
 
     it('should have correct inputSchema', () => {
-      const tool = new ValidateFormTool({})
+      const tool = new GetFormSummaryTool({})
       const schema = tool.inputSchema
 
       expect(schema.model).toBeDefined()
       expect(schema.fields).toBeDefined()
-      expect(schema.section).toBeDefined()
       expect(schema.model.isOptional()).toBe(false)
       expect(schema.fields.isOptional()).toBe(false)
-      expect(schema.section.isOptional()).toBe(true)
     })
   })
 
   describe('execute', () => {
     it('should return error when fields is invalid', async () => {
       const mockPromptRegistry = {
-        getPromptClassByModel: () => ({ strategy: 'hybrid' })
+        getPromptClassByModel: () => ({ formStrategy: 'hybrid' })
       }
 
-      const tool = new ValidateFormTool({ promptRegistry: mockPromptRegistry })
+      const tool = new GetFormSummaryTool({ promptRegistry: mockPromptRegistry })
       const result = await tool.execute({
         model: 'rule',
-        fields: 'not-an-object-or-json'
+        fields: 'invalid-json{'
       })
 
-      expect(result.content[0].text).toContain('"valid": false')
-      expect(result.content[0].text).toContain('fields must be a valid object')
+      expect(result.content[0].text).toContain('error')
+      expect(result.content[0].text).toContain('valid object')
     })
 
     it('should return error for unknown model', async () => {
@@ -58,7 +55,7 @@ describe('lib/mcp/prompts/tools/validate-form-tool', () => {
         getPromptNameByModel: () => null
       }
 
-      const tool = new ValidateFormTool({ promptRegistry: mockPromptRegistry })
+      const tool = new GetFormSummaryTool({ promptRegistry: mockPromptRegistry })
       const result = await tool.execute({
         model: 'unknown',
         fields: {}
@@ -68,14 +65,14 @@ describe('lib/mcp/prompts/tools/validate-form-tool', () => {
       expect(result.content[0].text).toContain('Unknown model')
     })
 
-    it('should return error when strategy does not support validateFields', async () => {
-      const mockPromptClass = { strategy: 'stateless' }
+    it('should return error when strategy does not support generateSummary', async () => {
+      const mockPromptClass = { formStrategy: 'stateless' }
       const mockPromptRegistry = {
         getPromptClassByModel: () => mockPromptClass,
         getPromptNameByModel: () => null
       }
 
-      const tool = new ValidateFormTool({ promptRegistry: mockPromptRegistry })
+      const tool = new GetFormSummaryTool({ promptRegistry: mockPromptRegistry })
       const result = await tool.execute({
         model: 'simple',
         fields: { name: 'Test' }
@@ -86,19 +83,21 @@ describe('lib/mcp/prompts/tools/validate-form-tool', () => {
       expect(result.content[0].text).toContain("doesn't support")
     })
 
-    it('should validate fields using hybrid strategy', async () => {
+    it('should generate summary using hybrid strategy', async () => {
       const mockPromptClass = {
-        strategy: 'hybrid',
+        formStrategy: 'hybrid',
         fieldDefinitions: {
-          name: { type: 'string', required: true }
+          name: { type: 'string', description: 'Rule name' }
         },
-        fieldGroups: {}
+        fieldGroups: {
+          basic: { fields: ['name'] }
+        }
       }
       const mockPromptRegistry = {
         getPromptClassByModel: () => mockPromptClass
       }
 
-      const tool = new ValidateFormTool({ promptRegistry: mockPromptRegistry })
+      const tool = new GetFormSummaryTool({ promptRegistry: mockPromptRegistry })
       const result = await tool.execute({
         model: 'rule',
         fields: { name: 'Test Rule' }
@@ -106,17 +105,20 @@ describe('lib/mcp/prompts/tools/validate-form-tool', () => {
 
       expect(result.isError).toBeFalsy()
       const parsed = JSON.parse(result.content[0].text)
-      expect(parsed.valid).toBeDefined()
+      expect(parsed.human).toBeDefined()
+      expect(parsed.technical).toBeDefined()
     })
 
-    it('should validate section when specified for stateful models', async () => {
+    it('should generate summary using stateful strategy', async () => {
       const mockPromptClass = {
-        strategy: 'stateful',
+        formStrategy: 'stateful',
         fieldDefinitions: {
-          name: { type: 'string', required: true }
+          name: { type: 'string', description: 'Name' },
+          status: { type: 'string', description: 'Status' }
         },
         fieldGroups: {
-          basic: { fields: ['name'], required: true }
+          basic: { fields: ['name'], required: true },
+          settings: { fields: ['status'], required: false }
         },
         sections: {
           basic: { title: 'Basic', groups: ['basic'], required: true }
@@ -126,22 +128,21 @@ describe('lib/mcp/prompts/tools/validate-form-tool', () => {
         getPromptClassByModel: () => mockPromptClass
       }
 
-      const tool = new ValidateFormTool({ promptRegistry: mockPromptRegistry })
+      const tool = new GetFormSummaryTool({ promptRegistry: mockPromptRegistry })
       const result = await tool.execute({
         model: 'rule',
-        section: 'basic',
-        fields: { name: 'Test' }
+        fields: { name: 'Test', status: 'active' }
       })
 
       expect(result.isError).toBeFalsy()
       const parsed = JSON.parse(result.content[0].text)
-      expect(parsed.valid).toBeDefined()
+      expect(parsed.human).toBeDefined()
     })
 
-    it('should log validation when logger is available', async () => {
+    it('should log summary generation when logger is available', async () => {
       const mockLogger = { info: vi.fn() }
       const mockPromptClass = {
-        strategy: 'hybrid',
+        formStrategy: 'hybrid',
         fieldDefinitions: {},
         fieldGroups: {}
       }
@@ -149,7 +150,7 @@ describe('lib/mcp/prompts/tools/validate-form-tool', () => {
         getPromptClassByModel: () => mockPromptClass
       }
 
-      const tool = new ValidateFormTool({
+      const tool = new GetFormSummaryTool({
         promptRegistry: mockPromptRegistry,
         logger: mockLogger
       })
@@ -160,9 +161,17 @@ describe('lib/mcp/prompts/tools/validate-form-tool', () => {
       })
 
       expect(mockLogger.info).toHaveBeenCalledWith(
-        'validate_form invoked',
+        'get_form_summary invoked',
         expect.objectContaining({
-          tool: 'validate_form',
+          tool: 'get_form_summary',
+          model: 'rule'
+        })
+      )
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'get_form_summary result',
+        expect.objectContaining({
+          tool: 'get_form_summary',
           model: 'rule'
         })
       )
@@ -170,7 +179,7 @@ describe('lib/mcp/prompts/tools/validate-form-tool', () => {
 
     it('should handle JSON string fields', async () => {
       const mockPromptClass = {
-        strategy: 'hybrid',
+        formStrategy: 'hybrid',
         fieldDefinitions: {
           name: { type: 'string' }
         },
@@ -180,7 +189,7 @@ describe('lib/mcp/prompts/tools/validate-form-tool', () => {
         getPromptClassByModel: () => mockPromptClass
       }
 
-      const tool = new ValidateFormTool({ promptRegistry: mockPromptRegistry })
+      const tool = new GetFormSummaryTool({ promptRegistry: mockPromptRegistry })
       const result = await tool.execute({
         model: 'rule',
         fields: '{"name": "Test"}'
@@ -191,7 +200,7 @@ describe('lib/mcp/prompts/tools/validate-form-tool', () => {
 
     it('should handle empty fields', async () => {
       const mockPromptClass = {
-        strategy: 'hybrid',
+        formStrategy: 'hybrid',
         fieldDefinitions: {},
         fieldGroups: {}
       }
@@ -199,7 +208,7 @@ describe('lib/mcp/prompts/tools/validate-form-tool', () => {
         getPromptClassByModel: () => mockPromptClass
       }
 
-      const tool = new ValidateFormTool({ promptRegistry: mockPromptRegistry })
+      const tool = new GetFormSummaryTool({ promptRegistry: mockPromptRegistry })
       const result = await tool.execute({
         model: 'rule',
         fields: {}

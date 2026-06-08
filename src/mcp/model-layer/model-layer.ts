@@ -40,7 +40,7 @@ import {
   derivePromptSchema as derivePromptSchemaImpl,
   type DeriveSchemaOptions
 } from './schema-derivation.js'
-import { validateRequired, type ValidationResult } from './validators.js'
+import { type MissingFieldsResult, validateRequired } from './validators.js'
 
 export interface ModelLayer {
   /** The Model class this layer is bound to. */
@@ -82,7 +82,7 @@ export interface ModelLayer {
    * from the model's `static required` (`BaseModel` derives this from
    * `attributes`).
    */
-  checkRequired(params: Record<string, unknown>): ValidationResult
+  checkRequired(params: Record<string, unknown>): MissingFieldsResult
 }
 
 /**
