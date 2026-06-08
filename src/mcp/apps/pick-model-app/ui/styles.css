@@ -64,9 +64,9 @@
 .mr-result {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   padding: 11px 12px;
-  border-radius: var(--radius-md);
+  border-radius: 9px;
   cursor: pointer;
   transition: background 0.12s;
 }

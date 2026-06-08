@@ -19,56 +19,111 @@
   margin-left: 6px;
 }
 
+/*
+ * Active-filter chip row (sits between titlebar and popover). Rendered as v3
+ * `.mr-pill` chips — surface-2 background with a small uppercased mono label
+ * prefix injected via `.mr-badge .pk`.
+ */
 .mr-badge-row {
-  margin-top: 6px;
+  margin-top: 10px;
   margin-bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.mr-badge-row .mr-badge {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 7px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  color: var(--ink-2);
+  text-transform: none;
+  letter-spacing: -0.005em;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+}
+
+.mr-badge-row .mr-badge .pk {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-4);
 }
 
 .mr-popover {
   margin: 10px 0;
-  padding: 12px;
+  padding: 14px 16px;
   border: 1px solid var(--line-2);
-  border-radius: var(--radius-md, 6px);
-  background: var(--surface);
+  border-radius: 12px;
+  background: var(--app-bg);
+  box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .mr-popover-rows {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .mr-popover-row {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
 }
 
 .mr-popover-row select,
 .mr-popover-row input {
-  padding: 4px 6px;
+  height: 34px;
+  padding: 0 10px;
   border: 1px solid var(--line-2);
-  border-radius: 4px;
-  background: var(--surface);
+  border-radius: var(--radius-md);
+  background: var(--app-bg);
   color: var(--ink);
-  font: inherit;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+
+.mr-popover-row select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 26px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%239a9aa8' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  cursor: pointer;
 }
 
 .mr-popover-row .field-type {
   min-width: 140px;
+  background-color: var(--surface);
 }
 
 .mr-popover-row .field-value {
   flex: 1;
+  min-width: 180px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.mr-popover-row .field-value > select,
+.mr-popover-row .field-value > input {
+  flex: 1;
+  width: 100%;
 }
 
 .mr-popover-row .field-range {
   flex: 1;
   display: flex;
-  gap: 4px;
+  gap: 6px;
   align-items: center;
 }
 
@@ -78,24 +133,70 @@
 }
 
 .mr-popover-row .btn-remove {
-  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
   background: transparent;
-  border: 1px solid var(--line-2);
-  border-radius: 4px;
-  color: var(--ink);
+  color: var(--ink-4);
+  font-size: 16px;
+  line-height: 1;
   cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    color 0.12s,
+    background 0.12s;
+}
+
+.mr-popover-row .btn-remove:hover {
+  color: var(--ink-2);
+  background: var(--surface-2);
 }
 
 .mr-popover-actions {
   display: flex;
-  gap: 6px;
+  gap: 12px;
   align-items: center;
+  margin-top: 4px;
+  padding-top: 4px;
 }
 
-.mr-btn.ghost {
+.mr-popover-actions .mr-btn.ghost#btn-add-filter {
+  border: none;
   background: transparent;
-  border: 1px solid var(--line-2);
-  color: var(--ink);
+  color: var(--acc);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 0;
+  height: auto;
+}
+
+.mr-popover-actions .mr-btn.ghost#btn-add-filter:hover {
+  color: var(--acc-2);
+  background: transparent;
+}
+
+.mr-popover-actions .mr-btn.ghost#btn-clear-filters {
+  border: none;
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  padding: 4px 0;
+  height: auto;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--line-3);
+}
+
+.mr-popover-actions .mr-btn.ghost#btn-clear-filters:hover {
+  color: var(--ink-2);
+  background: transparent;
 }
 
 .mr-table tbody tr.sel {

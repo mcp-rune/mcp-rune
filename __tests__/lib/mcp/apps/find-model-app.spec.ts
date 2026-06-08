@@ -16,7 +16,20 @@ const modelClasses = {
     extensions: {
       search: {
         query: { endpoint: 'activities/search', method: 'POST', queryParam: 'q' },
-        lookup: { fields: ['title'] }
+        lookup: { fields: ['title'] },
+        filters: {
+          domain: {
+            type: 'relation',
+            label: 'Domain',
+            enumValues: ['Distributed Systems', 'Functional Programming']
+          },
+          subdomain: {
+            type: 'relation',
+            label: 'Subdomain',
+            dependsOn: 'domain'
+          },
+          status: { type: 'enum', label: 'Status', enumValues: ['open', 'closed'] }
+        }
       }
     },
     attributes: { title: { type: 'string', required: true } }
@@ -120,6 +133,27 @@ describe('find_model_app', () => {
     )
     const payload = JSON.parse(result.content[0].text)
     expect(payload.error).toMatch(/Unknown model/)
+  })
+
+  it('strips filter definitions with dependsOn from the client payload', async () => {
+    const dataLayer = fakeDataLayer()
+    const result = await findTool.handleToolCall({ model: 'activity' }, { dataLayer })
+    const payload = JSON.parse(result.content[0].text)
+    expect(Object.keys(payload.filterDefinitions)).toEqual(
+      expect.arrayContaining(['domain', 'status'])
+    )
+    expect(payload.filterDefinitions.subdomain).toBeUndefined()
+  })
+
+  it('forwards enumValues on relation filter definitions to the client', async () => {
+    const dataLayer = fakeDataLayer()
+    const result = await findTool.handleToolCall({ model: 'activity' }, { dataLayer })
+    const payload = JSON.parse(result.content[0].text)
+    expect(payload.filterDefinitions.domain.type).toBe('relation')
+    expect(payload.filterDefinitions.domain.enumValues).toEqual([
+      'Distributed Systems',
+      'Functional Programming'
+    ])
   })
 
   it('never imports SearchService — the handler only consumes dataLayer', () => {

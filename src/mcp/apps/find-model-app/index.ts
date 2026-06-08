@@ -136,7 +136,16 @@ export function createFindModelApp({ modelClasses, namespace }: FindModelAppOpti
         ModelClass
       )
       schema.model = model
-      const filterDefinitions = getSearchConfig(ModelClass)?.filters ?? {}
+      const rawFilterDefinitions = getSearchConfig(ModelClass)?.filters ?? {}
+      // TODO post-v1: support cascading filters. For now, definitions that
+      // declare `dependsOn: '<other-filter>'` are hidden from the Filters UI
+      // because the client doesn't yet know how to gate one filter's options
+      // on another's selection.
+      const filterDefinitions = Object.fromEntries(
+        Object.entries(rawFilterDefinitions).filter(
+          ([, def]) => !(def as { dependsOn?: string })?.dependsOn
+        )
+      )
 
       const clampedPerPage = Math.min(Math.max(1, per_page), MAX_PER_PAGE)
       const hasFilters = Object.keys(filters).length > 0

@@ -4,7 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [0.99.0] - 2026-06-08
+## [0.100.0] - 2026-06-08
+
+> **MCP apps v3 + Filters fixes.** Aligns the generated app theme to the v3 design (chrome-free, richer Filters/Sort toolbar) and fixes two filter-popover bugs surfaced in `find_model_app`. Adds an opt-in `dependsOn` field to filter definitions so relation filters with cascading values can be hidden from the UI until cascading support lands.
+
+### Fixed
+
+- `find_model_app` Filters popover no longer closes when an individual filter row's × button is clicked. The remove handler now calls `e.stopPropagation()` and the outside-click listener has been moved to `mousedown` so containment is tested before any synchronous row detachment in the bubbling click.
+- `relation`-typed filters whose definition supplies `enumValues` now render as a `<select>` dropdown instead of a plain text input — unblocks `Domain`-style filters that pre-resolve their options. Relation filters without `enumValues` still render as a text input for back-compat.
+
+### Added
+
+- Optional `dependsOn?: string` on `FilterConfig` (`src/mcp/data-layer/api-extensions/search/extension.ts`). Filters that declare it are stripped from `find_model_app`'s client payload until cascading support lands. Lets deployers opt cascading filters (e.g. Subdomain depending on Domain) out of the UI without removing them from the underlying search config.
+
+### Changed
+
+- v3 visual restyle of the Filters popover, filter rows, and active-filter pill chips in `src/mcp/apps/find-model-app/ui/styles.css` (12px radius card, 34px-tall fields with chevrons, borderless 28×28 × button, accent inline `+ Add filter`, underlined `Clear all`, pill-style chips with mono uppercased key prefix).
+- `src/mcp/apps/shared/filter-chips.js` chip markup now uses `.pk` for the key prefix to match the v3 pill style.
+- Minor v3 alignment in `pick-model-app` and `multi-pick-model-app` result rows (gap 14px, radius 9px).
 
 > **Refactor.** Splits the `vector-storage` runtime layer into focused, single-concern modules — one per adapter sub-contract (tool memories, analysis memories, ingested records, ingested edges). The public API is unchanged; `vector-storage.ts` and `vector-storage-definitions.ts` become re-export barrels that preserve all existing import paths.
 
@@ -62,6 +79,8 @@ initVectorStorage({
 
 `engineer-mcp` and `mcp-servers-mgx` both call `initVectorStorage({ pool })` from their own bootstraps. They must switch to the `createPgvectorAdapter({ pool })` form shown in the Migration section above. No shim is provided (pre-1.0 no-back-compat policy).
 
+[0.100.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.99.0...v0.100.0
+[0.99.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.98.0...v0.99.0
 [0.98.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.97.0...v0.98.0
 
 ## [0.97.0] - 2026-06-08

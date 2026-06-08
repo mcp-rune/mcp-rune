@@ -86,7 +86,7 @@ function renderChips() {
     const chip = document.createElement('span')
     chip.className = 'mr-badge acc'
     chip.innerHTML =
-      `<span class="k">Search:</span> ` + `<span class="v">${escapeHtml(currentQuery)}</span>`
+      `<span class="pk">Search</span> ` + `<span class="v">${escapeHtml(currentQuery)}</span>`
     container.appendChild(chip)
   }
 
@@ -304,8 +304,10 @@ document.getElementById('btn-select-all-results').addEventListener('click', (e) 
   selection.selectAllResults()
 })
 
-// Hide popover when clicking outside it.
-document.addEventListener('click', (e) => {
+// Hide popover when clicking outside it. Use `mousedown` so containment is
+// checked before any click handler inside the panel detaches its row (e.g.
+// the per-row remove button) and makes `e.target` ineligible.
+document.addEventListener('mousedown', (e) => {
   const panel = document.getElementById('filter-popover')
   const trigger = document.getElementById('btn-filters')
   if (panel.style.display === 'none') return
