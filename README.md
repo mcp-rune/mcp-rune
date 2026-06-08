@@ -26,9 +26,12 @@
 </p>
 
 <p align="center">
-  <strong>mcp-rune</strong> is a model-driven framework for building <a href="https://modelcontextprotocol.io">Model Context Protocol</a> servers.<br />
-  Define your models once — it derives the prompts, tools, apps and docs an agent needs, then<br />
-  indexes your whole dataset so the agent retrieves <strong>by meaning, not raw rows</strong>.<br />
+  Building an <a href="https://modelcontextprotocol.io">MCP</a> server by hand means writing N tool handlers, N schemas,<br />
+  OAuth from scratch, and an agent that still guesses your business rules.<br />
+  <br />
+  <strong>mcp-rune</strong> derives all of that from one model definition. Define your models once —<br />
+  it derives the prompts, tools, apps and docs an agent needs, then indexes your<br />
+  whole dataset so the agent retrieves <strong>by meaning, not raw rows</strong>.<br />
   <strong>One spec, an entire server.</strong>
 </p>
 
@@ -84,7 +87,7 @@ Most MCP servers can only hand the agent raw rows. mcp-rune indexes an entire da
 - **Grounded in your terms** — a registry of **concepts** and **business rules** grounds every finding in your vocabulary.
 - **Act without re-exposing** — `analysis_act` mutates a filtered subset server-side; matched IDs never return to the agent's context.
 
-Six tools — `analysis_ingest` · `analysis_query` · `analysis_store` · `analysis_act` · `analysis_summarize` · `analysis_clear` — opt-in via `ANALYSIS_ENABLED=true`. Local embeddings: **no external vector DB, no embedding API.**
+Six tools — `analysis_ingest` · `analysis_query` · `analysis_store` · `analysis_act` · `analysis_summarize` · `analysis_clear` — opt-in via `ANALYSIS_ENABLED=true`. **Off by default** — nothing loads, nothing runs, no startup cost until you turn it on. Local embeddings: **no external vector DB, no embedding API.**
 
 ## Documentation
 
