@@ -30,9 +30,11 @@ import type {
   BaseConvention,
   DataLayer,
   EndpointResolver,
+  FilterValidationResult,
   ModelConfig,
   ModelRequestOptions,
   ModelsRegistry,
+  NestedValidationResult,
   NormalizedListResponse,
   PaginationParams
 } from '#src/mcp/data-layer/data-layer.js'
@@ -134,6 +136,24 @@ export class SearchEnabledDataLayer implements DataLayer {
     attrs: Record<string, unknown>
   ): Record<string, unknown> {
     return this._base.buildPayload(model, modelConfig, attrs)
+  }
+
+  validateFilters(
+    model: string,
+    filters: Record<string, unknown> | undefined
+  ): FilterValidationResult {
+    return this._base.validateFilters(model, filters)
+  }
+
+  normalizeFilters(
+    model: string,
+    filters: Record<string, unknown> | undefined
+  ): Record<string, unknown> | undefined {
+    return this._base.normalizeFilters(model, filters)
+  }
+
+  validateNestedResource(parentModel: string, childResource: string): NestedValidationResult {
+    return this._base.validateNestedResource(parentModel, childResource)
   }
 
   /**

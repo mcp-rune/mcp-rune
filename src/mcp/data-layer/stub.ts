@@ -37,12 +37,20 @@ import { jsonApiConvention } from './api-conventions/index.js'
 import type {
   BaseConvention,
   DataLayer,
+  FilterValidationResult,
   ModelConfig,
   ModelRequestOptions,
   ModelsRegistry,
+  NestedValidationResult,
   NormalizedListResponse,
   PaginationParams
 } from './data-layer.js'
+import {
+  checkFiltersAgainstAttributes,
+  checkLinkAgainstAssociations,
+  normalizeFiltersAgainstAttributes,
+  resolveFilterableAttributes
+} from './request-validators.js'
 
 /** Record-shaped fixture; mirrors what the projection layer expects to read back. */
 export type StubRecord = Record<string, unknown>
@@ -298,6 +306,27 @@ export class InMemoryDataLayer implements DataLayer {
   ): Record<string, unknown> {
     const singular = this._singularName(modelConfig)
     return { [singular]: attrs }
+  }
+
+  validateFilters(
+    model: string,
+    filters: Record<string, unknown> | undefined
+  ): FilterValidationResult {
+    return checkFiltersAgainstAttributes(model, filters, this.models)
+  }
+
+  normalizeFilters(
+    model: string,
+    filters: Record<string, unknown> | undefined
+  ): Record<string, unknown> | undefined {
+    return normalizeFiltersAgainstAttributes(
+      filters,
+      resolveFilterableAttributes(model, this.models)
+    )
+  }
+
+  validateNestedResource(parentModel: string, childResource: string): NestedValidationResult {
+    return checkLinkAgainstAssociations(parentModel, childResource, this.models)
   }
 
   // --- Test helpers ---

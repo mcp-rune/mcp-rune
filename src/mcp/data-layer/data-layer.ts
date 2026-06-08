@@ -56,6 +56,55 @@ export type {
 }
 
 /**
+ * Metadata for a single filterable attribute on a model's search config.
+ * Deployers declare these inside the search extension's config bag; the
+ * `DataLayer` consumes them at request time to validate and normalize
+ * incoming tool filters.
+ */
+export interface FilterableAttribute {
+  type: string
+  enumValues?: string[]
+  description?: string
+  [key: string]: unknown
+}
+
+export interface FilterValidationSuccess {
+  valid: true
+  filters?: Record<string, unknown>
+}
+
+export interface FilterValidationError {
+  valid: false
+  error: string
+  availableFilters: string[]
+  suggestion: string
+}
+
+export type FilterValidationResult = FilterValidationSuccess | FilterValidationError
+
+export interface LinkInfo {
+  conditional?: string
+  [key: string]: unknown
+}
+
+export interface NestedValidationSuccess {
+  valid: true
+  linkInfo?: LinkInfo
+  type?: 'hasMany' | 'custom' | 'belongsTo'
+  suggestion?: string | null
+  warning?: string
+}
+
+export interface NestedValidationError {
+  valid: false
+  error: string
+  availableLinks: string[]
+  suggestion: string
+}
+
+export type NestedValidationResult = NestedValidationSuccess | NestedValidationError
+
+/**
  * The projection-facing data-access surface.
  *
  * Every method returns plain `Record<string, unknown>` — adapters are
@@ -199,6 +248,32 @@ export interface DataLayer {
     modelConfig: ModelConfig,
     attrs: Record<string, unknown>
   ): Record<string, unknown>
+
+  /**
+   * Validate request filters against the model's filterable attributes:
+   * checks every filter key is declared and every enum value matches its
+   * `FilterableAttribute.enumValues`. Returns the normalized filter map on
+   * success.
+   */
+  validateFilters(
+    model: string,
+    filters: Record<string, unknown> | undefined
+  ): FilterValidationResult
+
+  /**
+   * Split comma-separated enum strings against each filterable attribute's
+   * `enumValues`. Non-enum filters pass through untouched.
+   */
+  normalizeFilters(
+    model: string,
+    filters: Record<string, unknown> | undefined
+  ): Record<string, unknown> | undefined
+
+  /**
+   * Validate a nested-resource name against the parent model's declared
+   * associations (`belongsTo` / `hasMany` / `custom`).
+   */
+  validateNestedResource(parentModel: string, childResource: string): NestedValidationResult
 
   /** Read-only view of the models registry the adapter was constructed with. */
   readonly models: ModelsRegistry

@@ -66,10 +66,4 @@ export type {
 export { ToolRegistry } from './mcp/tools/tool-registry.js'
 export type { ToolResult } from './mcp/tools/tool-result.js'
 export { textError, textResult } from './mcp/tools/tool-result.js'
-export {
-  normalizeFilterValues,
-  validateFilterParams,
-  validateFilterValues,
-  validateNestedResource,
-  validateToolSchema
-} from './mcp/tools/validators.js'
+export { validateToolInputSchema } from './mcp/tools/validators.js'

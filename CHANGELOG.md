@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.95.0] - 2026-06-08
+
+> **BREAKING.** Resolves the `FilterSchema` name collision (epic #268, axis #2) and re-homes request-time validation onto `DataLayer`. The four standalone request-time validators are removed from the public surface — callers go through `dataLayer.validateFilters` / `normalizeFilters` / `validateNestedResource` instead. `FilterSchema` is renamed `FilterableAttribute` with a single canonical definition.
+
+### Added
+
+- `src/mcp/data-layer/request-validators.ts` — pure helpers (`checkFiltersAgainstAttributes`, `checkFilterValuesAgainstEnums`, `normalizeFiltersAgainstAttributes`, `checkLinkAgainstAssociations`, `resolveFilterableAttributes`). Names declare what each call compares against (filterable attributes, association links). Not exported from the package; reached through the `DataLayer` seam.
+- `DataLayer.validateFilters(model, filters)` — validates filter keys against the model's filterable attributes and enum values against each attribute's `enumValues`. Returns a `FilterValidationResult` envelope including normalized filters on success.
+- `DataLayer.normalizeFilters(model, filters)` — splits comma-separated enum strings against `FilterableAttribute.enumValues`; non-enum filters pass through.
+- `DataLayer.validateNestedResource(parentModel, childResource)` — validates a nested-resource link against the parent's `belongsTo` / `hasMany` / `custom` associations.
+- `FilterableAttribute`, `FilterValidationResult`, `NestedValidationResult`, `LinkInfo` types exported from `src/mcp/data-layer/data-layer.ts`.
+- Implementations in `ModelService`, `InMemoryDataLayer` (stub), and pass-through delegation in `SearchEnabledDataLayer`.
+
+### Changed
+
+- `FilterSchema` → `FilterableAttribute`. Single canonical definition lives in `src/mcp/data-layer/data-layer.ts`. The duplicate in `src/mcp/tools/base-tool.ts` is gone.
+- `validateToolSchema` → `validateToolInputSchema` (reads as "validate the tool's `inputSchema` field" rather than "the tool's schema"). Still exported from `@mcp-rune/mcp-rune/tools`.
+- `SearchRecordsTool`, `FindRecordsTool`, `AnalysisIngestTool` now route filter and nested-resource validation through `dataLayer.*` instead of importing standalone validators.
+- `src/mcp/tools/validators.ts` shrunk to a single export (`validateToolInputSchema`); the request-time logic moved to `src/mcp/data-layer/request-validators.ts`.
+
+### Removed
+
+- `FilterSchema` interface (duplicated in two places with subtly different shapes). Replaced by `FilterableAttribute` with a single source of truth.
+- Standalone request-time validators removed from the public `@mcp-rune/mcp-rune/tools` entry: `validateFilterParams`, `validateFilterValues`, `normalizeFilterValues`, `validateNestedResource`. Consumers go through the `DataLayer` seam, which already owns the `models` registry these helpers needed as a parameter.
+- Private `SearchRecordsTool._validateFilters` (duplicated logic of the standalone validators); the tool now calls `dataLayer.normalizeFilters` + `dataLayer.validateFilters` directly.
+- `validateToolSchema` export name (renamed — no shim, per pre-1.0 no-back-compat policy).
+
+[0.95.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.94.0...v0.95.0
+
 ## [0.94.0] - 2026-06-07
 
 > **BREAKING.** Replaces the local `ToolResult` discriminated union with the MCP SDK's `CallToolResult`. The cast at the SDK boundary in `tool-registry.ts` is gone — tool callbacks are now structurally assignable to `McpServer.registerTool`. First axis of the duplicated/misplaced interfaces epic (#268), sub-issue #269.

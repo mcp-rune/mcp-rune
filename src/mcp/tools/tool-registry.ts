@@ -72,7 +72,7 @@ import type { BaseTool } from './base-tool.js'
 import { errorInterceptor, loggingInterceptor } from './interceptors.js'
 import type { ToolInterceptor } from './tool-pipeline.js'
 import { wrapToolHandler } from './tool-pipeline.js'
-import { validateToolSchema } from './validators.js'
+import { validateToolInputSchema } from './validators.js'
 
 /**
  * A recursive Proxy used as a stand-in `ModelService` during boot-time mixin
@@ -402,7 +402,7 @@ export class ToolRegistry {
       let defInstance: BaseTool
       try {
         defInstance = this._createInstance(ToolCls)
-        validateToolSchema(toolName, defInstance.inputSchema)
+        validateToolInputSchema(toolName, defInstance.inputSchema)
       } catch (err) {
         const error = err as Error
         this._logger.error('Skipping tool with invalid schema', {

@@ -51,14 +51,6 @@ export interface ServerContext {
   sessionId?: string
 }
 
-/** Filter schema entry used by validators */
-export interface FilterSchema {
-  type: string
-  enumValues?: string[]
-  description?: string
-  [key: string]: unknown
-}
-
 /**
  * Model configuration as stored in the models registry. Aligned with the
  * static shape of `BaseModel` so `typeof MyModel` (a `BaseModel` subclass)

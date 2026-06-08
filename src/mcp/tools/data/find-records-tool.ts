@@ -5,7 +5,6 @@ import { pickFields } from '#src/core/helpers.js'
 
 import type { ToolAnnotations, ToolResult } from '../base-tool.js'
 import { BaseTool } from '../base-tool.js'
-import { validateFilterParams } from '../validators.js'
 
 /**
  * Tool for finding records by ID or search criteria.
@@ -104,7 +103,7 @@ Capabilities:
 
       // Validate filter params against model's filterable fields
       if (filters) {
-        const validation = validateFilterParams(model, filters, this.models)
+        const validation = service.validateFilters(model, filters)
         if (!validation.valid) {
           return {
             content: [{ type: 'text', text: `${validation.error}\n\n${validation.suggestion}` }],
