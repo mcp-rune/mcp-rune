@@ -9,6 +9,7 @@
  * factory, …) addressable. Use `exclude` to opt individual apps out.
  */
 
+import type { ApiClient } from '#src/core/api-client.js'
 import type {
   SearchGroup,
   SearchRequestShaper
@@ -21,7 +22,7 @@ import { createPickModelApp } from '../pick-model-app/index.js'
 import { createShowModelApp } from '../show-model-app/index.js'
 import { createViewSelectionApp } from '../view-selection-app/index.js'
 import type { AppFormClass } from './app-form-entities.js'
-import type { ApiClient, AppModelClass } from './app-shared-entities.js'
+import type { AppModelClass } from './app-shared-entities.js'
 import { createModelFormApp } from './create-model-form-app.js'
 import type { AppDefinition, KindExtension, ThemeOverrides } from './registry.js'
 import { AppRegistry } from './registry.js'

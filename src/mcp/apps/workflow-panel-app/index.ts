@@ -10,7 +10,8 @@
  * client-side from each workflow's `tags`.
  */
 
-import type { ToolResult } from '../lib/app-shared-entities.js'
+import type { ToolResult } from '#src/mcp/tools/tool-result.js'
+
 import { createHtmlLoader } from '../lib/html-loader.js'
 import type { AppDefinition } from '../lib/registry.js'
 

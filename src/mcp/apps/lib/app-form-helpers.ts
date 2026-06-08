@@ -7,10 +7,11 @@
  * fetch for edit) stay in each factory.
  */
 
+import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 import { normalizeListWithConvention } from '#src/mcp/data-layer/model-service/model-service.js'
 import * as logger from '#src/runtime/logger.js'
 
-import type { AppFormFieldDefinition, AppModelClass, DataLayer } from './app-shared-entities.js'
+import type { AppFormFieldDefinition, AppModelClass } from './app-shared-entities.js'
 import { errorMeta } from './helpers.js'
 
 /**

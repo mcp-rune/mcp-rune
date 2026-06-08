@@ -14,9 +14,10 @@ import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
 import { createSelectionTools } from '#src/mcp/apps/lib/selection-tools.js'
 import { getSearchConfig } from '#src/mcp/data-layer/api-extensions/search/index.js'
 import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
+import type { ToolResult } from '#src/mcp/tools/tool-result.js'
 import * as logger from '#src/runtime/logger.js'
 
-import type { AppModelClass, ToolResult } from '../lib/app-shared-entities.js'
+import type { AppModelClass } from '../lib/app-shared-entities.js'
 import { createHtmlLoader } from '../lib/html-loader.js'
 
 const MAX_RECORDS = 200

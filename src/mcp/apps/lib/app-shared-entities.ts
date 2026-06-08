@@ -17,10 +17,6 @@ import type {
 import type { AppFormDataStore } from './app-form-data-store.js'
 import type { SelectionStore } from './selection-store.js'
 
-// Re-exported for AppRegistry consumers wiring up the createApiClient factory.
-export type { ApiClient } from '#src/core/api-client.js'
-export type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
-
 /**
  * Attribute definition as seen by MCP Apps. Alias of the canonical
  * `AttributeDefinition` so app schema generators and the model layer share
@@ -56,8 +52,6 @@ export interface AppModelInstance {
   displayValue: string
   lookupFields: Record<string, unknown>
 }
-
-export type { ToolResult } from '#src/mcp/tools/tool-result.js'
 
 /** Context passed to handleToolCall by AppRegistry */
 export interface AppToolContext {

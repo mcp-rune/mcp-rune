@@ -23,6 +23,8 @@ import {
 } from '#src/mcp/apps/lib/app-form-associations.js'
 import { generateAppFormSchema } from '#src/mcp/apps/lib/app-form-schema.js'
 import { errorMeta, humanize } from '#src/mcp/apps/lib/helpers.js'
+import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
+import type { ToolResult } from '#src/mcp/tools/tool-result.js'
 import * as logger from '#src/runtime/logger.js'
 
 import type { FormSubmitMode } from '../../extensions/tool-flow.js'
@@ -32,7 +34,7 @@ import {
   filterEmpty,
   resolveAssociationOptions
 } from './app-form-helpers.js'
-import type { AppModelClass, DataLayer, ToolResult } from './app-shared-entities.js'
+import type { AppModelClass } from './app-shared-entities.js'
 import { bindAppForm } from './bind-app-form.js'
 import { createHtmlLoader } from './html-loader.js'
 import type { AppDefinition } from './registry.js'
