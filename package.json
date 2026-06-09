@@ -1,6 +1,6 @@
 {
   "name": "@mcp-rune/mcp-rune",
-  "version": "0.102.1",
+  "version": "0.102.2",
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
     "access": "public"
@@ -81,6 +81,10 @@
     "./runtime": {
       "types": "./dist/runtime.d.ts",
       "import": "./dist/runtime.js"
+    },
+    "./runtime/vendor/pgvector": {
+      "types": "./dist/runtime/vendor/pgvector/index.d.ts",
+      "import": "./dist/runtime/vendor/pgvector/index.js"
     },
     "./model-service": {
       "types": "./dist/mcp/data-layer/model-service/index.d.ts",
