@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.102.0] - 2026-06-09
+
+> **BREAKING — DomainAdapter.** Introduces `DomainAdapter` (a pluggable storage interface for domain knowledge) and `InMemoryDomainAdapter` (the default in-process implementation). `DomainRegistry` now accepts `{ adapter, models? }` instead of `{ knowledge, rules, workflows }`, and all its methods are now `async`. A new `DomainModule` type and `domain-definitions.ts` types file centralise the config vocabulary, following the `model-definitions.ts` / `prompt-definitions.ts` pattern. Downstream servers must replace their registry factory call and add `await` to any call site that reads from the registry.
+
+### Added
+
+- **`DomainAdapter` interface** (`src/mcp/domain/adapters/base-adapter.ts`) — all methods async so remote backends (PGVector, Qdrant) can implement the same contract without a parallel interface.
+- **`InMemoryDomainAdapter`** (`src/mcp/domain/adapters/inmemory.ts`) — wraps `DomainKnowledge`, `RuleSet`, and `WorkflowRegistry`; accepts `DomainModule | DomainModule[]` so modules can be composed per domain area.
+- **`DomainModule` type** (`src/mcp/domain/domain-definitions.ts`) — bundles `concepts`, `rules`, and `workflows` into one object per domain area, replacing separate per-resource arrays.
+- **`domain-definitions.ts`** — pure-types file centralising all config interfaces (`DomainConceptConfig`, `BusinessRuleConfig`, `WorkflowDefinitionConfig`, `WorkflowStepConfig`, etc.) and rule-evaluation types (`RuleSeverity`, `RuleResult`, `EvaluationResult`). Runtime classes now import from here instead of inlining their own interfaces.
+- **`DomainRegistry.getAllConcepts()`**, **`getConceptsForModel()`**, **`getAllWorkflows()`** — new public methods completing the registry surface.
+- **`docs/guides/08-domain-knowledge/domain-adapters.md`** — new guide explaining the adapter design, why InMemory is almost always correct, and what remote adapters would require.
+- **`AGENTS.md` additions** — "Layers vs adapters" section explaining when to use each pattern; "Definitions files" table showing the `*-definitions.ts` convention across modules; updated folder layout entry for `src/mcp/domain/`.
+
+### Changed
+
+- **`DomainRegistry` constructor** changed from `{ knowledge: DomainKnowledge, rules: RuleSet, workflows: WorkflowRegistry }` to `{ adapter: DomainAdapter, models?: Record<string, ModelClass> }`. **BREAKING.**
+- **All `DomainRegistry` methods are now async** (`getContextForModel`, `checkRules`, `getConcept`, `getWorkflow`, `describeRules`, `getWorkflowsByTag`). Callers must add `await`. **BREAKING.**
+- **`knowledge.ts`, `business-rules.ts`, `workflows.ts`** — config interfaces extracted to `domain-definitions.ts`; classes now re-export types from there.
+- **Domain tools** (`get_domain_context`, `check_business_rules`, `suggest_workflow`, `get_workflow_step`) — `await` added to all registry calls; removed direct `.knowledge`/`.workflows`/`.rules` property access through the registry.
+- **`analysis-query-tool.ts`** — concept resolution for stratifiers now pre-fetches concepts via `domainRegistry.getConceptsForModel()` before the synchronous `toGraphStratifierSpec` map.
+- **`src/domain.ts`** — exports `DomainAdapter`, `InMemoryDomainAdapter`, `DomainModule`, and all definition types.
+- **`docs/guides/04-tools/the-three-layers.md`** — new callout explaining why `DomainRegistry` doesn't follow the layer pattern.
+- **`docs/guides/08-domain-knowledge/domain-knowledge.md`** — architecture diagram and DomainRegistry wiring section updated to new API.
+
+[0.102.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.101.1...v0.102.0
+
 ## [0.101.1] - 2026-06-09
 
 > **Deployer-facing docs pass.** Every chapter in `docs/guides/` now opens with a `> **Customization:**` callout that tells a deployer at a glance whether the chapter describes a registry-level seam they can override or a framework internal they should understand but cannot replace. `model-layer.md` is rewritten consumption-first (real code examples before the interface reference). The database docs are split into a schema-reference file and a new how-to guide that explicitly states that migrations are the deployer's responsibility and shows both the `rune new` easy path and the manual runner.

@@ -40,31 +40,31 @@ describe('ClusterOperationsTool', () => {
     getOperationClusters.mockResolvedValue({
       clusters: [
         {
-          representative: 'create_model deal operations',
+          representative: 'create_model book operations',
           toolName: 'create_model',
           count: 3,
           operations: [
             {
               toolName: 'create_model',
-              summary: 'create_model deal A',
+              summary: 'create_model book A',
               createdAt: '2025-01-15T10:00:00Z',
-              toolOutput: { id: '1', name: 'Deal A' }
+              toolOutput: { id: '1', name: 'Book A' }
             },
             {
               toolName: 'create_model',
-              summary: 'create_model deal B',
+              summary: 'create_model book B',
               createdAt: '2025-01-15T11:00:00Z',
-              toolOutput: { id: '2', name: 'Deal B' }
+              toolOutput: { id: '2', name: 'Book B' }
             },
             {
               toolName: 'create_model',
-              summary: 'create_model deal C',
+              summary: 'create_model book C',
               createdAt: '2025-01-15T12:00:00Z'
             }
           ]
         }
       ],
-      outliers: [{ toolName: 'delete_model', summary: 'delete_model brand X' }]
+      outliers: [{ toolName: 'delete_model', summary: 'delete_model author X' }]
     })
 
     const result = await tool.execute({ days: 7 })

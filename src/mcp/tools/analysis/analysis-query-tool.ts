@@ -316,14 +316,7 @@ Typical reasoning flow:
     // embedding coverage. Surfaces what graph-aware sampling and the
     // GraphRAG strategies have to work with.
     const graphInfo = await getSessionGraphInfo(analysisId)
-    const conceptResolver = this.domainRegistry as
-      | {
-          knowledge?: {
-            getConceptsForModel?: (m: string) => Array<{ name: string; models: string[] }>
-          }
-        }
-      | undefined
-    const concepts = conceptResolver?.knowledge?.getConceptsForModel?.(model) ?? []
+    const concepts = this.domainRegistry ? await this.domainRegistry.getConceptsForModel(model) : []
 
     if (concepts.length > 0 || graphInfo.edgeTypes.length > 0 || graphInfo.totalRecordCount > 0) {
       parts.push('')
@@ -512,10 +505,23 @@ Typical reasoning flow:
       }
 
       try {
+        // Pre-fetch concepts for the source model so toGraphStratifierSpec can
+        // resolve concept stratifiers synchronously inside the map.
+        const conceptsForModel = this.domainRegistry
+          ? await this.domainRegistry.getConceptsForModel(model)
+          : []
+        const conceptResolver =
+          conceptsForModel.length > 0
+            ? {
+                knowledge: {
+                  getConceptsForModel: (m: string) => (m === model ? conceptsForModel : [])
+                }
+              }
+            : undefined
         resolvedStratifiers = stratifiers.map((s) =>
           toGraphStratifierSpec(
             s as Parameters<typeof toGraphStratifierSpec>[0],
-            this.domainRegistry,
+            conceptResolver,
             model
           )
         )

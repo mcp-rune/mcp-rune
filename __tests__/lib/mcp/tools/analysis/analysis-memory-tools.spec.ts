@@ -52,7 +52,7 @@ describe('Analysis Memory Tools', () => {
         analysis_id: 'audit-2024',
         findings: [
           {
-            finding: 'Missing metadata on 15 titles',
+            finding: 'Missing metadata on 15 books',
             category: 'gap',
             metadata: { count: 15 }
           }
@@ -62,7 +62,7 @@ describe('Analysis Memory Tools', () => {
       expect(storeAnalysisMemory).toHaveBeenCalledTimes(1)
       expect(storeAnalysisMemory).toHaveBeenCalledWith({
         analysisId: 'audit-2024',
-        finding: 'Missing metadata on 15 titles',
+        finding: 'Missing metadata on 15 books',
         category: 'gap',
         metadata: { count: 15 },
         persistent: undefined
@@ -372,8 +372,8 @@ describe('Analysis Memory Tools', () => {
 
       it('should return matching records', async () => {
         queryIngestedData.mockResolvedValueOnce([
-          { id: '1', name: 'Deal A', status: 'active' },
-          { id: '2', name: 'Deal B', status: 'active' }
+          { id: '1', name: 'Book A', status: 'active' },
+          { id: '2', name: 'Book B', status: 'active' }
         ])
 
         const result = await tool.execute({
@@ -388,7 +388,7 @@ describe('Analysis Memory Tools', () => {
           where: { status: 'active' },
           limit: 10
         })
-        expect(result.content[0].text).toContain('Deal A')
+        expect(result.content[0].text).toContain('Book A')
       })
 
       it('should handle no matches', async () => {

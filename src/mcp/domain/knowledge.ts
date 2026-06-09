@@ -10,17 +10,11 @@
  * frameworks, and processes that span multiple models.
  */
 
+import type { DomainConceptConfig, ModelClass, ModelContext } from './domain-definitions.js'
 import type { DomainItem, DomainSearchStrategy } from './search-strategy.js'
 import { createDomainSearch, SubstringSearch } from './search-strategy.js'
 
-export interface DomainConceptConfig {
-  name: string
-  title: string
-  description: string
-  models: string[]
-  tags?: string[]
-  details?: Record<string, unknown>
-}
+export type { DomainConceptConfig, ModelClass, ModelContext }
 
 export class DomainConcept {
   name: string
@@ -40,49 +34,9 @@ export class DomainConcept {
   }
 }
 
-export interface ModelClass {
-  description?: string
-  api?: { readOnly?: boolean }
-  attributes?: Record<
-    string,
-    {
-      label?: string
-      type?: string
-      required?: boolean
-      immutable?: boolean
-      description?: string
-    }
-  >
-  associations?: Record<string, unknown>
-}
-
 export interface DomainKnowledgeConfig {
   concepts?: DomainConcept[]
   models?: Record<string, ModelClass>
-}
-
-export interface ModelContext {
-  model: string
-  concepts: Array<{
-    name: string
-    title: string
-    description: string
-    models: string[]
-    details: Record<string, unknown>
-  }>
-  description?: string
-  readOnly?: boolean
-  attributes?: Array<{
-    name: string
-    label?: string
-    type?: string
-    required: boolean
-    immutable: boolean
-    description?: string
-  }>
-  associations?: Record<string, unknown>
-  rules?: Array<{ name: string; description: string; severity: string }>
-  workflows?: Array<{ name: string; title: string; description: string; tags: string[] }>
 }
 
 export class DomainKnowledge {

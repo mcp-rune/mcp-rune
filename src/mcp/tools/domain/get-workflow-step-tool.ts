@@ -24,10 +24,6 @@ interface WorkflowDefinition {
   [key: string]: unknown
 }
 
-interface WorkflowsRegistry {
-  getAllWorkflows(): WorkflowDefinition[]
-}
-
 /**
  * Get details for a specific workflow step
  *
@@ -58,11 +54,11 @@ export class GetWorkflowStepTool extends BaseDomainTool {
       step: number
     }
 
-    const w = this.domainRegistry.getWorkflow(workflowName) as unknown as
+    const w = (await this.domainRegistry.getWorkflow(workflowName)) as unknown as
       | WorkflowDefinition
       | undefined
     if (!w) {
-      const all = (this.domainRegistry.workflows as unknown as WorkflowsRegistry).getAllWorkflows()
+      const all = (await this.domainRegistry.getAllWorkflows()) as unknown as WorkflowDefinition[]
       const names = all.map((wf) => `\`${wf.name}\``).join(', ')
       return this.formatResponse(`Workflow "${workflowName}" not found. Available: ${names}`)
     }

@@ -1,47 +1,46 @@
-import { RuleSet } from '../../../../../src/mcp/domain/business-rules.js'
-import { DomainKnowledge } from '../../../../../src/mcp/domain/knowledge.js'
+import { InMemoryDomainAdapter } from '../../../../../src/mcp/domain/adapters/inmemory.js'
 import { DomainRegistry } from '../../../../../src/mcp/domain/registry.js'
-import { WorkflowDefinition, WorkflowRegistry } from '../../../../../src/mcp/domain/workflows.js'
+import { WorkflowDefinition } from '../../../../../src/mcp/domain/workflows.js'
 import { SuggestWorkflowTool } from '../../../../../src/mcp/tools/domain/suggest-workflow-tool.js'
 
 function createTestRegistry() {
   return new DomainRegistry({
-    knowledge: new DomainKnowledge({ concepts: [], models: {} }),
-    rules: new RuleSet([]),
-    workflows: new WorkflowRegistry([
-      new WorkflowDefinition({
-        name: 'setup_vod',
-        title: 'Set Up VOD',
-        description: 'Set up VOD availability',
-        tags: ['vod', 'onboarding'],
-        models: ['rule'],
-        steps: [
-          {
-            order: 1,
-            title: 'Find title',
-            description: 'Search for the title',
-            tool: 'find_records'
-          },
-          { order: 2, title: 'Create rule', description: 'Create the rule', tool: 'create_model' }
-        ]
-      }),
-      new WorkflowDefinition({
-        name: 'demo_vod',
-        title: 'Demo VOD',
-        description: 'Demo VOD rules',
-        tags: ['vod', 'demo'],
-        models: ['rule'],
-        steps: [{ order: 1, title: 'Intro', description: 'Introduce VOD' }]
-      }),
-      new WorkflowDefinition({
-        name: 'create_deal',
-        title: 'Create a Deal',
-        description: 'Create a licensing deal',
-        tags: ['licensing'],
-        models: ['deal'],
-        steps: [{ order: 1, title: 'Find licensor', description: 'Search' }]
-      })
-    ])
+    adapter: new InMemoryDomainAdapter({
+      workflows: [
+        new WorkflowDefinition({
+          name: 'setup_project',
+          title: 'Set Up Project',
+          description: 'Set up a project with tasks',
+          tags: ['tasks', 'onboarding'],
+          models: ['project'],
+          steps: [
+            {
+              order: 1,
+              title: 'Find project',
+              description: 'Search for the project',
+              tool: 'find_records'
+            },
+            { order: 2, title: 'Create task', description: 'Create the task', tool: 'create_model' }
+          ]
+        }),
+        new WorkflowDefinition({
+          name: 'demo_tasks',
+          title: 'Demo Tasks',
+          description: 'Demo task tracking workflow',
+          tags: ['tasks', 'demo'],
+          models: ['task'],
+          steps: [{ order: 1, title: 'Intro', description: 'Introduce task tracking' }]
+        }),
+        new WorkflowDefinition({
+          name: 'create_book',
+          title: 'Create a Book',
+          description: 'Add a book to the catalog',
+          tags: ['catalog'],
+          models: ['book'],
+          steps: [{ order: 1, title: 'Find author', description: 'Search for author' }]
+        })
+      ]
+    })
   })
 }
 
@@ -62,25 +61,25 @@ describe('SuggestWorkflowTool', () => {
     const result = await tool.execute({})
     const text = result.content[0].text
     expect(text).toContain('Available Workflows')
-    expect(text).toContain('Set Up VOD')
-    expect(text).toContain('Demo VOD')
-    expect(text).toContain('Create a Deal')
+    expect(text).toContain('Set Up Project')
+    expect(text).toContain('Demo Tasks')
+    expect(text).toContain('Create a Book')
   })
 
   it('should render roadmap + first step only', async () => {
-    const result = await tool.execute({ workflow: 'setup_vod' })
+    const result = await tool.execute({ workflow: 'setup_project' })
     const text = result.content[0].text
     // Overview
-    expect(text).toContain('Set Up VOD')
+    expect(text).toContain('Set Up Project')
     // Roadmap has both steps as titles (no descriptions)
     expect(text).toContain('Roadmap')
-    expect(text).toContain('1. Find title')
-    expect(text).toContain('2. Create rule')
+    expect(text).toContain('1. Find project')
+    expect(text).toContain('2. Create task')
     // Step 1 rendered in detail
-    expect(text).toContain('Step 1: Find title')
+    expect(text).toContain('Step 1: Find project')
     expect(text).toContain('find_records')
     // Step 2 NOT rendered in detail (only in roadmap)
-    expect(text).not.toContain('Step 2: Create rule')
+    expect(text).not.toContain('Step 2: Create task')
     // Mandatory chaining instruction
     expect(text).toContain('Execute ONLY the step shown below')
     expect(text).toContain('MUST call `get_workflow_step`')
@@ -93,34 +92,34 @@ describe('SuggestWorkflowTool', () => {
     const result = await tool.execute({ workflow: 'unknown' })
     const text = result.content[0].text
     expect(text).toContain('not found')
-    expect(text).toContain('setup_vod')
+    expect(text).toContain('setup_project')
   })
 
   it('should filter by tag', async () => {
     const result = await tool.execute({ tag: 'demo' })
     const text = result.content[0].text
-    expect(text).toContain('Demo VOD')
-    expect(text).not.toContain('Create a Deal')
+    expect(text).toContain('Demo Tasks')
+    expect(text).not.toContain('Create a Book')
   })
 
   it('should return single workflow when tag matches one', async () => {
-    const result = await tool.execute({ tag: 'licensing' })
+    const result = await tool.execute({ tag: 'catalog' })
     const text = result.content[0].text
-    expect(text).toContain('Create a Deal')
+    expect(text).toContain('Create a Book')
     expect(text).toContain('Step 1')
   })
 
   it('should search by goal', async () => {
-    const result = await tool.execute({ goal: 'VOD' })
+    const result = await tool.execute({ goal: 'task' })
     const text = result.content[0].text
-    expect(text).toContain('Set Up VOD')
-    expect(text).toContain('Demo VOD')
+    expect(text).toContain('Set Up Project')
+    expect(text).toContain('Demo Tasks')
   })
 
   it('should return single workflow when goal matches one', async () => {
-    const result = await tool.execute({ goal: 'licensing deal' })
+    const result = await tool.execute({ goal: 'catalog' })
     const text = result.content[0].text
-    expect(text).toContain('Create a Deal')
+    expect(text).toContain('Create a Book')
     expect(text).toContain('Step 1')
   })
 
@@ -143,7 +142,7 @@ describe('SuggestWorkflowTool', () => {
         appToolNames: ['find_model_app', 'show_model_app']
       }
     })
-    const result = await toolWithApps.execute({ workflow: 'setup_vod' })
+    const result = await toolWithApps.execute({ workflow: 'setup_project' })
     const text = result.content[0].text
     // Should include actual app tool names in exclusion
     expect(text).toContain('find_model_app')
@@ -154,33 +153,33 @@ describe('SuggestWorkflowTool', () => {
 
   it('should render loop group when first step is in a loop', async () => {
     const registry = new DomainRegistry({
-      knowledge: new DomainKnowledge({ concepts: [], models: {} }),
-      rules: new RuleSet([]),
-      workflows: new WorkflowRegistry([
-        new WorkflowDefinition({
-          name: 'loop_first',
-          title: 'Loop First',
-          description: 'Workflow starting with a loop',
-          steps: [
-            {
-              order: 1,
-              title: 'Fetch',
-              description: 'Fetch data',
-              tool: 'search_records',
-              exhaustive: true,
-              loopGroup: 'fetch-loop'
-            },
-            {
-              order: 2,
-              title: 'Process',
-              description: 'Process page',
-              tool: 'store_analysis_memory',
-              loopGroup: 'fetch-loop'
-            },
-            { order: 3, title: 'Done', description: 'Finish up' }
-          ]
-        })
-      ])
+      adapter: new InMemoryDomainAdapter({
+        workflows: [
+          new WorkflowDefinition({
+            name: 'loop_first',
+            title: 'Loop First',
+            description: 'Workflow starting with a loop',
+            steps: [
+              {
+                order: 1,
+                title: 'Fetch',
+                description: 'Fetch data',
+                tool: 'search_records',
+                exhaustive: true,
+                loopGroup: 'fetch-loop'
+              },
+              {
+                order: 2,
+                title: 'Process',
+                description: 'Process page',
+                tool: 'store_analysis_memory',
+                loopGroup: 'fetch-loop'
+              },
+              { order: 3, title: 'Done', description: 'Finish up' }
+            ]
+          })
+        ]
+      })
     })
     const loopTool = new SuggestWorkflowTool({ domainRegistry: registry })
     const result = await loopTool.execute({ workflow: 'loop_first' })
@@ -194,32 +193,32 @@ describe('SuggestWorkflowTool', () => {
 
   it('should render parallel group when first step is parallel', async () => {
     const registry = new DomainRegistry({
-      knowledge: new DomainKnowledge({ concepts: [], models: {} }),
-      rules: new RuleSet([]),
-      workflows: new WorkflowRegistry([
-        new WorkflowDefinition({
-          name: 'parallel_first',
-          title: 'Parallel First',
-          description: 'Workflow starting with parallel steps',
-          steps: [
-            {
-              order: 1,
-              title: 'Fetch A',
-              description: 'Get A',
-              tool: 'find_records',
-              parallelGroup: 'init'
-            },
-            {
-              order: 2,
-              title: 'Fetch B',
-              description: 'Get B',
-              tool: 'list_models',
-              parallelGroup: 'init'
-            },
-            { order: 3, title: 'Done', description: 'Finish up' }
-          ]
-        })
-      ])
+      adapter: new InMemoryDomainAdapter({
+        workflows: [
+          new WorkflowDefinition({
+            name: 'parallel_first',
+            title: 'Parallel First',
+            description: 'Workflow starting with parallel steps',
+            steps: [
+              {
+                order: 1,
+                title: 'Fetch A',
+                description: 'Get A',
+                tool: 'find_records',
+                parallelGroup: 'init'
+              },
+              {
+                order: 2,
+                title: 'Fetch B',
+                description: 'Get B',
+                tool: 'list_models',
+                parallelGroup: 'init'
+              },
+              { order: 3, title: 'Done', description: 'Finish up' }
+            ]
+          })
+        ]
+      })
     })
     const parallelTool = new SuggestWorkflowTool({ domainRegistry: registry })
     const result = await parallelTool.execute({ workflow: 'parallel_first' })

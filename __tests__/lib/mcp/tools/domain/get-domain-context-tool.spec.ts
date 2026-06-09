@@ -1,12 +1,13 @@
-import { BusinessRule, RuleSet } from '../../../../../src/mcp/domain/business-rules.js'
-import { DomainConcept, DomainKnowledge } from '../../../../../src/mcp/domain/knowledge.js'
+import { InMemoryDomainAdapter } from '../../../../../src/mcp/domain/adapters/inmemory.js'
+import { BusinessRule } from '../../../../../src/mcp/domain/business-rules.js'
+import { DomainConcept } from '../../../../../src/mcp/domain/knowledge.js'
 import { DomainRegistry } from '../../../../../src/mcp/domain/registry.js'
-import { WorkflowDefinition, WorkflowRegistry } from '../../../../../src/mcp/domain/workflows.js'
+import { WorkflowDefinition } from '../../../../../src/mcp/domain/workflows.js'
 import { GetDomainContextTool } from '../../../../../src/mcp/tools/domain/get-domain-context-tool.js'
 
 function createTestRegistry() {
   return new DomainRegistry({
-    knowledge: new DomainKnowledge({
+    adapter: new InMemoryDomainAdapter({
       concepts: [
         new DomainConcept({
           name: 'test_hierarchy',
@@ -17,34 +18,34 @@ function createTestRegistry() {
           details: { process: 'Create A then B', tips: ['Tip 1'] }
         })
       ],
-      models: {
-        model_a: {
-          description: 'Model A desc',
-          attributes: {
-            id: { type: 'string', description: 'ID' },
-            name: { type: 'string', required: true, description: 'Name' }
-          },
-          associations: {}
-        }
-      }
+      rules: [
+        new BusinessRule({
+          name: 'rule_a',
+          description: 'Rule for A',
+          scope: ['model_a'],
+          evaluate: () => ({ passed: true, message: 'ok' })
+        })
+      ],
+      workflows: [
+        new WorkflowDefinition({
+          name: 'wf_a',
+          title: 'Workflow A',
+          description: 'A workflow for model_a.',
+          models: ['model_a'],
+          steps: [{ order: 1, title: 'Step', description: 'Do it' }]
+        })
+      ]
     }),
-    rules: new RuleSet([
-      new BusinessRule({
-        name: 'rule_a',
-        description: 'Rule for A',
-        scope: ['model_a'],
-        evaluate: () => ({ passed: true, message: 'ok' })
-      })
-    ]),
-    workflows: new WorkflowRegistry([
-      new WorkflowDefinition({
-        name: 'wf_a',
-        title: 'Workflow A',
-        description: 'A workflow for model_a.',
-        models: ['model_a'],
-        steps: [{ order: 1, title: 'Step', description: 'Do it' }]
-      })
-    ])
+    models: {
+      model_a: {
+        description: 'Model A desc',
+        attributes: {
+          id: { type: 'string', description: 'ID' },
+          name: { type: 'string', required: true, description: 'Name' }
+        },
+        associations: {}
+      }
+    }
   })
 }
 
@@ -99,46 +100,38 @@ describe('GetDomainContextTool', () => {
 
   it('should show Read-Only suffix for read-only models', async () => {
     const registry = new DomainRegistry({
-      knowledge: new DomainKnowledge({
-        concepts: [],
-        models: {
-          platform: {
-            description: 'Platform entity',
-            api: { readOnly: true },
-            attributes: {
-              id: { type: 'string', description: 'ID' },
-              name: { type: 'string', description: 'Name' }
-            }
+      adapter: new InMemoryDomainAdapter({}),
+      models: {
+        genre: {
+          description: 'Genre entity',
+          api: { readOnly: true },
+          attributes: {
+            id: { type: 'string', description: 'ID' },
+            name: { type: 'string', description: 'Name' }
           }
         }
-      }),
-      rules: new RuleSet([]),
-      workflows: new WorkflowRegistry([])
+      }
     })
     const readOnlyTool = new GetDomainContextTool({ domainRegistry: registry })
-    const result = await readOnlyTool.execute({ model: 'platform' })
+    const result = await readOnlyTool.execute({ model: 'genre' })
     expect(result.content[0].text).toContain('(Read-Only)')
   })
 
   it('should show Immutable column when attributes have immutable flag', async () => {
     const registry = new DomainRegistry({
-      knowledge: new DomainKnowledge({
-        concepts: [],
-        models: {
-          deal: {
-            description: 'Deal entity',
-            attributes: {
-              id: { type: 'string', description: 'ID' },
-              external_id: { type: 'string', immutable: true, description: 'External ID' }
-            }
+      adapter: new InMemoryDomainAdapter({}),
+      models: {
+        book: {
+          description: 'Book entity',
+          attributes: {
+            id: { type: 'string', description: 'ID' },
+            external_id: { type: 'string', immutable: true, description: 'External ID' }
           }
         }
-      }),
-      rules: new RuleSet([]),
-      workflows: new WorkflowRegistry([])
+      }
     })
     const immutableTool = new GetDomainContextTool({ domainRegistry: registry })
-    const result = await immutableTool.execute({ model: 'deal' })
+    const result = await immutableTool.execute({ model: 'book' })
     const text = result.content[0].text
     expect(text).toContain('| Immutable |')
     expect(text).toContain('| Yes |')
@@ -152,28 +145,24 @@ describe('GetDomainContextTool', () => {
 
   it('should show dual-column Field | API Name when attributes have labels', async () => {
     const registry = new DomainRegistry({
-      knowledge: new DomainKnowledge({
-        concepts: [],
-        models: {
-          activity: {
-            description: 'Activity entity',
-            attributes: {
-              id: { type: 'string', description: 'ID' },
-              started_at: { type: 'datetime', label: 'Start Time', description: 'When it started' },
-              ended_at: { type: 'datetime', label: 'End Time', description: 'When it ended' }
-            }
+      adapter: new InMemoryDomainAdapter({}),
+      models: {
+        author: {
+          description: 'Author entity',
+          attributes: {
+            id: { type: 'string', description: 'ID' },
+            born_on: { type: 'datetime', label: 'Birth Date', description: 'Date of birth' },
+            died_on: { type: 'datetime', label: 'Death Date', description: 'Date of death' }
           }
         }
-      }),
-      rules: new RuleSet([]),
-      workflows: new WorkflowRegistry([])
+      }
     })
     const labelTool = new GetDomainContextTool({ domainRegistry: registry })
-    const result = await labelTool.execute({ model: 'activity' })
+    const result = await labelTool.execute({ model: 'author' })
     const text = result.content[0].text
     expect(text).toContain('| Field | API Name |')
-    expect(text).toContain('| Start Time | started_at |')
-    expect(text).toContain('| End Time | ended_at |')
+    expect(text).toContain('| Birth Date | born_on |')
+    expect(text).toContain('| Death Date | died_on |')
   })
 
   it('should append presentation footer to all responses', async () => {

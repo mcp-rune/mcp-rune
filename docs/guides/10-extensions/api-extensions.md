@@ -266,34 +266,34 @@ Mixin method names must be **globally unique** across all registered extensions.
 ```ts file=examples/api-extensions-05.ts
 import type { SummaryStrategy } from '@mcp-rune/mcp-rune/api-extensions'
 
-const salesNarrativeStrategy: SummaryStrategy = {
-  name: 'sales-narrative',
-  description: 'Prose summary tuned for deal records: pipeline stage, $ amount, owner.',
-  appliesTo: (input) => input.model === 'deal',
+const readingProgressStrategy: SummaryStrategy = {
+  name: 'reading-progress',
+  description: 'Prose summary of a page of books: title, author, genre.',
+  appliesTo: (input) => input.model === 'book',
   generate: (input) => ({
-    finding: `Page ${input.page}: ${input.records.length} deals — ${summarizeDeals(input.records)}`,
+    finding: `Page ${input.page}: ${input.records.length} books — ${summarizeBooks(input.records)}`,
     metadata: { page: input.page, model: input.model }
   })
 }
 
 register(ctx) {
-  ctx.registerSummaryStrategy(salesNarrativeStrategy)
+  ctx.registerSummaryStrategy(readingProgressStrategy)
 }
 ```
 
 ```js file=examples/api-extensions-05.js
-const salesNarrativeStrategy = {
-  name: 'sales-narrative',
-  description: 'Prose summary tuned for deal records: pipeline stage, $ amount, owner.',
-  appliesTo: (input) => input.model === 'deal',
+const readingProgressStrategy = {
+  name: 'reading-progress',
+  description: 'Prose summary of a page of books: title, author, genre.',
+  appliesTo: (input) => input.model === 'book',
   generate: (input) => ({
-    finding: `Page ${input.page}: ${input.records.length} deals — ${summarizeDeals(input.records)}`,
+    finding: `Page ${input.page}: ${input.records.length} books — ${summarizeBooks(input.records)}`,
     metadata: { page: input.page, model: input.model }
   })
 }
 register(ctx)
 {
-  ctx.registerSummaryStrategy(salesNarrativeStrategy)
+  ctx.registerSummaryStrategy(readingProgressStrategy)
 }
 export {}
 ```

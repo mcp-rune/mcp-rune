@@ -95,20 +95,24 @@ Call this FIRST when asked to review, analyze, or explain rights, deals, rules, 
     const { model, concept } = args as { model?: string; concept?: string }
 
     if (!model && !concept) {
-      return this.formatResponse(this._formatOverview())
+      return this.formatResponse(await this._formatOverview())
     }
 
     const parts: string[] = []
 
     // Model context
     if (model) {
-      const context = this.domainRegistry.getContextForModel(model) as unknown as ModelContext
+      const context = (await this.domainRegistry.getContextForModel(
+        model
+      )) as unknown as ModelContext
       parts.push(this._formatModelContext(context))
     }
 
     // Concept lookup or search
     if (concept) {
-      const exact = this.domainRegistry.getConcept(concept) as unknown as Concept | undefined
+      const exact = (await this.domainRegistry.getConcept(concept)) as unknown as
+        | Concept
+        | undefined
       if (exact) {
         parts.push(this._formatConcept(exact))
       } else {
@@ -124,16 +128,12 @@ Call this FIRST when asked to review, analyze, or explain rights, deals, rules, 
     return this.formatResponse(parts.join('\n\n---\n\n'))
   }
 
-  private _formatOverview(): string {
+  private async _formatOverview(): Promise<string> {
     this.requireDomainRegistry()
-    const knowledge = this.domainRegistry.knowledge as unknown as {
-      getAllConcepts: () => Concept[]
-    }
-    const workflows = this.domainRegistry.workflows as unknown as {
-      getAllWorkflows: () => WorkflowRef[]
-    }
-    const concepts = knowledge.getAllConcepts()
-    const allWorkflows = workflows.getAllWorkflows()
+    const [concepts, allWorkflows] = await Promise.all([
+      this.domainRegistry.getAllConcepts() as unknown as Promise<Concept[]>,
+      this.domainRegistry.getAllWorkflows() as unknown as Promise<WorkflowRef[]>
+    ])
 
     const lines = ['# Domain Knowledge Overview', '']
 

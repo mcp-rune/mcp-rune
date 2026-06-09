@@ -30,17 +30,38 @@ Never import `extractEdgesFromRecord`, `buildEmbeddingText`, `expandHops`, or an
 
 The rules above are enforced by a `no-restricted-imports` block in `eslint.config.js`, scoped to `src/mcp/apps/**`, `src/mcp/tools/**`, `src/mcp/prompts/**`, and `src/mcp/data-layer/api-extensions/**`. Boot-time validators (`src/mcp/apps/lib/form-validator.ts` and `src/mcp/prompts/prompt-validator.ts`) are exempt because they run before any factory is constructed; any new boot-time validator that needs a helper directly should be added to the exemption list rather than left to break the build.
 
+### Layers vs adapters
+
+A **layer** implies a projection/computation over _local_ definitions — e.g., `ModelLayer` derives a schema from model classes; `AnalysisLayer` builds embedding text from record fields. A layer presupposes local config to process.
+
+**When the storage backend may have no local config at all** (items come purely from a database), use the **adapter** pattern instead: name the interface `*Adapter`, nest it in the relevant module's own `adapters/` folder, and export it from the module's public entry point. Do not create a sibling `*-layer/` folder.
+
+Example: domain knowledge uses `DomainAdapter` (`src/mcp/domain/adapters/`) rather than a `domain-layer/` folder, because a remote adapter (PGVector, Qdrant) has nothing local to project.
+
+### Definitions files — one per module
+
+Each module that owns value-object classes ships a companion `*-definitions.ts` file with **pure TypeScript interfaces and types only** — no runtime code. The pattern:
+
+| Module             | Definitions file        | Layer / adapter            |
+| ------------------ | ----------------------- | -------------------------- |
+| `src/mcp/models/`  | `model-definitions.ts`  | `src/mcp/model-layer/`     |
+| `src/mcp/prompts/` | `prompt-definitions.ts` | —                          |
+| `src/mcp/domain/`  | `domain-definitions.ts` | `src/mcp/domain/adapters/` |
+
+The definitions file is the shared vocabulary. Runtime classes import types from it; projection-layer code (tools, apps) imports only the types it needs via the module's public entry point.
+
 ### Folder layout that supports the rule
 
-The three layers sit at the same depth under `src/mcp/`, separated from the **declarative** side of model definitions:
+The layers sit at the same depth under `src/mcp/`, separated from the **declarative** side:
 
 - `src/mcp/data-layer/` — backend I/O seam
 - `src/mcp/model-layer/` — generic, per-model-bound model-config consumers
 - `src/mcp/analysis-layer/` — analysis-domain consumers
-- `src/mcp/models/` — **what a model IS**: `base-model.ts` and the `kinds/` registry. _Never_ dump helpers that consume a model into this folder; they belong in `model-layer/` or `analysis-layer/`.
-- `src/mcp/prompts/` — both **what a prompt IS** (`base-prompt.ts`, `prompt-definitions.ts`, `prompt-content-builder.ts`, `association-transformers.ts`, `generators/`) and the prompt-runtime consumers (`prompt-registry.ts`, `prompt-cache.ts`, `prompt-validator.ts`, `form-strategies/`). One folder because the runtime side is not per-model-bound the way `model-layer/` or `analysis-layer/` are — there is no `promptLayer(name)` factory to keep on its own.
+- `src/mcp/models/` — **what a model IS**: `base-model.ts`, `model-definitions.ts`, and the `kinds/` registry. _Never_ dump helpers that consume a model into this folder; they belong in `model-layer/` or `analysis-layer/`.
+- `src/mcp/prompts/` — both **what a prompt IS** (`base-prompt.ts`, `prompt-definitions.ts`, …) and the prompt-runtime consumers (`prompt-registry.ts`, …). One folder because the runtime side is not per-model-bound the way `model-layer/` is.
+- `src/mcp/domain/` — **what domain knowledge IS**: `DomainConcept`, `BusinessRule`, `WorkflowDefinition`, `domain-definitions.ts`. Also contains `adapters/` (`DomainAdapter` interface + `InMemoryDomainAdapter`) and `registry.ts` (`DomainRegistry`, which wraps a `DomainAdapter`).
 
-When introducing a new domain seam later (e.g. an auth-layer, a workflow-layer), the same dichotomy applies: a sibling top-level folder for the layer; the declarative side stays in its own folder.
+When introducing a new seam, first ask: does this involve projecting _local_ definitions (→ layer + sibling folder), or providing a swappable storage backend (→ adapter + `adapters/` subfolder inside the existing module)?
 
 ## Seams must be self-documenting
 

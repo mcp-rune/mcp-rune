@@ -65,13 +65,13 @@ Accepts both proposed data (pre-submission) and existing entity data (post-fetch
     }
 
     // Check if there are rules for this model
-    const ruleDescriptions = this.domainRegistry.describeRules(model)
+    const ruleDescriptions = await this.domainRegistry.describeRules(model)
     if (ruleDescriptions.length === 0) {
       return this.formatResponse(`No business rules defined for model "${model}".`)
     }
 
     // Evaluate rules
-    const result = this.domainRegistry.checkRules(model, data, context ?? {}) as CheckResult
+    const result = (await this.domainRegistry.checkRules(model, data, context ?? {})) as CheckResult
 
     return this.formatResponse(this._formatResult(model, result))
   }

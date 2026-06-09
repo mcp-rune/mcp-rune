@@ -6,23 +6,15 @@
  * evaluate function -- testable, auditable, introspectable.
  */
 
-export interface RuleResult {
-  passed: boolean
-  message: string
-  details?: unknown
-  suggestion?: string
-}
+import type {
+  BusinessRuleConfig,
+  EvaluationResult,
+  EvaluationResultItem,
+  RuleResult,
+  RuleSeverity
+} from './domain-definitions.js'
 
-export type RuleSeverity = 'error' | 'warning' | 'info'
-
-export interface BusinessRuleConfig {
-  name: string
-  description: string
-  scope: string[]
-  severity?: RuleSeverity
-  tags?: string[]
-  evaluate: (data: Record<string, unknown>, context?: Record<string, unknown>) => RuleResult
-}
+export type { BusinessRuleConfig, EvaluationResult, EvaluationResultItem, RuleResult, RuleSeverity }
 
 export class BusinessRule {
   name: string
@@ -63,21 +55,6 @@ export class BusinessRule {
       }
     }
   }
-}
-
-export interface EvaluationResultItem {
-  rule: string
-  description: string
-  passed: boolean
-  message: string
-  severity: RuleSeverity
-  details?: unknown
-  suggestion?: string
-}
-
-export interface EvaluationResult {
-  passed: boolean
-  results: EvaluationResultItem[]
 }
 
 export class RuleSet {
