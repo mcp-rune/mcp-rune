@@ -6,46 +6,26 @@
  * Tagged for filtering (e.g., 'demo', 'onboarding').
  */
 
+import type {
+  ChangesetConfig,
+  ContextHint,
+  Decision,
+  DecisionOption,
+  MutationPlan,
+  WorkflowDefinitionConfig,
+  WorkflowStepConfig
+} from './domain-definitions.js'
 import type { DomainItem, DomainSearchStrategy } from './search-strategy.js'
 import { createDomainSearch, SubstringSearch } from './search-strategy.js'
 
-export interface DecisionOption {
-  label: string
-  description: string
-  nextStep?: number
-}
-
-export interface Decision {
-  question: string
-  options: DecisionOption[]
-}
-
-export interface ChangesetConfig {
-  mutating?: boolean
-  requiresPlan?: string
-}
-
-export interface ContextHint {
-  lifecycle?: string
-  consumedBy?: string
-}
-
-export interface WorkflowStepConfig {
-  order: number
-  title: string
-  description: string
-  tool?: string
-  toolArgs?: Record<string, unknown>
-  decision?: Decision
-  tips?: string[]
-  parallelGroup?: string
-  dependsOn?: number[]
-  changeset?: ChangesetConfig
-  optional?: boolean
-  fallbackDescription?: string
-  exhaustive?: boolean
-  loopGroup?: string
-  contextHint?: ContextHint
+export type {
+  ChangesetConfig,
+  ContextHint,
+  Decision,
+  DecisionOption,
+  MutationPlan,
+  WorkflowDefinitionConfig,
+  WorkflowStepConfig
 }
 
 export class WorkflowStep {
@@ -98,21 +78,6 @@ export class WorkflowStep {
     this.loopGroup = loopGroup || null
     this.contextHint = contextHint || null
   }
-}
-
-export interface MutationPlan {
-  [key: string]: unknown
-}
-
-export interface WorkflowDefinitionConfig {
-  name: string
-  title: string
-  description: string
-  tags?: string[]
-  models?: string[]
-  steps?: WorkflowStepConfig[]
-  draftRequired?: boolean
-  mutationPlans?: MutationPlan
 }
 
 export class WorkflowDefinition {

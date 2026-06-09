@@ -1,87 +1,86 @@
-import { RuleSet } from '../../../../../src/mcp/domain/business-rules.js'
-import { DomainKnowledge } from '../../../../../src/mcp/domain/knowledge.js'
+import { InMemoryDomainAdapter } from '../../../../../src/mcp/domain/adapters/inmemory.js'
 import { DomainRegistry } from '../../../../../src/mcp/domain/registry.js'
-import { WorkflowDefinition, WorkflowRegistry } from '../../../../../src/mcp/domain/workflows.js'
+import { WorkflowDefinition } from '../../../../../src/mcp/domain/workflows.js'
 import { GetWorkflowStepTool } from '../../../../../src/mcp/tools/domain/get-workflow-step-tool.js'
 
 function createTestRegistry() {
   return new DomainRegistry({
-    knowledge: new DomainKnowledge({ concepts: [], models: {} }),
-    rules: new RuleSet([]),
-    workflows: new WorkflowRegistry([
-      new WorkflowDefinition({
-        name: 'multi_step',
-        title: 'Multi Step Workflow',
-        description: 'A workflow with various step types',
-        tags: ['test'],
-        models: ['activity'],
-        steps: [
-          {
-            order: 1,
-            title: 'List themes',
-            description: 'Fetch all themes',
-            tool: 'list_models',
-            toolArgs: { model: 'theme' }
-          },
-          {
-            order: 2,
-            title: 'Search activities',
-            description: 'Fetch activity data for analysis',
-            tool: 'search_records',
-            toolArgs: { model: 'activity' },
-            exhaustive: true,
-            loopGroup: 'fetch-analyze'
-          },
-          {
-            order: 3,
-            title: 'Store analysis',
-            description: 'Store findings per page',
-            tool: 'store_analysis_memory',
-            loopGroup: 'fetch-analyze',
-            optional: true,
-            fallbackDescription: 'Keep in context'
-          },
-          {
-            order: 4,
-            title: 'Review results',
-            description: 'Decide on scope',
-            decision: {
-              question: 'How to proceed?',
-              options: [{ label: 'All', description: 'Apply all' }]
+    adapter: new InMemoryDomainAdapter({
+      workflows: [
+        new WorkflowDefinition({
+          name: 'multi_step',
+          title: 'Multi Step Workflow',
+          description: 'A workflow with various step types',
+          tags: ['test'],
+          models: ['activity'],
+          steps: [
+            {
+              order: 1,
+              title: 'List themes',
+              description: 'Fetch all themes',
+              tool: 'list_models',
+              toolArgs: { model: 'theme' }
+            },
+            {
+              order: 2,
+              title: 'Search activities',
+              description: 'Fetch activity data for analysis',
+              tool: 'search_records',
+              toolArgs: { model: 'activity' },
+              exhaustive: true,
+              loopGroup: 'fetch-analyze'
+            },
+            {
+              order: 3,
+              title: 'Store analysis',
+              description: 'Store findings per page',
+              tool: 'store_analysis_memory',
+              loopGroup: 'fetch-analyze',
+              optional: true,
+              fallbackDescription: 'Keep in context'
+            },
+            {
+              order: 4,
+              title: 'Review results',
+              description: 'Decide on scope',
+              decision: {
+                question: 'How to proceed?',
+                options: [{ label: 'All', description: 'Apply all' }]
+              }
+            },
+            {
+              order: 5,
+              title: 'Apply changes',
+              description: 'Execute bulk update',
+              tool: 'bulk_action_models',
+              changeset: { mutating: true }
             }
-          },
-          {
-            order: 5,
-            title: 'Apply changes',
-            description: 'Execute bulk update',
-            tool: 'bulk_action_models',
-            changeset: { mutating: true }
-          }
-        ]
-      }),
-      new WorkflowDefinition({
-        name: 'parallel_workflow',
-        title: 'Parallel Workflow',
-        description: 'Workflow with parallel steps',
-        steps: [
-          {
-            order: 1,
-            title: 'Step A',
-            description: 'Do A',
-            tool: 'find_records',
-            parallelGroup: 'p1'
-          },
-          {
-            order: 2,
-            title: 'Step B',
-            description: 'Do B',
-            tool: 'list_models',
-            parallelGroup: 'p1'
-          },
-          { order: 3, title: 'Step C', description: 'Final step', tool: 'create_model' }
-        ]
-      })
-    ])
+          ]
+        }),
+        new WorkflowDefinition({
+          name: 'parallel_workflow',
+          title: 'Parallel Workflow',
+          description: 'Workflow with parallel steps',
+          steps: [
+            {
+              order: 1,
+              title: 'Step A',
+              description: 'Do A',
+              tool: 'find_records',
+              parallelGroup: 'p1'
+            },
+            {
+              order: 2,
+              title: 'Step B',
+              description: 'Do B',
+              tool: 'list_models',
+              parallelGroup: 'p1'
+            },
+            { order: 3, title: 'Step C', description: 'Final step', tool: 'create_model' }
+          ]
+        })
+      ]
+    })
   })
 }
 

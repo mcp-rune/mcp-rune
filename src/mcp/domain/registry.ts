@@ -1,106 +1,148 @@
 /**
- * DomainRegistry - Aggregates all domain intelligence
+ * DomainRegistry — facade over a DomainAdapter
  *
- * Composes model metadata + cross-entity knowledge + business rules + workflows.
- * Dependency-injected like PromptRegistry. Gracefully absent like vector storage.
+ * Accepts a DomainAdapter (storage backend) and exposes the domain intelligence
+ * API consumed by domain tools. All methods are async to support remote adapters.
  */
 
-import type { EvaluationResult, RuleSet } from './business-rules.js'
-import type { DomainConcept, DomainKnowledge, ModelContext } from './knowledge.js'
-import type { WorkflowDefinition, WorkflowRegistry } from './workflows.js'
+import type { DomainAdapter } from './adapters/base-adapter.js'
+import type {
+  EvaluationResult,
+  ModelClass,
+  ModelContext,
+  RuleSeverity
+} from './domain-definitions.js'
+import type { DomainConcept } from './knowledge.js'
+import type { WorkflowDefinition } from './workflows.js'
 
 export interface DomainRegistryConfig {
-  knowledge: DomainKnowledge
-  rules: RuleSet
-  workflows: WorkflowRegistry
+  adapter: DomainAdapter
+  /** Optional field-level model metadata, forwarded to getContextForModel. */
+  models?: Record<string, ModelClass>
 }
 
 export class DomainRegistry {
-  knowledge: DomainKnowledge
-  rules: RuleSet
-  workflows: WorkflowRegistry
+  readonly adapter: DomainAdapter
+  private _models: Record<string, ModelClass>
 
-  constructor({ knowledge, rules, workflows }: DomainRegistryConfig) {
-    this.knowledge = knowledge
-    this.rules = rules
-    this.workflows = workflows
+  constructor({ adapter, models = {} }: DomainRegistryConfig) {
+    this.adapter = adapter
+    this._models = models
   }
 
   /**
-   * Initialize search across all sub-registries.
-   * Fire-and-forget at startup -- SubstringSearch resolves instantly,
+   * Initialise search indexing across all domain items.
+   * Fire-and-forget at startup — SubstringSearch resolves instantly,
    * EmbeddingSearch computes embeddings async.
    */
   async initSearch(strategy?: string): Promise<void> {
-    await Promise.all([this.knowledge.initSearch(strategy), this.workflows.initSearch(strategy)])
+    await this.adapter.initSearch?.(strategy)
   }
 
-  // ============================================================================
-  // Context enrichment
-  // ============================================================================
+  // ─── Context enrichment ───────────────────────────────────────────────────
 
-  /** Get composed context for a model (field metadata + cross-entity concepts) */
-  getContextForModel(model: string): ModelContext {
-    const context = this.knowledge.getContextForModel(model)
+  /** Get composed context for a model: field metadata + concepts + rules + workflows */
+  async getContextForModel(modelName: string): Promise<ModelContext> {
+    const [concepts, rules, workflows] = await Promise.all([
+      this.adapter.getConceptsForModel(modelName),
+      this.adapter.describeRules(modelName),
+      this.adapter.getWorkflowsByModel(modelName)
+    ])
 
-    // Add applicable business rules
-    context.rules = this.rules.describeRules(model)
+    const context: ModelContext = {
+      model: modelName,
+      concepts: concepts.map((c) => ({
+        name: c.name,
+        title: c.title,
+        description: c.description,
+        models: c.models,
+        details: c.details
+      })),
+      rules,
+      workflows: workflows.map((w) => ({
+        name: w.name,
+        title: w.title,
+        description: w.description,
+        tags: w.tags
+      }))
+    }
 
-    // Add related workflows
-    context.workflows = this.workflows.getWorkflowsByModel(model).map((w) => ({
-      name: w.name,
-      title: w.title,
-      description: w.description,
-      tags: w.tags
-    }))
+    // Pull optional field-level metadata from model registry
+    const ModelClassDef = this._models[modelName]
+    if (ModelClassDef) {
+      context.description = ModelClassDef.description
+      context.readOnly = ModelClassDef.api?.readOnly || false
+      context.attributes = Object.entries(ModelClassDef.attributes || {}).map(([name, cfg]) => ({
+        name,
+        label: cfg.label,
+        type: cfg.type,
+        required: cfg.required || false,
+        immutable: cfg.immutable || false,
+        description: cfg.description
+      }))
+      context.associations = ModelClassDef.associations || {}
+    }
 
     return context
   }
 
-  /** Get a specific concept */
-  getConcept(name: string): DomainConcept | undefined {
-    return this.knowledge.getConcept(name)
+  /** Get a specific concept by name */
+  async getConcept(name: string): Promise<DomainConcept | undefined> {
+    return this.adapter.getConcept(name)
   }
 
-  /** Search concepts */
+  /** Get all concepts */
+  async getAllConcepts(): Promise<DomainConcept[]> {
+    return this.adapter.getAllConcepts()
+  }
+
+  /** Get all concepts that involve a specific model */
+  async getConceptsForModel(modelName: string): Promise<DomainConcept[]> {
+    return this.adapter.getConceptsForModel(modelName)
+  }
+
+  /** Search concepts by query string */
   async searchConcepts(query: string): Promise<DomainConcept[]> {
-    return await this.knowledge.searchConcepts(query)
+    return this.adapter.searchConcepts(query)
   }
 
-  // ============================================================================
-  // Business rules
-  // ============================================================================
+  // ─── Business rules ───────────────────────────────────────────────────────
 
   /** Evaluate business rules for a model */
-  checkRules(
+  async checkRules(
     model: string,
     data: Record<string, unknown>,
     context?: Record<string, unknown>
-  ): EvaluationResult {
-    return this.rules.evaluate(model, data, context)
+  ): Promise<EvaluationResult> {
+    return this.adapter.evaluateRules(model, data, context)
   }
 
   /** Get rule descriptions for a model */
-  describeRules(model: string): Array<{ name: string; description: string; severity: string }> {
-    return this.rules.describeRules(model)
+  async describeRules(
+    model: string
+  ): Promise<Array<{ name: string; description: string; severity: RuleSeverity }>> {
+    return this.adapter.describeRules(model)
   }
 
-  // ============================================================================
-  // Workflows
-  // ============================================================================
+  // ─── Workflows ────────────────────────────────────────────────────────────
 
   /** Search workflows by goal */
   async suggestWorkflow(goal: string): Promise<WorkflowDefinition[]> {
-    return await this.workflows.searchWorkflows(goal)
+    return this.adapter.searchWorkflows(goal)
   }
 
-  /** Get a specific workflow */
-  getWorkflow(name: string): WorkflowDefinition | undefined {
-    return this.workflows.getWorkflow(name)
+  /** Get a specific workflow by exact name */
+  async getWorkflow(name: string): Promise<WorkflowDefinition | undefined> {
+    return this.adapter.getWorkflow(name)
+  }
+
+  /** Get all workflows */
+  async getAllWorkflows(): Promise<WorkflowDefinition[]> {
+    return this.adapter.getAllWorkflows()
   }
 
   /** Get workflows by tag */
-  getWorkflowsByTag(tag: string): WorkflowDefinition[] {
-    return this.workflows.getWorkflowsByTag(tag)
+  async getWorkflowsByTag(tag: string): Promise<WorkflowDefinition[]> {
+    return this.adapter.getWorkflowsByTag(tag)
   }
 }
