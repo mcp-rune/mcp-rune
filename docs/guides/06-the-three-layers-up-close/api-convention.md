@@ -1,3 +1,6 @@
+> **Customization:** per-model via `static api.convention`, server-wide via `defaultConvention:` on `ToolRegistry`.
+> Ships `jsonApiConvention` (also exported as `defaultConvention`). Write a custom one for HAL, flat envelopes, or proprietary wrappers.
+
 # API convention
 
 A **convention** owns everything wire-format-specific about your API: how request payloads are wrapped, how association IDs translate into the form your backend expects, how list responses are unpacked into `{ records, pagination }`, and how response envelopes are stripped of protocol noise before reaching tools and prompts.

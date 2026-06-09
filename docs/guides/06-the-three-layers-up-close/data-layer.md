@@ -1,3 +1,6 @@
+> **Customization:** swap via `dataLayer:` on `ToolRegistry` / `AppRegistry`.
+> Default adapter is `ModelService` (next chapter); an `InMemoryDataLayer` stub ships for tests. This is the deployer's main backend seam.
+
 # Data layer
 
 This chapter is the entry point to Part II. [Chapter 4](../04-tools/the-three-layers.md) introduced `DataLayer` as the per-request backend I/O interface every Tool and App consumes; this chapter covers what's behind it, which built-in implementations ship, and how to swap one in.
@@ -31,13 +34,15 @@ At a glance, the seam and what sits above and below it:
                           │
                           ▼
    ┌────────────────────────────────────────────────────┐
-   │   Default shaper: ModelService                    │
+   │   Default shaper: ModelService                     │
    │     ├─ ApiClient   (HTTP verbs against URLs)       │
    │     └─ Convention  (payload / association shape)   │
    └────────────────────────────────────────────────────┘
 ```
 
 The projection layer never imports `ApiClient`, `SearchClient`, or a `Convention` directly — `DataLayer` is the only seam it crosses. Swap the adapter (in-memory stub, fetch-only, third-party wrapper) without touching anything above the line.
+
+> [`ModelLayer`](./model-layer.md) is the read-only peer seam for static model metadata — sync, no I/O, and unlike `DataLayer` it is **not** swappable on the Registry. Tools and apps consume both: `this.dataLayer` for I/O, `this.modelLayer('book')` for the static reads.
 
 ## Table of Contents
 
