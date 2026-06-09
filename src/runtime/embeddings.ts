@@ -36,7 +36,14 @@ async function getOrCreatePipeline(): Promise<FeatureExtractionPipeline> {
   if (initPromise) return initPromise
 
   initPromise = (async () => {
-    const { pipeline: createPipeline } = await import('@huggingface/transformers')
+    let createPipeline: unknown
+    try {
+      ;({ pipeline: createPipeline } = await import('@huggingface/transformers'))
+    } catch {
+      throw new Error(
+        'Local embeddings require @huggingface/transformers. Install it: npm install @huggingface/transformers'
+      )
+    }
     const p = await (
       createPipeline as unknown as (
         task: string,

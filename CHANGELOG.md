@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.102.1] - 2026-06-09
+
+### Security
+
+- **Pin `onnxruntime-web` to stable `1.21.0`** via `overrides` — `@huggingface/transformers` was pulling in `onnxruntime-web@1.22.0-dev.20250409-89f8206ba4`, a dev pre-release pinned to a git commit hash, which Socket.dev flags as a supply chain risk.
+- **Fix `qs` CVE** (`GHSA-q8mj-m7cp-5q26`) — `qs.stringify` remotely-triggerable DoS via `npm audit fix`; bumped to patched version.
+
+### Changed
+
+- **`@huggingface/transformers` moved to `optionalDependencies`** — used only for local embeddings (`src/runtime/embeddings.ts`), already lazy-loaded. Deployers who don't need local embeddings can skip it with `--no-optional`; if missing, a clear install instruction error is thrown on first `embed()` call.
+
+### Added
+
+- **`SECURITY.md`** — security policy with reporting contact, supported versions, and scope; Socket.dev awards points for a published security policy.
+
 ## [0.102.0] - 2026-06-09
 
 > **BREAKING — DomainAdapter.** Introduces `DomainAdapter` (a pluggable storage interface for domain knowledge) and `InMemoryDomainAdapter` (the default in-process implementation). `DomainRegistry` now accepts `{ adapter, models? }` instead of `{ knowledge, rules, workflows }`, and all its methods are now `async`. A new `DomainModule` type and `domain-definitions.ts` types file centralise the config vocabulary, following the `model-definitions.ts` / `prompt-definitions.ts` pattern. Downstream servers must replace their registry factory call and add `await` to any call site that reads from the registry.
@@ -3050,3 +3065,5 @@ Initial public release. Extracted from production MCP servers.
 ### Packages
 
 - 11 subpath exports: `mcp-kit/server`, `mcp-kit/tools`, `mcp-kit/prompts`, `mcp-kit/apps`, `mcp-kit/search`, `mcp-kit/domain`, `mcp-kit/oauth2`, `mcp-kit/services`, `mcp-kit/db`, `mcp-kit/core`
+
+[0.102.1]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.0...v0.102.1
