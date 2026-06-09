@@ -1,36 +1,35 @@
-import { BusinessRule, RuleSet } from '../../../../../src/mcp/domain/business-rules.js'
-import { DomainKnowledge } from '../../../../../src/mcp/domain/knowledge.js'
+import { InMemoryDomainAdapter } from '../../../../../src/mcp/domain/adapters/inmemory.js'
+import { BusinessRule } from '../../../../../src/mcp/domain/business-rules.js'
 import { DomainRegistry } from '../../../../../src/mcp/domain/registry.js'
-import { WorkflowRegistry } from '../../../../../src/mcp/domain/workflows.js'
 import { CheckBusinessRulesTool } from '../../../../../src/mcp/tools/domain/check-business-rules-tool.js'
 
 function createTestRegistry() {
   return new DomainRegistry({
-    knowledge: new DomainKnowledge({ concepts: [], models: {} }),
-    rules: new RuleSet([
-      new BusinessRule({
-        name: 'positive_value',
-        description: 'Value must be positive',
-        scope: ['model_a'],
-        severity: 'error',
-        evaluate: (data) => ({
-          passed: !data.value || data.value > 0,
-          message: data.value > 0 ? 'Value is positive' : 'Value must be positive',
-          suggestion: data.value > 0 ? undefined : 'Use a positive number'
+    adapter: new InMemoryDomainAdapter({
+      rules: [
+        new BusinessRule({
+          name: 'positive_value',
+          description: 'Value must be positive',
+          scope: ['model_a'],
+          severity: 'error',
+          evaluate: (data) => ({
+            passed: !data.value || (data.value as number) > 0,
+            message: (data.value as number) > 0 ? 'Value is positive' : 'Value must be positive',
+            suggestion: (data.value as number) > 0 ? undefined : 'Use a positive number'
+          })
+        }),
+        new BusinessRule({
+          name: 'has_name',
+          description: 'Name is recommended',
+          scope: ['model_a'],
+          severity: 'warning',
+          evaluate: (data) => ({
+            passed: !!data.name,
+            message: data.name ? 'Has name' : 'Missing name'
+          })
         })
-      }),
-      new BusinessRule({
-        name: 'has_name',
-        description: 'Name is recommended',
-        scope: ['model_a'],
-        severity: 'warning',
-        evaluate: (data) => ({
-          passed: !!data.name,
-          message: data.name ? 'Has name' : 'Missing name'
-        })
-      })
-    ]),
-    workflows: new WorkflowRegistry([])
+      ]
+    })
   })
 }
 

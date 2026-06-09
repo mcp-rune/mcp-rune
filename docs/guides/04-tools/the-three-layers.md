@@ -120,6 +120,16 @@ override async execute(args: { id: string }) {
 
 **Why it exists:** edge extraction and embedding-text assembly are analysis concerns that, like `ModelLayer`'s reads, were previously scattered helpers. Promoting them to a per-model layer makes them swappable per deployment and prevents projection-layer code from poking at the internals. The `analysis_*` tool family (covered in Part III) is the principal consumer.
 
+## Why domain knowledge isn't a fourth layer
+
+`DomainRegistry` is passed to tools as `this.domainRegistry`, but it does not follow the layer pattern and has no corresponding `domain-layer/` folder. Two reasons:
+
+1. **It is not a projection over per-request context.** `ModelLayer` derives schema from model classes; `AnalysisLayer` builds embedding text from records. `DomainRegistry` is stateless and has no equivalent per-request state to project.
+
+2. **Its storage backend may have no local config.** A `DataLayer` or `ModelLayer` always projects _local_ definitions. Remote `DomainAdapter` implementations (PGVector, Qdrant) retrieve items from a database — there is nothing local to project. Calling that a "layer" would leave a `domain-layer/` folder empty downstream.
+
+The storage backend is therefore called a `DomainAdapter` (see `src/mcp/domain/adapters/`), following the OAuth2 `BaseTokenStoreAdapter` pattern rather than the layer pattern.
+
 ## The eslint guard
 
 The three layers are not a convention you can break by typo. `eslint.config.js` declares a `no-restricted-imports` block scoped to `src/mcp/apps/**`, `src/mcp/tools/**`, `src/mcp/prompt-layer/**`, and `src/mcp/data-layer/api-extensions/**`. From those folders, importing `ApiClient`, `ModelService`, `SearchService`, `EndpointResolver`, `resolveDerivedFields`, `getKind`, `extractEdgesFromRecord`, or anything analogous fails the build.

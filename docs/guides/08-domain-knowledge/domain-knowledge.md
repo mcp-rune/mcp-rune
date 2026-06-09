@@ -21,36 +21,60 @@ This guide explains how to extend the domain intelligence layer with new concept
 <!-- illustration: domain-knowledge#arch -->
 
 ```
-lib/mcp/domain/                      # Framework classes (shared)
-├── knowledge.js                     # DomainConcept + DomainKnowledge
-├── business-rules.js                # BusinessRule + RuleSet
-├── workflows.js                     # WorkflowStep + WorkflowDefinition + WorkflowRegistry
-└── registry.js                      # DomainRegistry (aggregates all of the above)
+src/mcp/domain/                      # Framework classes (shared)
+├── domain-definitions.ts            # Pure types: *Config interfaces + DomainModule
+├── knowledge.ts                     # DomainConcept + DomainKnowledge
+├── business-rules.ts                # BusinessRule + RuleSet
+├── workflows.ts                     # WorkflowStep + WorkflowDefinition + WorkflowRegistry
+├── registry.ts                      # DomainRegistry (facade over DomainAdapter)
+└── adapters/
+    ├── base-adapter.ts              # DomainAdapter interface
+    └── inmemory.ts                  # InMemoryDomainAdapter (the default)
 
-lib/mcp/tools/domain/                # Domain tools (shared)
-├── base-domain-tool.js              # BaseDomainTool (DOMAIN category, no auth)
-├── get-domain-context-tool.js       # Retrieves composed context for a model/concept
-├── check-business-rules-tool.js     # Validates data against business rules
-├── suggest-workflow-tool.js         # Returns a workflow roadmap + first step
-└── get-workflow-step-tool.js        # Returns detail for a specific workflow step
+src/mcp/tools/domain/                # Domain tools (shared)
+├── base-domain-tool.ts              # BaseDomainTool (DOMAIN category, no auth)
+├── get-domain-context-tool.ts       # Retrieves composed context for a model/concept
+├── check-business-rules-tool.ts     # Validates data against business rules
+├── suggest-workflow-tool.ts         # Returns a workflow roadmap + first step
+└── get-workflow-step-tool.ts        # Returns detail for a specific workflow step
 
 src/<server>/domain/                 # Server-specific domain data
-├── registry.js                      # Factory: createXxxDomainRegistry()
-├── knowledge/
-│   └── concepts.js                  # DomainConcept instances
-├── rules/
-│   ├── <domain>-rules.js            # BusinessRule instances
-│   └── mutability-rules.js          # Auto-generated from model metadata
-└── workflows/
-    └── <workflow-category>.js       # WorkflowDefinition instances
+├── registry.ts                      # Factory: createXxxDomainRegistry()
+└── modules/
+    └── <domain>.ts                  # DomainModule: { concepts, rules, workflows }
 ```
 
 **Data flow:**
 
-1. Server-specific code creates `DomainConcept`, `BusinessRule`, and `WorkflowDefinition` instances
-2. These are assembled into a `DomainRegistry` via a factory function
-3. The registry is dependency-injected into the tool registry
+1. Server code defines `DomainModule` objects — one per domain area (`catchup`, `deals`, …)
+2. Modules are passed to `InMemoryDomainAdapter`, which constructs the value-object instances
+3. The adapter is wrapped in `DomainRegistry` and dependency-injected into the tool registry
 4. Four domain tools (`get_domain_context`, `check_business_rules`, `suggest_workflow`, `get_workflow_step`) consume the registry and expose it to users
+
+### DomainModule — the bundling type
+
+`DomainModule` (from `domain-definitions.ts`) groups concepts, rules, and workflows for one domain area instead of maintaining separate arrays per resource type:
+
+```ts
+import type { DomainModule } from '@mcp-rune/mcp-rune/domain'
+import { DomainConcept, BusinessRule, WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
+
+export const taskModule: DomainModule = {
+  concepts: [new DomainConcept({ name: 'task_lifecycle', ... })],
+  rules:    [new BusinessRule({ name: 'task_requires_due_date', ... })],
+  workflows: [new WorkflowDefinition({ name: 'setup_project', ... })]
+}
+```
+
+Multiple modules are merged by the adapter:
+
+```ts
+new InMemoryDomainAdapter([taskModule, projectModule, bookModule])
+```
+
+### DomainAdapter — the storage backend
+
+`DomainRegistry` accepts any `DomainAdapter` implementation. The default is `InMemoryDomainAdapter` — items live in process memory, search uses MiniLM embeddings. Remote adapters (PGVector, Qdrant) are not yet shipped; the interface supports them once a seeding/sync mechanism is designed.
 
 ---
 
@@ -611,29 +635,22 @@ new BusinessRule({
 
 ### Where to Put Rules
 
-Add rules to `src/<server>/domain/rules/<domain>-rules.js`. Each file exports an array:
+Rules live in a `DomainModule` alongside their related concepts and workflows. Group by domain area (tasks, projects, books), not by component type:
 
-```js file=src/task-rules.js
-// src/<server>/domain/rules/task-rules.js
-import { BusinessRule } from '#src/mcp/domain/business-rules.js'
+```ts file=src/task-module.ts
+// src/<server>/domain/modules/tasks.ts
+import type { DomainModule } from '@mcp-rune/mcp-rune/domain'
+import { BusinessRule, DomainConcept } from '@mcp-rune/mcp-rune/domain'
 
-export const taskRules = [
-  new BusinessRule({ ... }),
-  new BusinessRule({ ... }),
-]
+export const taskModule: DomainModule = {
+  concepts: [/* concepts about tasks */],
+  rules: [
+    new BusinessRule({ name: 'task_requires_due_date', ... }),
+    new BusinessRule({ name: 'task_priority_valid', ... }),
+  ],
+  workflows: [/* task-related workflows */],
+}
 ```
-
-```ts file=src/task-rules.ts
-// src/<server>/domain/rules/task-rules.js
-import { BusinessRule } from '#src/mcp/domain/business-rules.js'
-
-export const taskRules = [
-  new BusinessRule({ ... }),
-  new BusinessRule({ ... }),
-]
-```
-
-Group related rules in the same file. Create new files for distinct domains (e.g., `project-rules.js`, `book-rules.js`).
 
 ---
 
@@ -890,63 +907,44 @@ Group related workflows in the same file (e.g., setup + demo variant of the same
 
 ## Wiring It Up — The Domain Registry
 
-**Source:** `lib/mcp/domain/registry.js`
+**Source:** `src/mcp/domain/registry.ts`
 
-The `DomainRegistry` aggregates all domain intelligence into a single injectable dependency.
+The `DomainRegistry` is a facade over a `DomainAdapter`. It aggregates domain intelligence into a single injectable dependency.
 
 ### Creating the Registry
 
-```js file=src/registries/create-my-domain-registry.js
-// src/<server>/domain/registry.js
-import { DomainKnowledge } from '#src/mcp/domain/knowledge.js'
-import { RuleSet } from '#src/mcp/domain/business-rules.js'
-import { WorkflowRegistry } from '#src/mcp/domain/workflows.js'
-import { DomainRegistry } from '#src/mcp/domain/registry.js'
-import { MODEL_CLASSES } from '../models/index.js'
+```ts file=src/registries/create-my-domain-registry.ts
+// src/<server>/domain/registry.ts
+import { DomainRegistry, InMemoryDomainAdapter } from '@mcp-rune/mcp-rune/domain'
+import type { DomainModule } from '@mcp-rune/mcp-rune/domain'
 
-import { concepts } from './knowledge/concepts.js'
-import { taskRules } from './rules/task-rules.js'
-import { projectRules } from './rules/project-rules.js'
-import { projectWorkflows } from './workflows/project-tasks.js'
+import { taskModule } from './modules/tasks.js'
+import { projectModule } from './modules/projects.js'
 
-export function createMyDomainRegistry() {
-  const knowledge = new DomainKnowledge({
-    concepts: [...concepts],
-    models: MODEL_CLASSES // Pass model classes for field metadata
+export function createMyDomainRegistry(): DomainRegistry {
+  return new DomainRegistry({
+    adapter: new InMemoryDomainAdapter([taskModule, projectModule])
   })
-
-  const rules = new RuleSet([...taskRules, ...projectRules])
-
-  const workflows = new WorkflowRegistry([...projectWorkflows])
-
-  return new DomainRegistry({ knowledge, rules, workflows })
 }
 ```
 
-```ts file=src/registries/create-my-domain-registry.ts
-// src/<server>/domain/registry.js
-import { DomainKnowledge } from '#src/mcp/domain/knowledge.js'
-import { RuleSet } from '#src/mcp/domain/business-rules.js'
-import { WorkflowRegistry } from '#src/mcp/domain/workflows.js'
-import { DomainRegistry } from '#src/mcp/domain/registry.js'
-import { MODEL_CLASSES } from '../models/index.js'
+Each module lives in its own file and groups related concepts, rules, and workflows:
 
-import { concepts } from './knowledge/concepts.js'
-import { taskRules } from './rules/task-rules.js'
-import { projectRules } from './rules/project-rules.js'
-import { projectWorkflows } from './workflows/project-tasks.js'
+```ts file=src/modules/tasks.ts
+// src/<server>/domain/modules/tasks.ts
+import type { DomainModule } from '@mcp-rune/mcp-rune/domain'
+import { DomainConcept, BusinessRule, WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
 
-export function createMyDomainRegistry() {
-  const knowledge = new DomainKnowledge({
-    concepts: [...concepts],
-    models: MODEL_CLASSES // Pass model classes for field metadata
-  })
-
-  const rules = new RuleSet([...taskRules, ...projectRules])
-
-  const workflows = new WorkflowRegistry([...projectWorkflows])
-
-  return new DomainRegistry({ knowledge, rules, workflows })
+export const taskModule: DomainModule = {
+  concepts: [
+    new DomainConcept({ name: 'task_lifecycle', ... }),
+  ],
+  rules: [
+    new BusinessRule({ name: 'task_requires_due_date', ... }),
+  ],
+  workflows: [
+    new WorkflowDefinition({ name: 'setup_project_with_tasks', ... }),
+  ],
 }
 ```
 

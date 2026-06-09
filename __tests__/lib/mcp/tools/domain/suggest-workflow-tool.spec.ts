@@ -1,47 +1,46 @@
-import { RuleSet } from '../../../../../src/mcp/domain/business-rules.js'
-import { DomainKnowledge } from '../../../../../src/mcp/domain/knowledge.js'
+import { InMemoryDomainAdapter } from '../../../../../src/mcp/domain/adapters/inmemory.js'
 import { DomainRegistry } from '../../../../../src/mcp/domain/registry.js'
-import { WorkflowDefinition, WorkflowRegistry } from '../../../../../src/mcp/domain/workflows.js'
+import { WorkflowDefinition } from '../../../../../src/mcp/domain/workflows.js'
 import { SuggestWorkflowTool } from '../../../../../src/mcp/tools/domain/suggest-workflow-tool.js'
 
 function createTestRegistry() {
   return new DomainRegistry({
-    knowledge: new DomainKnowledge({ concepts: [], models: {} }),
-    rules: new RuleSet([]),
-    workflows: new WorkflowRegistry([
-      new WorkflowDefinition({
-        name: 'setup_project',
-        title: 'Set Up Project',
-        description: 'Set up a project with tasks',
-        tags: ['tasks', 'onboarding'],
-        models: ['project'],
-        steps: [
-          {
-            order: 1,
-            title: 'Find project',
-            description: 'Search for the project',
-            tool: 'find_records'
-          },
-          { order: 2, title: 'Create task', description: 'Create the task', tool: 'create_model' }
-        ]
-      }),
-      new WorkflowDefinition({
-        name: 'demo_tasks',
-        title: 'Demo Tasks',
-        description: 'Demo task tracking workflow',
-        tags: ['tasks', 'demo'],
-        models: ['task'],
-        steps: [{ order: 1, title: 'Intro', description: 'Introduce task tracking' }]
-      }),
-      new WorkflowDefinition({
-        name: 'create_book',
-        title: 'Create a Book',
-        description: 'Add a book to the catalog',
-        tags: ['catalog'],
-        models: ['book'],
-        steps: [{ order: 1, title: 'Find author', description: 'Search for author' }]
-      })
-    ])
+    adapter: new InMemoryDomainAdapter({
+      workflows: [
+        new WorkflowDefinition({
+          name: 'setup_project',
+          title: 'Set Up Project',
+          description: 'Set up a project with tasks',
+          tags: ['tasks', 'onboarding'],
+          models: ['project'],
+          steps: [
+            {
+              order: 1,
+              title: 'Find project',
+              description: 'Search for the project',
+              tool: 'find_records'
+            },
+            { order: 2, title: 'Create task', description: 'Create the task', tool: 'create_model' }
+          ]
+        }),
+        new WorkflowDefinition({
+          name: 'demo_tasks',
+          title: 'Demo Tasks',
+          description: 'Demo task tracking workflow',
+          tags: ['tasks', 'demo'],
+          models: ['task'],
+          steps: [{ order: 1, title: 'Intro', description: 'Introduce task tracking' }]
+        }),
+        new WorkflowDefinition({
+          name: 'create_book',
+          title: 'Create a Book',
+          description: 'Add a book to the catalog',
+          tags: ['catalog'],
+          models: ['book'],
+          steps: [{ order: 1, title: 'Find author', description: 'Search for author' }]
+        })
+      ]
+    })
   })
 }
 
@@ -154,33 +153,33 @@ describe('SuggestWorkflowTool', () => {
 
   it('should render loop group when first step is in a loop', async () => {
     const registry = new DomainRegistry({
-      knowledge: new DomainKnowledge({ concepts: [], models: {} }),
-      rules: new RuleSet([]),
-      workflows: new WorkflowRegistry([
-        new WorkflowDefinition({
-          name: 'loop_first',
-          title: 'Loop First',
-          description: 'Workflow starting with a loop',
-          steps: [
-            {
-              order: 1,
-              title: 'Fetch',
-              description: 'Fetch data',
-              tool: 'search_records',
-              exhaustive: true,
-              loopGroup: 'fetch-loop'
-            },
-            {
-              order: 2,
-              title: 'Process',
-              description: 'Process page',
-              tool: 'store_analysis_memory',
-              loopGroup: 'fetch-loop'
-            },
-            { order: 3, title: 'Done', description: 'Finish up' }
-          ]
-        })
-      ])
+      adapter: new InMemoryDomainAdapter({
+        workflows: [
+          new WorkflowDefinition({
+            name: 'loop_first',
+            title: 'Loop First',
+            description: 'Workflow starting with a loop',
+            steps: [
+              {
+                order: 1,
+                title: 'Fetch',
+                description: 'Fetch data',
+                tool: 'search_records',
+                exhaustive: true,
+                loopGroup: 'fetch-loop'
+              },
+              {
+                order: 2,
+                title: 'Process',
+                description: 'Process page',
+                tool: 'store_analysis_memory',
+                loopGroup: 'fetch-loop'
+              },
+              { order: 3, title: 'Done', description: 'Finish up' }
+            ]
+          })
+        ]
+      })
     })
     const loopTool = new SuggestWorkflowTool({ domainRegistry: registry })
     const result = await loopTool.execute({ workflow: 'loop_first' })
@@ -194,32 +193,32 @@ describe('SuggestWorkflowTool', () => {
 
   it('should render parallel group when first step is parallel', async () => {
     const registry = new DomainRegistry({
-      knowledge: new DomainKnowledge({ concepts: [], models: {} }),
-      rules: new RuleSet([]),
-      workflows: new WorkflowRegistry([
-        new WorkflowDefinition({
-          name: 'parallel_first',
-          title: 'Parallel First',
-          description: 'Workflow starting with parallel steps',
-          steps: [
-            {
-              order: 1,
-              title: 'Fetch A',
-              description: 'Get A',
-              tool: 'find_records',
-              parallelGroup: 'init'
-            },
-            {
-              order: 2,
-              title: 'Fetch B',
-              description: 'Get B',
-              tool: 'list_models',
-              parallelGroup: 'init'
-            },
-            { order: 3, title: 'Done', description: 'Finish up' }
-          ]
-        })
-      ])
+      adapter: new InMemoryDomainAdapter({
+        workflows: [
+          new WorkflowDefinition({
+            name: 'parallel_first',
+            title: 'Parallel First',
+            description: 'Workflow starting with parallel steps',
+            steps: [
+              {
+                order: 1,
+                title: 'Fetch A',
+                description: 'Get A',
+                tool: 'find_records',
+                parallelGroup: 'init'
+              },
+              {
+                order: 2,
+                title: 'Fetch B',
+                description: 'Get B',
+                tool: 'list_models',
+                parallelGroup: 'init'
+              },
+              { order: 3, title: 'Done', description: 'Finish up' }
+            ]
+          })
+        ]
+      })
     })
     const parallelTool = new SuggestWorkflowTool({ domainRegistry: registry })
     const result = await parallelTool.execute({ workflow: 'parallel_first' })
