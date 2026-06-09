@@ -14,22 +14,22 @@ import { embed, embedBatch } from '#src/runtime/embeddings.js'
 
 const testItems = [
   {
-    name: 'deal_rights',
-    title: 'Deal Rights Hierarchy',
-    description: 'How deals relate to rights.',
-    tags: ['licensing', 'hierarchy']
+    name: 'book_genre_hierarchy',
+    title: 'Book Genre Hierarchy',
+    description: 'How books relate to genres.',
+    tags: ['catalog', 'hierarchy']
   },
   {
-    name: 'content_scheduling',
-    title: 'Content Scheduling',
-    description: 'Schedule content for broadcast.',
-    tags: ['scheduling', 'broadcast']
+    name: 'project_task_management',
+    title: 'Project Task Management',
+    description: 'Manage tasks within a project to track progress.',
+    tags: ['tasks', 'workflow']
   },
   {
-    name: 'catchup_vod',
-    title: 'Catch-up VOD',
-    description: 'On-demand availability after broadcast.',
-    tags: ['vod', 'catchup']
+    name: 'reading_progress',
+    title: 'Reading Progress',
+    description: 'Track reading completion and status.',
+    tags: ['reading', 'catalog']
   }
 ]
 
@@ -43,32 +43,32 @@ describe('lib/mcp/domain/search-strategy', () => {
     })
 
     it('should match by name', async () => {
-      const results = await search.search('deal')
+      const results = await search.search('book')
       expect(results).toHaveLength(1)
-      expect(results[0].name).toBe('deal_rights')
+      expect(results[0].name).toBe('book_genre_hierarchy')
     })
 
     it('should match by title', async () => {
-      const results = await search.search('Scheduling')
+      const results = await search.search('Project')
       expect(results).toHaveLength(1)
-      expect(results[0].name).toBe('content_scheduling')
+      expect(results[0].name).toBe('project_task_management')
     })
 
     it('should match by description', async () => {
-      const results = await search.search('broadcast')
+      const results = await search.search('track')
       expect(results).toHaveLength(2)
     })
 
     it('should match by tags', async () => {
-      const results = await search.search('vod')
+      const results = await search.search('reading')
       expect(results).toHaveLength(1)
-      expect(results[0].name).toBe('catchup_vod')
+      expect(results[0].name).toBe('reading_progress')
     })
 
     it('should be case-insensitive', async () => {
       const results = await search.search('HIERARCHY')
       expect(results).toHaveLength(1)
-      expect(results[0].name).toBe('deal_rights')
+      expect(results[0].name).toBe('book_genre_hierarchy')
     })
 
     it('should return empty for no match', async () => {
@@ -113,10 +113,10 @@ describe('lib/mcp/domain/search-strategy', () => {
       const search = new EmbeddingSearch({ threshold: 0.1 })
       await search.initialize(testItems, (i) => `${i.name}: ${i.description}`)
 
-      const results = await search.search('deal')
+      const results = await search.search('book')
       // Items with cosine > 0.1 to [1,0,0]: item 0 (1.0) and item 2 (~0.9)
       expect(results).toHaveLength(2)
-      expect(results[0].name).toBe('deal_rights')
+      expect(results[0].name).toBe('book_genre_hierarchy')
     })
 
     it('should fall back to substring when no embedding results match', async () => {
@@ -131,10 +131,10 @@ describe('lib/mcp/domain/search-strategy', () => {
       const search = new EmbeddingSearch({ threshold: 0.5 })
       await search.initialize(testItems, (i) => i.name)
 
-      // No embedding results, but 'deal' appears in item name → substring fallback
-      const results = await search.search('deal')
+      // No embedding results, but 'book' appears in item name → substring fallback
+      const results = await search.search('book')
       expect(results).toHaveLength(1)
-      expect(results[0].name).toBe('deal_rights')
+      expect(results[0].name).toBe('book_genre_hierarchy')
     })
 
     it('should pass options through to SemanticSearch', async () => {

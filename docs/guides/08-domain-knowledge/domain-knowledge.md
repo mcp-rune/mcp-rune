@@ -67,9 +67,9 @@ src/<server>/domain/                 # Server-specific domain data
 
 **Key distinction: Concept vs Rule vs Workflow**
 
-- **Concept** = knowledge about what exists and how things relate ("deals contain rights, which inherit restrictions")
-- **Rule** = a testable constraint that can pass or fail ("catch-up rights must have transmission_type")
-- **Workflow** = an ordered sequence of steps to accomplish a goal ("set up catch-up VOD in 5 steps")
+- **Concept** = knowledge about what exists and how things relate ("projects contain tasks, which inherit priority and due date")
+- **Rule** = a testable constraint that can pass or fail ("in-progress tasks must have a due_date")
+- **Workflow** = an ordered sequence of steps to accomplish a goal ("set up a project with tasks in 5 steps")
 
 If you find yourself writing a concept with an `evaluate` function, make it a rule. If you find yourself writing a rule with 10 steps, make it a workflow.
 
@@ -87,11 +87,11 @@ A `DomainConcept` captures knowledge that spans multiple models and cannot be ex
 import { DomainConcept } from '#src/mcp/domain/knowledge.js'
 
 new DomainConcept({
-  name: 'deal_rights_hierarchy',              // Unique identifier (snake_case)
-  title: 'Deal → Rights → Platforms',          // Human-readable title
-  description: 'Deals contain rights...',      // 1-2 sentence explanation
-  models: ['deal', 'right', 'specific_platform'],  // Models this concept spans
-  tags: ['hierarchy', 'licensing'],            // For filtering and search
+  name: 'project_task_hierarchy',              // Unique identifier (snake_case)
+  title: 'Project → Task → Tag',               // Human-readable title
+  description: 'Projects contain tasks...',   // 1-2 sentence explanation
+  models: ['project', 'task', 'tag'],          // Models this concept spans
+  tags: ['hierarchy', 'structure'],            // For filtering and search
   details: { ... }                             // Structured additional context
 })
 ```
@@ -100,11 +100,11 @@ new DomainConcept({
 import { DomainConcept } from '#src/mcp/domain/knowledge.js'
 
 new DomainConcept({
-  name: 'deal_rights_hierarchy',              // Unique identifier (snake_case)
-  title: 'Deal → Rights → Platforms',          // Human-readable title
-  description: 'Deals contain rights...',      // 1-2 sentence explanation
-  models: ['deal', 'right', 'specific_platform'],  // Models this concept spans
-  tags: ['hierarchy', 'licensing'],            // For filtering and search
+  name: 'project_task_hierarchy',              // Unique identifier (snake_case)
+  title: 'Project → Task → Tag',               // Human-readable title
+  description: 'Projects contain tasks...',   // 1-2 sentence explanation
+  models: ['project', 'task', 'tag'],          // Models this concept spans
+  tags: ['hierarchy', 'structure'],            // For filtering and search
   details: { ... }                             // Structured additional context
 })
 ```
@@ -113,11 +113,11 @@ new DomainConcept({
 
 The `details` object is **freeform by design** — the `get_domain_context` tool renders it as structured content to the LLM, so any keys work. However, the formatting layer recognizes certain conventional keys and renders them specially:
 
-| Key           | Type                   | Rendering                                     | Purpose                                      |
-| ------------- | ---------------------- | --------------------------------------------- | -------------------------------------------- |
-| `inheritance` | `{ from, to, fields }` | `**Inheritance:** deal → right (fields: ...)` | Describes field inheritance between entities |
-| `process`     | `string`               | `**Process:** Create deal → add rights → ...` | Step-by-step procedure                       |
-| `tips`        | `string[]`             | Bulleted list under `**Tips:**`               | Actionable guidance                          |
+| Key           | Type                   | Rendering                                       | Purpose                                      |
+| ------------- | ---------------------- | ----------------------------------------------- | -------------------------------------------- |
+| `inheritance` | `{ from, to, fields }` | `**Inheritance:** project → task (fields: ...)` | Describes field inheritance between entities |
+| `process`     | `string`               | `**Process:** Create project → add tasks → ...` | Step-by-step procedure                       |
+| `tips`        | `string[]`             | Bulleted list under `**Tips:**`                 | Actionable guidance                          |
 
 **Other keys** are passed through as-is in the JSON context. Common conventions:
 
@@ -140,22 +140,22 @@ You can invent new keys freely — just be descriptive. The formatting layer wil
 
 ```js file=examples/domain-knowledge-guide-02.js
 new DomainConcept({
-  name: 'deal_rights_hierarchy',
-  title: 'Deal → Rights → Platforms',
+  name: 'project_task_hierarchy',
+  title: 'Project → Task → Tag',
   description:
-    'Deals contain rights, which in turn have platform assignments. Rights inherit certain fields from their parent deal.',
-  models: ['deal', 'right', 'specific_platform'],
-  tags: ['hierarchy', 'licensing', 'inheritance'],
+    'Projects contain tasks, which in turn have tags. Tasks inherit certain fields from their parent project.',
+  models: ['project', 'task', 'tag'],
+  tags: ['hierarchy', 'structure', 'inheritance'],
   details: {
     inheritance: {
-      from: 'deal',
-      to: 'right',
-      fields: ['restrictions', 'transmission config', 'offset timing']
+      from: 'project',
+      to: 'task',
+      fields: ['priority', 'due_date', 'assignee']
     },
-    process: 'Create deal first → add rights under the deal → assign specific_platforms per right',
+    process: 'Create project first → add tasks under the project → assign tags per task',
     tips: [
-      'Create the deal before creating rights — rights are nested under deals',
-      'Platform assignment is per-right, not per-deal (use specific_platforms)'
+      'Create the project before creating tasks — tasks are nested under projects',
+      'Tag assignment is per-task, not per-project (use tags)'
     ]
   }
 })
@@ -163,22 +163,22 @@ new DomainConcept({
 
 ```ts file=examples/domain-knowledge-guide-02.ts
 new DomainConcept({
-  name: 'deal_rights_hierarchy',
-  title: 'Deal → Rights → Platforms',
+  name: 'project_task_hierarchy',
+  title: 'Project → Task → Tag',
   description:
-    'Deals contain rights, which in turn have platform assignments. Rights inherit certain fields from their parent deal.',
-  models: ['deal', 'right', 'specific_platform'],
-  tags: ['hierarchy', 'licensing', 'inheritance'],
+    'Projects contain tasks, which in turn have tags. Tasks inherit certain fields from their parent project.',
+  models: ['project', 'task', 'tag'],
+  tags: ['hierarchy', 'structure', 'inheritance'],
   details: {
     inheritance: {
-      from: 'deal',
-      to: 'right',
-      fields: ['restrictions', 'transmission config', 'offset timing']
+      from: 'project',
+      to: 'task',
+      fields: ['priority', 'due_date', 'assignee']
     },
-    process: 'Create deal first → add rights under the deal → assign specific_platforms per right',
+    process: 'Create project first → add tasks under the project → assign tags per task',
     tips: [
-      'Create the deal before creating rights — rights are nested under deals',
-      'Platform assignment is per-right, not per-deal (use specific_platforms)'
+      'Create the project before creating tasks — tasks are nested under projects',
+      'Tag assignment is per-task, not per-project (use tags)'
     ]
   }
 })
@@ -188,40 +188,48 @@ new DomainConcept({
 
 ```js file=examples/domain-knowledge-guide-03.js
 new DomainConcept({
-  name: 'rights_validation_status',
-  title: 'Rights Status Calculation',
-  description: 'When a schedule entry is created, its rights status is calculated automatically.',
-  models: ['right', 'scheduling', 'platform'],
-  tags: ['rights', 'validation', 'status'],
+  name: 'task_completion_status',
+  title: 'Task Status Lifecycle',
+  description:
+    'When a task is created or updated, its completion status follows a defined lifecycle.',
+  models: ['task', 'project'],
+  tags: ['status', 'lifecycle', 'tasks'],
   details: {
     statuses: {
-      cleared: 'Rights are satisfied — the schedule entry is valid',
-      in_conflict: 'One or more rights exist but a restriction has been breached',
-      no_rights: 'No single right satisfies ALL platform requirements',
-      denied: 'Rights have been explicitly denied'
+      pending: 'Task has not been started yet',
+      in_progress: 'Task is actively being worked on',
+      completed: 'Task has been finished',
+      cancelled: 'Task was abandoned before completion'
     },
-    process: 'Schedule entry created → background job calculates rights status → status displayed',
-    tips: ['Rights status is calculated automatically — never set it manually']
+    process:
+      'Task created → status set to pending → in_progress when started → completed when done',
+    tips: [
+      'Task status transitions are tracked automatically — update status to reflect current state'
+    ]
   }
 })
 ```
 
 ```ts file=examples/domain-knowledge-guide-03.ts
 new DomainConcept({
-  name: 'rights_validation_status',
-  title: 'Rights Status Calculation',
-  description: 'When a schedule entry is created, its rights status is calculated automatically.',
-  models: ['right', 'scheduling', 'platform'],
-  tags: ['rights', 'validation', 'status'],
+  name: 'task_completion_status',
+  title: 'Task Status Lifecycle',
+  description:
+    'When a task is created or updated, its completion status follows a defined lifecycle.',
+  models: ['task', 'project'],
+  tags: ['status', 'lifecycle', 'tasks'],
   details: {
     statuses: {
-      cleared: 'Rights are satisfied — the schedule entry is valid',
-      in_conflict: 'One or more rights exist but a restriction has been breached',
-      no_rights: 'No single right satisfies ALL platform requirements',
-      denied: 'Rights have been explicitly denied'
+      pending: 'Task has not been started yet',
+      in_progress: 'Task is actively being worked on',
+      completed: 'Task has been finished',
+      cancelled: 'Task was abandoned before completion'
     },
-    process: 'Schedule entry created → background job calculates rights status → status displayed',
-    tips: ['Rights status is calculated automatically — never set it manually']
+    process:
+      'Task created → status set to pending → in_progress when started → completed when done',
+    tips: [
+      'Task status transitions are tracked automatically — update status to reflect current state'
+    ]
   }
 })
 ```
@@ -277,18 +285,18 @@ export const concepts = [
   // ============================================================================
   // HIERARCHY & STRUCTURE CONCEPTS
   // ============================================================================
-  new DomainConcept({ name: 'deal_rights_hierarchy', ... }),
-  new DomainConcept({ name: 'two_step_platform_assignment', ... }),
+  new DomainConcept({ name: 'project_task_hierarchy', ... }),
+  new DomainConcept({ name: 'two_step_tag_assignment', ... }),
 
   // ============================================================================
   // RIGHTS VALIDATION CONCEPTS
   // ============================================================================
-  new DomainConcept({ name: 'rights_validation_status', ... }),
+  new DomainConcept({ name: 'task_completion_status', ... }),
 
   // ============================================================================
   // TERMINOLOGY & WINDOWS CONCEPTS
   // ============================================================================
-  new DomainConcept({ name: 'window_terminology', ... }),
+  new DomainConcept({ name: 'project_terminology', ... }),
 ]
 ```
 
@@ -297,18 +305,18 @@ export const concepts = [
   // ============================================================================
   // HIERARCHY & STRUCTURE CONCEPTS
   // ============================================================================
-  new DomainConcept({ name: 'deal_rights_hierarchy', ... }),
-  new DomainConcept({ name: 'two_step_platform_assignment', ... }),
+  new DomainConcept({ name: 'project_task_hierarchy', ... }),
+  new DomainConcept({ name: 'two_step_tag_assignment', ... }),
 
   // ============================================================================
   // RIGHTS VALIDATION CONCEPTS
   // ============================================================================
-  new DomainConcept({ name: 'rights_validation_status', ... }),
+  new DomainConcept({ name: 'task_completion_status', ... }),
 
   // ============================================================================
   // TERMINOLOGY & WINDOWS CONCEPTS
   // ============================================================================
-  new DomainConcept({ name: 'window_terminology', ... }),
+  new DomainConcept({ name: 'project_terminology', ... }),
 ]
 ```
 
@@ -326,11 +334,11 @@ A `BusinessRule` validates constraints between entities that individual model va
 import { BusinessRule } from '#src/mcp/domain/business-rules.js'
 
 new BusinessRule({
-  name: 'catchup_requires_transmission_config', // Unique identifier (snake_case)
-  description: 'Catch-up rights must specify transmission_type and reference_tx_nth',
-  scope: ['right'], // Models this rule applies to
+  name: 'task_requires_due_date', // Unique identifier (snake_case)
+  description: 'Tasks in progress must have a due_date set',
+  scope: ['task'], // Models this rule applies to
   severity: 'error', // 'error' | 'warning' | 'info'
-  tags: ['catch-up', 'required-fields'], // For filtering
+  tags: ['in-progress', 'required-fields'], // For filtering
   evaluate(data, context = {}) {
     // Validation function
     // ...
@@ -342,11 +350,11 @@ new BusinessRule({
 import { BusinessRule } from '#src/mcp/domain/business-rules.js'
 
 new BusinessRule({
-  name: 'catchup_requires_transmission_config', // Unique identifier (snake_case)
-  description: 'Catch-up rights must specify transmission_type and reference_tx_nth',
-  scope: ['right'], // Models this rule applies to
+  name: 'task_requires_due_date', // Unique identifier (snake_case)
+  description: 'Tasks in progress must have a due_date set',
+  scope: ['task'], // Models this rule applies to
   severity: 'error', // 'error' | 'warning' | 'info'
-  tags: ['catch-up', 'required-fields'], // For filtering
+  tags: ['in-progress', 'required-fields'], // For filtering
   evaluate(data, context = {}) {
     // Validation function
     // ...
@@ -360,10 +368,10 @@ The evaluate function receives two arguments and must return a result object:
 
 **Input:**
 
-| Parameter | Description                                                                                  |
-| --------- | -------------------------------------------------------------------------------------------- |
-| `data`    | The entity data being validated (e.g., `{ right_type: 'catchup', transmission_type: null }`) |
-| `context` | Additional context — related entities, parent data, content type, etc.                       |
+| Parameter | Description                                                                         |
+| --------- | ----------------------------------------------------------------------------------- |
+| `data`    | The entity data being validated (e.g., `{ status: 'in_progress', due_date: null }`) |
+| `context` | Additional context — related entities, parent data, content type, etc.              |
 
 **Output:**
 
@@ -399,8 +407,8 @@ The evaluate function receives two arguments and must return a result object:
 
 ```js file=examples/domain-knowledge-guide-08.js
 evaluate(data) {
-  if (data.right_type !== 'catchup') {
-    return { passed: true, message: 'Not a catch-up right, rule not applicable' }
+  if (data.status !== 'in_progress') {
+    return { passed: true, message: 'Not an in-progress task, rule not applicable' }
   }
   // ... actual validation
 }
@@ -408,8 +416,8 @@ evaluate(data) {
 
 ```ts file=examples/domain-knowledge-guide-08.ts
 evaluate(data) {
-  if (data.right_type !== 'catchup') {
-    return { passed: true, message: 'Not a catch-up right, rule not applicable' }
+  if (data.status !== 'in_progress') {
+    return { passed: true, message: 'Not an in-progress task, rule not applicable' }
   }
   // ... actual validation
 }
@@ -419,19 +427,19 @@ evaluate(data) {
 
 ```js file=examples/domain-knowledge-guide-09.js
 evaluate(data, context = {}) {
-  if (!context.rights || context.rights.length === 0) {
-    return { passed: true, message: 'No rights in context to validate against' }
+  if (!context.tasks || context.tasks.length === 0) {
+    return { passed: true, message: 'No tasks in context to validate against' }
   }
-  // ... validate deal dates encompass rights dates
+  // ... validate project dates encompass task due dates
 }
 ```
 
 ```ts file=examples/domain-knowledge-guide-09.ts
 evaluate(data, context = {}) {
-  if (!context.rights || context.rights.length === 0) {
-    return { passed: true, message: 'No rights in context to validate against' }
+  if (!context.tasks || context.tasks.length === 0) {
+    return { passed: true, message: 'No tasks in context to validate against' }
   }
-  // ... validate deal dates encompass rights dates
+  // ... validate project dates encompass task due dates
 }
 ```
 
@@ -440,18 +448,16 @@ evaluate(data, context = {}) {
 ```js file=examples/domain-knowledge-guide-10.js
 return {
   passed: false,
-  message: `Catch-up rights require: ${missing.join(', ')}`,
-  suggestion:
-    'Set transmission_type (play_run/costed_run/rerun) and reference_tx_nth (e.g., "all", "1")'
+  message: `In-progress tasks require: ${missing.join(', ')}`,
+  suggestion: 'Set due_date to a valid ISO date string (e.g., "2026-03-01T00:00:00Z")'
 }
 ```
 
 ```ts file=examples/domain-knowledge-guide-10.ts
 return {
   passed: false,
-  message: `Catch-up rights require: ${missing.join(', ')}`,
-  suggestion:
-    'Set transmission_type (play_run/costed_run/rerun) and reference_tx_nth (e.g., "all", "1")'
+  message: `In-progress tasks require: ${missing.join(', ')}`,
+  suggestion: 'Set due_date to a valid ISO date string (e.g., "2026-03-01T00:00:00Z")'
 }
 ```
 
@@ -460,7 +466,7 @@ return {
 ```js file=examples/domain-knowledge-guide-11.js
 new BusinessRule({
   name: 'end_date_after_start_date',
-  scope: ['right', 'deal'] // Applies to both
+  scope: ['task', 'project'] // Applies to both
   // ...
 })
 ```
@@ -468,7 +474,7 @@ new BusinessRule({
 ```ts file=examples/domain-knowledge-guide-11.ts
 new BusinessRule({
   name: 'end_date_after_start_date',
-  scope: ['right', 'deal'] // Applies to both
+  scope: ['task', 'project'] // Applies to both
   // ...
 })
 ```
@@ -479,83 +485,79 @@ new BusinessRule({
 
 ```js file=src/missing.js
 new BusinessRule({
-  name: 'catchup_requires_transmission_config',
-  description: 'Catch-up rights must specify transmission_type and reference_tx_nth',
-  scope: ['right'],
+  name: 'task_requires_due_date',
+  description: 'Tasks in progress must have a due_date set',
+  scope: ['task'],
   severity: 'error',
-  tags: ['catch-up', 'required-fields'],
+  tags: ['in-progress', 'required-fields'],
   evaluate(data) {
-    if (data.right_type !== 'catchup') {
-      return { passed: true, message: 'Not a catch-up right, rule not applicable' }
+    if (data.status !== 'in_progress') {
+      return { passed: true, message: 'Not an in-progress task, rule not applicable' }
     }
     const missing = []
-    if (!data.transmission_type) missing.push('transmission_type')
-    if (!data.reference_tx_nth) missing.push('reference_tx_nth')
+    if (!data.due_date) missing.push('due_date')
 
     if (missing.length > 0) {
       return {
         passed: false,
-        message: `Catch-up rights require: ${missing.join(', ')}`,
-        suggestion:
-          'Set transmission_type (play_run/costed_run/rerun) and reference_tx_nth (e.g., "all", "1", "1-3")'
+        message: `In-progress tasks require: ${missing.join(', ')}`,
+        suggestion: 'Set due_date to a valid ISO date string (e.g., "2026-03-01T00:00:00Z")'
       }
     }
-    return { passed: true, message: 'Catch-up transmission config is set' }
+    return { passed: true, message: 'Task due date is set' }
   }
 })
 ```
 
 ```ts file=src/missing.ts
 new BusinessRule({
-  name: 'catchup_requires_transmission_config',
-  description: 'Catch-up rights must specify transmission_type and reference_tx_nth',
-  scope: ['right'],
+  name: 'task_requires_due_date',
+  description: 'Tasks in progress must have a due_date set',
+  scope: ['task'],
   severity: 'error',
-  tags: ['catch-up', 'required-fields'],
+  tags: ['in-progress', 'required-fields'],
   evaluate(data) {
-    if (data.right_type !== 'catchup') {
-      return { passed: true, message: 'Not a catch-up right, rule not applicable' }
+    if (data.status !== 'in_progress') {
+      return { passed: true, message: 'Not an in-progress task, rule not applicable' }
     }
     const missing = []
-    if (!data.transmission_type) missing.push('transmission_type')
-    if (!data.reference_tx_nth) missing.push('reference_tx_nth')
+    if (!data.due_date) missing.push('due_date')
 
     if (missing.length > 0) {
       return {
         passed: false,
-        message: `Catch-up rights require: ${missing.join(', ')}`,
-        suggestion:
-          'Set transmission_type (play_run/costed_run/rerun) and reference_tx_nth (e.g., "all", "1", "1-3")'
+        message: `In-progress tasks require: ${missing.join(', ')}`,
+        suggestion: 'Set due_date to a valid ISO date string (e.g., "2026-03-01T00:00:00Z")'
       }
     }
-    return { passed: true, message: 'Catch-up transmission config is set' }
+    return { passed: true, message: 'Task due date is set' }
   }
 })
 ```
 
 **Cross-entity validation rule (uses context):**
 
-```js file=src/deal-start.js
+```js file=src/project-dates-rule.js
 new BusinessRule({
-  name: 'deal_dates_encompass_rights',
-  description: 'Deal date range should encompass its rights date ranges',
-  scope: ['deal'],
+  name: 'project_dates_encompass_tasks',
+  description: "Project date range should encompass its tasks' due dates",
+  scope: ['project'],
   severity: 'warning',
   tags: ['dates', 'cross-entity'],
   evaluate(data, context = {}) {
     if (!data.starts && !data.ends) {
-      return { passed: true, message: 'Deal has no date constraints' }
+      return { passed: true, message: 'Project has no date constraints' }
     }
-    if (!context.rights || context.rights.length === 0) {
-      return { passed: true, message: 'No rights in context to validate against' }
+    if (!context.tasks || context.tasks.length === 0) {
+      return { passed: true, message: 'No tasks in context to validate against' }
     }
 
-    const dealStart = data.starts ? new Date(data.starts) : null
+    const projectStart = data.starts ? new Date(data.starts) : null
     const issues = []
 
-    for (const right of context.rights) {
-      if (dealStart && right.starts && new Date(right.starts) < dealStart) {
-        issues.push(`Right starts before deal`)
+    for (const task of context.tasks) {
+      if (projectStart && task.due_date && new Date(task.due_date) < projectStart) {
+        issues.push(`Task due date is before project start`)
       }
     }
 
@@ -563,35 +565,35 @@ new BusinessRule({
       return {
         passed: false,
         message: issues.join('; '),
-        suggestion: 'Extend deal dates to encompass all rights'
+        suggestion: 'Extend project dates to encompass all task due dates'
       }
     }
-    return { passed: true, message: 'Deal dates encompass all rights' }
+    return { passed: true, message: 'Project dates encompass all task due dates' }
   }
 })
 ```
 
-```ts file=src/deal-start.ts
+```ts file=src/project-dates-rule.ts
 new BusinessRule({
-  name: 'deal_dates_encompass_rights',
-  description: 'Deal date range should encompass its rights date ranges',
-  scope: ['deal'],
+  name: 'project_dates_encompass_tasks',
+  description: "Project date range should encompass its tasks' due dates",
+  scope: ['project'],
   severity: 'warning',
   tags: ['dates', 'cross-entity'],
   evaluate(data, context = {}) {
     if (!data.starts && !data.ends) {
-      return { passed: true, message: 'Deal has no date constraints' }
+      return { passed: true, message: 'Project has no date constraints' }
     }
-    if (!context.rights || context.rights.length === 0) {
-      return { passed: true, message: 'No rights in context to validate against' }
+    if (!context.tasks || context.tasks.length === 0) {
+      return { passed: true, message: 'No tasks in context to validate against' }
     }
 
-    const dealStart = data.starts ? new Date(data.starts) : null
+    const projectStart = data.starts ? new Date(data.starts) : null
     const issues = []
 
-    for (const right of context.rights) {
-      if (dealStart && right.starts && new Date(right.starts) < dealStart) {
-        issues.push(`Right starts before deal`)
+    for (const task of context.tasks) {
+      if (projectStart && task.due_date && new Date(task.due_date) < projectStart) {
+        issues.push(`Task due date is before project start`)
       }
     }
 
@@ -599,10 +601,10 @@ new BusinessRule({
       return {
         passed: false,
         message: issues.join('; '),
-        suggestion: 'Extend deal dates to encompass all rights'
+        suggestion: 'Extend project dates to encompass all task due dates'
       }
     }
-    return { passed: true, message: 'Deal dates encompass all rights' }
+    return { passed: true, message: 'Project dates encompass all task due dates' }
   }
 })
 ```
@@ -611,27 +613,27 @@ new BusinessRule({
 
 Add rules to `src/<server>/domain/rules/<domain>-rules.js`. Each file exports an array:
 
-```js file=src/rights-rules.js
-// src/<server>/domain/rules/rights-rules.js
+```js file=src/task-rules.js
+// src/<server>/domain/rules/task-rules.js
 import { BusinessRule } from '#src/mcp/domain/business-rules.js'
 
-export const rightsRules = [
+export const taskRules = [
   new BusinessRule({ ... }),
   new BusinessRule({ ... }),
 ]
 ```
 
-```ts file=src/rights-rules.ts
-// src/<server>/domain/rules/rights-rules.js
+```ts file=src/task-rules.ts
+// src/<server>/domain/rules/task-rules.js
 import { BusinessRule } from '#src/mcp/domain/business-rules.js'
 
-export const rightsRules = [
+export const taskRules = [
   new BusinessRule({ ... }),
   new BusinessRule({ ... }),
 ]
 ```
 
-Group related rules in the same file. Create new files for distinct domains (e.g., `deal-rules.js`, `scheduling-rules.js`).
+Group related rules in the same file. Create new files for distinct domains (e.g., `project-rules.js`, `book-rules.js`).
 
 ---
 
@@ -650,11 +652,11 @@ A `WorkflowDefinition` is a structured multi-step process guide. It can include 
 import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
 
 new WorkflowDefinition({
-  name: 'catchup_vod_setup',                    // Unique identifier (snake_case)
-  title: 'Set Up Catch-Up VOD',                 // Human-readable title
-  description: 'Creates a rule that generates schedulings when linear transmissions occur.',
-  tags: ['catch-up', 'vod', 'onboarding'],      // For filtering
-  models: ['title', 'rule', 'specific_platform'], // Models involved
+  name: 'create_project_workflow',                    // Unique identifier (snake_case)
+  title: 'Set Up a New Project',               // Human-readable title
+  description: 'Creates a project and populates it with tasks.',
+  tags: ['project', 'tasks', 'onboarding'],    // For filtering
+  models: ['project', 'task', 'tag'],          // Models involved
   steps: [
     { order: 1, title: '...', description: '...', ... },
     { order: 2, title: '...', description: '...', ... },
@@ -666,11 +668,11 @@ new WorkflowDefinition({
 import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
 
 new WorkflowDefinition({
-  name: 'catchup_vod_setup',                    // Unique identifier (snake_case)
-  title: 'Set Up Catch-Up VOD',                 // Human-readable title
-  description: 'Creates a rule that generates schedulings when linear transmissions occur.',
-  tags: ['catch-up', 'vod', 'onboarding'],      // For filtering
-  models: ['title', 'rule', 'specific_platform'], // Models involved
+  name: 'create_project_workflow',                    // Unique identifier (snake_case)
+  title: 'Set Up a New Project',               // Human-readable title
+  description: 'Creates a project and populates it with tasks.',
+  tags: ['project', 'tasks', 'onboarding'],    // For filtering
+  models: ['project', 'task', 'tag'],          // Models involved
   steps: [
     { order: 1, title: '...', description: '...', ... },
     { order: 2, title: '...', description: '...', ... },
@@ -685,23 +687,23 @@ Each step is a plain object (auto-wrapped in `WorkflowStep`):
 ```js file=examples/domain-knowledge-guide-16.js
 {
   order: 1,                           // Step number (1-based)
-  title: 'Find the title',            // Step title
-  description: 'Search for the title you want to configure.',
-  tool: 'find_records',                 // Optional: MCP tool to call
+  title: 'Find the project',          // Step title
+  description: 'Search for the project you want to set up.',
+  tool: 'find_records',               // Optional: MCP tool to call
   toolArgs: {                         // Optional: example arguments
-    model: 'title',
-    search: { name: '<title_name>' }
+    model: 'project',
+    search: { name: '<project_name>' }
   },
   decision: {                          // Optional: branching point
-    question: 'All platforms or specific ones?',
+    question: 'All tasks or specific ones?',
     options: [
-      { label: 'All platforms', description: 'Skip — rule applies everywhere' },
-      { label: 'Specific platforms', description: 'Add specific_platform records', nextStep: 6 }
+      { label: 'All tasks', description: 'Skip — project applies to all tasks' },
+      { label: 'Specific tasks', description: 'Add task records', nextStep: 6 }
     ]
   },
   tips: [                              // Optional: guidance for this step
-    'You need the title ID for the next step',
-    'If the title does not exist, create it first'
+    'You need the project ID for the next step',
+    'If the project does not exist, create it first'
   ]
 }
 ```
@@ -709,23 +711,23 @@ Each step is a plain object (auto-wrapped in `WorkflowStep`):
 ```ts file=examples/domain-knowledge-guide-16.ts
 {
   order: 1,                           // Step number (1-based)
-  title: 'Find the title',            // Step title
-  description: 'Search for the title you want to configure.',
-  tool: 'find_records',                 // Optional: MCP tool to call
+  title: 'Find the project',          // Step title
+  description: 'Search for the project you want to set up.',
+  tool: 'find_records',               // Optional: MCP tool to call
   toolArgs: {                         // Optional: example arguments
-    model: 'title',
-    search: { name: '<title_name>' }
+    model: 'project',
+    search: { name: '<project_name>' }
   },
   decision: {                          // Optional: branching point
-    question: 'All platforms or specific ones?',
+    question: 'All tasks or specific ones?',
     options: [
-      { label: 'All platforms', description: 'Skip — rule applies everywhere' },
-      { label: 'Specific platforms', description: 'Add specific_platform records', nextStep: 6 }
+      { label: 'All tasks', description: 'Skip — project applies to all tasks' },
+      { label: 'Specific tasks', description: 'Add task records', nextStep: 6 }
     ]
   },
   tips: [                              // Optional: guidance for this step
-    'You need the title ID for the next step',
-    'If the title does not exist, create it first'
+    'You need the project ID for the next step',
+    'If the project does not exist, create it first'
   ]
 }
 ```
@@ -742,26 +744,26 @@ Each step is a plain object (auto-wrapped in `WorkflowStep`):
 
 ```js file=examples/domain-knowledge-guide-17.js
 new WorkflowDefinition({
-  name: 'catchup_vod_setup',
-  title: 'Set Up Catch-Up VOD',
-  description: 'Set up catch-up VOD availability for a title.',
-  tags: ['catch-up', 'vod', 'onboarding'],
-  models: ['title', 'rule', 'specific_platform', 'scheduling'],
+  name: 'create_project_workflow',
+  title: 'Set Up a New Project',
+  description: 'Set up a project and populate it with tasks.',
+  tags: ['project', 'tasks', 'onboarding'],
+  models: ['project', 'task', 'tag'],
   steps: [
     {
       order: 1,
-      title: 'Find the title',
-      description: 'Search for the title to set up catch-up VOD for.',
+      title: 'Find the project',
+      description: 'Search for the project you want to set up.',
       tool: 'find_records',
-      toolArgs: { model: 'title', search: { name: '<title_name>' } },
-      tips: ['You need the title ID for the next step']
+      toolArgs: { model: 'project', search: { name: '<project_name>' } },
+      tips: ['You need the project ID for the next step']
     },
     {
       order: 2,
-      title: 'Get the rule creation guide',
-      description: 'Load the guided creation form for VOD rules.',
+      title: 'Get the task creation guide',
+      description: 'Load the guided creation form for tasks.',
       tool: 'get_prompt_guide',
-      toolArgs: { guide_name: 'create_rule' },
+      toolArgs: { guide_name: 'create_task' },
       tips: ['Use mode: "quick" if you already know the field values']
     }
     // ... more steps
@@ -771,26 +773,26 @@ new WorkflowDefinition({
 
 ```ts file=examples/domain-knowledge-guide-17.ts
 new WorkflowDefinition({
-  name: 'catchup_vod_setup',
-  title: 'Set Up Catch-Up VOD',
-  description: 'Set up catch-up VOD availability for a title.',
-  tags: ['catch-up', 'vod', 'onboarding'],
-  models: ['title', 'rule', 'specific_platform', 'scheduling'],
+  name: 'create_project_workflow',
+  title: 'Set Up a New Project',
+  description: 'Set up a project and populate it with tasks.',
+  tags: ['project', 'tasks', 'onboarding'],
+  models: ['project', 'task', 'tag'],
   steps: [
     {
       order: 1,
-      title: 'Find the title',
-      description: 'Search for the title to set up catch-up VOD for.',
+      title: 'Find the project',
+      description: 'Search for the project you want to set up.',
       tool: 'find_records',
-      toolArgs: { model: 'title', search: { name: '<title_name>' } },
-      tips: ['You need the title ID for the next step']
+      toolArgs: { model: 'project', search: { name: '<project_name>' } },
+      tips: ['You need the project ID for the next step']
     },
     {
       order: 2,
-      title: 'Get the rule creation guide',
-      description: 'Load the guided creation form for VOD rules.',
+      title: 'Get the task creation guide',
+      description: 'Load the guided creation form for tasks.',
       tool: 'get_prompt_guide',
-      toolArgs: { guide_name: 'create_rule' },
+      toolArgs: { guide_name: 'create_task' },
       tips: ['Use mode: "quick" if you already know the field values']
     }
     // ... more steps
@@ -802,27 +804,27 @@ new WorkflowDefinition({
 
 ```js file=examples/domain-knowledge-guide-18.js
 new WorkflowDefinition({
-  name: 'catchup_vod_demo',
-  title: 'Demo: Catch-Up VOD Rules',
+  name: 'demo_task_tracking',
+  title: 'Demo: Task Tracking',
   description: 'Choreographed demo with audience-friendly explanations.',
-  tags: ['catch-up', 'vod', 'demo'],
-  models: ['title', 'rule', 'specific_platform'],
+  tags: ['tasks', 'demo'],
+  models: ['project', 'task'],
   steps: [
     {
       order: 1,
       title: 'Set the scene',
       description:
-        'Explain catch-up VOD: "Catch-up lets viewers watch on-demand after broadcast..."',
-      tips: ['Key value prop: rules automate scheduling — no manual work per transmission']
+        'Explain task tracking: "Tasks let you break down projects into actionable steps..."',
+      tips: ['Key value prop: tasks make large goals manageable']
       // No tool — narrative step
     },
     {
       order: 2,
-      title: 'Find a demo title',
-      description: 'Search for a recognizable title.',
+      title: 'Find a demo project',
+      description: 'Search for a recognizable project.',
       tool: 'find_records',
-      toolArgs: { model: 'title', search: { name: 'Breaking Bad' } },
-      tips: ['Choose a title the audience will recognize']
+      toolArgs: { model: 'project', search: { name: 'The Hobbit' } },
+      tips: ['Choose a project the audience will recognize']
     }
     // ... more steps
   ]
@@ -831,27 +833,27 @@ new WorkflowDefinition({
 
 ```ts file=examples/domain-knowledge-guide-18.ts
 new WorkflowDefinition({
-  name: 'catchup_vod_demo',
-  title: 'Demo: Catch-Up VOD Rules',
+  name: 'demo_task_tracking',
+  title: 'Demo: Task Tracking',
   description: 'Choreographed demo with audience-friendly explanations.',
-  tags: ['catch-up', 'vod', 'demo'],
-  models: ['title', 'rule', 'specific_platform'],
+  tags: ['tasks', 'demo'],
+  models: ['project', 'task'],
   steps: [
     {
       order: 1,
       title: 'Set the scene',
       description:
-        'Explain catch-up VOD: "Catch-up lets viewers watch on-demand after broadcast..."',
-      tips: ['Key value prop: rules automate scheduling — no manual work per transmission']
+        'Explain task tracking: "Tasks let you break down projects into actionable steps..."',
+      tips: ['Key value prop: tasks make large goals manageable']
       // No tool — narrative step
     },
     {
       order: 2,
-      title: 'Find a demo title',
-      description: 'Search for a recognizable title.',
+      title: 'Find a demo project',
+      description: 'Search for a recognizable project.',
       tool: 'find_records',
-      toolArgs: { model: 'title', search: { name: 'Breaking Bad' } },
-      tips: ['Choose a title the audience will recognize']
+      toolArgs: { model: 'project', search: { name: 'The Hobbit' } },
+      tips: ['Choose a project the audience will recognize']
     }
     // ... more steps
   ]
@@ -862,21 +864,21 @@ new WorkflowDefinition({
 
 Add workflows to `src/<server>/domain/workflows/<category>.js`. Each file exports an array:
 
-```js file=src/catchup-workflows.js
-// src/<server>/domain/workflows/catchup-vod.js
+```js file=src/project-workflows.js
+// src/<server>/domain/workflows/project-tasks.js
 import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
 
-export const catchupWorkflows = [
+export const projectWorkflows = [
   new WorkflowDefinition({ ... }),  // Setup
   new WorkflowDefinition({ ... }),  // Demo
 ]
 ```
 
-```ts file=src/catchup-workflows.ts
-// src/<server>/domain/workflows/catchup-vod.js
+```ts file=src/project-workflows.ts
+// src/<server>/domain/workflows/project-tasks.js
 import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
 
-export const catchupWorkflows = [
+export const projectWorkflows = [
   new WorkflowDefinition({ ... }),  // Setup
   new WorkflowDefinition({ ... }),  // Demo
 ]
@@ -903,9 +905,9 @@ import { DomainRegistry } from '#src/mcp/domain/registry.js'
 import { MODEL_CLASSES } from '../models/index.js'
 
 import { concepts } from './knowledge/concepts.js'
-import { rightsRules } from './rules/rights-rules.js'
-import { dealRules } from './rules/deal-rules.js'
-import { catchupWorkflows } from './workflows/catchup-vod.js'
+import { taskRules } from './rules/task-rules.js'
+import { projectRules } from './rules/project-rules.js'
+import { projectWorkflows } from './workflows/project-tasks.js'
 
 export function createMyDomainRegistry() {
   const knowledge = new DomainKnowledge({
@@ -913,9 +915,9 @@ export function createMyDomainRegistry() {
     models: MODEL_CLASSES // Pass model classes for field metadata
   })
 
-  const rules = new RuleSet([...rightsRules, ...dealRules])
+  const rules = new RuleSet([...taskRules, ...projectRules])
 
-  const workflows = new WorkflowRegistry([...catchupWorkflows])
+  const workflows = new WorkflowRegistry([...projectWorkflows])
 
   return new DomainRegistry({ knowledge, rules, workflows })
 }
@@ -930,9 +932,9 @@ import { DomainRegistry } from '#src/mcp/domain/registry.js'
 import { MODEL_CLASSES } from '../models/index.js'
 
 import { concepts } from './knowledge/concepts.js'
-import { rightsRules } from './rules/rights-rules.js'
-import { dealRules } from './rules/deal-rules.js'
-import { catchupWorkflows } from './workflows/catchup-vod.js'
+import { taskRules } from './rules/task-rules.js'
+import { projectRules } from './rules/project-rules.js'
+import { projectWorkflows } from './workflows/project-tasks.js'
 
 export function createMyDomainRegistry() {
   const knowledge = new DomainKnowledge({
@@ -940,9 +942,9 @@ export function createMyDomainRegistry() {
     models: MODEL_CLASSES // Pass model classes for field metadata
   })
 
-  const rules = new RuleSet([...rightsRules, ...dealRules])
+  const rules = new RuleSet([...taskRules, ...projectRules])
 
-  const workflows = new WorkflowRegistry([...catchupWorkflows])
+  const workflows = new WorkflowRegistry([...projectWorkflows])
 
   return new DomainRegistry({ knowledge, rules, workflows })
 }
@@ -992,12 +994,12 @@ Four tools expose domain intelligence to users. All extend `BaseDomainTool` (cat
 
 Retrieves composed context for a model or concept.
 
-| Input                                     | Behavior                                                            |
-| ----------------------------------------- | ------------------------------------------------------------------- |
-| No args                                   | Lists all concepts and workflows (overview)                         |
-| `{ model: 'right' }`                      | Returns field metadata + concepts + rules + workflows for the model |
-| `{ concept: 'deal_rights_hierarchy' }`    | Returns full concept details                                        |
-| `{ model: 'right', concept: 'catch-up' }` | Returns both model context and concept search results               |
+| Input                                      | Behavior                                                            |
+| ------------------------------------------ | ------------------------------------------------------------------- |
+| No args                                    | Lists all concepts and workflows (overview)                         |
+| `{ model: 'task' }`                        | Returns field metadata + concepts + rules + workflows for the model |
+| `{ concept: 'project_task_hierarchy' }`    | Returns full concept details                                        |
+| `{ model: 'task', concept: 'completion' }` | Returns both model context and concept search results               |
 
 **Formatting of `details` conventional keys:**
 
@@ -1010,10 +1012,10 @@ Retrieves composed context for a model or concept.
 
 Validates entity data against applicable business rules.
 
-| Input                                                        | Behavior                              |
-| ------------------------------------------------------------ | ------------------------------------- |
-| `{ model: 'right', data: { right_type: 'catchup' } }`        | Evaluates all rules scoped to `right` |
-| `{ model: 'deal', data: {...}, context: { rights: [...] } }` | Evaluates with cross-entity context   |
+| Input                                                          | Behavior                             |
+| -------------------------------------------------------------- | ------------------------------------ |
+| `{ model: 'task', data: { status: 'in_progress' } }`           | Evaluates all rules scoped to `task` |
+| `{ model: 'project', data: {...}, context: { tasks: [...] } }` | Evaluates with cross-entity context  |
 
 Output is grouped by severity: Errors (must fix) → Warnings (should fix) → Info → Passed.
 
@@ -1021,23 +1023,23 @@ Output is grouped by severity: Errors (must fix) → Warnings (should fix) → I
 
 Returns a workflow roadmap (all step titles) plus the first step in full detail. The LLM executes one step at a time, calling `get_workflow_step` for each subsequent step.
 
-| Input                               | Behavior                                                   |
-| ----------------------------------- | ---------------------------------------------------------- |
-| No args                             | Lists all workflows                                        |
-| `{ goal: 'catch-up' }`              | Searches by title/description/tags, returns best match     |
-| `{ workflow: 'catchup_vod_setup' }` | Returns the full roadmap + first step for a named workflow |
-| `{ tag: 'demo' }`                   | Filters by tag                                             |
+| Input                                     | Behavior                                                   |
+| ----------------------------------------- | ---------------------------------------------------------- |
+| No args                                   | Lists all workflows                                        |
+| `{ goal: 'project tasks' }`               | Searches by title/description/tags, returns best match     |
+| `{ workflow: 'create_project_workflow' }` | Returns the full roadmap + first step for a named workflow |
+| `{ tag: 'demo' }`                         | Filters by tag                                             |
 
 ### `get_workflow_step`
 
 Returns detailed instructions for a single workflow step — the tool to call, arguments to pass, tips, and exclusion warnings. For loop and parallel groups, returns all steps in the group together with a hint about the next step after the group.
 
-| Input                                         | Behavior                                                         |
-| --------------------------------------------- | ---------------------------------------------------------------- |
-| `{ workflow: 'catchup_vod_setup', step: 1 }`  | Detail for step 1: tool, args, tips, next-step hint              |
-| `{ workflow: 'catchup_vod_setup', step: 3 }`  | If step 3 is in a loop or parallel group, returns the full group |
-| `{ workflow: 'unknown', step: 1 }`            | Error: lists available workflow names                            |
-| `{ workflow: 'catchup_vod_setup', step: 99 }` | Error: lists the workflow's available step numbers               |
+| Input                                               | Behavior                                                         |
+| --------------------------------------------------- | ---------------------------------------------------------------- |
+| `{ workflow: 'create_project_workflow', step: 1 }`  | Detail for step 1: tool, args, tips, next-step hint              |
+| `{ workflow: 'create_project_workflow', step: 3 }`  | If step 3 is in a loop or parallel group, returns the full group |
+| `{ workflow: 'unknown', step: 1 }`                  | Error: lists available workflow names                            |
+| `{ workflow: 'create_project_workflow', step: 99 }` | Error: lists the workflow's available step numbers               |
 
 The tool is stateless. The LLM (or a coordinating agent) drives progression by calling `get_workflow_step` once per step; the framework never tracks "current step" on the server side. Steps may declare a `contextHint` payload that surfaces in the response's `_meta.contextHints` for the transient-context protocol.
 
@@ -1316,7 +1318,7 @@ import { SemanticSearch } from '#src/mcp/domain/semantic-search.js'
 const search = new SemanticSearch({ threshold: 0.3, topK: 20 })
 await search.initialize(items, (item) => `${item.name} ${item.title}: ${item.description}`)
 
-const results = await search.search('licensing hierarchy')
+const results = await search.search('project hierarchy')
 // [{ item: <DomainConcept>, score: 0.72 }, ...]
 ```
 
@@ -1326,7 +1328,7 @@ import { SemanticSearch } from '#src/mcp/domain/semantic-search.js'
 const search = new SemanticSearch({ threshold: 0.3, topK: 20 })
 await search.initialize(items, (item) => `${item.name} ${item.title}: ${item.description}`)
 
-const results = await search.search('licensing hierarchy')
+const results = await search.search('project hierarchy')
 // [{ item: <DomainConcept>, score: 0.72 }, ...]
 ```
 

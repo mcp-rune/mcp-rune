@@ -102,8 +102,8 @@ describe('GetDomainContextTool', () => {
       knowledge: new DomainKnowledge({
         concepts: [],
         models: {
-          platform: {
-            description: 'Platform entity',
+          genre: {
+            description: 'Genre entity',
             api: { readOnly: true },
             attributes: {
               id: { type: 'string', description: 'ID' },
@@ -116,7 +116,7 @@ describe('GetDomainContextTool', () => {
       workflows: new WorkflowRegistry([])
     })
     const readOnlyTool = new GetDomainContextTool({ domainRegistry: registry })
-    const result = await readOnlyTool.execute({ model: 'platform' })
+    const result = await readOnlyTool.execute({ model: 'genre' })
     expect(result.content[0].text).toContain('(Read-Only)')
   })
 
@@ -125,8 +125,8 @@ describe('GetDomainContextTool', () => {
       knowledge: new DomainKnowledge({
         concepts: [],
         models: {
-          deal: {
-            description: 'Deal entity',
+          book: {
+            description: 'Book entity',
             attributes: {
               id: { type: 'string', description: 'ID' },
               external_id: { type: 'string', immutable: true, description: 'External ID' }
@@ -138,7 +138,7 @@ describe('GetDomainContextTool', () => {
       workflows: new WorkflowRegistry([])
     })
     const immutableTool = new GetDomainContextTool({ domainRegistry: registry })
-    const result = await immutableTool.execute({ model: 'deal' })
+    const result = await immutableTool.execute({ model: 'book' })
     const text = result.content[0].text
     expect(text).toContain('| Immutable |')
     expect(text).toContain('| Yes |')
@@ -155,12 +155,12 @@ describe('GetDomainContextTool', () => {
       knowledge: new DomainKnowledge({
         concepts: [],
         models: {
-          activity: {
-            description: 'Activity entity',
+          author: {
+            description: 'Author entity',
             attributes: {
               id: { type: 'string', description: 'ID' },
-              started_at: { type: 'datetime', label: 'Start Time', description: 'When it started' },
-              ended_at: { type: 'datetime', label: 'End Time', description: 'When it ended' }
+              born_on: { type: 'datetime', label: 'Birth Date', description: 'Date of birth' },
+              died_on: { type: 'datetime', label: 'Death Date', description: 'Date of death' }
             }
           }
         }
@@ -169,11 +169,11 @@ describe('GetDomainContextTool', () => {
       workflows: new WorkflowRegistry([])
     })
     const labelTool = new GetDomainContextTool({ domainRegistry: registry })
-    const result = await labelTool.execute({ model: 'activity' })
+    const result = await labelTool.execute({ model: 'author' })
     const text = result.content[0].text
     expect(text).toContain('| Field | API Name |')
-    expect(text).toContain('| Start Time | started_at |')
-    expect(text).toContain('| End Time | ended_at |')
+    expect(text).toContain('| Birth Date | born_on |')
+    expect(text).toContain('| Death Date | died_on |')
   })
 
   it('should append presentation footer to all responses', async () => {

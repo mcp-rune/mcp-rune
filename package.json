@@ -2,8 +2,8 @@
   "name": "@mcp-rune/mcp-rune",
   "version": "0.101.1",
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com",
-    "access": "restricted"
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
   },
   "description": "Model-driven framework for building Model Context Protocol servers.",
   "type": "module",

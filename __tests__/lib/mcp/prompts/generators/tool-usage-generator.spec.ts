@@ -4,7 +4,7 @@ import { generateToolUsage } from '../../../../../src/mcp/prompts/generators/too
 // MOCK HELPERS
 // =============================================================================
 
-function makeContext(toolUsage = {}, fieldDefs = {}, modelName = 'brand') {
+function makeContext(toolUsage = {}, fieldDefs = {}, modelName = 'book') {
   return {
     modelName,
     promptClass: {
@@ -16,14 +16,14 @@ function makeContext(toolUsage = {}, fieldDefs = {}, modelName = 'brand') {
 
 const baseFieldDefs = {
   id: { type: 'string', prompt_visible: false, description: 'Unique identifier' },
-  name: { type: 'string', required: true, description: 'The name', examples: ['Breaking Bad'] },
+  name: { type: 'string', required: true, description: 'The name', examples: ['The Hobbit'] },
   external_id: {
     type: 'string',
     immutable: true,
     description: 'External system identifier',
-    examples: ['BRAND-001']
+    examples: ['BOOK-001']
   },
-  tags: { type: 'string', description: 'Comma-separated tags', examples: ['Action,Drama'] }
+  tags: { type: 'string', description: 'Comma-separated tags', examples: ['Fiction,Fantasy'] }
 }
 
 // =============================================================================
@@ -35,8 +35,8 @@ describe('Pattern A: Simple standalone', () => {
     const result = generateToolUsage(makeContext({}, baseFieldDefs))
 
     expect(result).toContain('## TOOL USAGE')
-    expect(result).toContain('### Creating the Brand')
-    expect(result).toContain('model: "brand"')
+    expect(result).toContain('### Creating the Book')
+    expect(result).toContain('model: "book"')
     expect(result).not.toContain('parent_path')
   })
 
@@ -44,7 +44,7 @@ describe('Pattern A: Simple standalone', () => {
     const result = generateToolUsage(makeContext({}, baseFieldDefs))
 
     // Required field with examples should be included
-    expect(result).toContain('"name": "Breaking Bad"')
+    expect(result).toContain('"name": "The Hobbit"')
     // Optional field should NOT be auto-included
     expect(result).not.toContain('"tags"')
   })
@@ -79,13 +79,13 @@ describe('Pattern A: Simple standalone', () => {
     const config = {
       exampleAttributes: {
         name: 'Custom Name',
-        licensor_link: 'https://api.example.com/licensors/123'
+        publisher_link: 'https://api.example.com/publishers/123'
       }
     }
     const result = generateToolUsage(makeContext(config, baseFieldDefs))
 
     expect(result).toContain('"name": "Custom Name"')
-    expect(result).toContain('"licensor_link"')
+    expect(result).toContain('"publisher_link"')
   })
 })
 
@@ -95,30 +95,35 @@ describe('Pattern A: Simple standalone', () => {
 
 describe('Pattern B: Nested with static parent', () => {
   const nestedFieldDefs = {
-    name: { type: 'string', required: true, description: 'Asset name', examples: ['Asset Name'] },
-    external_id: { type: 'string', description: 'External ID', examples: ['ASSET-001'] }
+    name: {
+      type: 'string',
+      required: true,
+      description: 'Chapter name',
+      examples: ['Chapter Name']
+    },
+    external_id: { type: 'string', description: 'External ID', examples: ['CHAPTER-001'] }
   }
 
   it('includes parent_path in create block', () => {
-    const config = { parentPath: 'titles/{title_id}/assets' }
-    const result = generateToolUsage(makeContext(config, nestedFieldDefs, 'asset'))
+    const config = { parentPath: 'books/{book_id}/chapters' }
+    const result = generateToolUsage(makeContext(config, nestedFieldDefs, 'chapter'))
 
-    expect(result).toContain('parent_path: "titles/{title_id}/assets"')
+    expect(result).toContain('parent_path: "books/{book_id}/chapters"')
   })
 
   it('renders alternative creation section', () => {
     const config = {
-      parentPath: 'titles/{title_id}/assets',
+      parentPath: 'books/{book_id}/chapters',
       alternativeCreation: {
-        title: 'Using title_link in attributes',
-        linkAttribute: 'title_link',
-        exampleAttributes: { name: 'Asset Name' }
+        title: 'Using book_link in attributes',
+        linkAttribute: 'book_link',
+        exampleAttributes: { name: 'Chapter Name' }
       }
     }
-    const result = generateToolUsage(makeContext(config, nestedFieldDefs, 'asset'))
+    const result = generateToolUsage(makeContext(config, nestedFieldDefs, 'chapter'))
 
-    expect(result).toContain('### Using title_link in attributes')
-    expect(result).toContain('"title_link"')
+    expect(result).toContain('### Using book_link in attributes')
+    expect(result).toContain('"book_link"')
   })
 })
 
@@ -128,26 +133,26 @@ describe('Pattern B: Nested with static parent', () => {
 
 describe('Pattern C: Dynamic parent via instance overrides', () => {
   const fieldDefs = {
-    put_up: {
+    started_at: {
       type: 'datetime',
       required: true,
       description: 'Start date',
       examples: ['2024-06-17T06:00:00Z']
     },
-    take_down: {
+    due_date: {
       type: 'datetime',
       required: true,
-      description: 'End date',
+      description: 'Due date',
       examples: ['2024-11-01T06:00:00Z']
     }
   }
 
   it('uses parentPath from instance overrides', () => {
-    const result = generateToolUsage(makeContext({}, fieldDefs, 'scheduling'), {
-      parentPath: 'titles/123/schedule/schedulings'
+    const result = generateToolUsage(makeContext({}, fieldDefs, 'task'), {
+      parentPath: 'projects/123/tasks'
     })
 
-    expect(result).toContain('parent_path: "titles/123/schedule/schedulings"')
+    expect(result).toContain('parent_path: "projects/123/tasks"')
   })
 })
 
@@ -156,64 +161,63 @@ describe('Pattern C: Dynamic parent via instance overrides', () => {
 // =============================================================================
 
 describe('Pattern D: Multi-step with postCreateSteps', () => {
-  const dealFieldDefs = {
-    right_type: {
+  const projectFieldDefs = {
+    priority: {
       type: 'enum',
       required: true,
-      description: 'Type of right',
-      examples: ['archive']
+      description: 'Priority level',
+      examples: ['high']
     },
-    starts: { type: 'datetime', description: 'Start date' }
+    due_date: { type: 'datetime', description: 'Due date' }
   }
 
   const config = {
-    excludeFromAttributes: ['selected_platforms'],
+    excludeFromAttributes: ['selected_tags'],
     postCreateSteps: [
       {
-        title: 'Add Specific Platforms',
-        condition: '`selected_platforms` array is NOT empty',
-        skipCondition:
-          '`selected_platforms` is empty, skip this step — the deal will apply to ALL platforms',
-        model: 'specific_platform',
-        parentTemplate: 'deals/{deal_id}/specific_platforms',
-        attributes: { platform_link: '{platform_link}' },
-        iterateOver: 'selected_platforms'
+        title: 'Add Tags',
+        condition: '`selected_tags` array is NOT empty',
+        skipCondition: '`selected_tags` is empty, skip this step — the project will have no tags',
+        model: 'tag',
+        parentTemplate: 'projects/{project_id}/tags',
+        attributes: { tag_link: '{tag_link}' },
+        iterateOver: 'selected_tags'
       }
     ],
-    notes: ['The licensor URL must point to an existing licensor']
+    notes: ['The author link must point to an existing author']
   }
 
   it('uses Step 1 prefix when post-create steps exist', () => {
-    const result = generateToolUsage(makeContext(config, dealFieldDefs, 'deal'))
+    const result = generateToolUsage(makeContext(config, projectFieldDefs, 'project'))
 
-    expect(result).toContain('### Step 1: Creating the Deal')
+    expect(result).toContain('### Step 1: Creating the Project')
   })
 
   it('renders post-create step with tool call', () => {
-    const result = generateToolUsage(makeContext(config, dealFieldDefs, 'deal'))
+    const result = generateToolUsage(makeContext(config, projectFieldDefs, 'project'))
 
-    expect(result).toContain('### Step 2: Add Specific Platforms')
-    expect(result).toContain('model: "specific_platform"')
-    expect(result).toContain('parent_path: "deals/{deal_id}/specific_platforms"')
+    expect(result).toContain('### Step 2: Add Tags')
+    expect(result).toContain('model: "tag"')
+    expect(result).toContain('parent_path: "projects/{project_id}/tags"')
   })
 
   it('renders iterate and skip instructions', () => {
-    const result = generateToolUsage(makeContext(config, dealFieldDefs, 'deal'))
+    const result = generateToolUsage(makeContext(config, projectFieldDefs, 'project'))
 
-    expect(result).toContain('Repeat for each item in `selected_platforms`')
+    expect(result).toContain('Repeat for each item in `selected_tags`')
     expect(result).toContain('skip this step')
   })
 
   it('renders exclusion notes for prompt-only fields', () => {
-    const result = generateToolUsage(makeContext(config, dealFieldDefs, 'deal'))
+    const result = generateToolUsage(makeContext(config, projectFieldDefs, 'project'))
 
-    expect(result).toContain('Do NOT include `selected_platforms`')
+    expect(result).toContain('Do NOT include `selected_tags`')
   })
 
   it('renders custom notes', () => {
-    const result = generateToolUsage(makeContext(config, dealFieldDefs, 'deal'))
+    const result = generateToolUsage(makeContext(config, projectFieldDefs, 'project'))
 
-    expect(result).toContain('The licensor URL must point to an existing licensor')
+    expect(result).toContain('The author link must point to an existing author')
   })
 })
 
@@ -222,61 +226,61 @@ describe('Pattern D: Multi-step with postCreateSteps', () => {
 // =============================================================================
 
 describe('Pattern E: Multiple creation variants', () => {
-  const seriesFieldDefs = {
+  const authorFieldDefs = {
     name: {
       type: 'string',
       required: true,
-      description: 'Series name',
-      examples: ['Series Name S1']
+      description: 'Author name',
+      examples: ['Author Name']
     },
-    season_number: { type: 'integer', description: 'Season number', examples: [1] }
+    book_count: { type: 'integer', description: 'Number of published books', examples: [1] }
   }
 
   const config = {
     variants: [
       {
-        title: 'Creating a Series (Basic - PREFERRED)',
+        title: 'Creating an Author (Basic - PREFERRED)',
         description: 'Use this method by default.',
-        fixedAttributes: { title_group_type: 'series' }
+        fixedAttributes: { entity_type: 'author' }
       },
       {
-        title: 'Creating Under a Brand',
-        parentPath: 'brands/{brand_id}/series',
-        fixedAttributes: { title_group_type: 'series' },
+        title: 'Creating Under a Genre',
+        parentPath: 'genres/{genre_id}/authors',
+        fixedAttributes: { entity_type: 'author' },
         description: 'WARNING: Only use if user explicitly requests.'
       }
     ]
   }
 
   it('renders each variant as a sub-section', () => {
-    const result = generateToolUsage(makeContext(config, seriesFieldDefs, 'series'))
+    const result = generateToolUsage(makeContext(config, authorFieldDefs, 'author'))
 
-    expect(result).toContain('### Creating a Series (Basic - PREFERRED)')
-    expect(result).toContain('### Creating Under a Brand')
+    expect(result).toContain('### Creating an Author (Basic - PREFERRED)')
+    expect(result).toContain('### Creating Under a Genre')
   })
 
   it('includes variant descriptions', () => {
-    const result = generateToolUsage(makeContext(config, seriesFieldDefs, 'series'))
+    const result = generateToolUsage(makeContext(config, authorFieldDefs, 'author'))
 
     expect(result).toContain('Use this method by default.')
     expect(result).toContain('WARNING: Only use if user explicitly requests.')
   })
 
   it('includes parent_path only for variants that have it', () => {
-    const result = generateToolUsage(makeContext(config, seriesFieldDefs, 'series'))
+    const result = generateToolUsage(makeContext(config, authorFieldDefs, 'author'))
 
     // First variant should NOT have parent_path
-    const firstBlock = result.split('### Creating Under a Brand')[0]
-    // The first block contains the "Creating a Series" variant
+    const firstBlock = result.split('### Creating Under a Genre')[0]
+    // The first block contains the "Creating an Author" variant
     const firstCodeBlock = firstBlock.split('```')[1] || ''
     expect(firstCodeBlock).not.toContain('parent_path')
 
     // Second variant SHOULD have parent_path
-    expect(result).toContain('parent_path: "brands/{brand_id}/series"')
+    expect(result).toContain('parent_path: "genres/{genre_id}/authors"')
   })
 
   it('renders shared checklists once after all variants', () => {
-    const result = generateToolUsage(makeContext(config, seriesFieldDefs, 'series'))
+    const result = generateToolUsage(makeContext(config, authorFieldDefs, 'author'))
 
     expect(result).toContain('### Required Attributes')
     // Only one checklist section
@@ -285,9 +289,9 @@ describe('Pattern E: Multiple creation variants', () => {
   })
 
   it('includes fixedAttributes in create blocks', () => {
-    const result = generateToolUsage(makeContext(config, seriesFieldDefs, 'series'))
+    const result = generateToolUsage(makeContext(config, authorFieldDefs, 'author'))
 
-    expect(result).toContain('"title_group_type": "series"')
+    expect(result).toContain('"entity_type": "author"')
   })
 })
 
@@ -300,12 +304,12 @@ describe('Edge cases', () => {
     const result = generateToolUsage(makeContext({}, baseFieldDefs))
 
     expect(result).toContain('## TOOL USAGE')
-    expect(result).toContain('model: "brand"')
+    expect(result).toContain('model: "book"')
   })
 
   it('handles undefined toolUsage config', () => {
     const context = {
-      modelName: 'brand',
+      modelName: 'book',
       promptClass: { fieldDefinitions: baseFieldDefs }
     }
     const result = generateToolUsage(context)
@@ -317,7 +321,7 @@ describe('Edge cases', () => {
     const result = generateToolUsage(makeContext({}, {}))
 
     expect(result).toContain('## TOOL USAGE')
-    expect(result).toContain('model: "brand"')
+    expect(result).toContain('model: "book"')
     expect(result).not.toContain('### Required Attributes')
   })
 
@@ -325,14 +329,14 @@ describe('Edge cases', () => {
     const config = {
       postCreateSteps: [
         {
-          title: 'Add Platforms',
-          model: 'specific_platform',
+          title: 'Add Tags',
+          model: 'tag',
           parentTemplate: 'test',
           attributes: {}
         },
         {
-          title: 'Add Requirements',
-          model: 'granted_requirement',
+          title: 'Add Labels',
+          model: 'label',
           parentTemplate: 'test2',
           attributes: {}
         }
@@ -340,7 +344,7 @@ describe('Edge cases', () => {
     }
     const result = generateToolUsage(makeContext(config, {}))
 
-    expect(result).toContain('### Step 2: Add Platforms')
-    expect(result).toContain('### Step 3: Add Requirements')
+    expect(result).toContain('### Step 2: Add Tags')
+    expect(result).toContain('### Step 3: Add Labels')
   })
 })
