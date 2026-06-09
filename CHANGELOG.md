@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.102.3] - 2026-06-10
+
+### Security
+
+- **Socket.dev supply chain scanning wired in** — added `socket.yml` with `projectIgnorePaths`, `triggerPaths`, and `issueRules` suppressing `obfuscatedCode` false positives (all from minified-but-legitimate packages: `@sentry/core`, `prettier`, `tar`, `powershell-utils`, etc.). New **Supply Chain Security** section in `SECURITY.md` documents the `socket login` / `socket scan` flow.
+
+### Dependencies
+
+- **`@langfuse/otel` and `@langfuse/tracing` ^4.0.0 → ^5.0.0** — `LangfuseSpanProcessor` API is unchanged, no consumer impact.
+- **Pinned `boolean@3.2.0`** in `overrides` — deprecated transitive in the optional `@huggingface/transformers` chain.
+
+### Fixed
+
+- **README Socket badge** — corrected to the `badge.socket.dev` subdomain and removed the pinned version so the badge tracks the current scan.
+
 ## [0.102.2] - 2026-06-09
 
 ### Added
@@ -3077,5 +3092,6 @@ Initial public release. Extracted from production MCP servers.
 
 - 11 subpath exports: `mcp-kit/server`, `mcp-kit/tools`, `mcp-kit/prompts`, `mcp-kit/apps`, `mcp-kit/search`, `mcp-kit/domain`, `mcp-kit/oauth2`, `mcp-kit/services`, `mcp-kit/db`, `mcp-kit/core`
 
+[0.102.3]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.2...v0.102.3
 [0.102.2]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.1...v0.102.2
 [0.102.1]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.0...v0.102.1
