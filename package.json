@@ -169,11 +169,12 @@
     "@huggingface/transformers": "^3.8.1"
   },
   "overrides": {
-    "onnxruntime-web": "1.21.0"
+    "onnxruntime-web": "1.21.0",
+    "boolean": "3.2.0"
   },
   "dependencies": {
-    "@langfuse/otel": "^4.0.0",
-    "@langfuse/tracing": "^4.0.0",
+    "@langfuse/otel": "^5.0.0",
+    "@langfuse/tracing": "^5.0.0",
     "@modelcontextprotocol/ext-apps": "^1.7.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@opentelemetry/sdk-node": "^0.218.0",

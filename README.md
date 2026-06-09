@@ -11,6 +11,7 @@
   <img src="https://img.shields.io/badge/node-%3E%3D24-339933?logo=node.js&logoColor=white" alt="Node.js" />
   <a href="https://github.com/mcp-rune/mcp-rune/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-007ec6" alt="MIT license" /></a>
   <a href="https://discord.gg/fxM2yndabX"><img src="https://img.shields.io/badge/discord-join-5865F2?logo=discord&logoColor=white" alt="Join the Discord" /></a>
+  [![Socket Badge](https://badge.socket.dev/npm/package/@mcp-rune/mcp-rune/0.102.0)](https://badge.socket.dev/npm/package/@mcp-rune/mcp-rune/0.102.0)
 </p>
 
 <h3 align="center">

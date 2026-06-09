@@ -1,0 +1,19 @@
+version: 2
+
+projectIgnorePaths:
+  - 'dist/'
+  - 'vendor/'
+  - 'coverage/'
+  - 'docs/illustrations/dist/'
+
+triggerPaths:
+  - 'package.json'
+  - 'package-lock.json'
+
+issueRules:
+  # All obfuscatedCode alerts in this project are false positives: Socket's heuristic
+  # fires on minified distributions from well-known packages (@sentry/core, prettier,
+  # @langfuse/otel, tar, @protobufjs/float, powershell-utils, caniuse-lite, happy-dom,
+  # es-module-lexer, @typescript-eslint/eslint-plugin, onnxruntime-web). Re-enable when
+  # Socket supports per-package suppression without deprecating issueRules.
+  obfuscatedCode: false
