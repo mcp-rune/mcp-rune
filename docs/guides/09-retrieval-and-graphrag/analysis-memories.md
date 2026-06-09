@@ -194,35 +194,41 @@ See the **Database** section of the root README for the full migration runner sn
 
 ```ts file=src/pool.ts
 import pg from 'pg'
-import { vectorStorage } from '@mcp-rune/mcp-rune/services'
+import { vectorStorage } from '@mcp-rune/mcp-rune/runtime'
+import { createPgvectorAdapter } from '@mcp-rune/mcp-rune/runtime/vendor/pgvector'
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
 
 vectorStorage.initVectorStorage({
-  pool, // required — pool injection only; mcp-rune never creates pools
+  adapter: createPgvectorAdapter({
+    pool, // required — pool lifecycle stays with you; mcp-rune never creates pools
+    toolMemoriesRetentionDays: 30, // default: 30 — sweep window for tool_memories
+    ingestedRecordsRetentionDays: 7 // default: 7 — TTL for ingested_records
+  }),
   serviceName: 'my-mcp-server',
   version: '1.0.0',
-  retentionDays: 30, // default: 30 — sweep window for tool_memories (operations feature)
-  ingestedRecordsRetentionDays: 7, // default: 7 — TTL for ingested_records (analysis feature)
-  backgroundCleanupIntervalMs: 6 * 60 * 60 * 1000 // optional — periodic cleanup across all three tables; omit to disable
+  backgroundCleanupIntervalMs: 6 * 60 * 60 * 1000 // optional — periodic cleanup; omit to disable
 })
 ```
 
 ```js file=src/pool.js
 import pg from 'pg'
-import { vectorStorage } from '@mcp-rune/mcp-rune/services'
+import { vectorStorage } from '@mcp-rune/mcp-rune/runtime'
+import { createPgvectorAdapter } from '@mcp-rune/mcp-rune/runtime/vendor/pgvector'
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
 vectorStorage.initVectorStorage({
-  pool, // required — pool injection only; mcp-rune never creates pools
+  adapter: createPgvectorAdapter({
+    pool, // required — pool lifecycle stays with you; mcp-rune never creates pools
+    toolMemoriesRetentionDays: 30, // default: 30 — sweep window for tool_memories
+    ingestedRecordsRetentionDays: 7 // default: 7 — TTL for ingested_records
+  }),
   serviceName: 'my-mcp-server',
   version: '1.0.0',
-  retentionDays: 30, // default: 30 — sweep window for tool_memories (operations feature)
-  ingestedRecordsRetentionDays: 7, // default: 7 — TTL for ingested_records (analysis feature)
-  backgroundCleanupIntervalMs: 6 * 60 * 60 * 1000 // optional — periodic cleanup across all three tables; omit to disable
+  backgroundCleanupIntervalMs: 6 * 60 * 60 * 1000 // optional — periodic cleanup; omit to disable
 })
 ```
 
-If `options.pool` is omitted, vector storage stays disabled and the six analysis tools simply won't show up in the tool list. There's no error path — the gate is silent by design.
+If `options.adapter` is omitted, vector storage stays disabled and the six analysis tools simply won't show up in the tool list. There's no error path — the gate is silent by design.
 
 `backgroundCleanupIntervalMs` is opt-in because short-lived processes (test runs, single-shot scripts) don't need it; the boot-time sweep already evicts expired rows on startup. Set it for long-running servers where on-access eviction alone may leave orphaned rows behind.
 
@@ -565,7 +571,7 @@ analysis_clear({ analysis_id: "library-audit-2026-05" })
 
 1. `DATABASE_URL` is set.
 2. `ANALYSIS_ENABLED=true`.
-3. `initVectorStorage({ pool })` was called at server startup with a real `pg.Pool`. The init returns `false` and logs `pgvector: no pool provided, vector storage disabled` when the pool is missing.
+3. `initVectorStorage({ adapter: createPgvectorAdapter({ pool }) })` was called at server startup. The init returns `false` and logs a warning when the adapter is missing.
 4. The `analysis_memories` and `ingested_records` tables exist (migrations applied).
 
 **`analysis_ingest` reports duplicate-looking counts after a retry.** Resolved in commit c1cc813 — the table now has a partial unique index and inserts use `ON CONFLICT DO UPDATE`. If you're seeing it, confirm your migrations are up to date (the unique index ships in the relevant migration).

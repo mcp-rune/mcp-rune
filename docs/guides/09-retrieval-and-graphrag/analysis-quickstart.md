@@ -67,11 +67,12 @@ Open `my-app/server.ts` and add the storage init before
 
 ```ts file=src/pool.ts
 import { Pool } from 'pg'
-import { vectorStorage } from '@mcp-rune/mcp-rune/services'
+import { vectorStorage } from '@mcp-rune/mcp-rune/runtime'
+import { createPgvectorAdapter } from '@mcp-rune/mcp-rune/runtime/vendor/pgvector'
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 vectorStorage.initVectorStorage({
-  pool,
+  adapter: createPgvectorAdapter({ pool }),
   serviceName: 'bookshelf-mcp',
   version: '1.0.0'
 })
@@ -79,16 +80,17 @@ vectorStorage.initVectorStorage({
 
 ```js file=src/pool.js
 import { Pool } from 'pg'
-import { vectorStorage } from '@mcp-rune/mcp-rune/services'
+import { vectorStorage } from '@mcp-rune/mcp-rune/runtime'
+import { createPgvectorAdapter } from '@mcp-rune/mcp-rune/runtime/vendor/pgvector'
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 vectorStorage.initVectorStorage({
-  pool,
+  adapter: createPgvectorAdapter({ pool }),
   serviceName: 'bookshelf-mcp',
   version: '1.0.0'
 })
 ```
 
-When the pool is missing — say you forget `DATABASE_URL` — init returns
+When the adapter is missing — say you forget `DATABASE_URL` and skip init — `initVectorStorage` returns
 `false` and the six analysis tools simply stay out of `tools/list`. No
 crash, no noisy error path.
 
@@ -105,7 +107,7 @@ Inside the Inspector, confirm the analysis tools are now visible —
 `analysis_ingest`, `analysis_summarize`, `analysis_query`,
 `analysis_act`, `analysis_clear`, `analysis_store` should all appear
 alongside the CRUD tools. If they don't, double-check `ANALYSIS_ENABLED`
-is `true` and the `initVectorStorage` block has a live pool.
+is `true` and `initVectorStorage` was called with a live adapter.
 
 ## 4. One strategy at a time
 

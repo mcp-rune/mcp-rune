@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.102.2] - 2026-06-09
+
+### Added
+
+- **`./runtime/vendor/pgvector` subpath export** — `createPgvectorAdapter` and `PgvectorAdapterOptions` are now importable via `@mcp-rune/mcp-rune/runtime/vendor/pgvector` with proper `types` + `import` conditions. Previously the factory was only reachable through the untyped `./lib/*` wildcard.
+
+### Fixed
+
+- **`initVectorStorage` docs updated to adapter pattern** — `analysis-memories.md` and `analysis-quickstart.md` now show the correct two-step wiring (`createPgvectorAdapter({ pool })` → `initVectorStorage({ adapter })`). The old `{ pool }` shorthand was removed in v0.102.0 but the docs kept the stale signature.
+- **`subpath-imports.md` reference corrected** — replaced the non-existent `@mcp-rune/mcp-rune/services` entry with `@mcp-rune/mcp-rune/runtime` (the real subpath for `vectorStorage`, `logger`, `tracing`, `errorTracking`) and added the new `./runtime/vendor/pgvector` row.
+
 ## [0.102.1] - 2026-06-09
 
 ### Security
@@ -3066,4 +3077,5 @@ Initial public release. Extracted from production MCP servers.
 
 - 11 subpath exports: `mcp-kit/server`, `mcp-kit/tools`, `mcp-kit/prompts`, `mcp-kit/apps`, `mcp-kit/search`, `mcp-kit/domain`, `mcp-kit/oauth2`, `mcp-kit/services`, `mcp-kit/db`, `mcp-kit/core`
 
+[0.102.2]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.1...v0.102.2
 [0.102.1]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.0...v0.102.1
