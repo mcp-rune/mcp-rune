@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.101.1] - 2026-06-09
+
+> **Deployer-facing docs pass.** Every chapter in `docs/guides/` now opens with a `> **Customization:**` callout that tells a deployer at a glance whether the chapter describes a registry-level seam they can override or a framework internal they should understand but cannot replace. `model-layer.md` is rewritten consumption-first (real code examples before the interface reference). The database docs are split into a schema-reference file and a new how-to guide that explicitly states that migrations are the deployer's responsibility and shows both the `rune new` easy path and the manual runner.
+
+### Changed
+
+- **Customization callouts added to all 14 chapters in Parts II–IV.** Seven internals chapters (`model-layer`, `analysis-layer`, `mcp-apps-arch`, `prompt-derivation`, `sections-groups`, `definition-vs-consumption`, `transient-context`) open with `> **Customization:** none` plus a pointer to the actual deployer seam. Seven seam chapters (`data-layer`, `model-service`, `api-client`, `api-convention`, `search-request-shaper`, `tool-creation`, `custom-app`) open with `> **Customization:** swap via <seam> on ToolRegistry / AppRegistry`.
+- **`06/model-layer.md` rewritten consumption-first.** New structure: callout → one-paragraph explanation → three real-code examples (`kindFor` in `execute`, `resolveDerivedFields` after `find`, `validFieldNames` in an `ApiExtension`) → why it is separate from `DataLayer` → interface reference → "For framework contributors" section gating the extension rule.
+- **`06/data-layer.md`** gains a one-sentence cross-reference at the seam diagram clarifying that `ModelLayer` is the read-only peer and **not** swappable on the Registry.
+- **`06/analysis-layer.md`** "Extending the interface" section renamed to "For framework contributors" for consistency.
+- **`11-reference/database-reference.md`** reduced to tables matrix + env-var reference + cross-links. Migration runner code removed (moved to new setup guide).
+
+### Added
+
+- **`11-reference/database-setup.md`** (new file): how-to guide covering who runs migrations, the `rune new` easy path, the manual `pg.Pool` runner (TS + JS), feature gating (`core` vs `analysis`), upgrade flow, and troubleshooting (pgvector extension, role permissions, docker readiness).
+- **`11-reference/index.md`** updated to list both database files.
+
+[0.101.1]: https://github.com/mcp-rune/mcp-rune/compare/v0.101.0...v0.101.1
+
 ## [0.101.0] - 2026-06-08
 
 > **Docs restructure around the Model.** Reorganises `docs/guides/` into a 11-section "book-shaped" arc that follows the order you build an mcp-rune server: Model → Prompt → Tools → Apps → Three Layers Up Close → Auth & Transport → Domain → Retrieval → Extensions → Reference. Adds a dedicated **The Model** chapter (the framework's foundational concept) and a **Three Layers Up Close** part that documents the `DataLayer` / `ModelLayer` / `AnalysisLayer` DI surface, the eslint guard that enforces it, and the definition-vs-consumption folder split (`models/` vs `model-layer/`, `prompts/` vs `prompt-layer/`). Every chapter now hands off to the next, and every code example is sourced from the `mcp-rune-examples` repo (`tasks`, `bookshelf`, `bookshelf-graph`, `bookshelf-rest`, `bookshelf-remote`).

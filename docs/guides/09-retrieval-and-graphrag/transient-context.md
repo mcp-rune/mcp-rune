@@ -1,3 +1,6 @@
+> **Customization:** none — this is a server-to-client protocol specification.
+> Your deployer hook is the `contextHint` field on workflow steps you declare; the framework emits `_meta.context` on tool responses automatically. You declare the relationship; the framework wires the rest.
+
 # Transient Context Protocol
 
 Server-to-client protocol for managing conversation context growth during workflow loops. Data-fetching tools mark their responses as transient; consumer tools signal consumption; the MCP client collapses consumed results to compact summaries.

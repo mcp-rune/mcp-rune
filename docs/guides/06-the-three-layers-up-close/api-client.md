@@ -1,3 +1,6 @@
+> **Customization:** pass your own `ApiClient` via `createApiClient:` on `ToolRegistry` / `AppRegistry`.
+> The default is the bundled axios-based client. Sits below `DataLayer`; projection-layer code never sees it directly.
+
 # API client
 
 `ApiClient` is the universal CRUD HTTP contract `ModelService` (the [previous chapter](./model-service.md)) depends on. It sits one layer below the [`DataLayer`](./data-layer.md) seam — projection-layer code never imports it directly; only `ModelService` does. `DataLayer` is "data operations against models"; `ApiClient` is "HTTP verbs against URLs." Most deployers never need to write their own — they pass the bundled axios-based client. You write a custom one when:

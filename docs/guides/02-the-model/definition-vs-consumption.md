@@ -1,3 +1,6 @@
+> **Customization:** none — this chapter is the architectural rule for where declaration code lives versus where consumption code lives.
+> It applies equally to mcp-rune itself (`src/mcp/models/` vs `src/mcp/model-layer/`) and to your own server (your `models/` folder vs how the framework reads them). The split is enforced by `no-restricted-imports`; you cannot bypass it.
+
 # Definition vs consumption
 
 You've now seen everything that goes _into_ a Model declaration. This chapter answers the next obvious question: _who reads it, and where does that reader live?_

@@ -1,3 +1,6 @@
+> **Customization:** per-model via `searchConfig({ shaper: ... })`, or globally via `defaultShaper:` on the `search` ApiExtension.
+> Default spreads filters flat into the POST body. Subclass `SearchRequestShaper` for Ransack, Elasticsearch DSL, or any nested-filter API.
+
 # Search request shaper
 
 A **search request shaper** translates the MCP-generic search format (`{ query, filters, page, perPage }`) into the request shape your API expects. The default shaper spreads filters flat into the POST body — fine for hand-rolled REST APIs but wrong for Rails Ransack, Elasticsearch DSL, JSON:API filter syntax, or anything that requires nesting.

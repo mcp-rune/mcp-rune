@@ -1,3 +1,6 @@
+> **Customization:** declared on your `BasePrompt` subclass via `static sections` and `static fieldGroups`.
+> This chapter is the reference for those two structures. See [Prompt Creation](./prompt-creation.md) for how a strategy (stateless / hybrid / stateful) consumes them.
+
 # Sections & Field Groups
 
 Sections and field groups are the two halves of mcp-rune's prompt structure. **Sections** define the user-facing workflow — how an LLM walks the user through a creation or update flow. **Field groups** define validation — which fields belong together and what rules apply. They live side by side in every prompt class, and the framework derives field tables, flow diagrams, and per-section docs from both.

@@ -1,3 +1,6 @@
+> **Customization:** register your `AppDefinition` via `apps:` on `AppRegistry`.
+> Your app receives `context.dataLayer` (the projection-layer seam). For the wiring/sandbox internals, see [Apps architecture](../05-apps/mcp-apps-arch.md).
+
 # Writing a Custom MCP App
 
 mcp-rune ships seven **MCP App tools** — interactive iframe widgets the LLM can summon: `new_model_app`, `edit_model_app`, `find_model_app`, `show_model_app`, `pick_model_app`, `multi_pick_model_app`, `view_selection_app`. They share infrastructure: the [kind taxonomy](../03-the-prompt/attribute-kinds.md) from `src/mcp/models/kinds/`, the renderer registry from `apps/shared/kind-renderers.ts`, the form-schema generator, the selection store, theming.

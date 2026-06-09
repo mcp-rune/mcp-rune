@@ -1,3 +1,6 @@
+> **Customization:** register your `BaseTool` subclass via `toolClasses:` on `ToolRegistry`.
+> Your tool receives `this.dataLayer`, `this.modelLayer`, `this.analysisLayer` automatically. The framework handles dispatch, schema validation, interceptors, and result envelopes.
+
 # Tool creation
 
 The previous chapter covered the nine polymorphic tools the framework ships. This chapter covers the other path: writing a `BaseTool` subclass when your operation is _not_ uniform across models — a bespoke verb like "cancel a subscription", "retry a payment", or "recompute a leaderboard".

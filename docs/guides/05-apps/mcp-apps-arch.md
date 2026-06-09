@@ -1,3 +1,6 @@
+> **Customization:** none — this chapter is the wiring deep-dive (sandbox, channels, schema generators, build).
+> The deployer-facing seams are [`AppRegistry({ apps, ... })`](./mcp-apps.md) for registering custom apps and [`BaseAppForm`](./model-form.md) for tuning the generic form. Architecture below is what runs underneath; you cannot replace it.
+
 # Apps architecture
 
 The previous chapter showed _what_ an MCP app is and how it talks to the server. This one is the deep reference for _how_ the framework wires it: how a `ui://` resource resolves to an iframe, how the sandbox is constructed, how the message channels are bound to the three layers from [chapter 4](../04-tools/the-three-layers.md). Read it when you need to debug a wiring issue or understand exactly what runs before your app's `init()` callback.

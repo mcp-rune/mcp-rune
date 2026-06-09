@@ -1,3 +1,6 @@
+> **Customization:** the 5-layer pipeline itself is not replaceable — these layers explain how the framework turns your model + prompt config into a string.
+> The deployer-facing API documented in this chapter is [`PromptContentBuilder`](#promptcontentgenerator-api), which you call inside your `BasePrompt.promptContent` to assemble the result. You consume the pipeline; you do not replace it.
+
 # Prompt derivation
 
 [Chapter 2's derivation overview](../02-the-model/derivation-overview.md) listed _what_ the framework derives from your Model. This chapter walks the path the prompt subsystem actually takes — five layers between the `static attributes` block you wrote and the string an LLM ends up reading. Knowing the layers matters when you want to override one (a custom kind label, a section-level intro) without forking the rest.

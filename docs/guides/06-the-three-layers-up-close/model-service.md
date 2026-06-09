@@ -1,3 +1,6 @@
+> **Customization:** the default `DataLayer` adapter.
+> Swap the whole DataLayer via `dataLayer:` on the Registry, or extend just this one (custom convention, custom endpoint resolution) by subclassing `ModelService`.
+
 # Model service
 
 `ModelService` is the **default `DataLayer` implementation** — the adapter your server uses unless you swap something else in. It composes three smaller primitives (`EndpointResolver`, `ApiClient`, and a convention) into the polymorphic CRUD surface every Tool and App calls.

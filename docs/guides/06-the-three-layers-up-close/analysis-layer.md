@@ -1,3 +1,6 @@
+> **Customization:** none — this chapter is informational.
+> AnalysisLayer is constructed internally per request and carries the deployer's `DataLayer`. The deployer-facing seam is [`DataLayerFactory`](./data-layer.md) on `ToolRegistry` / `AppRegistry`; AnalysisLayer rides on top of it.
+
 # Analysis layer
 
 `AnalysisLayer` is the third peer interface — alongside `DataLayer` and `ModelLayer` — and the one that powers the GraphRAG and retrieval tooling in Part III. Like `ModelLayer`, it's bound to a single model at construction; unlike `ModelLayer`, it carries a per-request `DataLayer` so its methods can fetch records when they need to.
@@ -62,9 +65,9 @@ This also keeps the projection layer's API narrow. A tool that wants to do edge 
 
 The `analysis_*` tools shipped today (`analysis_ingest`, `analysis_summarize`, `analysis_query`, …) are the principal first-party consumers. [Analysis quickstart](../09-retrieval-and-graphrag/analysis-quickstart.md) walks through bringing them up against the `bookshelf-graph` fixtures.
 
-## Extending the interface
+## For framework contributors
 
-Same rule as `ModelLayer`: if you need a new analysis projection that today isn't on the interface, **extend the interface** in `src/mcp/analysis-layer/analysis-layer.ts`. Never import `extractEdgesFromRecord`, `expandHops`, or anything from `graph-stratifiers.ts` / `multi-hop-fetch.ts` directly from projection-layer code — the eslint guard will reject it.
+If you are contributing to mcp-rune itself (not a deployer extending a server) and you need a new analysis projection that today isn't on the interface, the rule — same as `ModelLayer` — is: **extend the interface** in `src/mcp/analysis-layer/analysis-layer.ts`. Never import `extractEdgesFromRecord`, `expandHops`, or anything from `graph-stratifiers.ts` / `multi-hop-fetch.ts` directly from projection-layer code; the eslint guard will reject it.
 
 The roadmap surface listed in the interface doc (`walkHops`, `summarize`, `buildStratifier`) is what the layer is _designed_ to host next; if your use case maps to one of those, the right move is to PR them onto the interface rather than reach past it.
 
