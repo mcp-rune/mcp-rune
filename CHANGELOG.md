@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.102.4] - 2026-06-10
+
+### Changed
+
+- **Quickstart rewritten to lead with the `rune` CLI** (`docs/guides/01-getting-started/quickstart.md`). The previous version taught `npx @mcp-rune/create new my-app --template bookshelf` and never mentioned the `rune` command, so users coming from the marketing site's CLI page got a tutorial that bypassed the very tool the linking page was about. The new flow installs the CLI globally (`npm install -g @mcp-rune/create`), scaffolds a server from scratch with `rune new my-server --preset simple --models Note`, opens it with `rune inspect`, and walks the `Note` model through the polymorphic data tool set. The bookshelf example is preserved as a one-paragraph "Want a fuller demo?" pointer to `rune new bookshelf-demo --template bookshelf`. `bookshelf` → `my-server` in the Claude Desktop config example.
+
 ## [0.102.3] - 2026-06-10
 
 ### Security
@@ -3092,6 +3098,7 @@ Initial public release. Extracted from production MCP servers.
 
 - 11 subpath exports: `mcp-kit/server`, `mcp-kit/tools`, `mcp-kit/prompts`, `mcp-kit/apps`, `mcp-kit/search`, `mcp-kit/domain`, `mcp-kit/oauth2`, `mcp-kit/services`, `mcp-kit/db`, `mcp-kit/core`
 
+[0.102.4]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.3...v0.102.4
 [0.102.3]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.2...v0.102.3
 [0.102.2]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.1...v0.102.2
 [0.102.1]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.0...v0.102.1

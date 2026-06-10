@@ -1,6 +1,6 @@
 {
   "name": "@mcp-rune/mcp-rune",
-  "version": "0.102.3",
+  "version": "0.102.4",
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
     "access": "public"
