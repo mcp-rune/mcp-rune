@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.102.5] - 2026-06-10
+
+### Fixed
+
+- **`CODE_OF_CONDUCT.md` reformatted to satisfy `prettier --check`**. The Contributor Covenant text was committed with prettier-incompatible wrapping and was failing the CI `Format check` step, which blocked the publish job from running on `master`. Reformatted in place — no content changes.
+
 ## [0.102.4] - 2026-06-10
 
 ### Changed
@@ -3098,6 +3104,7 @@ Initial public release. Extracted from production MCP servers.
 
 - 11 subpath exports: `mcp-kit/server`, `mcp-kit/tools`, `mcp-kit/prompts`, `mcp-kit/apps`, `mcp-kit/search`, `mcp-kit/domain`, `mcp-kit/oauth2`, `mcp-kit/services`, `mcp-kit/db`, `mcp-kit/core`
 
+[0.102.5]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.4...v0.102.5
 [0.102.4]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.3...v0.102.4
 [0.102.3]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.2...v0.102.3
 [0.102.2]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.1...v0.102.2
