@@ -597,7 +597,7 @@ analysis_clear({ analysis_id: "library-audit-2026-05" })
 | `src/mcp/tools/analysis/analysis-summarize-tool.ts` | `analysis_summarize` tool (re-runs strategies against stored records, no refetch)                                    |
 | `src/mcp/tools/analysis/analysis-clear-tool.ts`     | `analysis_clear` tool                                                                                                |
 | `src/mcp/tools/analysis/base-analysis-tool.ts`      | Category binding (`ANALYSIS`, `requiresVectorStorage`)                                                               |
-| `src/core/summary-strategies/`                      | Strategy interface + 5 built-ins (`distribution`, `coverage`, `anomaly`, `temporal`, `entity-extraction`) + registry |
+| `src/mcp/analysis-layer/summary-strategies/`        | Strategy interface + 5 built-ins (`distribution`, `coverage`, `anomaly`, `temporal`, `entity-extraction`) + registry |
 | `src/runtime/vector-storage.ts`                     | Vendor-agnostic facade — `initVectorStorage`, `isVectorStorageEnabled`, all store/query/clear entry points           |
 | `src/runtime/vendor/pgvector/index.ts`              | Pool injection, cleanup-on-boot                                                                                      |
 | `src/runtime/vendor/pgvector/analysis-memories.ts`  | Findings table SQL (store, recall, clear, eviction)                                                                  |

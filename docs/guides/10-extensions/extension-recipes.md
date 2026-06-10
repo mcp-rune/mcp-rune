@@ -369,7 +369,7 @@ Once registered, callers select your strategy via `analysis_ingest(summary_strat
 
 **Why this lives in `ApiExtension`:** strategies extend the model-layer surface (they read `input.records` which the framework fetches via `DataLayer`) and the registration happens at `ToolRegistry` construction. Same lifetime, same context, same collision rules as tool registration.
 
-→ Full reference: [Summary Strategies](../09-retrieval-and-graphrag/summary-strategies.md). The built-in strategies live under [`src/core/summary-strategies/`](../../../src/core/summary-strategies/).
+→ Full reference: [Summary Strategies](../09-retrieval-and-graphrag/summary-strategies.md). The built-in strategies live under [`src/mcp/analysis-layer/summary-strategies/`](../../../src/mcp/analysis-layer/summary-strategies/).
 
 ---
 

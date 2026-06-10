@@ -652,7 +652,7 @@ This split is deliberate. You can swap the [`ApiClient`](./api-client.md) (e.g.,
 
 **Related guides:**
 
-- [API Configuration Guide](../01-getting-started/api-config.md) — how `Model.api` is shaped, including the `convention` field.
+- [API Configuration Guide](./api-configuration.md) — how `Model.api` is shaped, including the `convention` field.
 - [DataLayer Guide](./data-layer.md) — the layer above conventions.
 - [Custom API Client](./api-client.md) — the layer below.
 - [Model service](./model-service.md) — how `ModelService` composes convention + endpoint resolver + client.

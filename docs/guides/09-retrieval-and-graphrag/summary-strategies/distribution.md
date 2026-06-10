@@ -40,7 +40,7 @@ The **left** panel is a mixed-shape record; the **middle** panel routes each fie
 5. **Other**: skip — distribution has nothing to say.
 6. Pack everything into `metadata.fields` keyed by field name, plus a one-line per-field `finding` text suitable for semantic embedding.
 
-Source: [`src/core/summary-strategies/distribution.ts`](../../../../src/core/summary-strategies/distribution.ts).
+Source: [`src/mcp/analysis-layer/summary-strategies/distribution.ts`](../../../../src/mcp/analysis-layer/summary-strategies/distribution.ts).
 
 ## Inputs consumed
 

@@ -1,11 +1,8 @@
 # Analysis Quickstart
 
-Part 2 of the [Quickstart](../01-getting-started/quickstart.md). Once the bookshelf is
-running with its 5,000-book dataset, this guide brings up
-postgres+pgvector, points the analysis tools at it, and walks **all nine
-built-in summary strategies** end to end — five field-level strategies
-on the `large` dataset, then four GraphRAG-aware strategies on the
-`graph` dataset (500 books with author + genre + intentional gaps).
+The hands-on entry to chapter IX. Part 2 of the [Quickstart](../01-getting-started/quickstart.md) — once the bookshelf is running with its 5,000-book dataset, this guide brings up postgres+pgvector, points the analysis tools at it, and walks **all nine built-in summary strategies** end to end — five field-level strategies on the `large` dataset, then four GraphRAG-aware strategies on the `graph` dataset (500 books with author + genre + intentional gaps).
+
+If you prefer the architecture first, read [Retrieval & GraphRAG overview](./retrieval-graphrag.md) (next in the chapter) and come back here when you're ready to run something.
 
 You'll spend about twenty minutes: ~3 on infrastructure, ~7 on the
 field-level tour, ~7 on the GraphRAG tour, ~3 on graph-aware sampling

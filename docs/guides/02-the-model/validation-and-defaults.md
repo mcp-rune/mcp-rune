@@ -2,6 +2,124 @@
 
 Attributes and associations declare _which fields exist_. This chapter covers the three small declarations that make a field **valid** — `required`, `default`, and `validation` — and explains where each one fires in the request lifecycle.
 
+## Try it — required, default, enum, range
+
+> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune ^0.102.0.
+
+Four calls to `validate_form` against your `bookshelf-tour` project surface
+each of the declarations this chapter teaches. Add the fields below to
+`src/models/book.ts` and invoke `validate_form` after each one.
+
+**Setup:** extend the `attributes` block in `src/models/book.ts`:
+
+```ts
+status: {
+  type: 'enum',
+  enumValues: ['unread', 'reading', 'finished'],
+  default: 'unread',
+  description: 'Reading state',
+},
+rating: {
+  type: 'integer',
+  validation: { min: 1, max: 5 },
+  description: '1-to-5 personal rating',
+},
+```
+
+(If you completed the [Associations](./associations.md) hands-on, your
+`Book` model still has `belongsTo: author`. Keep it — you'll need an
+integer `author_id` in the calls below.)
+
+**1. `required` — `validate_form` blocks an empty submission**
+
+Call `validate_form` with `{ "model": "book", "fields": {} }`:
+
+```json
+{
+  "valid": false,
+  "ready_to_submit": false,
+  "errors": [{ "field": "name", "message": "Name is required" }],
+  "warnings": [],
+  "computed": {},
+  "fields": {}
+}
+```
+
+The error is shaped by `required: true` on `name`. There is no
+`required: false` — absence is the default. The pass runs without a
+backend round trip; that's the contract the LLM relies on.
+
+**2. `default:` — the value is substituted before submit**
+
+Call `validate_form` with `{ "model": "book", "fields": { "name": "Dune", "author_id": 1 } }`:
+
+```json
+{
+  "valid": true,
+  "ready_to_submit": true,
+  "errors": [],
+  "warnings": ["Using default for status: unread"],
+  "computed": { "status": "unread" },
+  "fields": { "status": "unread", "name": "Dune", "author_id": 1 }
+}
+```
+
+`status` was missing; the framework substituted the static `default:` and
+echoed it back under both `computed` and `fields`. The warning tells the
+LLM the default was applied so it can re-prompt if the user wanted to be
+explicit.
+
+**3. `enumValues:` — an out-of-set value is rejected**
+
+Call `validate_form` with `{ "model": "book", "fields": { "name": "Dune", "author_id": 1, "status": "bogus" } }`:
+
+```json
+{
+  "valid": false,
+  "ready_to_submit": false,
+  "errors": [
+    {
+      "field": "status",
+      "message": "Invalid value \"bogus\". Valid options: unread, reading, finished"
+    }
+  ],
+  "warnings": [],
+  "computed": {},
+  "fields": { "name": "Dune", "author_id": 1, "status": "bogus" }
+}
+```
+
+`enumValues:` is its own validation — the message lists the allowed set,
+which is what the LLM reads to retry.
+
+**4. `validation: { min, max }` — bounds fire later, not here**
+
+Call `validate_form` with `{ "model": "book", "fields": { "name": "Dune", "author_id": 1, "rating": 99 } }`:
+
+```json
+{
+  "valid": true,
+  "ready_to_submit": true,
+  "errors": [],
+  "warnings": ["Using default for status: unread"],
+  "computed": { "status": "unread" },
+  "fields": { "status": "unread", "name": "Dune", "author_id": 1, "rating": 99 }
+}
+```
+
+`validate_form` does **not** currently enforce numeric `validation: { min, max }`
+bounds — `rating: 99` passes silently here. Bounds fire at write time
+(`create_model` / `update_model`), which means a backend with an `ApiClient`
+wired is needed to observe them. Treat `validation: { min, max }` as a
+write-time guarantee, not a form-time one. (`enumValues` and `required` _do_
+fire at validate-form time, as steps 1–3 show.)
+
+**Observe:** three of the four declarations short-circuit before any
+network call — that's the point of `validate_form`. Bounds are the
+exception today; the lifecycle diagram below names "Schema validation"
+as the pass that owns them, and the closest place the bounds fire today
+is on dispatch through `DataLayer`.
+
 ## `required: true`
 
 Marks the attribute as mandatory. The framework treats this as a contract that's checked in two places:

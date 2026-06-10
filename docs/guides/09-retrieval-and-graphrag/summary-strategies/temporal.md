@@ -39,7 +39,7 @@ The **left** panel is a column of dates (here with a deliberate mid-span gap); t
 4. Walk the buckets in order; count occurrences; flag empty buckets between the first and last populated bucket as `gaps`.
 5. Compute the recency window (days between the most-recent timestamp and now).
 
-Source: [`src/core/summary-strategies/temporal.ts`](../../../../src/core/summary-strategies/temporal.ts).
+Source: [`src/mcp/analysis-layer/summary-strategies/temporal.ts`](../../../../src/mcp/analysis-layer/summary-strategies/temporal.ts).
 
 ## Inputs consumed
 

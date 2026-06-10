@@ -43,7 +43,7 @@ The **left** panel feeds the dispatcher-loaded 384-dim embeddings keyed by recor
 6. Per cluster, sort members by distance ascending; the closest member to the anchor is the **representative**. Compute mean intra-cluster distance.
 7. The `representative_hint` is the first non-empty value from `title` / `name` / `subject` on the representative record, truncated to 60 chars. Useful as a human-readable label.
 
-Source: [`src/core/summary-strategies/semantic-cluster.ts`](../../../../src/core/summary-strategies/semantic-cluster.ts).
+Source: [`src/mcp/analysis-layer/summary-strategies/semantic-cluster.ts`](../../../../src/mcp/analysis-layer/summary-strategies/semantic-cluster.ts).
 
 ## Inputs consumed
 
