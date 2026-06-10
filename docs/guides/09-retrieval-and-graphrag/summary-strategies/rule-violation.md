@@ -45,7 +45,7 @@ The **left** panel is the page records plus every `BusinessRule` whose `scope` i
    - Otherwise, increment `failed`, append the record's `id` to `failed_ids` (cap 10), and store the result's `message` in `example_messages` (cap 3, deduplicated).
 4. Pack per-rule stats as `{ passed, failed, severity, description, failed_ids, example_messages }` into `metadata.rules` keyed by rule name.
 
-Source: [`src/core/summary-strategies/rule-violation.ts`](../../../../src/core/summary-strategies/rule-violation.ts).
+Source: [`src/mcp/analysis-layer/summary-strategies/rule-violation.ts`](../../../../src/mcp/analysis-layer/summary-strategies/rule-violation.ts).
 
 ## Inputs consumed
 

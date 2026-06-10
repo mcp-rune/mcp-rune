@@ -35,7 +35,7 @@ The **left** panel shows population per field on a page; the **middle** panel co
 3. Flag fields where `missing_rate >= SPARSE_THRESHOLD` (default `0.5`, hard-coded).
 4. Pack per-field stats into `metadata.coverage` and the flagged subset into `metadata.sparse_fields`.
 
-Source: [`src/core/summary-strategies/coverage.ts`](../../../../src/core/summary-strategies/coverage.ts).
+Source: [`src/mcp/analysis-layer/summary-strategies/coverage.ts`](../../../../src/mcp/analysis-layer/summary-strategies/coverage.ts).
 
 ## Inputs consumed
 

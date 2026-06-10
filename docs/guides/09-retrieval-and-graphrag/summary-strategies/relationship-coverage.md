@@ -45,7 +45,7 @@ The **left** panel is the page's records plus the persisted edges from `ingested
    - Tally `dst_model` distribution.
    - First 10 record IDs **with no edge of this type** become `gap_ids`.
 
-Source: [`src/core/summary-strategies/relationship-coverage.ts`](../../../../src/core/summary-strategies/relationship-coverage.ts).
+Source: [`src/mcp/analysis-layer/summary-strategies/relationship-coverage.ts`](../../../../src/mcp/analysis-layer/summary-strategies/relationship-coverage.ts).
 
 ## Inputs consumed
 

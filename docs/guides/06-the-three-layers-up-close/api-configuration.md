@@ -1,6 +1,6 @@
-# API Configuration Guide
+# API configuration
 
-This guide covers the `static api` configuration on models and the services that consume it: EndpointResolver and ModelService. It is the single reference for configuring how a model maps to API endpoints, HTTP methods, and payload conventions.
+This guide is the reference for the `static api` block on a `BaseModel`: `endpoint`, `convention`, `namespace`, `readOnly`, per-action overrides, custom actions, and compound IDs. It pairs with three sibling guides in this chapter — [Model service](./model-service.md) routes against the `api` block, [API client](./api-client.md) ships the requests, and [API convention](./api-convention.md) decides the wire format. Read this one when you're ready to point a model at a real backend.
 
 > **Custom actions (non-CRUD verbs) moved to the [`custom-actions` ApiExtension](../10-extensions/api-extensions.md) in v0.44.0.** Sections in this guide that reference `api.actions`, `ActionDefinition`, or `ModelActionTool` describe behavior that now lives in the extension. The configuration shape is unchanged — only the registration site moved. Register `customActionsExtension()` on `ToolRegistry` and declare actions on `static extensions['custom-actions']` via the `customActionsConfig()` helper.
 >

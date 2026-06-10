@@ -38,7 +38,7 @@ The 2854-pages row is the outlier the **left** panel feeds in; the **middle** pa
 3. **Categorical fields** (≤ 20 distinct values, by the same heuristic as `distribution`): flag any value whose share is < 5% (rounded).
 4. Collect `outlier_records` as an array of `{id, field, value, z_score?}` entries (limited to 20 per page to keep the memory row size bounded).
 
-Source: [`src/core/summary-strategies/anomaly.ts`](../../../../src/core/summary-strategies/anomaly.ts).
+Source: [`src/mcp/analysis-layer/summary-strategies/anomaly.ts`](../../../../src/mcp/analysis-layer/summary-strategies/anomaly.ts).
 
 ## Inputs consumed
 

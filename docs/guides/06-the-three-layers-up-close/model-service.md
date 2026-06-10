@@ -52,7 +52,7 @@ When any of those isn't true, you have two options: extend `ModelService` via th
 3. **Compound-ID expansion** for nested resources (`books/:book_id/chapters/:id`).
 4. **Custom `pathForType`** if the deployer overrides the namespacing rule.
 
-You rarely touch `EndpointResolver` directly. You touch it indirectly when you declare a model's `api.endpoint`, when you wire `namespace:` on the registry, or when you declare `endpoints:` for non-CRUD actions. The [API configuration guide](../01-getting-started/api-config.md) covers the declarative surface.
+You rarely touch `EndpointResolver` directly. You touch it indirectly when you declare a model's `api.endpoint`, when you wire `namespace:` on the registry, or when you declare `endpoints:` for non-CRUD actions. The [API configuration guide](./api-configuration.md) covers the declarative surface.
 
 ## `ApiClient` — HTTP verbs
 

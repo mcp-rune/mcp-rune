@@ -2,6 +2,110 @@
 
 The previous chapter covered single-attribute kinds. This chapter covers the second kind of declaration in a model: how it points at other models. An association is a static field that tells the framework "every record of this type has an FK to a record of that type" — and from that one declaration the framework derives foreign-key columns, pickers, validators, prompt fields, and join logic.
 
+## Try it — wire `Book belongsTo Author`
+
+> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune ^0.102.0.
+
+Three edits to your scaffolded `bookshelf-tour` project make the derivation
+visible: add a second model, declare the FK, and observe two surfaces that
+weren't there before.
+
+**1. Add the second model**
+
+```bash
+rune add model Author --attrs name:string,bio:text
+```
+
+Expected output:
+
+```
+✓ added model Author
+  + src/models/author.ts
+  + src/prompts/author-prompt.ts
+  ~ src/models/index.ts
+  ~ src/prompts/index.ts
+
+Edit src/models/author.ts to declare attributes.
+```
+
+**2. Declare the `belongsTo` on `Book`**
+
+Edit `src/models/book.ts` and add three things: a `convention` on the `api`
+block (associations require it), an `associations` field, and the import
+for the convention. The minimal diff:
+
+```ts
+import { jsonApiConvention } from '@mcp-rune/mcp-rune/api-conventions'
+
+export class Book extends BaseModel {
+  static override description = 'A Book record'
+  static override api = { endpoint: 'books', convention: jsonApiConvention }
+
+  static override associations = {
+    belongsTo: {
+      author: { target_model: 'author' as const, required: true }
+    }
+  }
+
+  // …attributes unchanged…
+}
+```
+
+> **Gotcha:** The framework throws `apiConvention is required when model has
+associations` if you forget the `convention:` field on `api`. The error
+> message currently says "set static apiConvention" — read it as "add
+> `convention:` to your `static api` block". Without it, the prompt-derivation
+> pass fails at server boot.
+
+Confirm it typechecks:
+
+```bash
+npm run typecheck
+```
+
+(Prints nothing on success.)
+
+**3. Observe two derived surfaces**
+
+Restart the Inspector and call `list_models` with `{}`. The `book` row now
+has a derived `belongs_to` slot the framework synthesised from the
+association:
+
+```json
+{
+  "name": "book",
+  "endpoint": "books",
+  "description": "A Book record",
+  "attributes": ["name", "description"],
+  "required_attributes": ["name"],
+  "read_only": false,
+  "belongs_to": ["author"]
+}
+```
+
+Call `validate_form` with `{ "model": "book", "fields": { "name": "Dune" } }`.
+The required `author_id` foreign key (synthesised from the association name
+
+- `_id`) is missing, and the framework reports it with a humanised label:
+
+```json
+{
+  "valid": false,
+  "ready_to_submit": false,
+  "errors": [{ "field": "author_id", "message": "ID of the author is required" }],
+  "warnings": [],
+  "computed": {},
+  "fields": { "name": "Dune" }
+}
+```
+
+**Observe:** you didn't declare `author_id` as an attribute, and you
+didn't write a validator for it. One `belongsTo` line synthesised the
+FK and the required-field check at validate-form time — listed in the
+[derivation overview](./derivation-overview.md) under "Foreign-key columns".
+The picker (`pick_model_app({ model: 'book', field: 'author_id' })`) is
+the same story; see [MCP apps](../05-apps/mcp-apps.md).
+
 ## The two shapes
 
 mcp-rune supports two association shapes, declared in a single `static associations` block.

@@ -38,7 +38,7 @@ The **left** panel is the scalar FK columns on a page; the **middle** panel runs
 3. For each field in `EntityFields`: count occurrences per value, sort descending, take the top **5**.
 4. Pack per-field stats as `{ total_refs, unique_refs, top }` into `metadata.fields`.
 
-Source: [`src/core/summary-strategies/entity-extraction.ts`](../../../../src/core/summary-strategies/entity-extraction.ts).
+Source: [`src/mcp/analysis-layer/summary-strategies/entity-extraction.ts`](../../../../src/mcp/analysis-layer/summary-strategies/entity-extraction.ts).
 
 ## Inputs consumed
 

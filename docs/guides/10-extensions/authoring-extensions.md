@@ -705,7 +705,7 @@ If you publish your extension as a separate package, pin a `peerDependencies` ra
 - [API Extensions Guide](./api-extensions.md) — the conceptual reference (architecture overview, narrowed-context principle, naming convention, the "Why the namespaced bag?" rationale)
 - [Extensions Guide (HTTP)](./extensions-http.md) — the `HttpExtension` contract and worked CIMD example
 - [Model service](../06-the-three-layers-up-close/model-service.md) — what `ModelService.dispatch`, `buildPayload`, `endpointResolver`, `apiClient`, `models` actually do — the stable mixin contract
-- [API Configuration Guide](../01-getting-started/api-config.md) — how `BaseModel.api` and `static extensions` interact
+- [API Configuration Guide](../06-the-three-layers-up-close/api-configuration.md) — how `BaseModel.api` and `static extensions` interact
 - Source of the built-ins:
   - [`src/api-extensions/custom-actions.ts`](../../../src/api-extensions/custom-actions.ts) — single-file extension (tool + mixin + helper + reader)
   - [`src/api-extensions/search/`](../../../src/api-extensions/search/) — directory-shaped extension (multiple modules including a factory)

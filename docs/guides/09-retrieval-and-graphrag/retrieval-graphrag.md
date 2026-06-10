@@ -1,12 +1,10 @@
 # Retrieval & GraphRAG
 
-**Start here for retrieval.** mcp-rune doesn't just hand an agent raw rows — it
-indexes a whole dataset three ways and lets the agent answer by _meaning_,
-_aggregate_, or _stratified sample_. Vectors give you semantic recall; a
-relationship graph and a domain registry make that recall **GraphRAG-aware**.
+The architectural map for chapter IX. If you'd like to feel this working before reading the architecture, run [Analysis quickstart](./analysis-quickstart.md) first — it brings up pgvector and walks every summary strategy end to end against fixtures. Come back here when you want to know which piece does what.
 
-This guide is the map. Each moving part has its own deep-dive; this page frames
-how they fit together and which guide owns which piece.
+mcp-rune doesn't just hand an agent raw rows — it indexes a whole dataset three ways and lets the agent answer by _meaning_, _aggregate_, or _stratified sample_. Vectors give you semantic recall; a relationship graph and a domain registry make that recall **GraphRAG-aware**.
+
+This guide frames how they fit together and which guide owns which piece.
 
 ```
 RETRIEVAL / GRAPHRAG PIPELINE                      MiniLM-L6-v2 · 384-dim · pgvector

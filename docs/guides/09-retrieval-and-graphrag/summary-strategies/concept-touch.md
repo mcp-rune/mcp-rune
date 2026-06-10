@@ -46,7 +46,7 @@ The **left** panel supplies the page records plus the `DomainConcept` declaring 
    - `touched_by_target[<dst_model>]` = records that have ≥1 edge into that specific target.
    - `missing_ids` = first 10 record IDs with zero edges into any of `targets`.
 
-Source: [`src/core/summary-strategies/concept-touch.ts`](../../../../src/core/summary-strategies/concept-touch.ts).
+Source: [`src/mcp/analysis-layer/summary-strategies/concept-touch.ts`](../../../../src/mcp/analysis-layer/summary-strategies/concept-touch.ts).
 
 ## Inputs consumed
 

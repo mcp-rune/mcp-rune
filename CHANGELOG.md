@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.102.6] - 2026-06-10
+
+### Changed
+
+- **Docs site reorganized: chapters I, II, VI, IX, and the framework subpath map**. The placement and content of the early-chapter guides drifted from the framework they describe; this release realigns them and grounds every command/output in a real `/tmp` validation against rune CLI 0.11.0.
+  - **`docs/guides/01-getting-started/api-config.md` → `docs/guides/06-the-three-layers-up-close/api-configuration.md`**. The static `api` block is consumed by `ModelService`, `ApiClient`, and `ApiConvention` — all chapter VI guides — so it now sits with them as the third entry of the chapter. The slug renamed to `api-configuration` so the sidebar's "API …" family (`API client`, `API configuration`, `API convention`) sorts together.
+  - **`derivation-overview.md` promoted to lead chapter II** as a chapter primer (was the closing entry). The intro and "What's next" rewritten to introduce the table as a destination, then route into the five deep-dive guides.
+  - **`analysis-quickstart.md` promoted to lead chapter IX**. It is Quickstart Part 2 and the only hands-on tutorial in the chapter — burying it after three reference guides was reader-hostile.
+- **Every chapter I–II guide gets a validated `## Try it` section**. Each one was run end-to-end against a real scaffold in `/tmp/rune-docs-validate/bookshelf-tour/`; the commands and their captured outputs go into the guide verbatim. Affected files: `quickstart.md`, `project-structure.md`, `derivation-overview.md`, `defining-a-model.md`, `attributes-and-kinds.md`, `associations.md`, `validation-and-defaults.md`, `definition-vs-consumption.md`.
+- **`project-structure.md` framework block** rewritten against the actual `package.json` `exports`. The previous block named a non-existent `mcp/services` subpath, kept a `services` entry for code that now lives in `runtime/`, and claimed `core` contained `BaseModel`. The new block lists every real subpath (including `data-layer`, `api-conventions`, `models`, `runtime`, `extensions/center-of-control`, `apps/kind-renderers`, `db/migrations`) in import order and notes the `core` → `models` move for older code.
+- **`subpath-imports.md` example and map** updated. `BaseModel`/`AttributeDefinition` now import from `/models` (was `/core`); `ApiClient` type imports from `/core` (was wrongly listed under `/tools`); `SearchService`/`SearchRequestShaper` now import from `/api-extensions/search` (the standalone `/search` subpath does not exist). The map adds `/models`, `/data-layer`, `/api-conventions`, `/api-extensions/custom-actions`, `/extensions/center-of-control`. Replaced the fictional `createNewModelApp` with the real factory list (`createFindModelApp`, `createShowModelApp`, `createPickModelApp`, …).
+- **`definition-vs-consumption.md` prompt section** rewritten to match reality. The doc claimed a sibling `src/mcp/prompt-layer/` folder; no such folder exists. Updated to describe the actual split: declaration and consumption files coexist inside `src/mcp/prompts/`, sharing the same `no-restricted-imports` guard. Same fix in `the-three-layers.md` line 135 (eslint scope `prompts/**`, not `prompt-layer/**`).
+
+### Fixed
+
+- **Quickstart's "in-memory `DataLayer` adapter" claim**. The simple-preset scaffold actually wires a throwing `Proxy` as the `ApiClient` — every CRUD call surfaces a clear "Wire `createApiClient` in `src/config.ts`" error instead of working silently against an in-memory store. The quickstart now describes that seam honestly and points to chapter VI for the wiring.
+- **Polymorphic tool count: 8 → 9**. `list_models`, `find_records`, `create_model`, `update_model`, `delete_model`, `bulk_action_models`, `get_prompt_guide`, `validate_form`, `get_form_summary` — six data + three form-strategy. Multiple guides corrected.
+- **Quickstart's scaffolded-Book attribute list**. `rune new ... --models Book` actually produces `{name, description}` (generic placeholders), not `{title, author, status, rating}`. Diagram and prose updated.
+- **Quickstart Claude Desktop config path**. The entry point is `src/server.ts`, not `server.ts` at the project root.
+- **`validation-and-defaults.md` claim about numeric bounds**. The guide stated `validation: { min, max }` fires at `validate_form` time; the framework's `validate_form` currently does not enforce numeric bounds (rating: 99 passes silently). The guide now scopes the claim to `required`, `default`, and `enumValues` and notes the open gap.
+- **Stale `src/core/summary-strategies/` source links** in `analysis-memories.md`, `extension-recipes.md`, and the ten per-strategy reference pages (`anomaly`, `concept-touch`, `coverage`, `distribution`, `entity-extraction`, `relationship-coverage`, `rule-violation`, `semantic-cluster`, `temporal`). Real path is `src/mcp/analysis-layer/summary-strategies/`.
+- **Internal cross-links** for the api-config rename (`authoring-extensions.md`, `api-convention.md`, `model-service.md`, `01-getting-started/index.md`, `project-structure.md`).
+
 ## [0.102.5] - 2026-06-10
 
 ### Fixed
@@ -3104,6 +3127,7 @@ Initial public release. Extracted from production MCP servers.
 
 - 11 subpath exports: `mcp-kit/server`, `mcp-kit/tools`, `mcp-kit/prompts`, `mcp-kit/apps`, `mcp-kit/search`, `mcp-kit/domain`, `mcp-kit/oauth2`, `mcp-kit/services`, `mcp-kit/db`, `mcp-kit/core`
 
+[0.102.6]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.5...v0.102.6
 [0.102.5]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.4...v0.102.5
 [0.102.4]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.3...v0.102.4
 [0.102.3]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.2...v0.102.3

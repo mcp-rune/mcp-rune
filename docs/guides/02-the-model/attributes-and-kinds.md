@@ -2,6 +2,74 @@
 
 The previous chapter showed the `attributes` block as a flat map of names to definitions. This chapter zooms into one entry of that map. The `type:` literal you wrote (`'string'`, `'enum'`, `'datetime'`) selects a **kind** — a single object that knows how the value moves between your API, the framework's internal representation, the HTML `<input>`, the LLM-facing summary, and the validator. One declaration drives all of them.
 
+## Try it — watch three representations move
+
+> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune ^0.102.0.
+
+Three calls against your `bookshelf-tour` project surface three of the
+representations the diagram below maps. Run them and match the output
+before reading the kind taxonomy.
+
+**1. API representation — `list_models` shows the wire shape**
+
+`list_models` with `{}` reports the attribute names and types the
+framework will accept on the wire. For the scaffolded `book`:
+
+```json
+{
+  "name": "book",
+  "attributes": ["name", "description"],
+  "required_attributes": ["name"]
+}
+```
+
+`name` is a `string` kind, `description` is a `text` kind — both selected
+by the `type:` literal in `src/models/book.ts`.
+
+**2. Validation representation — `validate_form` exercises the kind's `validate` method**
+
+Call `validate_form` with `{ "model": "book", "fields": {} }`:
+
+```json
+{
+  "valid": false,
+  "ready_to_submit": false,
+  "errors": [{ "field": "name", "message": "Name is required" }],
+  "warnings": [],
+  "computed": {},
+  "fields": {}
+}
+```
+
+The error message is shaped by two things: the `required: true` flag on
+the `name` attribute (the rule) and the kind's `describe()` (the
+`"Name"` label). Change the `description:` text in `book.ts` and the
+message updates on next boot.
+
+**3. LLM representation — `get_prompt_guide` calls every kind's `describe`**
+
+Call `get_prompt_guide` with `{ "guide_name": "book" }`. The bottom of
+the response is a Markdown table the LLM reads to fill the form:
+
+```
+| Attribute     | Type   | Required | Valid Values |
+|---------------|--------|----------|--------------|
+| name          | string | Yes      |              |
+| description   | text   | No       |              |
+```
+
+Each row is the kind reporting itself. Switch `description` from `'text'`
+to a different built-in (e.g. `'string'`) in `src/models/book.ts`, save,
+re-run, and watch the row update — no template lives in your prompt
+class for this content.
+
+**Observe:** one `type:` literal selects the wire parser, the
+validation message, and the LLM-facing type label simultaneously. Now
+the rest of this guide is the taxonomy of which kinds you have to
+choose from and what each one ships.
+
+---
+
 An **attribute kind** describes how a single attribute value moves through three representations:
 
 ```

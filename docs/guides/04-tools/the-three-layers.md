@@ -132,7 +132,7 @@ The storage backend is therefore called a `DomainAdapter` (see `src/mcp/domain/a
 
 ## The eslint guard
 
-The three layers are not a convention you can break by typo. `eslint.config.js` declares a `no-restricted-imports` block scoped to `src/mcp/apps/**`, `src/mcp/tools/**`, `src/mcp/prompt-layer/**`, and `src/mcp/data-layer/api-extensions/**`. From those folders, importing `ApiClient`, `ModelService`, `SearchService`, `EndpointResolver`, `resolveDerivedFields`, `getKind`, `extractEdgesFromRecord`, or anything analogous fails the build.
+The three layers are not a convention you can break by typo. `eslint.config.js` declares a `no-restricted-imports` block scoped to `src/mcp/apps/**`, `src/mcp/tools/**`, `src/mcp/prompts/**`, and `src/mcp/data-layer/api-extensions/**`. From those folders, importing `ApiClient`, `ModelService`, `SearchService`, `EndpointResolver`, `resolveDerivedFields`, `getKind`, `extractEdgesFromRecord`, or anything analogous fails the build.
 
 If a method you need is missing from one of the three interfaces, the rule is **extend the interface** rather than reach past it. The interfaces are designed to grow; the projection layer is designed to stay narrow.
 

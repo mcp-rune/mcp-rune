@@ -79,6 +79,102 @@ override get displayValue(): string {
 
 Omit it and the framework uses `id` — which works but tells the human nothing.
 
+## Try it — add a second model
+
+> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune ^0.102.0.
+
+The `Tag` declaration above is the example. Now add it to your own
+scaffold and watch the framework wire it up for free.
+
+**1. Add the model**
+
+From the `bookshelf-tour` project you scaffolded in the
+[Quickstart](../01-getting-started/quickstart.md):
+
+```bash
+rune add model Tag --attrs name:string,color:string
+```
+
+Expected output:
+
+```
+✓ added model Tag
+  + src/models/tag.ts
+  + src/prompts/tag-prompt.ts
+  ~ src/models/index.ts
+  ~ src/prompts/index.ts
+
+Edit src/models/tag.ts to declare attributes.
+```
+
+Four files: two new (`tag.ts` and `tag-prompt.ts`), two patched
+(`src/models/index.ts` and `src/prompts/index.ts` now also export `Tag`
+and register `TagPrompt`). You didn't touch the registry — the CLI did.
+
+**2. Inspect what was generated**
+
+```bash
+cat src/models/tag.ts
+```
+
+Expected output:
+
+```ts
+import type { AttributeDefinition } from '@mcp-rune/mcp-rune/models'
+import { BaseModel } from '@mcp-rune/mcp-rune/models'
+
+export class Tag extends BaseModel {
+  static override description = 'A Tag record'
+  static override api = { endpoint: 'tags' }
+
+  static override attributes: Record<string, AttributeDefinition> = {
+    name: {
+      type: 'string',
+      description: 'name'
+    },
+    color: {
+      type: 'string',
+      description: 'color'
+    }
+  }
+
+  static get attributesConfig(): Record<string, AttributeDefinition> {
+    return this.attributes
+  }
+}
+```
+
+Match it against the four fields above: `description` and `api` are
+filled with safe defaults the scaffold picked from the model name;
+`attributes` was filled from the `--attrs` flag; `attributesConfig` is the
+mirror getter the prompt-derivation framework still reads. `displayValue`
+is not generated — the framework will fall back to `id` until you add one.
+
+**3. Watch the framework adopt it**
+
+Re-run the Inspector (or call via stdio JSON-RPC) and invoke `list_models`
+with `{}`. Expect the tag row right next to book:
+
+```json
+{
+  "name": "tag",
+  "endpoint": "tags",
+  "description": "A Tag record",
+  "attributes": ["name", "color"],
+  "required_attributes": [],
+  "read_only": false
+}
+```
+
+Then call `get_prompt_guide` with `{ "guide_name": "tag" }` and notice
+that every word of the guide is derived from the file you just read —
+no template, no manual wiring.
+
+**Observe:** registering one class — by way of the CLI patching one line
+into `src/models/index.ts` — added a fully-functional resource. Every
+polymorphic tool that worked against `book` works against `tag` too. Now
+the rest of this guide tells you what each piece of that file is doing.
+
 ## A richer example
 
 When a model has associations, the declaration grows by one field. `Task` from the `tasks` server adds a `belongsTo` to `Project` and a `hasMany` to `Tag`:
