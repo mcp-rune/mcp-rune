@@ -39,11 +39,6 @@ Inspector, and manages their lifecycle. Install it globally:
 npm install -g @mcp-rune/create
 ```
 
-> **Pre-publish note**: `@mcp-rune/create` is not on npm yet. Until it is,
-> follow [Local development](https://github.com/mcp-rune/mcp-rune-cli#local-development)
-> in the CLI README — clone the repo, `npm link`, and you'll have the same
-> `rune` command on your path.
-
 Prefer no global install? `npx @mcp-rune/create new …` and
 `npm create @mcp-rune@latest …` work the same way; see the
 [CLI README](https://github.com/mcp-rune/mcp-rune-cli#production-installation)
@@ -78,7 +73,7 @@ default prompt strategy, and all nine polymorphic tools registered.
 
 ## Try a tool
 
-> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune ^0.102.0 · Node 24.14.0.
+> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.103.0 · Node 24.
 
 Inside the Inspector, call these three in order. Each one reads the
 `Book` declaration directly — no backend wiring needed — so the output

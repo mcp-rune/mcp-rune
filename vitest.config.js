@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import path from 'node:path'
 
 export default defineConfig({
@@ -11,6 +11,9 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['**/__tests__/**/*.spec.{js,ts}'],
+    // The executable-docs suite is heavy (scaffolds, network installs, spawns
+    // servers) and runs on its own config — keep it out of the fast unit run.
+    exclude: [...configDefaults.exclude, '__tests__/docs/**'],
     testTimeout: 10000,
     coverage: {
       provider: 'v8',

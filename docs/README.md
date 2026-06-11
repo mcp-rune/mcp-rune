@@ -378,6 +378,77 @@ Shiki. Open an issue if you need first-class CJS support.
 
 ---
 
+## Verifying tutorials
+
+Guides that contain commands a reader runs are **tutorials**. They drive
+the real `rune` CLI and the framework, so we prove them rather than trust
+them: each is exercised end-to-end by an executable test in
+`__tests__/docs/`. A tutorial is not "done" until its test is green.
+Prose-only explainer chapters are exempt.
+
+`npm run docs:verify` runs the suite (`vitest.docs.config.js`). For each
+covered page it scaffolds a throwaway project in a temp dir against the
+pinned CLI, links the **working-tree** framework on top (so a red build
+means this branch broke the tutorial, not the last published release),
+then drives the scaffolded MCP server with a real client and asserts the
+documented tool outputs — the same path the Inspector walks, minus the
+browser. A failing test names the exact page that drifted from the code.
+
+The suite is heavy (network installs, a real build) and runs on its own
+config, kept out of the fast `npm test` unit run; `global-setup` builds
+and packs the working tree once. In CI it is the `docs-verify` job.
+
+### One pinned toolchain — `docs/verified-with.json`
+
+Every covered page is verified against ONE toolchain, so no two
+tutorials can claim different versions:
+
+```json
+{
+  "runeCli": "0.11.0",
+  "node": "24",
+  "pages": ["01-getting-started/quickstart.md", "01-getting-started/project-structure.md"]
+}
+```
+
+- **`runeCli`** — the `@mcp-rune/create` version every page-test
+  installs. It lives in a separate repo, so it is the one value recorded
+  by hand.
+- **`node`** — the verified Node major (matches the CI matrix).
+- **`pages`** — the executable tutorials. Both the stamp script and the
+  test suite read this list.
+
+The `@mcp-rune/mcp-rune` version is _not_ stored here — it comes from the
+root `package.json`, because that working tree is what the suite links.
+
+### The "Verified against" stamp is generated
+
+Each tutorial carries a one-line blockquote recording its toolchain:
+
+```
+> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.102.6 · Node 24.
+```
+
+`npm run docs:stamp` writes it from `docs/verified-with.json` +
+`package.json` — **never hand-edit it.** `npm run docs:stamp:check` is
+the CI gate (cheap, offline) and fails on any drift. Keep the three names
+straight: `rune` is the CLI binary, `@mcp-rune/create` is the package it
+ships in (the manifest's `runeCli`), and `@mcp-rune/mcp-rune` is the
+framework.
+
+### Changing or extending a tutorial
+
+- **Changed a step** (new command, changed flag, different output):
+  update that page's assertions in `__tests__/docs/` and re-run
+  `npm run docs:verify`.
+- **New pinned toolchain**: bump `docs/verified-with.json`
+  (`runeCli` / `node`) deliberately, re-run `docs:verify` to confirm the
+  tutorials still pass, then `docs:stamp` to refresh the blockquotes.
+- **New chapter coverage**: add the page to `pages[]`, write its spec in
+  `__tests__/docs/`, and run `docs:stamp`.
+
+---
+
 ## Optional frontmatter
 
 A guide can declare a YAML frontmatter block at the top of the file. Two

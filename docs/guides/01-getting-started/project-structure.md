@@ -39,7 +39,7 @@ The advanced preset's `--transport both` also scaffolds a second entry point at 
 
 ## Try it — walk a fresh scaffold
 
-> Verified against rune CLI 0.11.0 · Node 24.14.0 on Darwin 25.5.0.
+> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.103.0 · Node 24.
 
 Scaffold a throwaway project in `/tmp` and inspect it. Every file, folder,
 and command line below is captured verbatim from a real run; the layout
