@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readdirSync, readFileSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -66,6 +66,22 @@ export function installLinkedAndBuild(dir: string): void {
 
 export function runScript(dir: string, script: string): string {
   return execFileSync('npm', ['run', script], { cwd: dir, encoding: 'utf8' })
+}
+
+// `rune add model <Name> --attrs ...` against an existing scaffold (no install
+// needed — it only generates and patches src files).
+export function runeAdd(dir: string, model: string, attrs: string): string {
+  return execFileSync(
+    'npx',
+    ['--yes', `@mcp-rune/create@${RUNE_CLI}`, 'add', 'model', model, '--attrs', attrs],
+    { cwd: dir, encoding: 'utf8' }
+  )
+}
+
+// Apply a documented hand-edit to a scaffolded file (e.g. adding an
+// association or attribute to a model), the way the guide tells the reader to.
+export function editFile(path: string, transform: (src: string) => string): void {
+  writeFileSync(path, transform(readFileSync(path, 'utf8')), 'utf8')
 }
 
 // Launch the scaffolded stdio server and drive it with a real MCP client —

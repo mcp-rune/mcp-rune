@@ -8,7 +8,7 @@ Everything below is what makes the "Model is the single source of truth" claim c
 
 ## Try it — see derivation in action before reading the map
 
-> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune ^0.102.0.
+> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.103.0 · Node 24.
 
 If you finished the [Quickstart](../01-getting-started/quickstart.md) you
 already have everything you need: the scaffolded `bookshelf-tour` project,

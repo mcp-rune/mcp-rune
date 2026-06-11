@@ -4,7 +4,7 @@ Attributes and associations declare _which fields exist_. This chapter covers th
 
 ## Try it — required, default, enum, range
 
-> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune ^0.102.0.
+> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.103.0 · Node 24.
 
 Four calls to `validate_form` against your `bookshelf-tour` project surface
 each of the declarations this chapter teaches. Add the fields below to
@@ -38,16 +38,23 @@ Call `validate_form` with `{ "model": "book", "fields": {} }`:
 {
   "valid": false,
   "ready_to_submit": false,
-  "errors": [{ "field": "name", "message": "Name is required" }],
-  "warnings": [],
-  "computed": {},
-  "fields": {}
+  "errors": [
+    { "field": "name", "message": "Name is required" },
+    { "field": "author_id", "message": "ID of the author is required" }
+  ],
+  "warnings": ["Using default for status: unread"],
+  "computed": { "status": "unread" },
+  "fields": { "status": "unread" }
 }
 ```
 
-The error is shaped by `required: true` on `name`. There is no
-`required: false` — absence is the default. The pass runs without a
-backend round trip; that's the contract the LLM relies on.
+Two required fields block the submit: `name`, and the `author_id` FK
+synthesised by the `belongsTo: author` association you kept from the
+[Associations](./associations.md) guide. `status` is absent too, but it
+carries a `default:` — so instead of an error you get a warning and the
+substituted value under `computed` / `fields`. There is no
+`required: false`; absence is the default, and the whole pass runs without
+a backend round trip — the contract the LLM relies on.
 
 **2. `default:` — the value is substituted before submit**
 
@@ -168,7 +175,7 @@ A `default:` and `required: true` are not contradictory — they describe two di
 
 ## `validation: { … }`
 
-Numeric and length bounds. The framework runs them at `validate_form` time, returning a structured failure with the field name and the violated bound.
+Numeric and length bounds. These fire at **write time** (`create_model` / `update_model`), not at `validate_form` time — as the [Try it](#try-it--required-default-enum-range) section above shows, `rating: 99` passes `validate_form` untouched. Treat them as a backend-dispatch guarantee, not a form-time one.
 
 File: `bookshelf/models/book.ts`
 

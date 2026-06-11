@@ -11,13 +11,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Executable-docs harness — tutorials are now proven, not trusted.** Guides under `docs/guides/` that contain runnable commands are verified end-to-end by a new test suite in `__tests__/docs/`: each page is scaffolded in a temp dir against one pinned toolchain, the **working-tree** framework is linked on top (so a red build means this branch broke the tutorial, not the published release), and the scaffolded MCP server is driven by a real client to assert the documented tool outputs. A failing test names the exact page that drifted from the code. Run with `npm run docs:verify`; CI runs it as the `docs-verify` job.
   - **`docs/verified-with.json`** — a single source of truth pinning the `@mcp-rune/create` CLI version, the verified Node, and the list of executable pages, so no two tutorials can be verified against different versions.
   - **Generated `> Verified against …` stamps**. `npm run docs:stamp` writes each tutorial's stamp from the manifest + root `package.json`; `npm run docs:stamp:check` is the CI gate. The stamp is never hand-edited.
-  - Coverage today: the getting-started chapter (`quickstart.md`, `project-structure.md`).
+  - Coverage: the getting-started chapter (`quickstart.md`, `project-structure.md`) and all six chapter II "## Try it" tutorials (`defining-a-model`, `attributes-and-kinds`, `derivation-overview`, `associations`, `validation-and-defaults`, `definition-vs-consumption`) — including pages whose tutorial parts hand-edit the model (associations, status/rating attributes), which the harness applies the way the guide tells the reader to.
 
 ### Changed
 
 - **`AGENTS.md`** documents the tutorial-verification contract and points to `docs/README.md → "Verifying tutorials"` for the full workflow (harness, manifest fields, extending coverage).
 - The fast `npm test` unit run excludes the heavy `__tests__/docs/**` suite; it runs on its own `vitest.docs.config.js`.
-- Getting-started stamps normalized to one generated format.
+- All eight covered tutorial stamps normalized to one generated format.
+
+### Fixed
+
+- **`02-the-model/validation-and-defaults.md` — two outputs that didn't match the framework**, caught by the new executable suite. (1) The empty-form `validate_form` call showed only a `name` error; against the guide's own setup (the `belongsTo: author` association plus the `status` default) the real output also reports the required `author_id` and applies the `status` default — the JSON and prose now reflect that. (2) The `validation: { … }` reference section claimed numeric bounds fire at `validate_form` time, contradicting the guide's own call-4 (`rating: 99` passes); corrected to "write time."
 
 ## [0.102.6] - 2026-06-10
 
