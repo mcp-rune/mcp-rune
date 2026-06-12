@@ -92,6 +92,12 @@ Pick the smallest example domain that exercises the feature being documented —
 
 The mcp-rune source API is the source of truth for the example's _syntax_ (e.g. `static formStrategy`, `static fieldDefinitions`); the examples repo is the source of truth only for the _domain vocabulary_. If the two diverge, the framework wins — don't propagate stale examples-repo syntax into framework comments.
 
+## Tutorial docs are verified from a clean scaffold
+
+Any guide under `docs/guides/` with commands a reader runs is a **tutorial**: it is not "done" until its executable test in `__tests__/docs/` is green (`npm run docs:verify`), and its `> Verified against …` stamp is **generated** by `npm run docs:stamp` — never hand-edited. One manifest (`docs/verified-with.json`) pins the toolchain for every page, so no two tutorials drift to different versions; `npm run docs:stamp:check` gates it in CI.
+
+The full workflow — the harness, the manifest fields, changing a step, bumping the toolchain, and extending coverage to a new chapter — lives in **docs/README.md → "Verifying tutorials"**. Read it before you add or edit a tutorial.
+
 ## Epic workflow for complex changes
 
 For very complex changes, open a single GitHub **epic issue** before any code lands. The epic body enumerates every concrete sub-change in detail — file paths, axes, ordering, BREAKING flags, downstream-fork checks — and stays open as the source of truth for the whole effort.

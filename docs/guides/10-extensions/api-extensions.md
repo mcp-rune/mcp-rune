@@ -48,15 +48,15 @@ Six pieces work together. Author-facing pieces are on the left; framework-facing
                                         └───────────────────────┘
 ```
 
-| Piece                                                      | Owned by  | Read by                                   | Purpose                                                                                                                                                           |
-| ---------------------------------------------------------- | --------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`xxxConfig({...})`** typed helper                        | extension | model authors                             | Gives `extensions['xxx']` slot type-safe values                                                                                                                   |
-| **`getXxxConfig(model)`** typed reader                     | extension | tools/apps/anyone                         | Single read site; structural (works on `ModelConfig`, `AppModelClass`, `SearchModelClass`)                                                                        |
-| **Capability getters** (`getXxxableModelNames`, etc.)      | extension | tools that need "which models support X?" | Filter `models` registry by extension config                                                                                                                      |
-| **`xxxExtension()`** factory                               | extension | server author                             | Returns `ApiExtension`; registered on `ToolRegistry`                                                                                                              |
-| **`createXxxService(apiClient, ctx?)`** factory (optional) | extension | extension itself + other consumers        | Central construction site for long-lived service instances (only needed when the extension exposes a service that's used outside its tools, e.g. `SearchService`) |
-| **`BaseModel.extensions['xxx']`** slot                     | framework | typed reader                              | Per-model config bag, namespaced by extension key                                                                                                                 |
-| **`ToolRegistry({ apiExtensions: {...} })`**               | framework | server author                             | Single opt-in site; runs `register(ctx)` once at boot with capability validation and dedupe                                                                       |
+| Piece | Owned by | Read by | Purpose |
+| --- | --- | --- | --- |
+| **`xxxConfig({...})`** typed helper | extension | model authors | Gives `extensions['xxx']` slot type-safe values |
+| **`getXxxConfig(model)`** typed reader | extension | tools/apps/anyone | Single read site; structural (works on `ModelConfig`, `AppModelClass`, `SearchModelClass`) |
+| **Capability getters** (`getXxxableModelNames`, etc.) | extension | tools that need "which models support X?" | Filter `models` registry by extension config |
+| **`xxxExtension()`** factory | extension | server author | Returns `ApiExtension`; registered on `ToolRegistry` |
+| **`createXxxService(apiClient, ctx?)`** factory (optional) | extension | extension itself + other consumers | Central construction site for long-lived service instances (only needed when the extension exposes a service that's used outside its tools, e.g. `SearchService`) |
+| **`BaseModel.extensions['xxx']`** slot | framework | typed reader | Per-model config bag, namespaced by extension key |
+| **`ToolRegistry({ apiExtensions: {...} })`** | framework | server author | Single opt-in site; runs `register(ctx)` once at boot with capability validation and dedupe |
 
 The two built-in extensions show what this looks like in practice:
 
@@ -67,13 +67,13 @@ The two built-in extensions show what this looks like in practice:
 
 When your extension contributes a mixin via `ctx.registerModelServiceMixin(...)`, the mixin function receives a `ModelService` instance and returns a map of methods to `Object.assign` onto it. The mixin should compose these **public** members instead of reaching into private internals:
 
-| Member                                                       | Purpose                                                                                                                   |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `service.apiClient`                                          | The underlying CRUD client (`get`, `post`, `put`, `patch`, `delete`, `baseUrl`)                                           |
-| `service.endpointResolver`                                   | `pathForType(model, config)`, `applyNamespace(config, path)`, plus the CRUD `resolveCollection` / `resolveRecord` helpers |
-| `service.models`                                             | Read-only view of the models registry                                                                                     |
-| `service.buildPayload(model, modelConfig, attrs)`            | Convention-aware payload wrapping (handles association resolution)                                                        |
-| `service.dispatch(method, url, payload?, params?, options?)` | HTTP dispatch through the configured `ApiClient`                                                                          |
+| Member | Purpose |
+| --- | --- |
+| `service.apiClient` | The underlying CRUD client (`get`, `post`, `put`, `patch`, `delete`, `baseUrl`) |
+| `service.endpointResolver` | `pathForType(model, config)`, `applyNamespace(config, path)`, plus the CRUD `resolveCollection` / `resolveRecord` helpers |
+| `service.models` | Read-only view of the models registry |
+| `service.buildPayload(model, modelConfig, attrs)` | Convention-aware payload wrapping (handles association resolution) |
+| `service.dispatch(method, url, payload?, params?, options?)` | HTTP dispatch through the configured `ApiClient` |
 
 Anything prefixed with `_` (e.g. `_apiClient`, `_resolver`) is not part of the contract and may change without a release note.
 

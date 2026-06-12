@@ -758,13 +758,13 @@ await modelService.action('book', 'publish', {
 
 ### Domain Errors
 
-| Error                        | When                                 | Properties                  |
-| ---------------------------- | ------------------------------------ | --------------------------- |
-| `UnknownModelError`          | Model name not in registry           | `availableModels: string[]` |
-| `ModelReadOnlyError`         | Write CRUD on read-only model        | —                           |
-| `MissingRequiredFieldsError` | Create missing required attrs        | `missingFields: string[]`   |
-| `MissingParentError`         | Nested-only model without parentPath | —                           |
-| `UnknownActionError`         | Action not declared on model         | —                           |
+| Error | When | Properties |
+| --- | --- | --- |
+| `UnknownModelError` | Model name not in registry | `availableModels: string[]` |
+| `ModelReadOnlyError` | Write CRUD on read-only model | — |
+| `MissingRequiredFieldsError` | Create missing required attrs | `missingFields: string[]` |
+| `MissingParentError` | Nested-only model without parentPath | — |
+| `UnknownActionError` | Action not declared on model | — |
 
 **Note:** `ModelReadOnlyError` only applies to CRUD write operations (create, update, delete). Custom actions use `_validateModel` — read-only models can still have custom actions (e.g., GET export).
 

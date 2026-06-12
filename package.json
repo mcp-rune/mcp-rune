@@ -1,6 +1,6 @@
 {
   "name": "@mcp-rune/mcp-rune",
-  "version": "0.102.6",
+  "version": "0.103.0",
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
     "access": "public"
@@ -139,6 +139,9 @@
     "docs:dualize": "node docs/scripts/dualize.mjs",
     "docs:check": "node docs/scripts/dualize.mjs --check",
     "docs:check-placeholders": "node docs/scripts/dualize.mjs --report-placeholders",
+    "docs:verify": "vitest run -c vitest.docs.config.js",
+    "docs:stamp": "node docs/scripts/verified-stamp.mjs",
+    "docs:stamp:check": "node docs/scripts/verified-stamp.mjs --check",
     "illustrations:build": "node docs/illustrations/scripts/build-illustrations.mjs",
     "illustrations:check": "node docs/illustrations/scripts/check-illustrations.mjs",
     "prepublishOnly": "npm run build:full",

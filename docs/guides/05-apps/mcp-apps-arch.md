@@ -1,5 +1,4 @@
-> **Customization:** none — this chapter is the wiring deep-dive (sandbox, channels, schema generators, build).
-> The deployer-facing seams are [`AppRegistry({ apps, ... })`](./mcp-apps.md) for registering custom apps and [`BaseAppForm`](./model-form.md) for tuning the generic form. Architecture below is what runs underneath; you cannot replace it.
+> **Customization:** none — this chapter is the wiring deep-dive (sandbox, channels, schema generators, build). The deployer-facing seams are [`AppRegistry({ apps, ... })`](./mcp-apps.md) for registering custom apps and [`BaseAppForm`](./model-form.md) for tuning the generic form. Architecture below is what runs underneath; you cannot replace it.
 
 # Apps architecture
 
@@ -109,15 +108,15 @@ The `App` class from `@modelcontextprotocol/ext-apps` provides the communication
 
 ### App Catalog
 
-| App                | Tool Name              | Resource URI                         | Auth | Purpose                                                    |
-| ------------------ | ---------------------- | ------------------------------------ | ---- | ---------------------------------------------------------- |
-| New Model App      | `new_model_app`        | `ui://engineer/new-model-app`        | Yes  | Interactive form to create records                         |
-| Edit Model App     | `edit_model_app`       | `ui://engineer/edit-model-app`       | Yes  | Interactive form to edit records                           |
-| Find Model App     | `find_model_app`       | `ui://engineer/find-model-app`       | Yes  | Browseable table with optional text query + filter popover |
-| Show Model App     | `show_model_app`       | `ui://engineer/show-model-app`       | Yes  | Read-only detail cards                                     |
-| Pick Model App     | `pick_model_app`       | `ui://engineer/pick-model-app`       | Yes  | Type-ahead picker (single-model or cross-model group)      |
-| Multi-Pick App     | `multi_pick_model_app` | `ui://engineer/multi-pick-model-app` | Yes  | Browse-and-select picker for small/medium model sets       |
-| View Selection App | `view_selection_app`   | `ui://engineer/view-selection-app`   | Yes  | Inspect and manage the in-session selection store          |
+| App | Tool Name | Resource URI | Auth | Purpose |
+| --- | --- | --- | --- | --- |
+| New Model App | `new_model_app` | `ui://engineer/new-model-app` | Yes | Interactive form to create records |
+| Edit Model App | `edit_model_app` | `ui://engineer/edit-model-app` | Yes | Interactive form to edit records |
+| Find Model App | `find_model_app` | `ui://engineer/find-model-app` | Yes | Browseable table with optional text query + filter popover |
+| Show Model App | `show_model_app` | `ui://engineer/show-model-app` | Yes | Read-only detail cards |
+| Pick Model App | `pick_model_app` | `ui://engineer/pick-model-app` | Yes | Type-ahead picker (single-model or cross-model group) |
+| Multi-Pick App | `multi_pick_model_app` | `ui://engineer/multi-pick-model-app` | Yes | Browse-and-select picker for small/medium model sets |
+| View Selection App | `view_selection_app` | `ui://engineer/view-selection-app` | Yes | Inspect and manage the in-session selection store |
 
 Note: `new_model_app` and `edit_model_app` each build their own bundle, but both wrap the same shared client module at `src/mcp/apps/shared/model-form/main.js` — the rendered DOM is identical, and the mode (`'create'` vs `'update'`) is set from the server's tool result.
 
@@ -227,26 +226,26 @@ Schema generators are **pure functions** — no API calls, no side effects. They
 
 ### Schema Generators
 
-| Generator                | Input                     | Output                                    | Used By                            |
-| ------------------------ | ------------------------- | ----------------------------------------- | ---------------------------------- |
-| `generateFormSchema()`   | ModelClass + PromptClass  | `{ model, title, fieldsets, fields }`     | New/Edit Model App                 |
-| `generateListSchema()`   | ModelClass                | `{ model, title, columns, searchFields }` | Find Model App, View Selection App |
-| `generateDetailSchema()` | ModelClass + PromptClass? | `{ model, title, fields, fieldsets? }`    | Show Model App                     |
+| Generator | Input | Output | Used By |
+| --- | --- | --- | --- |
+| `generateFormSchema()` | ModelClass + PromptClass | `{ model, title, fieldsets, fields }` | New/Edit Model App |
+| `generateListSchema()` | ModelClass | `{ model, title, columns, searchFields }` | Find Model App, View Selection App |
+| `generateDetailSchema()` | ModelClass + PromptClass? | `{ model, title, fields, fieldsets? }` | Show Model App |
 
 ### Single Source of Truth
 
 The schema generators read from two sources:
 
-| What                | Source                         | Example                                         |
-| ------------------- | ------------------------------ | ----------------------------------------------- |
-| Field types, labels | `Model.attributes`             | `title: { type: 'string', label: 'Title' }`     |
-| Enum options        | `Model.attributes`             | `status: { enumValues: ['unread', 'reading'] }` |
-| Validations         | `Model.attributes`             | `rating: { validation: { min: 1, max: 5 } }`    |
-| Field grouping      | `Prompt.fieldGroups`           | `identity: { fields: ['title', 'author'] }`     |
-| Section layout      | `Prompt.sections`              | `identity: { title: 'Book Identity' }`          |
-| Defaults            | `Prompt.getDefaultFormState()` | `{ status: 'unread', formats: [] }`             |
-| Associations        | `Model.associations`           | `belongsTo: { location: { ... } }`              |
-| Search filters      | `Model.filters`                | `{ status: { type: 'enum', ... } }`             |
+| What | Source | Example |
+| --- | --- | --- |
+| Field types, labels | `Model.attributes` | `title: { type: 'string', label: 'Title' }` |
+| Enum options | `Model.attributes` | `status: { enumValues: ['unread', 'reading'] }` |
+| Validations | `Model.attributes` | `rating: { validation: { min: 1, max: 5 } }` |
+| Field grouping | `Prompt.fieldGroups` | `identity: { fields: ['title', 'author'] }` |
+| Section layout | `Prompt.sections` | `identity: { title: 'Book Identity' }` |
+| Defaults | `Prompt.getDefaultFormState()` | `{ status: 'unread', formats: [] }` |
+| Associations | `Model.associations` | `belongsTo: { location: { ... } }` |
+| Search filters | `Model.filters` | `{ status: { type: 'enum', ... } }` |
 
 The Rails API is only used for:
 
@@ -492,11 +491,11 @@ if (ctx?.theme) applyDocumentTheme(ctx.theme)
 
 Each app maintains minimal client-side state:
 
-| App              | State Variables                                                                                  |
-| ---------------- | ------------------------------------------------------------------------------------------------ |
-| New/Edit Model   | `formSchema`, `currentMode`, `recordId`                                                          |
-| List Model App   | `listSchema`, `currentRecords`, `currentPage`, `modelName`                                       |
-| Show Model App   | `detailSchema`, `record`                                                                         |
+| App | State Variables |
+| --- | --- |
+| New/Edit Model | `formSchema`, `currentMode`, `recordId` |
+| List Model App | `listSchema`, `currentRecords`, `currentPage`, `modelName` |
+| Show Model App | `detailSchema`, `record` |
 | Search Model App | `listSchema`, `currentRecords`, `currentPage`, `modelName`, `activeFilters`, `filterDefinitions` |
 
 ### Dynamic Rendering

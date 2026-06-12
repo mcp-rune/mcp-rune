@@ -30,14 +30,14 @@ Every tool takes a `model:` argument and uses the registry to look up the matchi
 
 ### CRUD — six tools that hit `DataLayer`
 
-| Tool                 | What it does                                          | Reaches                         |
-| -------------------- | ----------------------------------------------------- | ------------------------------- |
-| `list_models`        | Lists every registered model + its schema summary     | `this.modelLayer` only — no I/O |
-| `find_records`       | Paginated read for a model, with filters and includes | `this.dataLayer.list`           |
-| `create_model`       | Validated write — runs schema + association passes    | `this.dataLayer.dispatch`       |
-| `update_model`       | Same as create, but updates by id                     | `this.dataLayer.dispatch`       |
-| `delete_model`       | Delete by id                                          | `this.dataLayer.dispatch`       |
-| `bulk_action_models` | Batch create / update / delete in one call            | `this.dataLayer.dispatch`       |
+| Tool | What it does | Reaches |
+| --- | --- | --- |
+| `list_models` | Lists every registered model + its schema summary | `this.modelLayer` only — no I/O |
+| `find_records` | Paginated read for a model, with filters and includes | `this.dataLayer.list` |
+| `create_model` | Validated write — runs schema + association passes | `this.dataLayer.dispatch` |
+| `update_model` | Same as create, but updates by id | `this.dataLayer.dispatch` |
+| `delete_model` | Delete by id | `this.dataLayer.dispatch` |
+| `bulk_action_models` | Batch create / update / delete in one call | `this.dataLayer.dispatch` |
 
 All six are wired in via `DATA_TOOL_CLASSES` from `@mcp-rune/mcp-rune/tools`. In your `config.ts`:
 
@@ -61,11 +61,11 @@ There is no per-model wiring. `ToolRegistry` reads the `models:` map and the too
 
 ### Form-strategy — three tools that hit `ModelLayer`
 
-| Tool               | What it does                                                                 |
-| ------------------ | ---------------------------------------------------------------------------- |
+| Tool | What it does |
+| --- | --- |
 | `get_prompt_guide` | Returns the prompt content (chapter 3) for one model — the LLM's form filler |
-| `validate_form`    | Runs the kind/association validators on a partial payload — no backend call  |
-| `get_form_summary` | Returns the "what would I be submitting" human-readable summary              |
+| `validate_form` | Runs the kind/association validators on a partial payload — no backend call |
+| `get_form_summary` | Returns the "what would I be submitting" human-readable summary |
 
 These three are STRATEGY-category tools. They don't take an authenticated `dataLayer` — `validate_form` deliberately can't write, because its purpose is to give the LLM cheap feedback before it commits. They consume `ModelLayer` for kind lookups and required-field checks, and `PromptRegistry` for the guide text.
 

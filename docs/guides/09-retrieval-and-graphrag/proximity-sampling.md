@@ -177,33 +177,33 @@ Returns 10 records with null synopsis, distributed evenly across daily buckets w
 
 All parameters are passed to `analysis_query` with `mode: "sample"`.
 
-| Parameter     | Type   | Default | Description                                                                                                                             |
-| ------------- | ------ | ------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `sample_size` | number | 5       | Maximum records to return (max: 50)                                                                                                     |
-| `stratify_by` | string | —       | Discrete field for stratification (e.g., `"status"`)                                                                                    |
-| `where`       | object | —       | Pre-filter conditions. Same syntax as filter mode: exact match (`{"status": "active"}`), range operators (`{"duration": {"$gte": 40}}`) |
-| `proximity`   | object | —       | Date-windowed sampling (see below)                                                                                                      |
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `sample_size` | number | 5 | Maximum records to return (max: 50) |
+| `stratify_by` | string | — | Discrete field for stratification (e.g., `"status"`) |
+| `where` | object | — | Pre-filter conditions. Same syntax as filter mode: exact match (`{"status": "active"}`), range operators (`{"duration": {"$gte": 40}}`) |
+| `proximity` | object | — | Date-windowed sampling (see below) |
 
 ### `proximity` object
 
-| Field    | Type   | Required | Description                                                               |
-| -------- | ------ | -------- | ------------------------------------------------------------------------- |
-| `field`  | string | Yes      | Date/datetime field to center on (e.g., `"created_at"`)                   |
-| `origin` | string | Yes      | Center date in ISO 8601 format (e.g., `"2026-03-15"`)                     |
-| `window` | string | Yes      | Symmetric window width (e.g., `"7 days"`, `"2 weeks"`, `"1 month"`)       |
-| `bucket` | string | No       | Bucket interval for temporal stratification (e.g., `"1 day"`, `"1 week"`) |
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `field` | string | Yes | Date/datetime field to center on (e.g., `"created_at"`) |
+| `origin` | string | Yes | Center date in ISO 8601 format (e.g., `"2026-03-15"`) |
+| `window` | string | Yes | Symmetric window width (e.g., `"7 days"`, `"2 weeks"`, `"1 month"`) |
+| `bucket` | string | No | Bucket interval for temporal stratification (e.g., `"1 day"`, `"1 week"`) |
 
 ### Composition rules
 
-| `where` | `proximity`         | `stratify_by` | Behavior                                                  |
-| ------- | ------------------- | ------------- | --------------------------------------------------------- |
-| —       | —                   | —             | Uniform random sample                                     |
-| —       | —                   | `"status"`    | Discrete stratified sample (existing behavior)            |
-| `{...}` | —                   | —             | Pre-filtered random sample                                |
-| —       | `{..., bucket}`     | —             | Date-windowed bucket-stratified sample                    |
-| `{...}` | `{..., bucket}`     | —             | Pre-filtered + date-windowed + bucket-stratified          |
-| `{...}` | `{..., bucket}`     | `"status"`    | Pre-filtered + composite (status × bucket) stratification |
-| —       | `{...}` (no bucket) | —             | Date-windowed uniform random sample                       |
+| `where` | `proximity` | `stratify_by` | Behavior |
+| --- | --- | --- | --- |
+| — | — | — | Uniform random sample |
+| — | — | `"status"` | Discrete stratified sample (existing behavior) |
+| `{...}` | — | — | Pre-filtered random sample |
+| — | `{..., bucket}` | — | Date-windowed bucket-stratified sample |
+| `{...}` | `{..., bucket}` | — | Pre-filtered + date-windowed + bucket-stratified |
+| `{...}` | `{..., bucket}` | `"status"` | Pre-filtered + composite (status × bucket) stratification |
+| — | `{...}` (no bucket) | — | Date-windowed uniform random sample |
 
 ---
 
@@ -364,24 +364,24 @@ With 3 statuses and 4 weekly buckets → 12 composite groups → 1 record each.
 
 ## 7. Edge Cases
 
-| Scenario                                                                             | Behavior                                                                                  |
-| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| **Empty window** — no records within the proximity range                             | Returns `[]` (empty result)                                                               |
-| **Null date values** — records where the date field is null                          | Excluded by the `::timestamptz` cast (null comparisons are false)                         |
-| **More buckets than sample_size** — e.g., 14 daily buckets, sample_size=5            | Budget = `CEIL(5/14) = 1` per bucket → 14 candidates, `LIMIT 5` returns 5 random buckets  |
-| **Single bucket with all data** — all records in one day                             | Budget = `CEIL(10/1) = 10` from that bucket — degrades gracefully to random within bucket |
-| **Composite with sparse cells** — many (status × bucket) combinations with 0 records | Only populated cells count in `num_groups`; empty cells are invisible                     |
-| **Invalid interval** — e.g., `"1; DROP TABLE"`                                       | Rejected by `validateInterval()` regex whitelist before reaching SQL                      |
-| **Invalid field name** — e.g., `"created_at; --"`                                    | Rejected by `sanitizeFieldName()` alphanumeric whitelist                                  |
+| Scenario | Behavior |
+| --- | --- |
+| **Empty window** — no records within the proximity range | Returns `[]` (empty result) |
+| **Null date values** — records where the date field is null | Excluded by the `::timestamptz` cast (null comparisons are false) |
+| **More buckets than sample_size** — e.g., 14 daily buckets, sample_size=5 | Budget = `CEIL(5/14) = 1` per bucket → 14 candidates, `LIMIT 5` returns 5 random buckets |
+| **Single bucket with all data** — all records in one day | Budget = `CEIL(10/1) = 10` from that bucket — degrades gracefully to random within bucket |
+| **Composite with sparse cells** — many (status × bucket) combinations with 0 records | Only populated cells count in `num_groups`; empty cells are invisible |
+| **Invalid interval** — e.g., `"1; DROP TABLE"` | Rejected by `validateInterval()` regex whitelist before reaching SQL |
+| **Invalid field name** — e.g., `"created_at; --"` | Rejected by `sanitizeFieldName()` alphanumeric whitelist |
 
 ---
 
 ## 8. File Reference
 
-| File                                                              | Role                                                                                                |
-| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `src/runtime/vendor/pgvector/ingested-records.ts`                 | Core SQL: `querySampleFiltered`, `buildWhereConditions`, `validateInterval`, `ProximityParams` type |
-| `src/mcp/tools/analysis/analysis-query-tool.ts`                   | Tool schema: `proximity` parameter, `where` in sample mode, updated `_queryDescribe` output         |
-| `src/runtime/vector-storage.ts`                                   | Facade: `IngestedDataQuery` type with `where` and `proximity` on sample variant                     |
-| `__tests__/lib/services/vendor/pgvector/ingested-records.spec.ts` | SQL-level tests: filtered sample, proximity window, bucket stratification, composite, validation    |
-| `__tests__/lib/mcp/tools/analysis/analysis-memory-tools.spec.ts`  | Tool-level tests: parameter pass-through for `where`, `proximity`, and composition                  |
+| File | Role |
+| --- | --- |
+| `src/runtime/vendor/pgvector/ingested-records.ts` | Core SQL: `querySampleFiltered`, `buildWhereConditions`, `validateInterval`, `ProximityParams` type |
+| `src/mcp/tools/analysis/analysis-query-tool.ts` | Tool schema: `proximity` parameter, `where` in sample mode, updated `_queryDescribe` output |
+| `src/runtime/vector-storage.ts` | Facade: `IngestedDataQuery` type with `where` and `proximity` on sample variant |
+| `__tests__/lib/services/vendor/pgvector/ingested-records.spec.ts` | SQL-level tests: filtered sample, proximity window, bucket stratification, composite, validation |
+| `__tests__/lib/mcp/tools/analysis/analysis-memory-tools.spec.ts` | Tool-level tests: parameter pass-through for `where`, `proximity`, and composition |

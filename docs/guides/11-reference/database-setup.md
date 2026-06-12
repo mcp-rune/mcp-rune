@@ -14,11 +14,11 @@ If you used `rune new` to scaffold the project, the CLI has already wired up a r
 
 The [`rune new`](https://github.com/dsaenz/mcp-rune-cli) CLI scaffolds the runner, configures `DATABASE_URL`, verifies the connection, and runs the migrations as part of the project-creation flow. When you select an analysis-enabled preset, the CLI prompts you to choose:
 
-| Choice                      | What happens                                                                                                                                                                  |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Use docker-compose pgvector | The CLI starts the scaffolded `docker-compose.yml` (Postgres + pgvector), writes the docker URL to `.env`, waits for the DB to be ready, runs `npm run db:migrate`.           |
-| Use existing `DATABASE_URL` | The CLI prompts for the URL, writes it to `.env`, runs `SELECT 1` to verify, then runs `npm run db:migrate`.                                                                  |
-| Skip                        | The scaffolded project includes a `db-migrate.ts` and a `db:migrate` npm script; you can run them later with `npm run db:migrate` (or restart this flow with `rune db init`). |
+| Choice | What happens |
+| --- | --- |
+| Use docker-compose pgvector | The CLI starts the scaffolded `docker-compose.yml` (Postgres + pgvector), writes the docker URL to `.env`, waits for the DB to be ready, runs `npm run db:migrate`. |
+| Use existing `DATABASE_URL` | The CLI prompts for the URL, writes it to `.env`, runs `SELECT 1` to verify, then runs `npm run db:migrate`. |
+| Skip | The scaffolded project includes a `db-migrate.ts` and a `db:migrate` npm script; you can run them later with `npm run db:migrate` (or restart this flow with `rune db init`). |
 
 After scaffold, the runner stays in your repo at `src/scripts/db-migrate.ts`. Re-run it any time you upgrade mcp-rune and pick up new migrations:
 
@@ -131,10 +131,10 @@ const needed = migrations.filter(
 )
 ```
 
-| Feature group | When required           | Tables                                                    |
-| ------------- | ----------------------- | --------------------------------------------------------- |
-| `core`        | `DATABASE_URL` is set   | `oauth_sessions`, `tool_memories`                         |
-| `analysis`    | `ANALYSIS_ENABLED=true` | `analysis_memories`, `ingested_records`, `ingested_edges` |
+| Feature group | When required | Tables |
+| --- | --- | --- |
+| `core` | `DATABASE_URL` is set | `oauth_sessions`, `tool_memories` |
+| `analysis` | `ANALYSIS_ENABLED=true` | `analysis_memories`, `ingested_records`, `ingested_edges` |
 
 A server running stdio without OAuth and without analysis tools needs no migrations at all.
 

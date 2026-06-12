@@ -209,18 +209,18 @@ ${ActivityPrompt.generateFlowDiagramFromConfig()}`
 
 ## BasePrompt helpers
 
-| Method                                                              | Purpose                                             |
-| ------------------------------------------------------------------- | --------------------------------------------------- |
-| `generateFieldGroupsList()`                                         | List field groups with fields and requirements      |
-| `generateFlowDiagramFromConfig()`                                   | Compact flow diagram from sections/fieldGroups      |
-| `generateStatefulGuidanceInstructions(modelName)`                   | Full guidance instructions including mode selection |
-| `generateSectionDocumentation(groupName, sectionNumber, modelName)` | Per-section documentation                           |
-| `generateToolExample(modelName, action, attributes)`                | Generate tool usage example                         |
-| `getStrategyIntro()`                                                | Strategy-appropriate intro text                     |
-| `getSectionFields(sectionName)`                                     | Get all fields for a section                        |
-| `getSectionForGroup(groupName)`                                     | Get section for a fieldGroup                        |
-| `getSectionFieldNames(sectionName)`                                 | Get all field names for a section                   |
-| `getSectionNumber(sectionName)`                                     | Get 1-based section number                          |
+| Method | Purpose |
+| --- | --- |
+| `generateFieldGroupsList()` | List field groups with fields and requirements |
+| `generateFlowDiagramFromConfig()` | Compact flow diagram from sections/fieldGroups |
+| `generateStatefulGuidanceInstructions(modelName)` | Full guidance instructions including mode selection |
+| `generateSectionDocumentation(groupName, sectionNumber, modelName)` | Per-section documentation |
+| `generateToolExample(modelName, action, attributes)` | Generate tool usage example |
+| `getStrategyIntro()` | Strategy-appropriate intro text |
+| `getSectionFields(sectionName)` | Get all fields for a section |
+| `getSectionForGroup(groupName)` | Get section for a fieldGroup |
+| `getSectionFieldNames(sectionName)` | Get all field names for a section |
+| `getSectionNumber(sectionName)` | Get 1-based section number |
 
 ## Validation flow
 

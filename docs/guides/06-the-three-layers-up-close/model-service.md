@@ -1,5 +1,4 @@
-> **Customization:** the default `DataLayer` adapter.
-> Swap the whole DataLayer via `dataLayer:` on the Registry, or extend just this one (custom convention, custom endpoint resolution) by subclassing `ModelService`.
+> **Customization:** the default `DataLayer` adapter. Swap the whole DataLayer via `dataLayer:` on the Registry, or extend just this one (custom convention, custom endpoint resolution) by subclassing `ModelService`.
 
 # Model service
 

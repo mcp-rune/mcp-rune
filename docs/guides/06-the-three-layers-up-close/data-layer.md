@@ -1,5 +1,4 @@
-> **Customization:** swap via `dataLayer:` on `ToolRegistry` / `AppRegistry`.
-> Default adapter is `ModelService` (next chapter); an `InMemoryDataLayer` stub ships for tests. This is the deployer's main backend seam.
+> **Customization:** swap via `dataLayer:` on `ToolRegistry` / `AppRegistry`. Default adapter is `ModelService` (next chapter); an `InMemoryDataLayer` stub ships for tests. This is the deployer's main backend seam.
 
 # Data layer
 

@@ -1,5 +1,4 @@
-> **Customization:** declared on your `BasePrompt` subclass via `static sections` and `static fieldGroups`.
-> This chapter is the reference for those two structures. See [Prompt Creation](./prompt-creation.md) for how a strategy (stateless / hybrid / stateful) consumes them.
+> **Customization:** declared on your `BasePrompt` subclass via `static sections` and `static fieldGroups`. This chapter is the reference for those two structures. See [Prompt Creation](./prompt-creation.md) for how a strategy (stateless / hybrid / stateful) consumes them.
 
 # Sections & Field Groups
 
@@ -52,12 +51,12 @@ Left column is what the LLM walks the user through; right column is what `valida
 
 ## Sections vs FieldGroups
 
-| Aspect      | Sections                                           | FieldGroups                                              |
-| ----------- | -------------------------------------------------- | -------------------------------------------------------- |
-| Purpose     | User-facing workflow                               | Validation & technical organization                      |
-| Contains    | `title`, `description`, `required`, `groups[]`     | `fields[]`, `required`, `conditional`, `validateSection` |
-| Used by     | `generateFlowDiagramFromConfig()`, `getSections()` | `validateSection()`, `getProgress()`                     |
-| Granularity | Coarse (user journey)                              | Fine (field validation)                                  |
+| Aspect | Sections | FieldGroups |
+| --- | --- | --- |
+| Purpose | User-facing workflow | Validation & technical organization |
+| Contains | `title`, `description`, `required`, `groups[]` | `fields[]`, `required`, `conditional`, `validateSection` |
+| Used by | `generateFlowDiagramFromConfig()`, `getSections()` | `validateSection()`, `getProgress()` |
+| Granularity | Coarse (user journey) | Fine (field validation) |
 
 ## Defining sections
 
@@ -135,11 +134,11 @@ static sections = {
 
 Sections support a `content` property with `intro` and `notes` that are automatically rendered in the generated section documentation. Use these to add domain-specific context without writing custom section generator methods.
 
-| Property        | Type       | Description                                                                                           |
-| --------------- | ---------- | ----------------------------------------------------------------------------------------------------- |
-| `content.intro` | `string`   | Introductory text rendered at the top of the section, before the field table. Supports full markdown. |
-| `content.notes` | `string[]` | Array of notes rendered as a bullet list after the field table and enum tables.                       |
-| `askPrompt`     | `string`   | Custom prompt shown as "Ask the user: ..." at the end of the section.                                 |
+| Property | Type | Description |
+| --- | --- | --- |
+| `content.intro` | `string` | Introductory text rendered at the top of the section, before the field table. Supports full markdown. |
+| `content.notes` | `string[]` | Array of notes rendered as a bullet list after the field table and enum tables. |
+| `askPrompt` | `string` | Custom prompt shown as "Ask the user: ..." at the end of the section. |
 
 **How it works**: When `allSections()` or `generateSectionDocumentation()` renders a section, it automatically:
 
@@ -204,12 +203,12 @@ static fieldGroups = {
 
 `BasePrompt` provides helper methods for working with sections:
 
-| Method                              | Description                                                     |
-| ----------------------------------- | --------------------------------------------------------------- |
-| `getSectionFields(sectionName)`     | Get all field definitions for a section (across all its groups) |
-| `getSectionFieldNames(sectionName)` | Get all field names for a section                               |
-| `getSectionForGroup(groupName)`     | Reverse lookup: find which section a group belongs to           |
-| `getSectionNumber(sectionName)`     | Get 1-based section number for display                          |
+| Method | Description |
+| --- | --- |
+| `getSectionFields(sectionName)` | Get all field definitions for a section (across all its groups) |
+| `getSectionFieldNames(sectionName)` | Get all field names for a section |
+| `getSectionForGroup(groupName)` | Reverse lookup: find which section a group belongs to |
+| `getSectionNumber(sectionName)` | Get 1-based section number for display |
 
 ## Flow diagram generation
 

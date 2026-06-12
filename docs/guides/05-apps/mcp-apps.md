@@ -124,15 +124,15 @@ Instead of building a custom HTML form for each model, we use a **schema-driven 
 
 The MCP server **already has** all metadata needed to render a form:
 
-| What's needed       | Where it lives                 | Example                                      |
-| ------------------- | ------------------------------ | -------------------------------------------- |
-| Field types, labels | `Model.attributes`             | `title: { type: 'string', label: 'Title' }`  |
-| Enum options        | `Model.attributes`             | `status: { enumValues: ['unread', ...] }`    |
-| Validations         | `Model.attributes`             | `rating: { validation: { min: 1, max: 5 } }` |
-| Field grouping      | `Prompt.fieldGroups`           | `identity: { fields: ['title', 'author'] }`  |
-| Section titles      | `Prompt.sections`              | `identity: { title: 'Book Identity' }`       |
-| Defaults            | `Prompt.getDefaultFormState()` | `{ status: 'unread' }`                       |
-| Associations        | `Model.associations`           | `belongsTo: { location }`                    |
+| What's needed | Where it lives | Example |
+| --- | --- | --- |
+| Field types, labels | `Model.attributes` | `title: { type: 'string', label: 'Title' }` |
+| Enum options | `Model.attributes` | `status: { enumValues: ['unread', ...] }` |
+| Validations | `Model.attributes` | `rating: { validation: { min: 1, max: 5 } }` |
+| Field grouping | `Prompt.fieldGroups` | `identity: { fields: ['title', 'author'] }` |
+| Section titles | `Prompt.sections` | `identity: { title: 'Book Identity' }` |
+| Defaults | `Prompt.getDefaultFormState()` | `{ status: 'unread' }` |
+| Associations | `Model.associations` | `belongsTo: { location }` |
 
 The **only** thing from the Rails API is association option values (the user's locations, tags) — fetched at form-open time with the user's access token.
 
@@ -461,8 +461,7 @@ src/mcp/apps/
 
 Pure function that generates a form schema from model attributes and prompt configuration. No API calls, no side effects.
 
-**Input:** Model class + Prompt class
-**Output:** `{ model, title, fieldsets, fields }`
+**Input:** Model class + Prompt class **Output:** `{ model, title, fieldsets, fields }`
 
 Maps model attribute types to form field types, resolves association metadata, preserves validation rules and defaults.
 
@@ -475,8 +474,7 @@ Two factory functions, one per tool, that produce MCP App definitions:
 - `handleToolCall(args, { dataLayer })` — Generates schema + fetches association options
 - `getHtml()` — Returns the built single-file HTML for that app
 
-**`new_model_app`**: builds defaults from `PromptClass.getDefaultFormState()`, merges pre-fill args, resolves a parent-context banner when nested.
-**`edit_model_app`**: fetches the existing record from the API via `record_id`, uses record data as defaults.
+**`new_model_app`**: builds defaults from `PromptClass.getDefaultFormState()`, merges pre-fill args, resolves a parent-context banner when nested. **`edit_model_app`**: fetches the existing record from the API via `record_id`, uses record data as defaults.
 
 Both bundles wrap the same `src/mcp/apps/shared/model-form/main.js` client module, so they render identical UI. The runtime mode (`'create'` / `'update'`) is set from the server's tool result, not from the bundle.
 
@@ -924,12 +922,12 @@ Without `defaultColumns`, all inferred columns are shown (which may cause horizo
 
 All column selection logic lives in `src/mcp/apps/lib/list-schema.ts`:
 
-| Function                                            | Purpose                                                  |
-| --------------------------------------------------- | -------------------------------------------------------- |
-| `getAvailableColumnNames(ModelClass)`               | Returns column name array for tool description inventory |
+| Function | Purpose |
+| --- | --- |
+| `getAvailableColumnNames(ModelClass)` | Returns column name array for tool description inventory |
 | `applyColumnSelection(schema, columns, ModelClass)` | Filters schema columns to requested subset with fallback |
-| `generateListSchema(ModelClass)`                    | Generates full schema with all inferred columns          |
-| `inferColumns(ModelClass)`                          | Determines which attributes become table columns         |
+| `generateListSchema(ModelClass)` | Generates full schema with all inferred columns |
+| `inferColumns(ModelClass)` | Determines which attributes become table columns |
 
 `inferColumns` automatically excludes: `id`, fields with `prompt_visible: false`, long text fields (except `description`), and file uploads (`format: 'base64'`).
 
@@ -1029,26 +1027,26 @@ The find-model-app UI hides the "Send (Add)" button when the selection escalates
 
 Four model-visible tools let the LLM read and edit the selection store directly. Each is shared across every app (registered once via `createSharedSelectionTools()` and deduplicated by `AppRegistry`).
 
-| Tool                    | Schema                     | Behavior                                                                                                                |
-| ----------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `get_selection`         | `{ model? }`               | Reads the stored selection for one model, or every model when `model` is omitted.                                       |
-| `add_to_selection`      | `{ model, ids: string[] }` | Unions IDs with the existing ids-mode selection. Errors when either side is filter-mode.                                |
-| `remove_from_selection` | `{ model, ids: string[] }` | Drops IDs from the ids-mode selection. No-op for filter-mode. Removing every remaining ID clears the entry.             |
-| `clear_selection`       | `{ model? }`               | Clears one model when `model` is supplied, every model when omitted.                                                    |
-| `materialize_selection` | `{ model }`                | For a filter-mode entry, calls `dataLayer.searchNormalized` with the stored filters and rewrites the entry as ids-mode. |
+| Tool | Schema | Behavior |
+| --- | --- | --- |
+| `get_selection` | `{ model? }` | Reads the stored selection for one model, or every model when `model` is omitted. |
+| `add_to_selection` | `{ model, ids: string[] }` | Unions IDs with the existing ids-mode selection. Errors when either side is filter-mode. |
+| `remove_from_selection` | `{ model, ids: string[] }` | Drops IDs from the ids-mode selection. No-op for filter-mode. Removing every remaining ID clears the entry. |
+| `clear_selection` | `{ model? }` | Clears one model when `model` is supplied, every model when omitted. |
+| `materialize_selection` | `{ model }` | For a filter-mode entry, calls `dataLayer.searchNormalized` with the stored filters and rewrites the entry as ids-mode. |
 
 `materialize_selection` is the bridge between the two modes — once filter-mode is materialized, individual rows can be pruned with `remove_from_selection`. The implementation lives in `selection-tools.ts` and consumes only `dataLayer` and `selectionStore` from context; it never imports `SearchService`.
 
 ### Key Files
 
-| File                                         | Purpose                                                                           |
-| -------------------------------------------- | --------------------------------------------------------------------------------- |
-| `src/mcp/apps/lib/selection-store.ts`        | `SelectionStore` class — session-scoped Map with `set({ strategy })`, `removeIds` |
-| `src/mcp/apps/lib/selection-tools.ts`        | `createSelectionTools()` + `createSharedSelectionTools()` factories               |
-| `src/mcp/apps/find-model-app/index.ts`       | Calls `createSelectionTools('select_find_records', …)`                            |
-| `src/mcp/apps/view-selection-app/index.ts`   | Calls `createSelectionTools('select_view_records', …)` + reads selection store    |
-| `src/mcp/apps/pick-model-app/index.ts`       | Calls `createSelectionTools('select_autocomplete_records', …)`                    |
-| `src/mcp/apps/multi-pick-model-app/index.ts` | Calls `createSelectionTools('select_multi_records', …)`                           |
+| File | Purpose |
+| --- | --- |
+| `src/mcp/apps/lib/selection-store.ts` | `SelectionStore` class — session-scoped Map with `set({ strategy })`, `removeIds` |
+| `src/mcp/apps/lib/selection-tools.ts` | `createSelectionTools()` + `createSharedSelectionTools()` factories |
+| `src/mcp/apps/find-model-app/index.ts` | Calls `createSelectionTools('select_find_records', …)` |
+| `src/mcp/apps/view-selection-app/index.ts` | Calls `createSelectionTools('select_view_records', …)` + reads selection store |
+| `src/mcp/apps/pick-model-app/index.ts` | Calls `createSelectionTools('select_autocomplete_records', …)` |
+| `src/mcp/apps/multi-pick-model-app/index.ts` | Calls `createSelectionTools('select_multi_records', …)` |
 
 ### Tool Visibility
 

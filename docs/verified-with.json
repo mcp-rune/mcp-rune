@@ -1,0 +1,14 @@
+{
+  "runeCli": "0.11.0",
+  "node": "24",
+  "pages": [
+    "01-getting-started/quickstart.md",
+    "01-getting-started/project-structure.md",
+    "02-the-model/defining-a-model.md",
+    "02-the-model/attributes-and-kinds.md",
+    "02-the-model/derivation-overview.md",
+    "02-the-model/associations.md",
+    "02-the-model/validation-and-defaults.md",
+    "02-the-model/definition-vs-consumption.md"
+  ]
+}

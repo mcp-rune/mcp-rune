@@ -4,16 +4,13 @@ The previous chapter showed the `attributes` block as a flat map of names to def
 
 ## Try it — watch three representations move
 
-> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune ^0.102.0.
+> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.103.0 · Node 24.
 
-Three calls against your `bookshelf-tour` project surface three of the
-representations the diagram below maps. Run them and match the output
-before reading the kind taxonomy.
+Three calls against your `bookshelf-tour` project surface three of the representations the diagram below maps. Run them and match the output before reading the kind taxonomy.
 
 **1. API representation — `list_models` shows the wire shape**
 
-`list_models` with `{}` reports the attribute names and types the
-framework will accept on the wire. For the scaffolded `book`:
+`list_models` with `{}` reports the attribute names and types the framework will accept on the wire. For the scaffolded `book`:
 
 ```json
 {
@@ -23,8 +20,7 @@ framework will accept on the wire. For the scaffolded `book`:
 }
 ```
 
-`name` is a `string` kind, `description` is a `text` kind — both selected
-by the `type:` literal in `src/models/book.ts`.
+`name` is a `string` kind, `description` is a `text` kind — both selected by the `type:` literal in `src/models/book.ts`.
 
 **2. Validation representation — `validate_form` exercises the kind's `validate` method**
 
@@ -41,15 +37,11 @@ Call `validate_form` with `{ "model": "book", "fields": {} }`:
 }
 ```
 
-The error message is shaped by two things: the `required: true` flag on
-the `name` attribute (the rule) and the kind's `describe()` (the
-`"Name"` label). Change the `description:` text in `book.ts` and the
-message updates on next boot.
+The error message is shaped by two things: the `required: true` flag on the `name` attribute (the rule) and the kind's `describe()` (the `"Name"` label). Change the `description:` text in `book.ts` and the message updates on next boot.
 
 **3. LLM representation — `get_prompt_guide` calls every kind's `describe`**
 
-Call `get_prompt_guide` with `{ "guide_name": "book" }`. The bottom of
-the response is a Markdown table the LLM reads to fill the form:
+Call `get_prompt_guide` with `{ "guide_name": "book" }`. The bottom of the response is a Markdown table the LLM reads to fill the form:
 
 ```
 | Attribute     | Type   | Required | Valid Values |
@@ -58,15 +50,9 @@ the response is a Markdown table the LLM reads to fill the form:
 | description   | text   | No       |              |
 ```
 
-Each row is the kind reporting itself. Switch `description` from `'text'`
-to a different built-in (e.g. `'string'`) in `src/models/book.ts`, save,
-re-run, and watch the row update — no template lives in your prompt
-class for this content.
+Each row is the kind reporting itself. Switch `description` from `'text'` to a different built-in (e.g. `'string'`) in `src/models/book.ts`, save, re-run, and watch the row update — no template lives in your prompt class for this content.
 
-**Observe:** one `type:` literal selects the wire parser, the
-validation message, and the LLM-facing type label simultaneously. Now
-the rest of this guide is the taxonomy of which kinds you have to
-choose from and what each one ships.
+**Observe:** one `type:` literal selects the wire parser, the validation message, and the LLM-facing type label simultaneously. Now the rest of this guide is the taxonomy of which kinds you have to choose from and what each one ships.
 
 ---
 
@@ -220,10 +206,10 @@ Each method has a precise role. Read them as a contract between three caller gro
 
 ## Two Extension Paths
 
-| Path                            | When to use                                                                                     | Channel                                                                                                              |
-| ------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| **`AppRegistry({ kinds })`**    | New kind your deployment needs (ISBN, currency, phone), or override fields on a built-in.       | `kinds: Record<string, KindExtension>` — descriptor half registers server-side; `render` half flows into the iframe. |
-| **`registerKindRenderer(...)`** | DOM-only widget change for an existing kind (slider for `rating`, gradient swatch for `color`). | `registerKindRenderer(kind, { render }, { format })` from `@mcp-rune/mcp-rune/apps/kind-renderers`. Iframe-only.     |
+| Path | When to use | Channel |
+| --- | --- | --- |
+| **`AppRegistry({ kinds })`** | New kind your deployment needs (ISBN, currency, phone), or override fields on a built-in. | `kinds: Record<string, KindExtension>` — descriptor half registers server-side; `render` half flows into the iframe. |
+| **`registerKindRenderer(...)`** | DOM-only widget change for an existing kind (slider for `rating`, gradient swatch for `color`). | `registerKindRenderer(kind, { render }, { format })` from `@mcp-rune/mcp-rune/apps/kind-renderers`. Iframe-only. |
 
 `AppRegistry({ kinds })` is the canonical path — one entry per kind covers behavior (parse, validate, label, htmlInputType, promptType) AND rendering. `registerKindRenderer` exists only for DOM widget overrides on a kind already defined elsewhere.
 

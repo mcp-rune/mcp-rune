@@ -188,17 +188,17 @@ get promptContent() {
 
 ### Builder Methods
 
-| Method                                   | Description                                                                | Strategy      |
-| ---------------------------------------- | -------------------------------------------------------------------------- | ------------- |
-| `.add(content)`                          | Add custom markdown content                                                | All           |
-| `.standard(options?)`                    | Canonical: flowDiagram → guidance → beforeSections → allSections → summary | All           |
-| `.flowDiagram()`                         | Add step-by-step roadmap                                                   | All           |
-| `.guidance()`                            | Add stateful guidance instructions                                         | Stateful only |
-| `.section(groupName, num)`               | Add single section documentation                                           | Stateful      |
-| `.allSections({ skip, customSections })` | Add all section docs                                                       | Stateful      |
-| `.summary()`                             | Add standard summary template                                              | Stateful      |
-| `.attributeReference()`                  | Add auto-generated attribute table                                         | All           |
-| `.build(separator)`                      | Join all parts (default: `\n\n---\n\n`)                                    | All           |
+| Method | Description | Strategy |
+| --- | --- | --- |
+| `.add(content)` | Add custom markdown content | All |
+| `.standard(options?)` | Canonical: flowDiagram → guidance → beforeSections → allSections → summary | All |
+| `.flowDiagram()` | Add step-by-step roadmap | All |
+| `.guidance()` | Add stateful guidance instructions | Stateful only |
+| `.section(groupName, num)` | Add single section documentation | Stateful |
+| `.allSections({ skip, customSections })` | Add all section docs | Stateful |
+| `.summary()` | Add standard summary template | Stateful |
+| `.attributeReference()` | Add auto-generated attribute table | All |
+| `.build(separator)` | Join all parts (default: `\n\n---\n\n`) | All |
 
 ### Atomic Helpers on BasePrompt
 

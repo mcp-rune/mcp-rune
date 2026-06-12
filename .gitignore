@@ -31,6 +31,9 @@ dist/
 # Local npm pack output (e.g. mcp-rune-mcp-rune-X.Y.Z.tgz)
 *.tgz
 
+# Executable-docs harness scratch (build + packed framework for docs:verify)
+.docs-verify/
+
 # AI
 .claude/settings.local.json
 .claude/workspaces

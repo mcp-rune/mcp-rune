@@ -20,12 +20,12 @@ The guides that follow are arranged as a four-part book that mirrors the order y
 
 Every code snippet in the guides is drawn from one of the example servers in [`mcp-rune-examples`](https://github.com/mcp-rune/examples). You can clone any of them and follow along with a real running server while you read.
 
-| Example            | Demonstrates                                                             | Used by                                           |
-| ------------------ | ------------------------------------------------------------------------ | ------------------------------------------------- |
-| `tasks`            | Smallest realistic shape — `Project`, `Task`, `Tag`; belongsTo + hasMany | The Model, The Prompt (trivial illustrations)     |
-| `bookshelf`        | Hand-picked seed data, full polymorphic tool surface, MCP apps           | Quickstart, Tools, Apps                           |
-| `bookshelf-graph`  | Domain registry + analysis tools + 9 summary strategies over 500 books   | Domain Knowledge, Retrieval & GraphRAG, workflows |
-| `bookshelf-rest`   | Real `DataLayer` swap to HTTP via custom `ApiClient` + convention        | Part II — data, api-client, convention, search    |
-| `bookshelf-remote` | `HttpServer` deployment, static-token auth then OAuth 2.1                | Part II — auth & transport                        |
+| Example | Demonstrates | Used by |
+| --- | --- | --- |
+| `tasks` | Smallest realistic shape — `Project`, `Task`, `Tag`; belongsTo + hasMany | The Model, The Prompt (trivial illustrations) |
+| `bookshelf` | Hand-picked seed data, full polymorphic tool surface, MCP apps | Quickstart, Tools, Apps |
+| `bookshelf-graph` | Domain registry + analysis tools + 9 summary strategies over 500 books | Domain Knowledge, Retrieval & GraphRAG, workflows |
+| `bookshelf-rest` | Real `DataLayer` swap to HTTP via custom `ApiClient` + convention | Part II — data, api-client, convention, search |
+| `bookshelf-remote` | `HttpServer` deployment, static-token auth then OAuth 2.1 | Part II — auth & transport |
 
 The rule we follow when picking an example for a snippet: **the smallest one that exercises the feature**. `tasks` is plenty for "what does a Model look like?"; `bookshelf-graph` earns its complexity when the chapter is about edge extraction or summary strategies.

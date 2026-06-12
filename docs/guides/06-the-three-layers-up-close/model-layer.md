@@ -1,5 +1,4 @@
-> **Customization:** none — this chapter is informational.
-> The deployer-facing seam for I/O is [`DataLayerFactory`](./data-layer.md) on `ToolRegistry` / `AppRegistry`. `ModelLayer` is constructed internally from `models:` on the Registry; you cannot replace it. Read this chapter to understand what `this.modelLayer('book')` does inside your own tools, prompts, and apps.
+> **Customization:** none — this chapter is informational. The deployer-facing seam for I/O is [`DataLayerFactory`](./data-layer.md) on `ToolRegistry` / `AppRegistry`. `ModelLayer` is constructed internally from `models:` on the Registry; you cannot replace it. Read this chapter to understand what `this.modelLayer('book')` does inside your own tools, prompts, and apps.
 
 # Model layer
 
@@ -166,13 +165,13 @@ Every method operates on the model bound at construction. There's no `(modelName
 
 ### When to use each method
 
-| Method                          | Use it when                                                                                         |
-| ------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `kindFor(attr)`                 | You have a dynamic attribute name and need its kind for rendering, validation, or describing.       |
+| Method | Use it when |
+| --- | --- |
+| `kindFor(attr)` | You have a dynamic attribute name and need its kind for rendering, validation, or describing. |
 | `resolveDerivedFields(records)` | After a `find` or `list`, before returning records to the LLM. Flattens `derived: { from, field }`. |
-| `validFieldNames()`             | Before forwarding a user-supplied `filters:` block (or write payload) to the backend.               |
-| `promptSchema()`                | Almost always called by the prompt subsystem itself; surfaced for `validate_form` / strategy tools. |
-| `checkRequired(params)`         | The cheap required-field pass that runs before any write. Returns structured pass/fail.             |
+| `validFieldNames()` | Before forwarding a user-supplied `filters:` block (or write payload) to the backend. |
+| `promptSchema()` | Almost always called by the prompt subsystem itself; surfaced for `validate_form` / strategy tools. |
+| `checkRequired(params)` | The cheap required-field pass that runs before any write. Returns structured pass/fail. |
 
 ### What it doesn't do
 

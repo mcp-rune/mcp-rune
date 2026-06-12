@@ -1,5 +1,4 @@
-> **Customization:** none — this chapter is the architectural rule for where declaration code lives versus where consumption code lives.
-> It applies equally to mcp-rune itself (`src/mcp/models/` vs `src/mcp/model-layer/`) and to your own server (your `models/` folder vs how the framework reads them). The split is enforced by `no-restricted-imports`; you cannot bypass it.
+> **Customization:** none — this chapter is the architectural rule for where declaration code lives versus where consumption code lives. It applies equally to mcp-rune itself (`src/mcp/models/` vs `src/mcp/model-layer/`) and to your own server (your `models/` folder vs how the framework reads them). The split is enforced by `no-restricted-imports`; you cannot bypass it.
 
 # Definition vs consumption
 
@@ -9,11 +8,9 @@ mcp-rune answers with a single architectural rule: **what a thing IS lives in on
 
 ## Try it — see the split inside the framework you installed
 
-> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune ^0.102.0.
+> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.103.0 · Node 24.
 
-Your `bookshelf-tour` project pulled the framework's compiled code into
-`node_modules/@mcp-rune/mcp-rune/`. The same split this chapter describes
-is visible there — three commands surface it.
+Your `bookshelf-tour` project pulled the framework's compiled code into `node_modules/@mcp-rune/mcp-rune/`. The same split this chapter describes is visible there — three commands surface it.
 
 **1. List the declaration folder vs the consumption folders**
 
@@ -24,11 +21,7 @@ ls node_modules/@mcp-rune/mcp-rune/dist/mcp/model-layer | head -10
 ls node_modules/@mcp-rune/mcp-rune/dist/mcp/data-layer | head -10
 ```
 
-`models/` holds `base-model.js`, `model-definitions.js`, and a `kinds/`
-subdirectory — declarations, no logic. `model-layer/` and `data-layer/`
-hold every file that _reads_ a model declaration: schema derivation,
-validation, the registry, the runtime services. Two folder names; two
-roles.
+`models/` holds `base-model.js`, `model-definitions.js`, and a `kinds/` subdirectory — declarations, no logic. `model-layer/` and `data-layer/` hold every file that _reads_ a model declaration: schema derivation, validation, the registry, the runtime services. Two folder names; two roles.
 
 **2. Open the eslint guard that enforces the split**
 
@@ -60,10 +53,7 @@ The framework's own `eslint.config.js` declares:
 ]
 ```
 
-Code in `apps/`, `tools/`, and `data-layer/api-extensions/` can't reach
-into `model-layer` internals — they get the bound `modelLayer` via DI.
-That's the build error that turns the split from a convention into a
-guarantee.
+Code in `apps/`, `tools/`, and `data-layer/api-extensions/` can't reach into `model-layer` internals — they get the bound `modelLayer` via DI. That's the build error that turns the split from a convention into a guarantee.
 
 **3. Confirm your own project doesn't repeat the guard**
 
@@ -71,22 +61,15 @@ guarantee.
 ls .eslintrc* eslint.config.* 2>/dev/null || echo "no eslint config in the simple-preset scaffold — by design"
 ```
 
-The simple preset ships no eslint config. You don't need to repeat the
-guard because you're not editing framework internals — your `src/models/`
-classes consume the framework through public subpath imports
-(`@mcp-rune/mcp-rune/models`, `@mcp-rune/mcp-rune/prompts`) that are
-stable and already on the right side of the split.
+The simple preset ships no eslint config. You don't need to repeat the guard because you're not editing framework internals — your `src/models/` classes consume the framework through public subpath imports (`@mcp-rune/mcp-rune/models`, `@mcp-rune/mcp-rune/prompts`) that are stable and already on the right side of the split.
 
-**Observe:** the rule applies to mcp-rune itself and stops there. Your
-project writes only declaration code (`models/` and `prompts/`); the
-consumption code is the framework, behind a stable import surface. That
-is the practical payoff of the split.
+**Observe:** the rule applies to mcp-rune itself and stops there. Your project writes only declaration code (`models/` and `prompts/`); the consumption code is the framework, behind a stable import surface. That is the practical payoff of the split.
 
 ## The split, in code
 
-| Declaration                                                                                                                  | Consumption                                                                                                               |
-| ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `src/mcp/models/` — `BaseModel`, kinds, definitions                                                                          | `src/mcp/model-layer/`, `src/mcp/data-layer/`, `src/mcp/analysis-layer/`                                                  |
+| Declaration | Consumption |
+| --- | --- |
+| `src/mcp/models/` — `BaseModel`, kinds, definitions | `src/mcp/model-layer/`, `src/mcp/data-layer/`, `src/mcp/analysis-layer/` |
 | `src/mcp/prompts/` declaration files (`base-prompt.ts`, `prompt-definitions.ts`, `prompt-content-builder.ts`, `generators/`) | `src/mcp/prompts/` consumption files (`prompt-registry.ts`, `prompt-cache.ts`, `prompt-validator.ts`, `form-strategies/`) |
 
 `src/mcp/models/` contains:

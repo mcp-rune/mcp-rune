@@ -131,24 +131,24 @@ Nine strategies ship with the framework. `distribution` is the default; the rest
 
 ### Field-level strategies
 
-| Name                                                             | Always applies?    | Requires | Guide                                                      |
-| ---------------------------------------------------------------- | ------------------ | -------- | ---------------------------------------------------------- |
-| [`distribution`](./summary-strategies/distribution.md)           | Yes                | —        | Per-field value distributions, numeric stats, date ranges. |
-| [`coverage`](./summary-strategies/coverage.md)                   | Yes                | —        | Null/empty rate per field; flags fields above 50% missing. |
-| [`anomaly`](./summary-strategies/anomaly.md)                     | ≥ 4 records        | —        | Numeric z-score outliers and rare enum values.             |
-| [`temporal`](./summary-strategies/temporal.md)                   | ≥ 1 ISO-date field | —        | Time-bucketed counts, gap detection, recency.              |
-| [`entity-extraction`](./summary-strategies/entity-extraction.md) | ≥ 1 `*_id` field   | —        | Top-N references per `*_id` field.                         |
+| Name | Always applies? | Requires | Guide |
+| --- | --- | --- | --- |
+| [`distribution`](./summary-strategies/distribution.md) | Yes | — | Per-field value distributions, numeric stats, date ranges. |
+| [`coverage`](./summary-strategies/coverage.md) | Yes | — | Null/empty rate per field; flags fields above 50% missing. |
+| [`anomaly`](./summary-strategies/anomaly.md) | ≥ 4 records | — | Numeric z-score outliers and rare enum values. |
+| [`temporal`](./summary-strategies/temporal.md) | ≥ 1 ISO-date field | — | Time-bucketed counts, gap detection, recency. |
+| [`entity-extraction`](./summary-strategies/entity-extraction.md) | ≥ 1 `*_id` field | — | Top-N references per `*_id` field. |
 
 ### GraphRAG-aware strategies
 
 These read from the relationship graph and embeddings that `analysis_ingest` populates when run with `hop_depth ≥ 1` and `embed_records: true`.
 
-| Name                                                                     | Requires                      | Guide                                                     |
-| ------------------------------------------------------------------------ | ----------------------------- | --------------------------------------------------------- |
-| [`relationship-coverage`](./summary-strategies/relationship-coverage.md) | `['edges']`                   | Per-edge-type coverage %, degree stats, gap-records list. |
-| [`concept-touch`](./summary-strategies/concept-touch.md)                 | `['edges', 'domainRegistry']` | Per-concept participation %, per-target-model breakdown.  |
-| [`rule-violation`](./summary-strategies/rule-violation.md)               | `['domainRegistry']`          | Per-`BusinessRule` pass/fail counts + failing IDs.        |
-| [`semantic-cluster`](./summary-strategies/semantic-cluster.md)           | `['embeddings']`              | Anchor-nearest clustering, sizes + representatives.       |
+| Name | Requires | Guide |
+| --- | --- | --- |
+| [`relationship-coverage`](./summary-strategies/relationship-coverage.md) | `['edges']` | Per-edge-type coverage %, degree stats, gap-records list. |
+| [`concept-touch`](./summary-strategies/concept-touch.md) | `['edges', 'domainRegistry']` | Per-concept participation %, per-target-model breakdown. |
+| [`rule-violation`](./summary-strategies/rule-violation.md) | `['domainRegistry']` | Per-`BusinessRule` pass/fail counts + failing IDs. |
+| [`semantic-cluster`](./summary-strategies/semantic-cluster.md) | `['embeddings']` | Anchor-nearest clustering, sizes + representatives. |
 
 Each strategy's `description` is what the LLM sees when picking — they're tuned for one-shot disambiguation. The per-strategy guides above include real bookshelf output and edge-case notes; the [Analysis Quickstart](./analysis-quickstart.md) walks all nine end to end against a runnable example.
 

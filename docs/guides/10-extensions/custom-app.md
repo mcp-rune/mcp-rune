@@ -1,5 +1,4 @@
-> **Customization:** register your `AppDefinition` via `apps:` on `AppRegistry`.
-> Your app receives `context.dataLayer` (the projection-layer seam). For the wiring/sandbox internals, see [Apps architecture](../05-apps/mcp-apps-arch.md).
+> **Customization:** register your `AppDefinition` via `apps:` on `AppRegistry`. Your app receives `context.dataLayer` (the projection-layer seam). For the wiring/sandbox internals, see [Apps architecture](../05-apps/mcp-apps-arch.md).
 
 # Writing a Custom MCP App
 
@@ -116,11 +115,11 @@ Almost every framework-shipped app is **resource + tool**: the LLM calls the too
 
 ## Three Categories of App
 
-| Category            | Populates                                       | Use when                                                                                                                                  |
-| ------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **Pure UI**         | `getHtml`, `resourceUri`                        | The app is static or self-contained — no server-side work.                                                                                |
-| **Tool-backed**     | `toolName`, `toolInputSchema`, `handleToolCall` | A tool the LLM calls (with no iframe), e.g. `get_field_suggestions`.                                                                      |
-| **Resource + tool** | All of the above                                | The standard interactive widget pattern — LLM calls the tool with arguments, server returns metadata pointing the iframe to the resource. |
+| Category | Populates | Use when |
+| --- | --- | --- |
+| **Pure UI** | `getHtml`, `resourceUri` | The app is static or self-contained — no server-side work. |
+| **Tool-backed** | `toolName`, `toolInputSchema`, `handleToolCall` | A tool the LLM calls (with no iframe), e.g. `get_field_suggestions`. |
+| **Resource + tool** | All of the above | The standard interactive widget pattern — LLM calls the tool with arguments, server returns metadata pointing the iframe to the resource. |
 
 The shipped apps are almost all category three. `show-model-app`, for instance: the LLM calls `show_model_app(model, ids)`, the handler fetches records and returns a `ToolResult` with `_meta` referencing the `mcp://app/show-model-app` resource; the host loads the HTML, the iframe receives the data via postMessage and renders.
 

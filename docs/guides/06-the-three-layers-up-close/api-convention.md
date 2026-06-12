@@ -1,5 +1,4 @@
-> **Customization:** per-model via `static api.convention`, server-wide via `defaultConvention:` on `ToolRegistry`.
-> Ships `jsonApiConvention` (also exported as `defaultConvention`). Write a custom one for HAL, flat envelopes, or proprietary wrappers.
+> **Customization:** per-model via `static api.convention`, server-wide via `defaultConvention:` on `ToolRegistry`. Ships `jsonApiConvention` (also exported as `defaultConvention`). Write a custom one for HAL, flat envelopes, or proprietary wrappers.
 
 # API convention
 

@@ -17,12 +17,12 @@ mcp-rune draws a sharp line between **app tools** (interactive UI surfaces) and 
 
 ### Worked examples
 
-| Wrong                | Right            | Why                                                            |
-| -------------------- | ---------------- | -------------------------------------------------------------- |
-| `create_model_form`  | `new_model_app`  | UI verb + `_app` suffix; `create_*` is the data tool           |
-| `record_browser_app` | `list_model_app` | Singular `_model_` noun                                        |
-| `update_model_app`   | `edit_model_app` | UI verb describes intent, not the mutation it eventually fires |
-| `find_records_app`   | `find_model_app` | `_model_` for scope, not cardinality                           |
+| Wrong | Right | Why |
+| --- | --- | --- |
+| `create_model_form` | `new_model_app` | UI verb + `_app` suffix; `create_*` is the data tool |
+| `record_browser_app` | `list_model_app` | Singular `_model_` noun |
+| `update_model_app` | `edit_model_app` | UI verb describes intent, not the mutation it eventually fires |
+| `find_records_app` | `find_model_app` | `_model_` for scope, not cardinality |
 
 ## Data tools — action verbs directly
 
