@@ -2,8 +2,7 @@
 
 This file covers contributor setup, local commands, and the build pipeline. For repo policies (commit style, PR flow), see [CONTRIBUTING.md](CONTRIBUTING.md). For the framework itself, start with the [docs site](https://mcp-rune.dev).
 
-> [!NOTE]
-> The `dist/` directory is gitignored and compiled from `src/`. A **post-merge** git hook automatically runs `npm run build` after `git pull` when source files changed, so your local build stays fresh across machines. To rebuild manually: `npm run build` (TypeScript only — fast iteration) or `npm run build:full` (Vite apps + tsc + copy HTML — full publishable artifact).
+> [!NOTE] The `dist/` directory is gitignored and compiled from `src/`. A **post-merge** git hook automatically runs `npm run build` after `git pull` when source files changed, so your local build stays fresh across machines. To rebuild manually: `npm run build` (TypeScript only — fast iteration) or `npm run build:full` (Vite apps + tsc + copy HTML — full publishable artifact).
 
 ## Prerequisites
 
