@@ -1225,10 +1225,10 @@ Patch fixing a class-field shadowing bug introduced when `BasePrompt` was slimme
 
 - **App folders split** — `src/mcp/apps/model-form/` is removed; each form factory + UI lives in its own folder:
 
-  | Before                             | After                                                                |
-  | ---------------------------------- | -------------------------------------------------------------------- |
-  | `src/mcp/apps/model-form/index.ts` | `src/mcp/apps/new-model-app/index.ts` + `edit-model-app/index.ts`    |
-  | `src/mcp/apps/model-form/ui/`      | `src/mcp/apps/new-model-app/ui/` + `edit-model-app/ui/` (thin shims) |
+  | Before | After |
+  | --- | --- |
+  | `src/mcp/apps/model-form/index.ts` | `src/mcp/apps/new-model-app/index.ts` + `edit-model-app/index.ts` |
+  | `src/mcp/apps/model-form/ui/` | `src/mcp/apps/new-model-app/ui/` + `edit-model-app/ui/` (thin shims) |
 
 - **Shared client-side code** — the bulk of the old `model-form/ui/app.js` moves to `src/mcp/apps/shared/model-form/main.js`, exported as `initModelFormApp()`. Each per-app `ui/app.js` is a two-line shim that imports and invokes it. `styles.css` moves to `shared/model-form/styles.css`.
 - **Shared server-side helpers** — `resolveAssociationOptions`, `buildDefaultsFromModel`, and `filterEmpty` extracted to `src/mcp/apps/lib/form-app-helpers.ts` so both factories consume the same implementation.
