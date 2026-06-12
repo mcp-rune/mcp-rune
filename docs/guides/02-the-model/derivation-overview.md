@@ -10,11 +10,7 @@ Everything below is what makes the "Model is the single source of truth" claim c
 
 > Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.103.0 · Node 24.
 
-If you finished the [Quickstart](../01-getting-started/quickstart.md) you
-already have everything you need: the scaffolded `bookshelf-tour` project,
-the MCP Inspector connected to it, and a `Book` model declared in
-`src/models/book.ts`. Before you scan the derivation table, observe two
-surfaces deriving from that one declaration.
+If you finished the [Quickstart](../01-getting-started/quickstart.md) you already have everything you need: the scaffolded `bookshelf-tour` project, the MCP Inspector connected to it, and a `Book` model declared in `src/models/book.ts`. Before you scan the derivation table, observe two surfaces deriving from that one declaration.
 
 **1. Tool list — derived from `MODEL_CLASSES`**
 
@@ -33,16 +29,11 @@ In the Inspector, call `list_models` with `{}`. Expect:
 ]
 ```
 
-Three things on this row are derived: `endpoint` from `static api.endpoint`,
-`attributes` from the `static attributes` map, and `required_attributes`
-from the `required: true` flag on `name`. You didn't write any of them
-into a registry — `list_models` reads the class itself.
+Three things on this row are derived: `endpoint` from `static api.endpoint`, `attributes` from the `static attributes` map, and `required_attributes` from the `required: true` flag on `name`. You didn't write any of them into a registry — `list_models` reads the class itself.
 
 **2. Prompt guide text — derived from `description` + `attributes`**
 
-Call `get_prompt_guide` with `{ "guide_name": "book" }`. The response is a
-multi-section Markdown guide whose **Attribute reference** table at the
-bottom looks like this:
+Call `get_prompt_guide` with `{ "guide_name": "book" }`. The response is a multi-section Markdown guide whose **Attribute reference** table at the bottom looks like this:
 
 ```
 | Attribute     | Type   | Required | Valid Values |
@@ -51,32 +42,27 @@ bottom looks like this:
 | description   | text   | No       |              |
 ```
 
-No template lives in `src/prompts/book-prompt.ts` for this table — it's
-synthesised from the same `static attributes` block.
+No template lives in `src/prompts/book-prompt.ts` for this table — it's synthesised from the same `static attributes` block.
 
-**Observe:** one declaration, two surfaces, zero glue code. Multiply that
-across every row in the table below and you have the chapter's argument:
-the Model is one place, and everything else points back to it. As you
-read each guide, return to this table to remember which row you're filling
-in.
+**Observe:** one declaration, two surfaces, zero glue code. Multiply that across every row in the table below and you have the chapter's argument: the Model is one place, and everything else points back to it. As you read each guide, return to this table to remember which row you're filling in.
 
 ## What gets derived
 
-| Surface                   | Driven by                                                | Covered in                                                                          |
-| ------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| **Prompt schema**         | `attributes` + `associations` (via `derivePromptSchema`) | [Prompt derivation](../03-the-prompt/prompt-derivation.md)                          |
-| **Prompt guide text**     | `description` + `attributes` + `examples`                | [Prompt creation](../03-the-prompt/prompt-creation.md)                              |
-| **9 polymorphic tools**   | `MODEL_CLASSES` registry — every model gets all 9        | [Polymorphic tools](../04-tools/polymorphic-tools.md)                               |
-| **Form validation**       | `required`, `default`, `validation`, `enumValues`        | [Validation and defaults](./validation-and-defaults.md)                             |
-| **App forms**             | `attributes` + `kinds` → `<input>` type per field        | [Model form](../05-apps/model-form.md)                                              |
-| **Picker / multi-picker** | `belongsTo` / `hasMany` → recommended picker app         | [MCP apps](../05-apps/mcp-apps.md), [Associations](./associations.md)               |
-| **Display rendering**     | `displayValue` + per-kind `render`                       | [Attributes and kinds](./attributes-and-kinds.md)                                   |
-| **Search filters**        | `attributes` + the search request shaper                 | [Search filters](../06-the-three-layers-up-close/search-filters.md)                 |
-| **API payload shape**     | `api.convention` (defaults to the server-wide one)       | [API convention](../06-the-three-layers-up-close/api-convention.md)                 |
-| **Foreign-key columns**   | `associations.belongsTo` → `{key}_id` attribute          | [Associations](./associations.md)                                                   |
-| **Graph edges**           | `associations` → `(record → target)` edges               | [Retrieval & GraphRAG](../09-retrieval-and-graphrag/retrieval-graphrag.md)          |
-| **Embedding text**        | `attributes` (text/string fields concatenated)           | [Analysis quickstart](../09-retrieval-and-graphrag/analysis-quickstart.md)          |
-| **Auto-generated docs**   | `description` + `attributes` + `associations`            | [Polymorphic tools](../04-tools/polymorphic-tools.md) (the `get_prompt_guide` tool) |
+| Surface | Driven by | Covered in |
+| --- | --- | --- |
+| **Prompt schema** | `attributes` + `associations` (via `derivePromptSchema`) | [Prompt derivation](../03-the-prompt/prompt-derivation.md) |
+| **Prompt guide text** | `description` + `attributes` + `examples` | [Prompt creation](../03-the-prompt/prompt-creation.md) |
+| **9 polymorphic tools** | `MODEL_CLASSES` registry — every model gets all 9 | [Polymorphic tools](../04-tools/polymorphic-tools.md) |
+| **Form validation** | `required`, `default`, `validation`, `enumValues` | [Validation and defaults](./validation-and-defaults.md) |
+| **App forms** | `attributes` + `kinds` → `<input>` type per field | [Model form](../05-apps/model-form.md) |
+| **Picker / multi-picker** | `belongsTo` / `hasMany` → recommended picker app | [MCP apps](../05-apps/mcp-apps.md), [Associations](./associations.md) |
+| **Display rendering** | `displayValue` + per-kind `render` | [Attributes and kinds](./attributes-and-kinds.md) |
+| **Search filters** | `attributes` + the search request shaper | [Search filters](../06-the-three-layers-up-close/search-filters.md) |
+| **API payload shape** | `api.convention` (defaults to the server-wide one) | [API convention](../06-the-three-layers-up-close/api-convention.md) |
+| **Foreign-key columns** | `associations.belongsTo` → `{key}_id` attribute | [Associations](./associations.md) |
+| **Graph edges** | `associations` → `(record → target)` edges | [Retrieval & GraphRAG](../09-retrieval-and-graphrag/retrieval-graphrag.md) |
+| **Embedding text** | `attributes` (text/string fields concatenated) | [Analysis quickstart](../09-retrieval-and-graphrag/analysis-quickstart.md) |
+| **Auto-generated docs** | `description` + `attributes` + `associations` | [Polymorphic tools](../04-tools/polymorphic-tools.md) (the `get_prompt_guide` tool) |
 
 ## What you write vs what derives
 

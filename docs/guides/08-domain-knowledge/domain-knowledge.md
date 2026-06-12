@@ -137,24 +137,24 @@ new DomainConcept({
 
 The `details` object is **freeform by design** — the `get_domain_context` tool renders it as structured content to the LLM, so any keys work. However, the formatting layer recognizes certain conventional keys and renders them specially:
 
-| Key           | Type                   | Rendering                                       | Purpose                                      |
-| ------------- | ---------------------- | ----------------------------------------------- | -------------------------------------------- |
+| Key | Type | Rendering | Purpose |
+| --- | --- | --- | --- |
 | `inheritance` | `{ from, to, fields }` | `**Inheritance:** project → task (fields: ...)` | Describes field inheritance between entities |
-| `process`     | `string`               | `**Process:** Create project → add tasks → ...` | Step-by-step procedure                       |
-| `tips`        | `string[]`             | Bulleted list under `**Tips:**`                 | Actionable guidance                          |
+| `process` | `string` | `**Process:** Create project → add tasks → ...` | Step-by-step procedure |
+| `tips` | `string[]` | Bulleted list under `**Tips:**` | Actionable guidance |
 
 **Other keys** are passed through as-is in the JSON context. Common conventions:
 
-| Key                | Type                                      | Purpose                                 |
-| ------------------ | ----------------------------------------- | --------------------------------------- |
-| `statuses`         | `{ status: description }`                 | Maps status enum values to meanings     |
-| `conflicts`        | `{ type: description }`                   | Maps conflict types to descriptions     |
-| `restrictions`     | `{ type: description }`                   | Describes restriction types             |
-| `windows`          | `{ term: definition }`                    | Terminology definitions                 |
-| `contentTypes`     | `{ type: behavior }`                      | Maps content types to their behavior    |
-| `categoryExamples` | `{ category: examples }`                  | Example values for categorization       |
-| `example`          | `{ scenario, problem, result, solution }` | Concrete scenario with problem/solution |
-| `keyInsight`       | `string`                                  | Critical insight about the concept      |
+| Key | Type | Purpose |
+| --- | --- | --- |
+| `statuses` | `{ status: description }` | Maps status enum values to meanings |
+| `conflicts` | `{ type: description }` | Maps conflict types to descriptions |
+| `restrictions` | `{ type: description }` | Describes restriction types |
+| `windows` | `{ term: definition }` | Terminology definitions |
+| `contentTypes` | `{ type: behavior }` | Maps content types to their behavior |
+| `categoryExamples` | `{ category: examples }` | Example values for categorization |
+| `example` | `{ scenario, problem, result, solution }` | Concrete scenario with problem/solution |
+| `keyInsight` | `string` | Critical insight about the concept |
 
 You can invent new keys freely — just be descriptive. The formatting layer will include them in the rendered context as structured JSON.
 
@@ -992,12 +992,12 @@ Four tools expose domain intelligence to users. All extend `BaseDomainTool` (cat
 
 Retrieves composed context for a model or concept.
 
-| Input                                      | Behavior                                                            |
-| ------------------------------------------ | ------------------------------------------------------------------- |
-| No args                                    | Lists all concepts and workflows (overview)                         |
-| `{ model: 'task' }`                        | Returns field metadata + concepts + rules + workflows for the model |
-| `{ concept: 'project_task_hierarchy' }`    | Returns full concept details                                        |
-| `{ model: 'task', concept: 'completion' }` | Returns both model context and concept search results               |
+| Input | Behavior |
+| --- | --- |
+| No args | Lists all concepts and workflows (overview) |
+| `{ model: 'task' }` | Returns field metadata + concepts + rules + workflows for the model |
+| `{ concept: 'project_task_hierarchy' }` | Returns full concept details |
+| `{ model: 'task', concept: 'completion' }` | Returns both model context and concept search results |
 
 **Formatting of `details` conventional keys:**
 
@@ -1010,10 +1010,10 @@ Retrieves composed context for a model or concept.
 
 Validates entity data against applicable business rules.
 
-| Input                                                          | Behavior                             |
-| -------------------------------------------------------------- | ------------------------------------ |
-| `{ model: 'task', data: { status: 'in_progress' } }`           | Evaluates all rules scoped to `task` |
-| `{ model: 'project', data: {...}, context: { tasks: [...] } }` | Evaluates with cross-entity context  |
+| Input | Behavior |
+| --- | --- |
+| `{ model: 'task', data: { status: 'in_progress' } }` | Evaluates all rules scoped to `task` |
+| `{ model: 'project', data: {...}, context: { tasks: [...] } }` | Evaluates with cross-entity context |
 
 Output is grouped by severity: Errors (must fix) → Warnings (should fix) → Info → Passed.
 
@@ -1021,23 +1021,23 @@ Output is grouped by severity: Errors (must fix) → Warnings (should fix) → I
 
 Returns a workflow roadmap (all step titles) plus the first step in full detail. The LLM executes one step at a time, calling `get_workflow_step` for each subsequent step.
 
-| Input                                     | Behavior                                                   |
-| ----------------------------------------- | ---------------------------------------------------------- |
-| No args                                   | Lists all workflows                                        |
-| `{ goal: 'project tasks' }`               | Searches by title/description/tags, returns best match     |
+| Input | Behavior |
+| --- | --- |
+| No args | Lists all workflows |
+| `{ goal: 'project tasks' }` | Searches by title/description/tags, returns best match |
 | `{ workflow: 'create_project_workflow' }` | Returns the full roadmap + first step for a named workflow |
-| `{ tag: 'demo' }`                         | Filters by tag                                             |
+| `{ tag: 'demo' }` | Filters by tag |
 
 ### `get_workflow_step`
 
 Returns detailed instructions for a single workflow step — the tool to call, arguments to pass, tips, and exclusion warnings. For loop and parallel groups, returns all steps in the group together with a hint about the next step after the group.
 
-| Input                                               | Behavior                                                         |
-| --------------------------------------------------- | ---------------------------------------------------------------- |
-| `{ workflow: 'create_project_workflow', step: 1 }`  | Detail for step 1: tool, args, tips, next-step hint              |
-| `{ workflow: 'create_project_workflow', step: 3 }`  | If step 3 is in a loop or parallel group, returns the full group |
-| `{ workflow: 'unknown', step: 1 }`                  | Error: lists available workflow names                            |
-| `{ workflow: 'create_project_workflow', step: 99 }` | Error: lists the workflow's available step numbers               |
+| Input | Behavior |
+| --- | --- |
+| `{ workflow: 'create_project_workflow', step: 1 }` | Detail for step 1: tool, args, tips, next-step hint |
+| `{ workflow: 'create_project_workflow', step: 3 }` | If step 3 is in a loop or parallel group, returns the full group |
+| `{ workflow: 'unknown', step: 1 }` | Error: lists available workflow names |
+| `{ workflow: 'create_project_workflow', step: 99 }` | Error: lists the workflow's available step numbers |
 
 The tool is stateless. The LLM (or a coordinating agent) drives progression by calling `get_workflow_step` once per step; the framework never tracks "current step" on the server side. Steps may declare a `contextHint` payload that surfaces in the response's `_meta.contextHints` for the transient-context protocol.
 

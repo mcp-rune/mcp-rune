@@ -6,9 +6,7 @@ The previous chapter covered single-attribute kinds. This chapter covers the sec
 
 > Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.103.0 · Node 24.
 
-Three edits to your scaffolded `bookshelf-tour` project make the derivation
-visible: add a second model, declare the FK, and observe two surfaces that
-weren't there before.
+Three edits to your scaffolded `bookshelf-tour` project make the derivation visible: add a second model, declare the FK, and observe two surfaces that weren't there before.
 
 **1. Add the second model**
 
@@ -30,9 +28,7 @@ Edit src/models/author.ts to declare attributes.
 
 **2. Declare the `belongsTo` on `Book`**
 
-Edit `src/models/book.ts` and add three things: a `convention` on the `api`
-block (associations require it), an `associations` field, and the import
-for the convention. The minimal diff:
+Edit `src/models/book.ts` and add three things: a `convention` on the `api` block (associations require it), an `associations` field, and the import for the convention. The minimal diff:
 
 ```ts
 import { jsonApiConvention } from '@mcp-rune/mcp-rune/api-conventions'
@@ -51,11 +47,7 @@ export class Book extends BaseModel {
 }
 ```
 
-> **Gotcha:** The framework throws `apiConvention is required when model has
-associations` if you forget the `convention:` field on `api`. The error
-> message currently says "set static apiConvention" — read it as "add
-> `convention:` to your `static api` block". Without it, the prompt-derivation
-> pass fails at server boot.
+> **Gotcha:** The framework throws `apiConvention is required when model has associations` if you forget the `convention:` field on `api`. The error message currently says "set static apiConvention" — read it as "add `convention:` to your `static api` block". Without it, the prompt-derivation pass fails at server boot.
 
 Confirm it typechecks:
 
@@ -67,9 +59,7 @@ npm run typecheck
 
 **3. Observe two derived surfaces**
 
-Restart the Inspector and call `list_models` with `{}`. The `book` row now
-has a derived `belongs_to` slot the framework synthesised from the
-association:
+Restart the Inspector and call `list_models` with `{}`. The `book` row now has a derived `belongs_to` slot the framework synthesised from the association:
 
 ```json
 {
@@ -83,8 +73,7 @@ association:
 }
 ```
 
-Call `validate_form` with `{ "model": "book", "fields": { "name": "Dune" } }`.
-The required `author_id` foreign key (synthesised from the association name
+Call `validate_form` with `{ "model": "book", "fields": { "name": "Dune" } }`. The required `author_id` foreign key (synthesised from the association name
 
 - `_id`) is missing, and the framework reports it with a humanised label:
 
@@ -99,12 +88,7 @@ The required `author_id` foreign key (synthesised from the association name
 }
 ```
 
-**Observe:** you didn't declare `author_id` as an attribute, and you
-didn't write a validator for it. One `belongsTo` line synthesised the
-FK and the required-field check at validate-form time — listed in the
-[derivation overview](./derivation-overview.md) under "Foreign-key columns".
-The picker (`pick_model_app({ model: 'book', field: 'author_id' })`) is
-the same story; see [MCP apps](../05-apps/mcp-apps.md).
+**Observe:** you didn't declare `author_id` as an attribute, and you didn't write a validator for it. One `belongsTo` line synthesised the FK and the required-field check at validate-form time — listed in the [derivation overview](./derivation-overview.md) under "Foreign-key columns". The picker (`pick_model_app({ model: 'book', field: 'author_id' })`) is the same story; see [MCP apps](../05-apps/mcp-apps.md).
 
 ## The two shapes
 

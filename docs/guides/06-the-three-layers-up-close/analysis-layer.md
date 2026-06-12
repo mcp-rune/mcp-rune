@@ -1,5 +1,4 @@
-> **Customization:** none — this chapter is informational.
-> AnalysisLayer is constructed internally per request and carries the deployer's `DataLayer`. The deployer-facing seam is [`DataLayerFactory`](./data-layer.md) on `ToolRegistry` / `AppRegistry`; AnalysisLayer rides on top of it.
+> **Customization:** none — this chapter is informational. AnalysisLayer is constructed internally per request and carries the deployer's `DataLayer`. The deployer-facing seam is [`DataLayerFactory`](./data-layer.md) on `ToolRegistry` / `AppRegistry`; AnalysisLayer rides on top of it.
 
 # Analysis layer
 

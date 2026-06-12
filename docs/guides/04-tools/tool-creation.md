@@ -1,5 +1,4 @@
-> **Customization:** register your `BaseTool` subclass via `toolClasses:` on `ToolRegistry`.
-> Your tool receives `this.dataLayer`, `this.modelLayer`, `this.analysisLayer` automatically. The framework handles dispatch, schema validation, interceptors, and result envelopes.
+> **Customization:** register your `BaseTool` subclass via `toolClasses:` on `ToolRegistry`. Your tool receives `this.dataLayer`, `this.modelLayer`, `this.analysisLayer` automatically. The framework handles dispatch, schema validation, interceptors, and result envelopes.
 
 # Tool creation
 
@@ -59,13 +58,13 @@ BaseTool (mcp-rune)
 
 The following CRUD tools are provided in `lib/mcp/tools/crud/` and shared across all servers:
 
-| Tool           | Description                                                                                                                                          |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `list_models`  | Lists available models with attributes and associations                                                                                              |
+| Tool | Description |
+| --- | --- |
+| `list_models` | Lists available models with attributes and associations |
 | `find_records` | Finds records by ID or search criteria with pagination. Supports compound IDs for nested resources and `parent_path` for listing nested collections. |
-| `create_model` | Creates records with model-key payload wrapping. Supports `parent_path` for nested model creation.                                                   |
-| `update_model` | Updates records with model-key payload wrapping. Supports compound IDs.                                                                              |
-| `delete_model` | Deletes records by ID. Supports compound IDs.                                                                                                        |
+| `create_model` | Creates records with model-key payload wrapping. Supports `parent_path` for nested model creation. |
+| `update_model` | Updates records with model-key payload wrapping. Supports compound IDs. |
+| `delete_model` | Deletes records by ID. Supports compound IDs. |
 
 These tools are completely generic — they have zero server-specific logic. They receive their configuration (models, serverContext) via constructor dependency injection.
 
@@ -610,18 +609,18 @@ export class MyGenericTool extends BaseTool {}
 
 ### Available Helpers
 
-| Method                       | Description                                                          |
-| ---------------------------- | -------------------------------------------------------------------- |
-| `requireApiClient()`         | Throws if not authenticated                                          |
-| `this.modelService`          | ModelService instance (optional, for CRUD)                           |
-| `formatResponse(data)`       | Wrap successful response                                             |
-| `formatError(error)`         | Wrap error response (delegates to convention for structured parsing) |
-| `storeToolMemory(params)`    | Fire-and-forget vector storage of tool operations                    |
-| `validateModel(name)`        | Check model exists in config                                         |
-| `getModelConfig(name)`       | Get model configuration                                              |
-| `getModelEnum()`             | Get list of available models                                         |
-| `truncateString(s, n)`       | Truncate string to max length                                        |
-| `sanitizeResponseData(data)` | JSON stringify for display                                           |
+| Method | Description |
+| --- | --- |
+| `requireApiClient()` | Throws if not authenticated |
+| `this.modelService` | ModelService instance (optional, for CRUD) |
+| `formatResponse(data)` | Wrap successful response |
+| `formatError(error)` | Wrap error response (delegates to convention for structured parsing) |
+| `storeToolMemory(params)` | Fire-and-forget vector storage of tool operations |
+| `validateModel(name)` | Check model exists in config |
+| `getModelConfig(name)` | Get model configuration |
+| `getModelEnum()` | Get list of available models |
+| `truncateString(s, n)` | Truncate string to max length |
+| `sanitizeResponseData(data)` | JSON stringify for display |
 
 ### Optional Overrides
 

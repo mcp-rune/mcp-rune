@@ -1,5 +1,4 @@
-> **Customization:** none — this is a server-to-client protocol specification.
-> Your deployer hook is the `contextHint` field on workflow steps you declare; the framework emits `_meta.context` on tool responses automatically. You declare the relationship; the framework wires the rest.
+> **Customization:** none — this is a server-to-client protocol specification. Your deployer hook is the `contextHint` field on workflow steps you declare; the framework emits `_meta.context` on tool responses automatically. You declare the relationship; the framework wires the rest.
 
 # Transient Context Protocol
 
@@ -13,10 +12,10 @@ During fetch-analyze workflow loops, each page of fetched data stays in the conv
 
 These are **complementary**, not competing:
 
-| Pattern               | LLM sees data?   | Use case                                               |
-| --------------------- | ---------------- | ------------------------------------------------------ |
-| **Lean mode**         | No               | LLM doesn't need data (counting, passing scratch_refs) |
-| **Transient context** | Yes, temporarily | LLM needs data for analysis, then client collapses it  |
+| Pattern | LLM sees data? | Use case |
+| --- | --- | --- |
+| **Lean mode** | No | LLM doesn't need data (counting, passing scratch_refs) |
+| **Transient context** | Yes, temporarily | LLM needs data for analysis, then client collapses it |
 
 Lean mode stores data server-side and returns only a summary. Transient context sends full data to the LLM but signals the client to collapse it after a consumer tool processes it.
 

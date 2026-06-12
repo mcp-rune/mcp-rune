@@ -2,10 +2,10 @@
 
 This guide walks you through writing an extension from scratch. mcp-rune has two extension types — pick the one whose lifetime matches your feature:
 
-| Type                | Lives in                            | Best for                                                                                                   | Reference                                                                                                                                                                          |
-| ------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`HttpExtension`** | `@mcp-rune/mcp-rune/extensions`     | HTTP routes and route-scoped middleware on top of `/oauth/*`, `/health`, and `/mcp`                        | [Extensions Guide](./extensions-http.md), worked example [`cimd`](../../../src/extensions/cimd.ts)                                                                                 |
-| **`ApiExtension`**  | `@mcp-rune/mcp-rune/api-extensions` | MCP tools + `ModelService` mixins + per-model config that's only relevant when the extension is registered | [API Extensions Guide](./api-extensions.md), worked examples [`custom-actions`](../../../src/api-extensions/custom-actions.ts) and [`search`](../../../src/api-extensions/search/) |
+| Type | Lives in | Best for | Reference |
+| --- | --- | --- | --- |
+| **`HttpExtension`** | `@mcp-rune/mcp-rune/extensions` | HTTP routes and route-scoped middleware on top of `/oauth/*`, `/health`, and `/mcp` | [Extensions Guide](./extensions-http.md), worked example [`cimd`](../../../src/extensions/cimd.ts) |
+| **`ApiExtension`** | `@mcp-rune/mcp-rune/api-extensions` | MCP tools + `ModelService` mixins + per-model config that's only relevant when the extension is registered | [API Extensions Guide](./api-extensions.md), worked examples [`custom-actions`](../../../src/api-extensions/custom-actions.ts) and [`search`](../../../src/api-extensions/search/) |
 
 Both follow the same authoring contract — `requires?` capability declaration, `register(ctx)` entrypoint, narrowed context, explicit opt-in, no auto-registration. The framework's promise is that "what's actually running" is answerable by reading one call site (your `new HttpServer({...})` or `new ToolRegistry({...})`).
 
@@ -26,13 +26,13 @@ your-extension/
 └── index.ts             Public re-exports — one stable import path
 ```
 
-| #   | Piece                                  | What it does                                                                                                                       | Example from `custom-actions`                                                             |
-| --- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| 1   | **Config type**                        | The shape your per-model config takes                                                                                              | `interface CustomActionsConfig { actions: Record<string, ActionDefinition> }`             |
-| 2   | **Typed helper** (`xxxConfig`)         | What model authors write in `extensions['xxx']` to get autocomplete + validation, even though the bag is `Record<string, unknown>` | `customActionsConfig({ actions: {...} })`                                                 |
-| 3   | **Typed reader** (`getXxxConfig`)      | What everyone else uses to read the slice — structural, tolerates absence                                                          | `getActionsConfig(modelConfig)` returns `CustomActionsConfig \| undefined`                |
-| 4   | **Service factory** (optional)         | If your extension creates a long-lived service that other code constructs, expose a factory so the construction is centralized     | `createSearchService(apiClient, context?)` — used by extension, apps, and analysis-ingest |
-| 5   | **Extension factory** (`xxxExtension`) | Returns the `ApiExtension` object — registers tools, mixins, etc. via the narrowed context                                         | `customActionsExtension()`                                                                |
+| # | Piece | What it does | Example from `custom-actions` |
+| --- | --- | --- | --- |
+| 1 | **Config type** | The shape your per-model config takes | `interface CustomActionsConfig { actions: Record<string, ActionDefinition> }` |
+| 2 | **Typed helper** (`xxxConfig`) | What model authors write in `extensions['xxx']` to get autocomplete + validation, even though the bag is `Record<string, unknown>` | `customActionsConfig({ actions: {...} })` |
+| 3 | **Typed reader** (`getXxxConfig`) | What everyone else uses to read the slice — structural, tolerates absence | `getActionsConfig(modelConfig)` returns `CustomActionsConfig \| undefined` |
+| 4 | **Service factory** (optional) | If your extension creates a long-lived service that other code constructs, expose a factory so the construction is centralized | `createSearchService(apiClient, context?)` — used by extension, apps, and analysis-ingest |
+| 5 | **Extension factory** (`xxxExtension`) | Returns the `ApiExtension` object — registers tools, mixins, etc. via the narrowed context | `customActionsExtension()` |
 
 Plus, on the consumer side, one model-side slot:
 
@@ -460,13 +460,13 @@ It exercises the **real** extension factory rather than exporting the mixin for 
 
 `HttpExtension` is structurally simpler — no per-model config, no mixins, just routes. See [Extensions Guide](./extensions-http.md) for the contract and [`cimd`](../../../src/extensions/cimd.ts) for a worked example. The mental model:
 
-| `ApiExtension` piece | `HttpExtension` equivalent                                                                                   |
-| -------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Per-model config     | n/a — extensions configure themselves at construction (`cimdExtension({ redirectUris, clientName, scope })`) |
-| Typed helper         | n/a — config goes into the factory's parameters                                                              |
-| Typed reader         | n/a                                                                                                          |
-| Extension factory    | Same shape: `cimdExtension(): HttpExtension`                                                                 |
-| Registration         | `new HttpServer({ extensions: { cimd: cimdExtension() } })`                                                  |
+| `ApiExtension` piece | `HttpExtension` equivalent |
+| --- | --- |
+| Per-model config | n/a — extensions configure themselves at construction (`cimdExtension({ redirectUris, clientName, scope })`) |
+| Typed helper | n/a — config goes into the factory's parameters |
+| Typed reader | n/a |
+| Extension factory | Same shape: `cimdExtension(): HttpExtension` |
+| Registration | `new HttpServer({ extensions: { cimd: cimdExtension() } })` |
 
 If you find yourself wanting per-model config or `ModelService` integration in an HTTP extension, you actually want an `ApiExtension`.
 

@@ -97,16 +97,16 @@ new WorkflowDefinition({
 })
 ```
 
-| Property        | Required | Description                                                                                  |
-| --------------- | -------- | -------------------------------------------------------------------------------------------- |
-| `name`          | Yes      | Unique snake_case identifier. Used for exact lookup via `suggest_workflow(workflow: "name")` |
-| `title`         | Yes      | Displayed in workflow lists and as the heading when rendered                                 |
-| `description`   | Yes      | Searchable description. Include key verbs and nouns for goal-based search                    |
-| `tags`          | No       | Used for `suggest_workflow(tag: "...")` filtering. Reuse existing tags when possible         |
-| `models`        | No       | Enables `getWorkflowsByModel()` — workflows shown when the LLM works with these models       |
-| `steps`         | Yes      | Array of step objects. Must have sequential `order` values starting from 1                   |
-| `draftRequired` | No       | When `true`, the rendered workflow includes a "Draft Required" notice                        |
-| `mutationPlans` | No       | Defines named plans for `preview_mutation_plan`. Keyed by plan name                          |
+| Property | Required | Description |
+| --- | --- | --- |
+| `name` | Yes | Unique snake_case identifier. Used for exact lookup via `suggest_workflow(workflow: "name")` |
+| `title` | Yes | Displayed in workflow lists and as the heading when rendered |
+| `description` | Yes | Searchable description. Include key verbs and nouns for goal-based search |
+| `tags` | No | Used for `suggest_workflow(tag: "...")` filtering. Reuse existing tags when possible |
+| `models` | No | Enables `getWorkflowsByModel()` — workflows shown when the LLM works with these models |
+| `steps` | Yes | Array of step objects. Must have sequential `order` values starting from 1 |
+| `draftRequired` | No | When `true`, the rendered workflow includes a "Draft Required" notice |
+| `mutationPlans` | No | Defines named plans for `preview_mutation_plan`. Keyed by plan name |
 
 ### WorkflowStep
 

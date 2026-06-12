@@ -6,9 +6,7 @@ Attributes and associations declare _which fields exist_. This chapter covers th
 
 > Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.103.0 · Node 24.
 
-Four calls to `validate_form` against your `bookshelf-tour` project surface
-each of the declarations this chapter teaches. Add the fields below to
-`src/models/book.ts` and invoke `validate_form` after each one.
+Four calls to `validate_form` against your `bookshelf-tour` project surface each of the declarations this chapter teaches. Add the fields below to `src/models/book.ts` and invoke `validate_form` after each one.
 
 **Setup:** extend the `attributes` block in `src/models/book.ts`:
 
@@ -26,9 +24,7 @@ rating: {
 },
 ```
 
-(If you completed the [Associations](./associations.md) hands-on, your
-`Book` model still has `belongsTo: author`. Keep it — you'll need an
-integer `author_id` in the calls below.)
+(If you completed the [Associations](./associations.md) hands-on, your `Book` model still has `belongsTo: author`. Keep it — you'll need an integer `author_id` in the calls below.)
 
 **1. `required` — `validate_form` blocks an empty submission**
 
@@ -48,13 +44,7 @@ Call `validate_form` with `{ "model": "book", "fields": {} }`:
 }
 ```
 
-Two required fields block the submit: `name`, and the `author_id` FK
-synthesised by the `belongsTo: author` association you kept from the
-[Associations](./associations.md) guide. `status` is absent too, but it
-carries a `default:` — so instead of an error you get a warning and the
-substituted value under `computed` / `fields`. There is no
-`required: false`; absence is the default, and the whole pass runs without
-a backend round trip — the contract the LLM relies on.
+Two required fields block the submit: `name`, and the `author_id` FK synthesised by the `belongsTo: author` association you kept from the [Associations](./associations.md) guide. `status` is absent too, but it carries a `default:` — so instead of an error you get a warning and the substituted value under `computed` / `fields`. There is no `required: false`; absence is the default, and the whole pass runs without a backend round trip — the contract the LLM relies on.
 
 **2. `default:` — the value is substituted before submit**
 
@@ -71,10 +61,7 @@ Call `validate_form` with `{ "model": "book", "fields": { "name": "Dune", "autho
 }
 ```
 
-`status` was missing; the framework substituted the static `default:` and
-echoed it back under both `computed` and `fields`. The warning tells the
-LLM the default was applied so it can re-prompt if the user wanted to be
-explicit.
+`status` was missing; the framework substituted the static `default:` and echoed it back under both `computed` and `fields`. The warning tells the LLM the default was applied so it can re-prompt if the user wanted to be explicit.
 
 **3. `enumValues:` — an out-of-set value is rejected**
 
@@ -96,8 +83,7 @@ Call `validate_form` with `{ "model": "book", "fields": { "name": "Dune", "autho
 }
 ```
 
-`enumValues:` is its own validation — the message lists the allowed set,
-which is what the LLM reads to retry.
+`enumValues:` is its own validation — the message lists the allowed set, which is what the LLM reads to retry.
 
 **4. `validation: { min, max }` — bounds fire later, not here**
 
@@ -114,18 +100,9 @@ Call `validate_form` with `{ "model": "book", "fields": { "name": "Dune", "autho
 }
 ```
 
-`validate_form` does **not** currently enforce numeric `validation: { min, max }`
-bounds — `rating: 99` passes silently here. Bounds fire at write time
-(`create_model` / `update_model`), which means a backend with an `ApiClient`
-wired is needed to observe them. Treat `validation: { min, max }` as a
-write-time guarantee, not a form-time one. (`enumValues` and `required` _do_
-fire at validate-form time, as steps 1–3 show.)
+`validate_form` does **not** currently enforce numeric `validation: { min, max }` bounds — `rating: 99` passes silently here. Bounds fire at write time (`create_model` / `update_model`), which means a backend with an `ApiClient` wired is needed to observe them. Treat `validation: { min, max }` as a write-time guarantee, not a form-time one. (`enumValues` and `required` _do_ fire at validate-form time, as steps 1–3 show.)
 
-**Observe:** three of the four declarations short-circuit before any
-network call — that's the point of `validate_form`. Bounds are the
-exception today; the lifecycle diagram below names "Schema validation"
-as the pass that owns them, and the closest place the bounds fire today
-is on dispatch through `DataLayer`.
+**Observe:** three of the four declarations short-circuit before any network call — that's the point of `validate_form`. Bounds are the exception today; the lifecycle diagram below names "Schema validation" as the pass that owns them, and the closest place the bounds fire today is on dispatch through `DataLayer`.
 
 ## `required: true`
 

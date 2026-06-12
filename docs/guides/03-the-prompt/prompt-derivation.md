@@ -1,5 +1,4 @@
-> **Customization:** the 5-layer pipeline itself is not replaceable — these layers explain how the framework turns your model + prompt config into a string.
-> The deployer-facing API documented in this chapter is [`PromptContentBuilder`](#promptcontentgenerator-api), which you call inside your `BasePrompt.promptContent` to assemble the result. You consume the pipeline; you do not replace it.
+> **Customization:** the 5-layer pipeline itself is not replaceable — these layers explain how the framework turns your model + prompt config into a string. The deployer-facing API documented in this chapter is [`PromptContentBuilder`](#promptcontentgenerator-api), which you call inside your `BasePrompt.promptContent` to assemble the result. You consume the pipeline; you do not replace it.
 
 # Prompt derivation
 
@@ -181,12 +180,12 @@ Generates per-section documentation from config. Includes:
 
 ### Atomic Helpers (BasePrompt static methods)
 
-| Method                                            | Input                                       | Output                                                         |
-| ------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------- |
+| Method | Input | Output |
+| --- | --- | --- |
 | `generateSectionDocumentation(group, num, model)` | fieldGroup name, section number, model name | Complete section doc with field table, enum tables, ask prompt |
-| `generateEnumTable(fieldName)`                    | Field name with enumValues                  | Markdown table of enum values with descriptions                |
-| `generateAttributeReferenceFromConfig()`          | (uses this.fieldDefinitions)                | Full attribute reference table                                 |
-| `generateSummaryTemplate(modelName)`              | Model name                                  | Standard summary/confirmation section                          |
+| `generateEnumTable(fieldName)` | Field name with enumValues | Markdown table of enum values with descriptions |
+| `generateAttributeReferenceFromConfig()` | (uses this.fieldDefinitions) | Full attribute reference table |
+| `generateSummaryTemplate(modelName)` | Model name | Standard summary/confirmation section |
 
 ### Enum Tables
 
@@ -231,14 +230,7 @@ static attributes = {
 Generated output:
 
 ```markdown
-**`status` values:**
-| Value | Description |
-|-------|-------------|
-| `"planned"` | Not yet started **(default)** |
-| `"active"` | Currently in progress |
-| `"paused"` | Temporarily on hold |
-| `"completed"` | Finished |
-| `"archived"` | No longer relevant |
+**`status` values:** | Value | Description | |-------|-------------| | `"planned"` | Not yet started **(default)** | | `"active"` | Currently in progress | | `"paused"` | Temporarily on hold | | `"completed"` | Finished | | `"archived"` | No longer relevant |
 ```
 
 ## Layer 4: Assembly Pipeline
@@ -304,16 +296,16 @@ PromptContentBuilder.for(PromptClass, 'model_name')
 
 ### Builder Methods
 
-| Method                                   | Description                                                                | Use With       |
-| ---------------------------------------- | -------------------------------------------------------------------------- | -------------- |
-| `.add(content)`                          | Add custom markdown content                                                | All strategies |
-| `.standard(options?)`                    | Canonical: flowDiagram → guidance → beforeSections → allSections → summary | All            |
-| `.guidance()`                            | Stateful guidance instructions (Layer 5)                                   | Stateful only  |
-| `.section(groupName, num, options)`      | Single section documentation                                               | Stateful       |
-| `.allSections({ skip, customSections })` | All sections from config                                                   | Stateful       |
-| `.summary()`                             | Standard summary/confirmation template                                     | Stateful       |
-| `.attributeReference()`                  | Auto-generated attribute table                                             | All strategies |
-| `.build(separator)`                      | Join parts (default: `\n\n---\n\n`)                                        | All            |
+| Method | Description | Use With |
+| --- | --- | --- |
+| `.add(content)` | Add custom markdown content | All strategies |
+| `.standard(options?)` | Canonical: flowDiagram → guidance → beforeSections → allSections → summary | All |
+| `.guidance()` | Stateful guidance instructions (Layer 5) | Stateful only |
+| `.section(groupName, num, options)` | Single section documentation | Stateful |
+| `.allSections({ skip, customSections })` | All sections from config | Stateful |
+| `.summary()` | Standard summary/confirmation template | Stateful |
+| `.attributeReference()` | Auto-generated attribute table | All strategies |
+| `.build(separator)` | Join parts (default: `\n\n---\n\n`) | All |
 
 ### `.allSections()` Options
 
@@ -422,10 +414,10 @@ get promptContent() {
 
 When migrating, classify each piece of content:
 
-| Category                  | Description                                   | Action                                                       |
-| ------------------------- | --------------------------------------------- | ------------------------------------------------------------ |
-| **A: Auto-generatable**   | Summary templates, attribute references       | Replace with `.summary()`, `.attributeReference()`           |
-| **B: Config-generatable** | Section documentation, enum tables            | Use `.allSections()` or `.section()`, enrich `content.notes` |
-| **C: Custom**             | Intro text, tool usage, domain-specific logic | Keep as `.add()` calls                                       |
+| Category | Description | Action |
+| --- | --- | --- |
+| **A: Auto-generatable** | Summary templates, attribute references | Replace with `.summary()`, `.attributeReference()` |
+| **B: Config-generatable** | Section documentation, enum tables | Use `.allSections()` or `.section()`, enrich `content.notes` |
+| **C: Custom** | Intro text, tool usage, domain-specific logic | Keep as `.add()` calls |
 
 **Rule of thumb**: If the content depends only on `fieldDefinitions`, `fieldGroups`, or `sections`, it's auto-generatable. If it requires runtime state or domain knowledge, keep it as `.add()`.

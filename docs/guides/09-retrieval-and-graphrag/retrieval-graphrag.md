@@ -25,24 +25,19 @@ RETRIEVAL / GRAPHRAG PIPELINE                      MiniLM-L6-v2 · 384-dim · pg
 
 ## Three indexes, one ingest
 
-A single `analysis_ingest` call auto-paginates an API model into offline storage
-(up to 50 pages), and — depending on how it's invoked — populates up to three
-indexes over the same records:
+A single `analysis_ingest` call auto-paginates an API model into offline storage (up to 50 pages), and — depending on how it's invoked — populates up to three indexes over the same records:
 
-| Index       | What it stores                                                                                        | Lit up by                         | Deep dive                                                      |
-| ----------- | ----------------------------------------------------------------------------------------------------- | --------------------------------- | -------------------------------------------------------------- |
-| **Vectors** | every page summary + stored finding, embedded with `all-MiniLM-L6-v2` (384-dim) in local **pgvector** | always                            | [Analysis Memories](./analysis-memories.md)                    |
-| **Edges**   | relationships between records, followed across models                                                 | multi-hop ingest                  | [Analysis Memories](./analysis-memories.md)                    |
-| **Domain**  | concepts + business rules that ground findings in your vocabulary                                     | a `DomainRegistry` passed at boot | [Domain Knowledge](../08-domain-knowledge/domain-knowledge.md) |
+| Index | What it stores | Lit up by | Deep dive |
+| --- | --- | --- | --- |
+| **Vectors** | every page summary + stored finding, embedded with `all-MiniLM-L6-v2` (384-dim) in local **pgvector** | always | [Analysis Memories](./analysis-memories.md) |
+| **Edges** | relationships between records, followed across models | multi-hop ingest | [Analysis Memories](./analysis-memories.md) |
+| **Domain** | concepts + business rules that ground findings in your vocabulary | a `DomainRegistry` passed at boot | [Domain Knowledge](../08-domain-knowledge/domain-knowledge.md) |
 
-The raw rows land in an `ingested_records` table (plain JSONB, 1-hour TTL) that
-the SQL query modes read directly. **Raw rows never cross the context window** —
-the agent works from summaries and findings.
+The raw rows land in an `ingested_records` table (plain JSONB, 1-hour TTL) that the SQL query modes read directly. **Raw rows never cross the context window** — the agent works from summaries and findings.
 
 ## Five query modes
 
-`analysis_query` answers in five modes. Four are deterministic SQL over
-`ingested_records`; one is vector recall over the embedded memories:
+`analysis_query` answers in five modes. Four are deterministic SQL over `ingested_records`; one is vector recall over the embedded memories:
 
 - **describe** — shape of the data: counts, numeric stats, date ranges.
 - **aggregate** — `GROUP BY` over fields.
@@ -50,33 +45,24 @@ the agent works from summaries and findings.
 - **sample** — random or **stratified** samples (incl. proximity buckets).
 - **semantic** — embeds the _query string_ and ranks memories by cosine distance.
 
-Only `semantic` pays for an embed (of the query, not the data). The rest are
-cheap, deterministic SQL.
+Only `semantic` pays for an embed (of the query, not the data). The rest are cheap, deterministic SQL.
 
 ## Nine summary strategies
 
-Every ingested page gets a **page summary** — the agent's semantic "starter
-pack," searchable before it has written anything. A _summary strategy_ decides
-what that summary contains. The nine built-ins split by what auxiliary data they
-need:
+Every ingested page gets a **page summary** — the agent's semantic "starter pack," searchable before it has written anything. A _summary strategy_ decides what that summary contains. The nine built-ins split by what auxiliary data they need:
 
-- **Field-level (5)** — work on records alone: `distribution`, `coverage`,
-  `anomaly`, `temporal`, `entity-extraction`.
+- **Field-level (5)** — work on records alone: `distribution`, `coverage`, `anomaly`, `temporal`, `entity-extraction`.
 - **GraphRAG-aware (4)** — need an auxiliary index:
   - `relationship-coverage` — requires **edges**
   - `concept-touch` — requires **edges + domain**
   - `rule-violation` — requires **domain**
   - `semantic-cluster` — requires **embeddings**
 
-The dispatcher loads each strategy's requirements lazily and silently skips any
-whose inputs aren't present. See [Summary Strategies](./summary-strategies.md).
+The dispatcher loads each strategy's requirements lazily and silently skips any whose inputs aren't present. See [Summary Strategies](./summary-strategies.md).
 
 ## Proximity sampling
 
-When an investigation is anchored to a date ("show me representative records
-around March 15th"), `sample` mode takes a `proximity` window and date buckets so
-the sample spreads evenly across time instead of clustering on the densest day.
-See [Proximity Sampling](./proximity-sampling.md).
+When an investigation is anchored to a date ("show me representative records around March 15th"), `sample` mode takes a `proximity` window and date buckets so the sample spreads evenly across time instead of clustering on the densest day. See [Proximity Sampling](./proximity-sampling.md).
 
 ## The six tools
 
@@ -93,11 +79,7 @@ The LLM drives the loop; the framework provides the seams:
 
 ## Enable it
 
-Retrieval is opt-in. Set `ANALYSIS_ENABLED=true` and provide a Postgres database
-with the `pgvector` extension; embeddings run **locally** via MiniLM — no
-external vector database and no embedding API. The
-[Analysis Quickstart](./analysis-quickstart.md) brings pgvector up and
-walks every strategy end to end against a 5,000-record dataset.
+Retrieval is opt-in. Set `ANALYSIS_ENABLED=true` and provide a Postgres database with the `pgvector` extension; embeddings run **locally** via MiniLM — no external vector database and no embedding API. The [Analysis Quickstart](./analysis-quickstart.md) brings pgvector up and walks every strategy end to end against a 5,000-record dataset.
 
 ## Where to go next
 

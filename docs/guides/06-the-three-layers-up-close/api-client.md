@@ -1,5 +1,4 @@
-> **Customization:** pass your own `ApiClient` via `createApiClient:` on `ToolRegistry` / `AppRegistry`.
-> The default is the bundled axios-based client. Sits below `DataLayer`; projection-layer code never sees it directly.
+> **Customization:** pass your own `ApiClient` via `createApiClient:` on `ToolRegistry` / `AppRegistry`. The default is the bundled axios-based client. Sits below `DataLayer`; projection-layer code never sees it directly.
 
 # API client
 

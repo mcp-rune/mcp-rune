@@ -4,26 +4,18 @@ The hands-on entry to chapter IX. Part 2 of the [Quickstart](../01-getting-start
 
 If you prefer the architecture first, read [Retrieval & GraphRAG overview](./retrieval-graphrag.md) (next in the chapter) and come back here when you're ready to run something.
 
-You'll spend about twenty minutes: ~3 on infrastructure, ~7 on the
-field-level tour, ~7 on the GraphRAG tour, ~3 on graph-aware sampling
-and teardown.
+You'll spend about twenty minutes: ~3 on infrastructure, ~7 on the field-level tour, ~7 on the GraphRAG tour, ~3 on graph-aware sampling and teardown.
 
 ## Prerequisites
 
-- Part 1 of the [Quickstart](../01-getting-started/quickstart.md) running locally
-  (i.e. the `bookshelf` example is scaffolded as `my-app` and starts).
+- Part 1 of the [Quickstart](../01-getting-started/quickstart.md) running locally (i.e. the `bookshelf` example is scaffolded as `my-app` and starts).
 - Docker (for one container) and a free port on `5432`.
 
-The analysis tools (`analysis_ingest`, `analysis_summarize`,
-`analysis_query`, `analysis_act`, `analysis_clear`, `analysis_store`)
-are gated by `requiresVectorStorage`. Without pgvector, they don't show
-up in `tools/list` — that's by design (see
-[Analysis Memories](./analysis-memories.md#troubleshooting)).
+The analysis tools (`analysis_ingest`, `analysis_summarize`, `analysis_query`, `analysis_act`, `analysis_clear`, `analysis_store`) are gated by `requiresVectorStorage`. Without pgvector, they don't show up in `tools/list` — that's by design (see [Analysis Memories](./analysis-memories.md#troubleshooting)).
 
 ## 1. Start pgvector
 
-Drop this `docker-compose.yml` next to `my-app/server.ts`
-and run `docker compose up -d`:
+Drop this `docker-compose.yml` next to `my-app/server.ts` and run `docker compose up -d`:
 
 ```yaml
 services:
@@ -37,8 +29,7 @@ services:
       - '5432:5432'
 ```
 
-Then apply mcp-rune's migrations against the new database. The
-framework ships migrations as data:
+Then apply mcp-rune's migrations against the new database. The framework ships migrations as data:
 
 ```bash
 DATABASE_URL=postgres://bookshelf:bookshelf@localhost:5432/bookshelf \
@@ -53,14 +44,11 @@ await pool.end();
 "
 ```
 
-That creates the two tables the feature relies on:
-`analysis_memories` (vectors, JSONB) and `ingested_records` (raw rows,
-JSONB).
+That creates the two tables the feature relies on: `analysis_memories` (vectors, JSONB) and `ingested_records` (raw rows, JSONB).
 
 ## 2. Wire vector storage into the bookshelf
 
-Open `my-app/server.ts` and add the storage init before
-`createServer` is called:
+Open `my-app/server.ts` and add the storage init before `createServer` is called:
 
 ```ts file=src/pool.ts
 import { Pool } from 'pg'
@@ -87,9 +75,7 @@ vectorStorage.initVectorStorage({
 })
 ```
 
-When the adapter is missing — say you forget `DATABASE_URL` and skip init — `initVectorStorage` returns
-`false` and the six analysis tools simply stay out of `tools/list`. No
-crash, no noisy error path.
+When the adapter is missing — say you forget `DATABASE_URL` and skip init — `initVectorStorage` returns `false` and the six analysis tools simply stay out of `tools/list`. No crash, no noisy error path.
 
 ## 3. Boot the bookshelf with the big dataset
 
@@ -100,19 +86,11 @@ BOOKSHELF_DATASET=large \
 npx @modelcontextprotocol/inspector -- npx tsx server.ts
 ```
 
-Inside the Inspector, confirm the analysis tools are now visible —
-`analysis_ingest`, `analysis_summarize`, `analysis_query`,
-`analysis_act`, `analysis_clear`, `analysis_store` should all appear
-alongside the CRUD tools. If they don't, double-check `ANALYSIS_ENABLED`
-is `true` and `initVectorStorage` was called with a live adapter.
+Inside the Inspector, confirm the analysis tools are now visible — `analysis_ingest`, `analysis_summarize`, `analysis_query`, `analysis_act`, `analysis_clear`, `analysis_store` should all appear alongside the CRUD tools. If they don't, double-check `ANALYSIS_ENABLED` is `true` and `initVectorStorage` was called with a live adapter.
 
 ## 4. One strategy at a time
 
-`analysis_ingest` downloads records once and writes a per-page summary
-through whichever strategy you pick. After the first ingest, every
-later call goes through `analysis_summarize`, which re-runs strategies
-against the already-stored rows without hitting the API again — the
-whole point of the two-tool split.
+`analysis_ingest` downloads records once and writes a per-page summary through whichever strategy you pick. After the first ingest, every later call goes through `analysis_summarize`, which re-runs strategies against the already-stored rows without hitting the API again — the whole point of the two-tool split.
 
 ### `distribution` (the default)
 
@@ -178,9 +156,7 @@ analysis_summarize({
 
 ## 5. Several strategies in one pass
 
-The same lens menu is available at ingest time. Run all five at once on
-a fresh `analysis_id` to see what a multi-strategy ingest looks like
-end to end:
+The same lens menu is available at ingest time. Run all five at once on a fresh `analysis_id` to see what a multi-strategy ingest looks like end to end:
 
 ```jsonc
 analysis_ingest({
@@ -202,21 +178,11 @@ analysis_ingest({
 //   needs ≥1 ISO-date field; entity-extraction needs ≥1 *_id field).
 ```
 
-`summary_strategy` (singular) and `summary_strategies` (plural) are
-mutually exclusive — passing both fails fast at validation time.
+`summary_strategy` (singular) and `summary_strategies` (plural) are mutually exclusive — passing both fails fast at validation time.
 
 ## 5.5 Switch to the graph dataset for the GraphRAG strategies
 
-The remaining four strategies — `relationship-coverage`, `concept-touch`,
-`rule-violation`, `semantic-cluster` — read from edges, embeddings, and
-the domain registry. None of those exist on the flat `large` dataset.
-Restart the bookshelf with the **graph** dataset, which adds `author`
-and `genre` models with proper foreign keys, two `DomainConcept`s
-(`reading-pipeline`, `catalogue`), and two `BusinessRule`s
-(`completed-books-need-rating`, `books-need-author`). The graph
-generator deliberately leaves ~5% of books without an `author_id` and
-~15% of completed books without a `rating` so every GraphRAG strategy
-has real signal to surface.
+The remaining four strategies — `relationship-coverage`, `concept-touch`, `rule-violation`, `semantic-cluster` — read from edges, embeddings, and the domain registry. None of those exist on the flat `large` dataset. Restart the bookshelf with the **graph** dataset, which adds `author` and `genre` models with proper foreign keys, two `DomainConcept`s (`reading-pipeline`, `catalogue`), and two `BusinessRule`s (`completed-books-need-rating`, `books-need-author`). The graph generator deliberately leaves ~5% of books without an `author_id` and ~15% of completed books without a `rating` so every GraphRAG strategy has real signal to surface.
 
 Stop the running Inspector, then:
 
@@ -227,9 +193,7 @@ BOOKSHELF_DATASET=graph \
 npx @modelcontextprotocol/inspector -- npx tsx server.ts
 ```
 
-In the Inspector, run a fresh ingest. The new args are `hop_depth: 1`
-(follow declared `belongsTo` associations) and `embed_records: true`
-(the default — embeddings are needed for `semantic-cluster`):
+In the Inspector, run a fresh ingest. The new args are `hop_depth: 1` (follow declared `belongsTo` associations) and `embed_records: true` (the default — embeddings are needed for `semantic-cluster`):
 
 ```jsonc
 analysis_ingest({
@@ -264,10 +228,7 @@ analysis_query({
 //   and the 1–3 gap IDs per page that lack an author edge.
 ```
 
-The [`relationship-coverage` guide](./summary-strategies/relationship-coverage.md)
-explains the per-edge-type stats; the takeaway here is that the gap
-records surface directly in the finding text so the LLM can
-`analysis_query mode:"filter" where:{id:[...]}` to inspect them.
+The [`relationship-coverage` guide](./summary-strategies/relationship-coverage.md) explains the per-edge-type stats; the takeaway here is that the gap records surface directly in the finding text so the LLM can `analysis_query mode:"filter" where:{id:[...]}` to inspect them.
 
 ### `concept-touch`
 
@@ -283,9 +244,7 @@ analysis_query({
 //   bookshelf's missing-author rate.
 ```
 
-`reading-pipeline` (book + genre) lands at 100% because every book has a
-genre. `catalogue` (book + author + genre) lands lower because of the
-missing-author records. See the [`concept-touch` guide](./summary-strategies/concept-touch.md).
+`reading-pipeline` (book + genre) lands at 100% because every book has a genre. `catalogue` (book + author + genre) lands lower because of the missing-author records. See the [`concept-touch` guide](./summary-strategies/concept-touch.md).
 
 ### `rule-violation`
 
@@ -321,10 +280,7 @@ See the [`semantic-cluster` guide](./summary-strategies/semantic-cluster.md).
 
 ## 5.6 Graph-aware sampling with composable stratifiers
 
-With edges + embeddings + concepts in play, `analysis_query mode:"sample"`
-can balance a sample across multiple graph dimensions at once. The
-`stratifiers` param accepts up to 3 entries that compose with the
-existing `where` / `proximity` / `stratify_by` partitioning:
+With edges + embeddings + concepts in play, `analysis_query mode:"sample"` can balance a sample across multiple graph dimensions at once. The `stratifiers` param accepts up to 3 entries that compose with the existing `where` / `proximity` / `stratify_by` partitioning:
 
 ```jsonc
 analysis_query({
@@ -357,14 +313,11 @@ analysis_query({
 //   - semantic cluster (3 anchor-nearest groups)
 ```
 
-When `kind: "cluster"` is requested on a session that was ingested with
-`embed_records: false`, the tool auto-back-fills missing embeddings
-before sampling. No re-ingest required.
+When `kind: "cluster"` is requested on a session that was ingested with `embed_records: false`, the tool auto-back-fills missing embeddings before sampling. No re-ingest required.
 
 ## 6. Recall by category
 
-Every memory is written with `category: "page_summary:<strategy>"`,
-which lets `analysis_query mode: semantic` filter cleanly:
+Every memory is written with `category: "page_summary:<strategy>"`, which lets `analysis_query mode: semantic` filter cleanly:
 
 ```jsonc
 analysis_query({
@@ -398,23 +351,12 @@ analysis_clear({ analysis_id: "tour-multi" })
 // → "Cleared 5000 ingested record(s) and N finding(s) …"
 ```
 
-`docker compose down -v` drops the container and the volume — by design
-the analysis loop is opt-in infrastructure, not a permanent dependency.
+`docker compose down -v` drops the container and the volume — by design the analysis loop is opt-in infrastructure, not a permanent dependency.
 
 ## Where to go next
 
-- [Summary Strategies](./summary-strategies.md) — full catalog with
-  links to each strategy's deep-dive guide, the `SummaryStrategy`
-  contract, and a walk-through for shipping your own strategy via an
-  `ApiExtension`.
-- Per-strategy guides under [`summary-strategies/`](./summary-strategies/) —
-  one file each for the nine built-ins; explains the algorithm, inputs
-  consumed, output shape, and edge cases.
-- [Analysis Memories](./analysis-memories.md) — the full feature
-  reference: ingest modes, the five-mode `analysis_query` API,
-  stratified sampling, `analysis_act`, lifecycle and retention.
-- [Proximity Sampling](./proximity-sampling.md) — date-windowed
-  bucketed sampling for the `analysis_query mode: sample` path.
-- [Domain Knowledge Guide](../08-domain-knowledge/domain-knowledge.md) — how
-  `DomainConcept` and `BusinessRule` feed `concept-touch` and
-  `rule-violation`.
+- [Summary Strategies](./summary-strategies.md) — full catalog with links to each strategy's deep-dive guide, the `SummaryStrategy` contract, and a walk-through for shipping your own strategy via an `ApiExtension`.
+- Per-strategy guides under [`summary-strategies/`](./summary-strategies/) — one file each for the nine built-ins; explains the algorithm, inputs consumed, output shape, and edge cases.
+- [Analysis Memories](./analysis-memories.md) — the full feature reference: ingest modes, the five-mode `analysis_query` API, stratified sampling, `analysis_act`, lifecycle and retention.
+- [Proximity Sampling](./proximity-sampling.md) — date-windowed bucketed sampling for the `analysis_query mode: sample` path.
+- [Domain Knowledge Guide](../08-domain-knowledge/domain-knowledge.md) — how `DomainConcept` and `BusinessRule` feed `concept-touch` and `rule-violation`.

@@ -85,13 +85,13 @@ Five filter types cover the common cases. The model's declaration is what the LL
 
 The table below restates the same contract row by row:
 
-| Type            | MCP sends                                               | Rails receives                           | Description                          |
-| --------------- | ------------------------------------------------------- | ---------------------------------------- | ------------------------------------ |
-| `text`          | `"field": "search term"`                                | `params[:filters][:field]`               | Free text search                     |
-| `enum`          | `"field": "value"`                                      | `params[:filters][:field]`               | Constrained value                    |
-| `relation`      | `"field": "123"`                                        | `params[:filters][:field]`               | ID of related model                  |
-| `date_range`    | `"field": { "from": "YYYY-MM-DD", "to": "YYYY-MM-DD" }` | `params.dig(:filters, :field, :from/to)` | Date range (either side optional)    |
-| `integer_range` | `"field": { "from": 30, "to": 120 }`                    | `params.dig(:filters, :field, :from/to)` | Numeric range (either side optional) |
+| Type | MCP sends | Rails receives | Description |
+| --- | --- | --- | --- |
+| `text` | `"field": "search term"` | `params[:filters][:field]` | Free text search |
+| `enum` | `"field": "value"` | `params[:filters][:field]` | Constrained value |
+| `relation` | `"field": "123"` | `params[:filters][:field]` | ID of related model |
+| `date_range` | `"field": { "from": "YYYY-MM-DD", "to": "YYYY-MM-DD" }` | `params.dig(:filters, :field, :from/to)` | Date range (either side optional) |
+| `integer_range` | `"field": { "from": 30, "to": 120 }` | `params.dig(:filters, :field, :from/to)` | Numeric range (either side optional) |
 
 ### Example: Activity Model
 

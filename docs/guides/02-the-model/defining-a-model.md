@@ -83,13 +83,11 @@ Omit it and the framework uses `id` — which works but tells the human nothing.
 
 > Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.103.0 · Node 24.
 
-The `Tag` declaration above is the example. Now add it to your own
-scaffold and watch the framework wire it up for free.
+The `Tag` declaration above is the example. Now add it to your own scaffold and watch the framework wire it up for free.
 
 **1. Add the model**
 
-From the `bookshelf-tour` project you scaffolded in the
-[Quickstart](../01-getting-started/quickstart.md):
+From the `bookshelf-tour` project you scaffolded in the [Quickstart](../01-getting-started/quickstart.md):
 
 ```bash
 rune add model Tag --attrs name:string,color:string
@@ -107,9 +105,7 @@ Expected output:
 Edit src/models/tag.ts to declare attributes.
 ```
 
-Four files: two new (`tag.ts` and `tag-prompt.ts`), two patched
-(`src/models/index.ts` and `src/prompts/index.ts` now also export `Tag`
-and register `TagPrompt`). You didn't touch the registry — the CLI did.
+Four files: two new (`tag.ts` and `tag-prompt.ts`), two patched (`src/models/index.ts` and `src/prompts/index.ts` now also export `Tag` and register `TagPrompt`). You didn't touch the registry — the CLI did.
 
 **2. Inspect what was generated**
 
@@ -144,16 +140,11 @@ export class Tag extends BaseModel {
 }
 ```
 
-Match it against the four fields above: `description` and `api` are
-filled with safe defaults the scaffold picked from the model name;
-`attributes` was filled from the `--attrs` flag; `attributesConfig` is the
-mirror getter the prompt-derivation framework still reads. `displayValue`
-is not generated — the framework will fall back to `id` until you add one.
+Match it against the four fields above: `description` and `api` are filled with safe defaults the scaffold picked from the model name; `attributes` was filled from the `--attrs` flag; `attributesConfig` is the mirror getter the prompt-derivation framework still reads. `displayValue` is not generated — the framework will fall back to `id` until you add one.
 
 **3. Watch the framework adopt it**
 
-Re-run the Inspector (or call via stdio JSON-RPC) and invoke `list_models`
-with `{}`. Expect the tag row right next to book:
+Re-run the Inspector (or call via stdio JSON-RPC) and invoke `list_models` with `{}`. Expect the tag row right next to book:
 
 ```json
 {
@@ -166,14 +157,9 @@ with `{}`. Expect the tag row right next to book:
 }
 ```
 
-Then call `get_prompt_guide` with `{ "guide_name": "tag" }` and notice
-that every word of the guide is derived from the file you just read —
-no template, no manual wiring.
+Then call `get_prompt_guide` with `{ "guide_name": "tag" }` and notice that every word of the guide is derived from the file you just read — no template, no manual wiring.
 
-**Observe:** registering one class — by way of the CLI patching one line
-into `src/models/index.ts` — added a fully-functional resource. Every
-polymorphic tool that worked against `book` works against `tag` too. Now
-the rest of this guide tells you what each piece of that file is doing.
+**Observe:** registering one class — by way of the CLI patching one line into `src/models/index.ts` — added a fully-functional resource. Every polymorphic tool that worked against `book` works against `tag` too. Now the rest of this guide tells you what each piece of that file is doing.
 
 ## A richer example
 

@@ -4,9 +4,7 @@ An mcp-rune project has two halves: **your server** (the models, prompts, tools,
 
 ## Your project
 
-A simple-preset mcp-rune project looks like this — `src/` holds the
-TypeScript you write, `test/` ships one smoke test, and the project root
-holds `package.json`, `tsconfig.json`, `.env.example`, and a `.gitignore`:
+A simple-preset mcp-rune project looks like this — `src/` holds the TypeScript you write, `test/` ships one smoke test, and the project root holds `package.json`, `tsconfig.json`, `.env.example`, and a `.gitignore`:
 
 <!-- illustration: project-structure#server -->
 
@@ -41,9 +39,7 @@ The advanced preset's `--transport both` also scaffolds a second entry point at 
 
 > Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.103.0 · Node 24.
 
-Scaffold a throwaway project in `/tmp` and inspect it. Every file, folder,
-and command line below is captured verbatim from a real run; the layout
-above describes what you'll see.
+Scaffold a throwaway project in `/tmp` and inspect it. Every file, folder, and command line below is captured verbatim from a real run; the layout above describes what you'll see.
 
 **1. Scaffold from scratch**
 
@@ -69,9 +65,7 @@ Scaffolding bookshelf-tour (simple)…
 ╰────────────────────────────────────────────╯
 ```
 
-(The `--yes --skip-mascot --no-install --no-git` flags only exist to make
-the output reproducible for this tutorial. Drop them in real use to get
-the wizard, `npm install`, and `git init` automatically.)
+(The `--yes --skip-mascot --no-install --no-git` flags only exist to make the output reproducible for this tutorial. Drop them in real use to get the wizard, `npm install`, and `git init` automatically.)
 
 **2. Walk the tree**
 
@@ -113,11 +107,7 @@ src/prompts:
 book-prompt.ts  index.ts
 ```
 
-Two files per folder: one declaration per model (`book.ts`, plus a prompt
-that mirrors it), and one `index.ts` that aggregates every declaration
-into the registry the framework reads. `rune add model Tag` will append
-`tag.ts` + `tag-prompt.ts` to these folders and patch both `index.ts`
-files for you — no manual wiring.
+Two files per folder: one declaration per model (`book.ts`, plus a prompt that mirrors it), and one `index.ts` that aggregates every declaration into the registry the framework reads. `rune add model Tag` will append `tag.ts` + `tag-prompt.ts` to these folders and patch both `index.ts` files for you — no manual wiring.
 
 **4. Confirm the typecheck and smoke test pass before you change anything**
 
@@ -127,24 +117,13 @@ npm run typecheck
 npm run test
 ```
 
-The typecheck prints nothing on success; the test prints `1 passed`.
-Both run in well under a minute on a fresh machine. If either fails on a
-clean scaffold, file a bug against `@mcp-rune/create` — that's the
-scaffold's own contract, asserted by `test/smoke.test.ts`.
+The typecheck prints nothing on success; the test prints `1 passed`. Both run in well under a minute on a fresh machine. If either fails on a clean scaffold, file a bug against `@mcp-rune/create` — that's the scaffold's own contract, asserted by `test/smoke.test.ts`.
 
-**Observe:** there's no `tools/` folder, no `domain/` folder, no
-`createApiClient` factory. The simple preset is deliberately minimal —
-the polymorphic tools cover CRUD, the stub `ApiClient` makes CRUD
-attempts fail with a pointed error, and you grow the project from
-there by adding models with `rune add model` and wiring real services
-in `config.ts`.
+**Observe:** there's no `tools/` folder, no `domain/` folder, no `createApiClient` factory. The simple preset is deliberately minimal — the polymorphic tools cover CRUD, the stub `ApiClient` makes CRUD attempts fail with a pointed error, and you grow the project from there by adding models with `rune add model` and wiring real services in `config.ts`.
 
 ## The framework
 
-The published `mcp-rune` package surfaces its capabilities through a flat list
-of **subpath exports** — one entry per concern, so you only pull in the surface
-you actually need. The authoritative list is the `"exports"` field in
-`package.json`; verbatim today:
+The published `mcp-rune` package surfaces its capabilities through a flat list of **subpath exports** — one entry per concern, so you only pull in the surface you actually need. The authoritative list is the `"exports"` field in `package.json`; verbatim today:
 
 <!-- illustration: project-structure#framework -->
 
@@ -179,34 +158,15 @@ you actually need. The authoritative list is the `"exports"` field in
         └─ migrations             Versioned SQL migrations as a JS array
 ```
 
-Each entry is a stable seam: renaming or moving an internal file does
-not break consumers. See [Subpath imports](../11-reference/subpath-imports.md)
-for per-subpath import examples.
+Each entry is a stable seam: renaming or moving an internal file does not break consumers. See [Subpath imports](../11-reference/subpath-imports.md) for per-subpath import examples.
 
 > Three things to know on first read.
 >
-> **The `api-extensions/*` subpaths are opt-in.** Importing the module gets you
-> the types and services (`SearchService`, etc.), but the contributed MCP tools
-> (`search_records`, `model_action`, `get_filters_guide`) only register when
-> you also pass the extension to `ToolRegistry({ apiExtensions: {...} })`.
-> Pure-REST servers can omit them entirely. See
-> [API extensions](../10-extensions/api-extensions.md) and
-> [Authoring extensions](../10-extensions/authoring-extensions.md).
+> **The `api-extensions/*` subpaths are opt-in.** Importing the module gets you the types and services (`SearchService`, etc.), but the contributed MCP tools (`search_records`, `model_action`, `get_filters_guide`) only register when you also pass the extension to `ToolRegistry({ apiExtensions: {...} })`. Pure-REST servers can omit them entirely. See [API extensions](../10-extensions/api-extensions.md) and [Authoring extensions](../10-extensions/authoring-extensions.md).
 >
-> **`core` no longer contains `BaseModel`.** Earlier releases re-exported it
-> there; today the model-domain layer lives behind the `models` subpath, and
-> `core` is reserved for framework primitives (helpers, env, the `ApiClient`
-> type definition). Scaffolded projects already import from the right place;
-> if you have older code, swap `@mcp-rune/mcp-rune/core` → `@mcp-rune/mcp-rune/models`
-> for `BaseModel`-related symbols.
+> **`core` no longer contains `BaseModel`.** Earlier releases re-exported it there; today the model-domain layer lives behind the `models` subpath, and `core` is reserved for framework primitives (helpers, env, the `ApiClient` type definition). Scaffolded projects already import from the right place; if you have older code, swap `@mcp-rune/mcp-rune/core` → `@mcp-rune/mcp-rune/models` for `BaseModel`-related symbols.
 >
-> **Internal vs public.** The map above is the public surface. Internally the
-> code is split across `src/core/`, `src/mcp/` (the bulk — `models/`,
-> `model-layer/`, `data-layer/`, `analysis-layer/`, `prompts/`, `tools/`,
-> `apps/`, `domain/`, etc.), `src/runtime/`, `src/extensions/`, `src/oauth2/`,
-> and `src/db/`. The mapping from subpath to internal folder is in
-> `package.json`. [Definition vs consumption](../02-the-model/definition-vs-consumption.md)
-> explains why declaration and consumption sit in sibling folders inside `src/mcp/`.
+> **Internal vs public.** The map above is the public surface. Internally the code is split across `src/core/`, `src/mcp/` (the bulk — `models/`, `model-layer/`, `data-layer/`, `analysis-layer/`, `prompts/`, `tools/`, `apps/`, `domain/`, etc.), `src/runtime/`, `src/extensions/`, `src/oauth2/`, and `src/db/`. The mapping from subpath to internal folder is in `package.json`. [Definition vs consumption](../02-the-model/definition-vs-consumption.md) explains why declaration and consumption sit in sibling folders inside `src/mcp/`.
 
 ## Example: the bookshelf
 

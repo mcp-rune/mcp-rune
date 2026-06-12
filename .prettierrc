@@ -4,11 +4,5 @@
   "tabWidth": 2,
   "trailingComma": "none",
   "printWidth": 100,
-  "overrides": [
-    {
-      "comment": "Agent/authoring instruction docs use one line per paragraph (no manual wrapping). proseWrap:never makes `prettier --check` enforce it, so the AGENTS.md style can't drift. Published guides under docs/guides/ keep their hard-wrap (it renders identically — soft newlines collapse to spaces).",
-      "files": ["AGENTS.md", "docs/README.md"],
-      "options": { "proseWrap": "never" }
-    }
-  ]
+  "proseWrap": "never"
 }

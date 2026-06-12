@@ -60,13 +60,13 @@ Tier 1 is where the wire-format and HTTP plumbing lives — swap it when the bac
 
 The data path: HTTP transport → response normalization → model-aware CRUD → projection layer. Each step is a swappable seam.
 
-| Surface                                         | What it owns                                                                                                                                                 | Guide                                                                             |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| **`ApiClient`**                                 | HTTP verbs (`get/post/put/patch/delete`) against URLs. Auth header injection, transport choice (axios, fetch, gRPC bridge).                                  | [Custom API Client](../06-the-three-layers-up-close/api-client.md)                |
-| **`BaseConvention`**                            | Wire-format specifics: request payload wrapping, association resolution, list normalization, error parsing. The HAL/JSON:API/your-flavor logic.              | [Custom API Convention](../06-the-three-layers-up-close/api-convention.md)        |
-| **`DataLayer`**                                 | Model-aware CRUD over the API client + convention combo. The seam every tool, prompt, and app talks to.                                                      | [DataLayer](../06-the-three-layers-up-close/data-layer.md)                        |
-| **`SearchRequestShaper`**                       | Filter shaping: turn `filters: { author_id: 7 }` into Ransack `q[author_id_eq]=7` or Elasticsearch `term: { author_id: 7 }`.                                 | [Custom Search Adapter](../06-the-three-layers-up-close/search-request-shaper.md) |
-| **Kinds (`KindDescriptor` + `KindRenderHint`)** | Attribute taxonomy: parse/serialize/toInput/fromInput/describe/validate. Drives forms, prompts, summaries, and display. Extend via `AppRegistry({ kinds })`. | [Attribute Kinds](../03-the-prompt/attribute-kinds.md)                            |
+| Surface | What it owns | Guide |
+| --- | --- | --- |
+| **`ApiClient`** | HTTP verbs (`get/post/put/patch/delete`) against URLs. Auth header injection, transport choice (axios, fetch, gRPC bridge). | [Custom API Client](../06-the-three-layers-up-close/api-client.md) |
+| **`BaseConvention`** | Wire-format specifics: request payload wrapping, association resolution, list normalization, error parsing. The HAL/JSON:API/your-flavor logic. | [Custom API Convention](../06-the-three-layers-up-close/api-convention.md) |
+| **`DataLayer`** | Model-aware CRUD over the API client + convention combo. The seam every tool, prompt, and app talks to. | [DataLayer](../06-the-three-layers-up-close/data-layer.md) |
+| **`SearchRequestShaper`** | Filter shaping: turn `filters: { author_id: 7 }` into Ransack `q[author_id_eq]=7` or Elasticsearch `term: { author_id: 7 }`. | [Custom Search Adapter](../06-the-three-layers-up-close/search-request-shaper.md) |
+| **Kinds (`KindDescriptor` + `KindRenderHint`)** | Attribute taxonomy: parse/serialize/toInput/fromInput/describe/validate. Drives forms, prompts, summaries, and display. Extend via `AppRegistry({ kinds })`. | [Attribute Kinds](../03-the-prompt/attribute-kinds.md) |
 
 The composition (top to bottom): `DataLayer ← ModelService ← (ApiClient, BaseConvention)`. For text search and typeahead, the `search` extension ships a `SearchEnabledDataLayer` decorator that composes a `SearchService` and implements `searchNormalized` / `lookupNormalized` / `groupSearchNormalized` on the `DataLayer` interface — `AppRegistry` wraps the factory output automatically. Kinds are orthogonal — they describe attribute values, not transport.
 
@@ -76,13 +76,13 @@ The composition (top to bottom): `DataLayer ← ModelService ← (ApiClient, Bas
 
 Where the framework's tool surface and runtime context get extended.
 
-| Surface                                | What it owns                                                                                                                                                                        | Guide                                                                                                                                                                               |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`ApiExtension`**                     | New MCP tools tied to the model layer (custom verbs like publish/archive, bulk ops, RPC). Optionally contribute `ModelService` mixins and `SummaryStrategy`s for `analysis_ingest`. | [API Extensions](./api-extensions.md) · [Summary Strategies](../09-retrieval-and-graphrag/summary-strategies.md) · [Authoring Extensions](./authoring-extensions.md)                |
-| **`ToolFlowExtension`**                | The tool/app pipeline: register additional app tools, flip form submit mode (`direct` ↔ `collect`), thread state into handlers via `provideContext`.                                | [Tool Flow Extension](./tool-flow-extension.md)                                                                                                                                     |
-| **MCP Apps (`AppDefinition`)**         | New iframe widgets beyond the six the framework ships (calendars, dashboards, bulk-edit grids, printable artifacts).                                                                | [Custom MCP App](./custom-app.md) · [MCP Apps Guide](../05-apps/mcp-apps.md) · [MCP Apps Architecture](../05-apps/mcp-apps-arch.md)                                                 |
-| **Prompts (`BasePrompt`, strategies)** | Domain-specific prompts: which model, which sections, which validation, which strategy (stateless / hybrid / stateful).                                                             | [Prompt Creation](../03-the-prompt/prompt-creation.md) · [Stateful Strategies](../03-the-prompt/stateful.md) · [Prompt Derivation Framework](../03-the-prompt/prompt-derivation.md) |
-| **Custom tools (`ToolClass`)**         | Tools beyond CRUD/search/prompt: domain workflows, batch operations, anything model-agnostic.                                                                                       | [Tool Creation](../04-tools/tool-creation.md)                                                                                                                                       |
+| Surface | What it owns | Guide |
+| --- | --- | --- |
+| **`ApiExtension`** | New MCP tools tied to the model layer (custom verbs like publish/archive, bulk ops, RPC). Optionally contribute `ModelService` mixins and `SummaryStrategy`s for `analysis_ingest`. | [API Extensions](./api-extensions.md) · [Summary Strategies](../09-retrieval-and-graphrag/summary-strategies.md) · [Authoring Extensions](./authoring-extensions.md) |
+| **`ToolFlowExtension`** | The tool/app pipeline: register additional app tools, flip form submit mode (`direct` ↔ `collect`), thread state into handlers via `provideContext`. | [Tool Flow Extension](./tool-flow-extension.md) |
+| **MCP Apps (`AppDefinition`)** | New iframe widgets beyond the six the framework ships (calendars, dashboards, bulk-edit grids, printable artifacts). | [Custom MCP App](./custom-app.md) · [MCP Apps Guide](../05-apps/mcp-apps.md) · [MCP Apps Architecture](../05-apps/mcp-apps-arch.md) |
+| **Prompts (`BasePrompt`, strategies)** | Domain-specific prompts: which model, which sections, which validation, which strategy (stateless / hybrid / stateful). | [Prompt Creation](../03-the-prompt/prompt-creation.md) · [Stateful Strategies](../03-the-prompt/stateful.md) · [Prompt Derivation Framework](../03-the-prompt/prompt-derivation.md) |
+| **Custom tools (`ToolClass`)** | Tools beyond CRUD/search/prompt: domain workflows, batch operations, anything model-agnostic. | [Tool Creation](../04-tools/tool-creation.md) |
 
 The boundary worth knowing: `ApiExtension` is about extending the model layer (new tools, new `ModelService` methods); `ToolFlowExtension` is about extending the tool runtime (intercepting submission, threading context). Different lifetime, different shape.
 
@@ -90,10 +90,10 @@ The boundary worth knowing: `ApiExtension` is about extending the model layer (n
 
 Routes, middleware, and auth. Below the MCP protocol.
 
-| Surface             | What it owns                                                                                                                | Guide                                                                                  |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Surface | What it owns | Guide |
+| --- | --- | --- |
 | **`HttpExtension`** | Express routes and route-scoped middleware on top of `/oauth/*`, `/health`, `/mcp`. Built-in example: CIMD client metadata. | [Extensions](./extensions-http.md) · [Authoring Extensions](./authoring-extensions.md) |
-| **`OAuthService`**  | Authorization server discovery, token introspection, token exchange, audience validation per RFC 8707.                      | [OAuth 2.0 Discovery Flow](../07-auth-and-transport/oauth2-discovery.md)               |
+| **`OAuthService`** | Authorization server discovery, token introspection, token exchange, audience validation per RFC 8707. | [OAuth 2.0 Discovery Flow](../07-auth-and-transport/oauth2-discovery.md) |
 
 `HttpExtension` is the only place to add a new HTTP route inside the same process as your MCP server. Don't sneak routes in elsewhere — the boundary is auditable on purpose.
 
@@ -103,25 +103,25 @@ For first-contact "I want to do X — which seam?" questions, start at the **[Ex
 
 The quick map below is the same table cross-referenced by the cookbook — read it as the index, the cookbook as the prose:
 
-| What you want                                                      | Pick                                                                                                                                                                          |
-| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "Add an ISBN attribute kind"                                       | [Attribute Kinds](../03-the-prompt/attribute-kinds.md) — declare `'string:isbn'` in `AppRegistry({ kinds })`.                                                                 |
-| "Render `boolean` as a toggle instead of a checkbox"               | [Attribute Kinds](../03-the-prompt/attribute-kinds.md) — DOM-only `registerKindRenderer` override.                                                                            |
-| "My API isn't JSON:API"                                            | [Custom API Convention](../06-the-three-layers-up-close/api-convention.md) · [recipe](./extension-recipes.md#swap-the-response-parsing-convention-for-one-model).             |
-| "My API takes filters as Rails Ransack `q[field_eq]`"              | [Custom Search Adapter](../06-the-three-layers-up-close/search-request-shaper.md).                                                                                            |
-| "I need request signing / mTLS / per-tenant routing on every call" | [Custom API Client](../06-the-three-layers-up-close/api-client.md).                                                                                                           |
-| "Stub the API for integration tests"                               | [DataLayer](../06-the-three-layers-up-close/data-layer.md) · [recipe](./extension-recipes.md#stub-the-api-for-integration-tests).                                             |
-| "Add a `publish` / `archive` non-CRUD action to a model"           | [API Extensions](./api-extensions.md) · [recipe](./extension-recipes.md#add-a-non-crud-verb-to-a-model-publish-archive).                                                      |
-| "Add a custom MCP tool unrelated to a model"                       | [Tool Creation](../04-tools/tool-creation.md) · [recipe](./extension-recipes.md#add-a-custom-mcp-tool-unrelated-to-a-model).                                                  |
-| "Change what `analysis_ingest` writes as the page summary"         | [Summary Strategies](../09-retrieval-and-graphrag/summary-strategies.md) · [recipe](./extension-recipes.md#add-a-new-way-to-summarize-a-page-of-records-for-analysis_ingest). |
-| "Approve every write through Slack before it hits the API"         | [Tool Flow Extension](./tool-flow-extension.md) · [recipe](./extension-recipes.md#stage-a-write-for-human-review-before-submitting-to-the-api).                               |
-| "Add a `/health/detailed` HTTP endpoint"                           | [Extensions (HttpExtension)](./extensions-http.md) · [recipe](./extension-recipes.md#add-an-http-route-inside-the-same-process).                                              |
-| "Ship a Stripe-style integration that touches multiple surfaces"   | [recipe](./extension-recipes.md#add-a-feature-that-touches-more-than-one-surface-stripe-style-integration).                                                                   |
-| "Show a monthly calendar widget for bookings"                      | [Custom MCP App](./custom-app.md).                                                                                                                                            |
-| "Customize the layout of the generic create form"                  | [Model Form Customization](../05-apps/model-form.md) — no extension needed, just `static fieldsets`.                                                                          |
-| "Add a multi-section guided prompt for a complex model"            | [Stateful Strategies](../03-the-prompt/stateful.md).                                                                                                                          |
-| "Wire OAuth2 for remote MCP clients"                               | [OAuth 2.0 Discovery Flow](../07-auth-and-transport/oauth2-discovery.md).                                                                                                     |
-| "Generate prompt docs from model attributes"                       | [Prompt Derivation Framework](../03-the-prompt/prompt-derivation.md).                                                                                                         |
+| What you want | Pick |
+| --- | --- |
+| "Add an ISBN attribute kind" | [Attribute Kinds](../03-the-prompt/attribute-kinds.md) — declare `'string:isbn'` in `AppRegistry({ kinds })`. |
+| "Render `boolean` as a toggle instead of a checkbox" | [Attribute Kinds](../03-the-prompt/attribute-kinds.md) — DOM-only `registerKindRenderer` override. |
+| "My API isn't JSON:API" | [Custom API Convention](../06-the-three-layers-up-close/api-convention.md) · [recipe](./extension-recipes.md#swap-the-response-parsing-convention-for-one-model). |
+| "My API takes filters as Rails Ransack `q[field_eq]`" | [Custom Search Adapter](../06-the-three-layers-up-close/search-request-shaper.md). |
+| "I need request signing / mTLS / per-tenant routing on every call" | [Custom API Client](../06-the-three-layers-up-close/api-client.md). |
+| "Stub the API for integration tests" | [DataLayer](../06-the-three-layers-up-close/data-layer.md) · [recipe](./extension-recipes.md#stub-the-api-for-integration-tests). |
+| "Add a `publish` / `archive` non-CRUD action to a model" | [API Extensions](./api-extensions.md) · [recipe](./extension-recipes.md#add-a-non-crud-verb-to-a-model-publish-archive). |
+| "Add a custom MCP tool unrelated to a model" | [Tool Creation](../04-tools/tool-creation.md) · [recipe](./extension-recipes.md#add-a-custom-mcp-tool-unrelated-to-a-model). |
+| "Change what `analysis_ingest` writes as the page summary" | [Summary Strategies](../09-retrieval-and-graphrag/summary-strategies.md) · [recipe](./extension-recipes.md#add-a-new-way-to-summarize-a-page-of-records-for-analysis_ingest). |
+| "Approve every write through Slack before it hits the API" | [Tool Flow Extension](./tool-flow-extension.md) · [recipe](./extension-recipes.md#stage-a-write-for-human-review-before-submitting-to-the-api). |
+| "Add a `/health/detailed` HTTP endpoint" | [Extensions (HttpExtension)](./extensions-http.md) · [recipe](./extension-recipes.md#add-an-http-route-inside-the-same-process). |
+| "Ship a Stripe-style integration that touches multiple surfaces" | [recipe](./extension-recipes.md#add-a-feature-that-touches-more-than-one-surface-stripe-style-integration). |
+| "Show a monthly calendar widget for bookings" | [Custom MCP App](./custom-app.md). |
+| "Customize the layout of the generic create form" | [Model Form Customization](../05-apps/model-form.md) — no extension needed, just `static fieldsets`. |
+| "Add a multi-section guided prompt for a complex model" | [Stateful Strategies](../03-the-prompt/stateful.md). |
+| "Wire OAuth2 for remote MCP clients" | [OAuth 2.0 Discovery Flow](../07-auth-and-transport/oauth2-discovery.md). |
+| "Generate prompt docs from model attributes" | [Prompt Derivation Framework](../03-the-prompt/prompt-derivation.md). |
 
 If your scenario isn't here and you can't pick from the table above, default to: change the **model**, not the **framework**. The model layer is where 80% of customization lives.
 

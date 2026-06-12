@@ -176,11 +176,11 @@ No schema changes needed — `buildGroupLayouts()` already passes through any la
 
 ## CSS Class Reference
 
-| Class             | Applied to                                   | Purpose                                          |
-| ----------------- | -------------------------------------------- | ------------------------------------------------ |
-| `.field`          | Every field container                        | Horizontal grid layout (label left, input right) |
-| `.field--stacked` | checkbox_group, multiselect, checkbox fields | Single-column layout for inline options          |
-| `.field-row`      | Group wrapper when `layout.type === 'row'`   | Flex row, equal-width children                   |
+| Class | Applied to | Purpose |
+| --- | --- | --- |
+| `.field` | Every field container | Horizontal grid layout (label left, input right) |
+| `.field--stacked` | checkbox_group, multiselect, checkbox fields | Single-column layout for inline options |
+| `.field-row` | Group wrapper when `layout.type === 'row'` | Flex row, equal-width children |
 
 ## Examples
 

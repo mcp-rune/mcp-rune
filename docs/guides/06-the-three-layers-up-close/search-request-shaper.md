@@ -1,5 +1,4 @@
-> **Customization:** per-model via `searchConfig({ shaper: ... })`, or globally via `defaultShaper:` on the `search` ApiExtension.
-> Default spreads filters flat into the POST body. Subclass `SearchRequestShaper` for Ransack, Elasticsearch DSL, or any nested-filter API.
+> **Customization:** per-model via `searchConfig({ shaper: ... })`, or globally via `defaultShaper:` on the `search` ApiExtension. Default spreads filters flat into the POST body. Subclass `SearchRequestShaper` for Ransack, Elasticsearch DSL, or any nested-filter API.
 
 # Search request shaper
 
