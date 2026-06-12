@@ -98,6 +98,15 @@ Any guide under `docs/guides/` with commands a reader runs is a **tutorial**: it
 
 The full workflow — the harness, the manifest fields, changing a step, bumping the toolchain, and extending coverage to a new chapter — lives in **docs/README.md → "Verifying tutorials"**. Read it before you add or edit a tutorial.
 
+## Before releasing
+
+Run the full gate locally before you tag or `/ship`. Master merges through PRs and direct pushes are blocked, so every problem CI catches after a tag costs a whole follow-up PR — the cheapest place to find them is your own machine, in one command. Two steps catch what has bitten releases before:
+
+- **`git status` must be clean.** Every reformat or fix has to be committed; an uncommitted file silently misses the release and lands master red. Stage with `git add -A`, not a narrow pathspec (a quoted `**/*.md` once skipped three root files and merged them unformatted).
+- **`npm run verify:release` must pass.** It chains every CI gate in one shot — `format:check`, `lint`, `build:check`, `docs:stamp:check`, `build:full`, `test`, and the executable-docs suite (`docs:verify`) — so failures surface before tagging, not after. It is heavy (the docs suite scaffolds projects and installs over the network); budget a few minutes.
+
+Only when both are green do you tag and push. The one thing `verify:release` cannot check is the npm `publish` step: it needs an npm **automation** token (granular, 2FA-bypassing) in the `NPM_TOKEN` secret — a normal token fails publish with `EOTP` (one-time-password required). That is an account/secret setting, not a code fix.
+
 ## Epic workflow for complex changes
 
 For very complex changes, open a single GitHub **epic issue** before any code lands. The epic body enumerates every concrete sub-change in detail — file paths, axes, ordering, BREAKING flags, downstream-fork checks — and stays open as the source of truth for the whole effort.
