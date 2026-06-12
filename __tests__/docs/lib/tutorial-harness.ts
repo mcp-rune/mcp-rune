@@ -15,6 +15,13 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 const MANIFEST = JSON.parse(readFileSync(join(ROOT, 'docs', 'verified-with.json'), 'utf8'))
 const RUNE_CLI: string = MANIFEST.runeCli
 
+// The rune CLI emits ANSI color even off a TTY in CI; assertions on its output
+// must be color-agnostic. Disable color at the source and strip it defensively
+// so the suite behaves identically locally and in CI.
+const CLI_ENV = { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' }
+// eslint-disable-next-line no-control-regex
+const stripAnsi = (s: string): string => s.replace(/\u001b\[[0-9;]*m/g, '')
+
 function frameworkTarball(): string {
   const outDir = join(ROOT, '.docs-verify')
   const tgz = readdirSync(outDir).find((f) => f.endsWith('.tgz'))
@@ -47,9 +54,9 @@ export function scaffold({ name, models = 'Book' }: { name: string; models?: str
       '--no-install',
       '--no-git'
     ],
-    { cwd: parent, encoding: 'utf8' }
+    { cwd: parent, encoding: 'utf8', env: CLI_ENV }
   )
-  return { dir: join(parent, name), stdout }
+  return { dir: join(parent, name), stdout: stripAnsi(stdout) }
 }
 
 // Install the scaffold's deps, then override @mcp-rune/mcp-rune with the
@@ -71,10 +78,12 @@ export function runScript(dir: string, script: string): string {
 // `rune add model <Name> --attrs ...` against an existing scaffold (no install
 // needed — it only generates and patches src files).
 export function runeAdd(dir: string, model: string, attrs: string): string {
-  return execFileSync(
-    'npx',
-    ['--yes', `@mcp-rune/create@${RUNE_CLI}`, 'add', 'model', model, '--attrs', attrs],
-    { cwd: dir, encoding: 'utf8' }
+  return stripAnsi(
+    execFileSync(
+      'npx',
+      ['--yes', `@mcp-rune/create@${RUNE_CLI}`, 'add', 'model', model, '--attrs', attrs],
+      { cwd: dir, encoding: 'utf8', env: CLI_ENV }
+    )
   )
 }
 
