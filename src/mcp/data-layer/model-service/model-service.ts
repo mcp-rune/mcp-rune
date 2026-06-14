@@ -507,7 +507,7 @@ export class ModelService implements DataLayer {
     meta?: Record<string, unknown>
   ): void {
     if (this._logger) {
-      this._logger[level](message, { service: 'model-service', ...meta })
+      this._logger[level](message, { service: 'mcp-data', ...meta })
     }
   }
 }

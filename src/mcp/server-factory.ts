@@ -135,6 +135,7 @@ export function createServer({
       const prompts = promptRegistry.getDefinitions()
       logger.info('ListPromptsRequestSchema handler invoked', {
         ...logContext,
+        service: 'mcp-prompts',
         handler: 'ListPromptsRequestSchema',
         promptCount: prompts.length
       })
@@ -148,6 +149,7 @@ export function createServer({
         const { name: promptName, arguments: args } = request.params
         logger.info('GetPromptRequestSchema handler invoked', {
           ...logContext,
+          service: 'mcp-prompts',
           handler: 'GetPromptRequestSchema',
           prompt: promptName
         })
@@ -174,6 +176,7 @@ export function createServer({
 
         logger.info('CompleteRequestSchema handler invoked', {
           ...logContext,
+          service: 'mcp-prompts',
           handler: 'CompleteRequestSchema',
           refType: ref?.type,
           refName: ref?.name,
