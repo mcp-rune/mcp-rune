@@ -58,7 +58,7 @@ The Inspector opens in your browser, pre-wired to your scaffolded server. You're
 
 ## Try a tool
 
-> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.103.0 · Node 24.
+> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.103.1 · Node 24.
 
 Inside the Inspector, call these three in order. Each one reads the `Book` declaration directly — no backend wiring needed — so the output below should match exactly.
 
