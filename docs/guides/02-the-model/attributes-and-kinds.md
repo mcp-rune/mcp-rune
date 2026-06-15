@@ -4,7 +4,7 @@ The previous chapter showed the `attributes` block as a flat map of names to def
 
 ## Try it — watch three representations move
 
-> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.103.0 · Node 24.
+> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.103.1 · Node 24.
 
 Three calls against your `bookshelf-tour` project surface three of the representations the diagram below maps. Run them and match the output before reading the kind taxonomy.
 
