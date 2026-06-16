@@ -1,0 +1,41 @@
+# Dependabot version + security updates for @mcp-rune/mcp-rune.
+#
+# Two layers keep dependencies current (see also the `Security audit` step in
+# .github/workflows/ci.yml):
+#   - Dependabot (this file) opens PRs for every available update — the
+#     visibility layer. It catches the exact drift that let patched-but-unpinned
+#     transitives (form-data, protobufjs, tar) sit stale in the lockfile.
+#   - `npm audit --audit-level=high` in CI hard-blocks master/publish on
+#     high+critical advisories — the enforcement layer.
+#
+# Repo Settings → Code security → "Dependabot security updates" should also be
+# ON so out-of-band advisories get their own PRs without waiting for the weekly
+# run. This file only governs routine version updates.
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    # Minor/patch bumps are batched into two PRs (prod vs dev) to cut review
+    # noise. Majors fall outside these groups and arrive as individual PRs —
+    # pre-1.0 we review BREAKING bumps one at a time rather than batching them.
+    groups:
+      production-minor-patch:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+      dev-minor-patch:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
