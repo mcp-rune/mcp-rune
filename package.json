@@ -1,6 +1,6 @@
 {
   "name": "@mcp-rune/mcp-rune",
-  "version": "0.103.3",
+  "version": "0.103.4",
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
     "access": "public"
@@ -170,7 +170,7 @@
   "author": "David Saenz <david@mcp-rune.dev>",
   "license": "MIT",
   "optionalDependencies": {
-    "@huggingface/transformers": "^3.8.1"
+    "@huggingface/transformers": "^4.2.0"
   },
   "overrides": {
     "onnxruntime-web": "1.21.0",
