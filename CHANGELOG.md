@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.103.4] - 2026-06-16
+
+### Dependencies
+
+- **`@huggingface/transformers` `^3.8.1` → `^4.2.0`** (Dependabot #328). Major bump of the optional, lazy-loaded local-embeddings backend (Transformers.js v4: new WebGPU backend, simplified internals). Pulled in as a follow-up to the v0.103.3 consolidation. The dependency is `optional` and loaded via dynamic `import()` in `src/runtime/embeddings.ts` with locally-declared types, so the major has no compile-time surface; the pinned `onnxruntime-web` 1.21.0 `override` is preserved across the bump. Verified through the full `verify:release` gate (build, 26 tests, docs-verify) with `npm audit` clean.
+
 ## [0.103.3] - 2026-06-16
 
 ### Dependencies
@@ -3173,6 +3179,7 @@ Initial public release. Extracted from production MCP servers.
 
 - 11 subpath exports: `mcp-kit/server`, `mcp-kit/tools`, `mcp-kit/prompts`, `mcp-kit/apps`, `mcp-kit/search`, `mcp-kit/domain`, `mcp-kit/oauth2`, `mcp-kit/services`, `mcp-kit/db`, `mcp-kit/core`
 
+[0.103.4]: https://github.com/mcp-rune/mcp-rune/compare/v0.103.3...v0.103.4
 [0.103.3]: https://github.com/mcp-rune/mcp-rune/compare/v0.103.2...v0.103.3
 [0.103.2]: https://github.com/mcp-rune/mcp-rune/compare/v0.103.1...v0.103.2
 [0.103.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.6...v0.103.0
