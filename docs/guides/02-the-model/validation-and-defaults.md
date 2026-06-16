@@ -4,7 +4,7 @@ Attributes and associations declare _which fields exist_. This chapter covers th
 
 ## Try it — required, default, enum, range
 
-> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.103.1 · Node 24.
+> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.103.2 · Node 24.
 
 Four calls to `validate_form` against your `bookshelf-tour` project surface each of the declarations this chapter teaches. Add the fields below to `src/models/book.ts` and invoke `validate_form` after each one.
 
