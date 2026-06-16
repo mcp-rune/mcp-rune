@@ -200,7 +200,7 @@
     "@eslint/js": "^10.0.1",
     "@types/cors": "^2.8.18",
     "@types/express": "^5.0.0",
-    "@types/node": "^24.0.0",
+    "@types/node": "^25.9.3",
     "@types/pg": "^8.15.0",
     "@vitest/coverage-v8": "^4.0.17",
     "ajv": "^8.18.0",
