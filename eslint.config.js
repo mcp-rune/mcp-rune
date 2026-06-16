@@ -60,7 +60,7 @@ export default [
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
       'n/prefer-node-protocol': 'error',
-      'unicorn/filename-case': ['error', { case: 'kebabCase' }]
+      'unicorn/filename-case': ['error', { case: 'kebabCase', ignore: [/^__tests__$/] }]
     }
   },
   // Test files — relax strict typing for mocks
