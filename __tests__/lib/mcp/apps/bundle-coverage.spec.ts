@@ -59,9 +59,9 @@ function bundleSource(bundlePath: string): string {
 }
 
 function bundleHandlesCase(source: string, caseValue: string): boolean {
-  // Match `case 'x':`, `case "x":`, and minified `case"x":` — all bundler
-  // emissions we've observed.
-  const pattern = new RegExp(`case\\s*['"]${escapeRegex(caseValue)}['"]`)
+  // Match `case 'x':`, `case "x":`, minified `case"x":`, and esbuild's
+  // template-literal form `case\`x\`:` — all bundler emissions we've observed.
+  const pattern = new RegExp('case\\s*[\'"`]' + escapeRegex(caseValue) + '[\'"`]')
   return pattern.test(source)
 }
 

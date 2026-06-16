@@ -36,6 +36,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Security audit
+        # Hard-fails master CI (and, via `needs: ci`, publish) on high+critical
+        # advisories anywhere in the tree. Moderate/low drift is surfaced as
+        # Dependabot PRs (.github/dependabot.yml) rather than blocking here, so
+        # an unfixable transitive moderate can't wedge releases. Raise the
+        # threshold by lowering --audit-level if a tighter gate is wanted.
+        run: npm audit --audit-level=high
+
       - name: Type check
         run: npm run build:check
 

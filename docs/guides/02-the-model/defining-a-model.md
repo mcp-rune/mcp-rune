@@ -81,7 +81,7 @@ Omit it and the framework uses `id` — which works but tells the human nothing.
 
 ## Try it — add a second model
 
-> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.103.1 · Node 24.
+> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.103.2 · Node 24.
 
 The `Tag` declaration above is the example. Now add it to your own scaffold and watch the framework wire it up for free.
 
