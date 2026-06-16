@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.103.2] - 2026-06-16
+
+### Security
+
+- **All known `npm audit` advisories cleared (4 high, 27 moderate → 0).** Most were patched-but-unpinned transitives left stale in the lockfile and refreshed in place: `form-data` 4.0.5 → 4.0.6 (CRLF injection, high), `protobufjs` 7.6.0 → 7.6.4 (property shadowing + `Any`-expansion DoS, high), `tar` 7.5.13 → 7.5.16 (PAX long-name file smuggling).
+- `@opentelemetry/sdk-node` `^0.218.0` → `^0.219.0` with `@opentelemetry/core` deduped to 2.8.0 (unbounded W3C-baggage allocation); `@sentry/node` refreshed to 10.58.0 within its existing range to drop a transitive exact `@opentelemetry/core@2.6.1` pin.
+- `vite` `^7.3.1` → `^8.0.16` pulls `esbuild` ≥ 0.28.1 (Deno-module RCE + Windows dev-server file read) — build-only tooling, not shipped in `dist/`.
+
+### Changed
+
+- **Dependency hygiene is now enforced, not manual.** New `.github/dependabot.yml` (weekly npm + GitHub-Actions updates; minor/patch grouped into prod/dev PRs, majors individual) plus an `npm audit --audit-level=high` gate in the `ci` job that hard-blocks master and — via `needs: ci` — publish on high+critical advisories.
+- Non-security maintenance bumps: `axios` `^1.13.6` → `^1.18.0`, `eslint` `^10.0.2` → `^10.5.0`, `pg` `^8.18.0` → `^8.21.0` (stays on 8.x).
+- `bundle-coverage` spec regex widened to accept esbuild 0.28's template-literal (``case`x`:``) switch emission under vite 8; the bundled apps are semantically unchanged.
+
 ## [0.103.0] - 2026-06-11
 
 ### Added
@@ -3146,6 +3160,7 @@ Initial public release. Extracted from production MCP servers.
 
 - 11 subpath exports: `mcp-kit/server`, `mcp-kit/tools`, `mcp-kit/prompts`, `mcp-kit/apps`, `mcp-kit/search`, `mcp-kit/domain`, `mcp-kit/oauth2`, `mcp-kit/services`, `mcp-kit/db`, `mcp-kit/core`
 
+[0.103.2]: https://github.com/mcp-rune/mcp-rune/compare/v0.103.1...v0.103.2
 [0.103.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.6...v0.103.0
 [0.102.6]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.5...v0.102.6
 [0.102.5]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.4...v0.102.5
