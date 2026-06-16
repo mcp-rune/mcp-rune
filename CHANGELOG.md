@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.103.3] - 2026-06-16
+
+### Dependencies
+
+- **Consolidated all eight open Dependabot PRs (#318–#325) into one verified release.** Each was applied to a single branch and taken through the full `verify:release` gate (format, lint, build, tests, docs-verify) together rather than merged in isolation.
+- Runtime (production-minor-patch group, #318), within existing `^` ranges: `@modelcontextprotocol/ext-apps` 1.7.1 → 1.7.4, `openid-client` 6.8.1 → 6.8.4.
+- Dev-dependency majors: `typescript` `^5.8.0` → `^6.0.3`, `@types/node` `^24.0.0` → `^25.9.3`, `eslint-plugin-n` `^17.24.0` → `^18.1.0`, `eslint-plugin-unicorn` `^64.0.0` → `^66.0.0`, `lint-staged` `^16.4.0` → `^17.0.7`, `npm-run-all2` `^8.0.4` → `^9.0.2`.
+- Dev-dependency minor/patch (dev-minor-patch group, #319): `@types/pg` 8.15 → 8.20, `@vitest/coverage-v8` + `vitest` 4.1.4 → 4.1.9, `fast-check` 4.6 → 4.8, `happy-dom` 20.9 → 20.10, `prettier` 3.8.2 → 3.8.4, `typescript-eslint` 8.58 → 8.61, `vite-plugin-singlefile` 2.3.2 → 2.3.3.
+
+### Changed
+
+- `unicorn/filename-case` now ignores the conventional `__tests__` directory. The `eslint-plugin-unicorn@66` major began validating directory-name casing, flagging `__tests__` as non-kebab; the rule is scoped with `ignore: [/^__tests__$/]` so the test-folder convention is preserved without renaming 90+ specs.
+
 ## [0.103.2] - 2026-06-16
 
 ### Security
@@ -3160,6 +3173,7 @@ Initial public release. Extracted from production MCP servers.
 
 - 11 subpath exports: `mcp-kit/server`, `mcp-kit/tools`, `mcp-kit/prompts`, `mcp-kit/apps`, `mcp-kit/search`, `mcp-kit/domain`, `mcp-kit/oauth2`, `mcp-kit/services`, `mcp-kit/db`, `mcp-kit/core`
 
+[0.103.3]: https://github.com/mcp-rune/mcp-rune/compare/v0.103.2...v0.103.3
 [0.103.2]: https://github.com/mcp-rune/mcp-rune/compare/v0.103.1...v0.103.2
 [0.103.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.6...v0.103.0
 [0.102.6]: https://github.com/mcp-rune/mcp-rune/compare/v0.102.5...v0.102.6
