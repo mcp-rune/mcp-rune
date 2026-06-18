@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.104.1] - 2026-06-19
+
+### Security
+
+- **Cleared a high-severity `hono` advisory (`<=4.12.24` → `4.12.26`).** Path traversal in `serve-static` on Windows via an encoded backslash (`%5C`, [GHSA-wwfh-h76j-fc44](https://github.com/advisories/GHSA-wwfh-h76j-fc44)) plus four related advisories. This is the advisory that turned `master` CI red immediately after the v0.104.0 tag; the lockfile bump resolves it.
+
+### Changed
+
+- **`npm audit --audit-level=high` is now enforced in the local release gate, not CI-only.** The CI `ci` job has long hard-blocked master and publish on high+critical advisories, but `npm run verify:release` — the gate AGENTS.md tells you to run before tagging — omitted it, so v0.104.0 passed locally and only failed on master after the tag. A new `audit` npm script holds the threshold in one place; `verify:release` now runs it first, and CI calls the same `npm run audit` script. AGENTS.md's "chains every CI gate" claim is accurate again, with the fail-then-`npm audit fix`-then-commit flow documented.
+
 ## [0.104.0] - 2026-06-19
 
 ### Added
@@ -3186,6 +3196,7 @@ Initial public release. Extracted from production MCP servers.
 
 - 11 subpath exports: `mcp-kit/server`, `mcp-kit/tools`, `mcp-kit/prompts`, `mcp-kit/apps`, `mcp-kit/search`, `mcp-kit/domain`, `mcp-kit/oauth2`, `mcp-kit/services`, `mcp-kit/db`, `mcp-kit/core`
 
+[0.104.1]: https://github.com/mcp-rune/mcp-rune/compare/v0.104.0...v0.104.1
 [0.104.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.103.4...v0.104.0
 [0.103.4]: https://github.com/mcp-rune/mcp-rune/compare/v0.103.3...v0.103.4
 [0.103.3]: https://github.com/mcp-rune/mcp-rune/compare/v0.103.2...v0.103.3
