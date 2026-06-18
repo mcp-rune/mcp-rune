@@ -80,6 +80,12 @@ Naming rules for new MCP tools and apps (the `<ui-verb>_model_app` / action-verb
 
 Data tools take the action-verb shape (`create_model`, `update_model`, `delete_model`, `find_records`, `list_models`); app tools take the UI-intent shape (`new_model_app`, `edit_model_app`, `show_model_app`, `list_model_app`). See the skill for the full ruleset, worked examples, and rationale.
 
+## Design handoff
+
+App UIs are implemented from [claude.ai/design](https://claude.ai/design) exports that are **committed to the repo** under `designs/`, not fetched from a design URL at request time. Read `designs/manifest.json` plus the relevant `designs/<slug>/` bundle locally; **do not** paste `api.anthropic.com/v1/design/…` fetch prompts — share URLs are unauthenticated-blocked ([#52292](https://github.com/anthropics/claude-code/issues/52292)), and committing the export is the interim pattern until live design-system MCP access lands ([#60327](https://github.com/anthropics/claude-code/issues/60327)).
+
+The full workflow — exporting, registering a design, the implement prompt, the what-NOT-to-ask list, and the drift rules — lives in **designs/README.md**. The manifest is enforced: `npm run designs:check` (in `verify:release` and CI) fails if a committed export drifts from its registry entry.
+
 ## Never name downstream implementors
 
 mcp-rune is the open-source framework; the projects that consume it are deployers/implementors and stay anonymous in this repo. **Do not mention any specific downstream consumer (private or public) by name in source, comments, docs, plans, commit messages, or PR descriptions.** When you need to illustrate a usage pattern, describe the _shape_ of the consumer ("a deployer that exports `MODEL_CLASSES`", "a prompt whose parent is fixed at construction") — never the identity. This applies even when you learned the pattern by reading a specific consumer's code.

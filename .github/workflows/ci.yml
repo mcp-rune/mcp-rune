@@ -71,6 +71,12 @@ jobs:
         # `docs-verify` job below proves the tutorials actually run.
         run: npm run docs:stamp:check
 
+      - name: Designs manifest in sync
+        # Cheap, offline: validates designs/manifest.json against its schema and
+        # asserts designs/<slug>/ <-> manifest <-> src/mcp/apps consistency, so a
+        # committed Claude Design export can't drift from its registry entry.
+        run: npm run designs:check
+
   docs-verify:
     runs-on: ubuntu-latest
 

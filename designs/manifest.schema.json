@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "mcp-rune design manifest",
+  "description": "Single source of truth for design exports committed under designs/. Validated by designs/scripts/validate-designs.mjs (npm run designs:check).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["designs"],
+  "properties": {
+    "designs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["slug", "name", "source", "version", "exportedAt", "files", "implements"],
+        "properties": {
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "description": "Folder name under designs/ holding this export."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human title of the design as it appears in claude.ai/design."
+          },
+          "source": {
+            "type": "string",
+            "pattern": "^https?://",
+            "description": "The claude.ai/design URL this bundle was exported from. Provenance only — never fetched at runtime."
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Designer-facing version of the snapshot (e.g. v3)."
+          },
+          "exportedAt": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "ISO date (YYYY-MM-DD) the export was taken. Makes drift visible."
+          },
+          "files": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 },
+            "description": "Bundle files (relative to designs/<slug>/) that matter. Each must exist on disk."
+          },
+          "implements": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+            "description": "App slugs under src/mcp/apps/ this design drives. Each must exist."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Optional free-form note, e.g. which shared tokens the design maps to."
+          }
+        }
+      }
+    }
+  }
+}
