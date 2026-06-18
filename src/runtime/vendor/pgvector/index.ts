@@ -18,6 +18,7 @@ import type { VectorStorageAdapter } from '#src/runtime/vector-storage-definitio
 import * as analysisMemories from './analysis-memories.js'
 import * as ingestedEdges from './ingested-edges.js'
 import * as ingestedRecords from './ingested-records.js'
+import { withSchemaHint } from './schema-errors.js'
 import * as toolMemories from './tool-memories.js'
 
 export interface PgvectorAdapterOptions {
@@ -68,14 +69,22 @@ export function createPgvectorAdapter(options: PgvectorAdapterOptions): VectorSt
       cleanupExpired: () => analysisMemories.cleanupExpired(pool)
     },
     ingestedRecords: {
-      storeRecords: (params) => ingestedRecords.storeRecords(pool, params, recordsRetention),
-      queryRecords: (analysisId, query) => ingestedRecords.queryRecords(pool, analysisId, query),
+      storeRecords: (params) =>
+        withSchemaHint(() => ingestedRecords.storeRecords(pool, params, recordsRetention)),
+      queryRecords: (analysisId, query) =>
+        withSchemaHint(() => ingestedRecords.queryRecords(pool, analysisId, query)),
       getEmbeddingsForRecords: (analysisId, model, recordIds) =>
-        ingestedRecords.getEmbeddingsForRecords(pool, analysisId, model, recordIds),
+        withSchemaHint(() =>
+          ingestedRecords.getEmbeddingsForRecords(pool, analysisId, model, recordIds)
+        ),
       getRecordsWithoutEmbeddings: (analysisId, model, limit) =>
-        ingestedRecords.getRecordsWithoutEmbeddings(pool, analysisId, model, limit),
+        withSchemaHint(() =>
+          ingestedRecords.getRecordsWithoutEmbeddings(pool, analysisId, model, limit)
+        ),
       updateRecordEmbeddings: (analysisId, model, updates) =>
-        ingestedRecords.updateRecordEmbeddings(pool, analysisId, model, updates),
+        withSchemaHint(() =>
+          ingestedRecords.updateRecordEmbeddings(pool, analysisId, model, updates)
+        ),
       getSessionGraphInfo: (analysisId) => ingestedRecords.getSessionGraphInfo(pool, analysisId),
       describeSession: (analysisId) => ingestedRecords.describeSession(pool, analysisId),
       getRecordCount: (analysisId, model) =>
