@@ -1,6 +1,6 @@
 {
   "name": "@mcp-rune/mcp-rune",
-  "version": "0.104.0",
+  "version": "0.104.1",
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
     "access": "public"
@@ -132,6 +132,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "audit": "npm audit --audit-level=high",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -142,7 +143,7 @@
     "docs:verify": "vitest run -c vitest.docs.config.js",
     "docs:stamp": "node docs/scripts/verified-stamp.mjs",
     "docs:stamp:check": "node docs/scripts/verified-stamp.mjs --check",
-    "verify:release": "npm run format:check && npm run lint && npm run build:check && npm run docs:stamp:check && npm run build:full && npm test && npm run docs:verify",
+    "verify:release": "npm run audit && npm run format:check && npm run lint && npm run build:check && npm run docs:stamp:check && npm run build:full && npm test && npm run docs:verify",
     "illustrations:build": "node docs/illustrations/scripts/build-illustrations.mjs",
     "illustrations:check": "node docs/illustrations/scripts/check-illustrations.mjs",
     "prepublishOnly": "npm run build:full",

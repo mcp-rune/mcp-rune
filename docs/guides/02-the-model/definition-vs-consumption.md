@@ -8,7 +8,7 @@ mcp-rune answers with a single architectural rule: **what a thing IS lives in on
 
 ## Try it — see the split inside the framework you installed
 
-> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.104.0 · Node 24.
+> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.104.1 · Node 24.
 
 Your `bookshelf-tour` project pulled the framework's compiled code into `node_modules/@mcp-rune/mcp-rune/`. The same split this chapter describes is visible there — three commands surface it.
 
