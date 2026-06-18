@@ -148,6 +148,26 @@ When a new mcp-rune release adds migrations, the upgrade flow is:
 
 The runner is idempotent by version, so it is safe to run on every deploy.
 
+If you forget step 2, the gap is silent until a tool touches the new schema — then it surfaces as a cryptic mid-request error (e.g. `column "embedding" does not exist`). The next section turns that into a clear failure at boot.
+
+## Detecting drift at startup
+
+mcp-rune exports a guard so your server **fails fast** — with the list of pending migrations and the remediation — instead of letting a missing column or table surface as an opaque SQL error mid-request. Call it once at startup, right after the pool is created:
+
+```ts
+import { assertMigrationsCurrent } from '@mcp-rune/mcp-rune/db/migrations'
+
+// `features` mirrors what this server provisions. Always 'core'; add
+// 'analysis' when ANALYSIS_ENABLED. The check is module-independent — it
+// covers every pending migration, not just analysis ones.
+const features = ['core', ...(analysisEnabled ? ['analysis'] : [])]
+await assertMigrationsCurrent(pool, { features })
+```
+
+`assertMigrationsCurrent` throws `PendingMigrationsError` naming the unapplied migrations and `Run: npm run db:migrate`. It is **feature-scoped**: a server with `DATABASE_URL` set but analysis disabled is not flagged for unapplied `analysis` migrations. If you'd rather log or branch than throw, `getPendingMigrations(pool, { features })` returns the same list. Both read the canonical `schema_migrations` table and treat a missing table as "nothing applied".
+
+Servers scaffolded with `rune new` (advanced preset) wire this into the database startup phase for you.
+
 ## Troubleshooting
 
 **`ERROR: extension "vector" is not available`** — migration 002 creates the pgvector extension. Make sure your Postgres image bundles it (the official `pgvector/pgvector:pg16` image, or install `postgresql-16-pgvector` on a system Postgres). The scaffolded `docker-compose.yml` uses the right image.
@@ -157,6 +177,8 @@ The runner is idempotent by version, so it is safe to run on every deploy.
 **`ECONNREFUSED` against the docker URL** — the Postgres container takes a few seconds to accept connections after `docker compose up`. The CLI's `rune new` flow waits for it; if you run `npm run db:migrate` manually right after `docker compose up`, give it ~5 seconds.
 
 **Migrations apply but server still errors on OAuth tables** — check that `DATABASE_URL` in your process environment matches the one you ran migrations against. The two paths can diverge if you have `.env` and shell variables overlapping.
+
+**`column "embedding" does not exist`, or another missing column/table, from an analysis tool** — the database is behind on migrations, typically after upgrading mcp-rune without re-running the runner. Run `npm run db:migrate`. To turn this into a clear boot-time failure instead of a mid-request error, call `assertMigrationsCurrent` at startup — see [Detecting drift at startup](#detecting-drift-at-startup).
 
 ## See also
 

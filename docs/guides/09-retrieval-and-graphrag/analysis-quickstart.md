@@ -77,6 +77,8 @@ vectorStorage.initVectorStorage({
 
 When the adapter is missing — say you forget `DATABASE_URL` and skip init — `initVectorStorage` returns `false` and the six analysis tools simply stay out of `tools/list`. No crash, no noisy error path.
 
+> **Behind on migrations?** If `DATABASE_URL` is set but the analysis migrations haven't been applied (e.g. after upgrading mcp-rune), the analysis tools register but fail at call time with `column "embedding" does not exist`. Guard against it by calling `assertMigrationsCurrent(pool, { features: ['core', 'analysis'] })` before `initVectorStorage` — it fails fast at startup with the pending list and `Run: npm run db:migrate`. See [Database setup → Detecting drift at startup](../11-reference/database-setup.md#detecting-drift-at-startup).
+
 ## 3. Boot the bookshelf with the big dataset
 
 ```bash
