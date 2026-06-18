@@ -12,6 +12,8 @@
  * }
  */
 
+import type { Pool } from 'pg'
+
 export interface Migration {
   /** Sequential version identifier (e.g. '001') */
   version: string
@@ -189,3 +191,97 @@ export const migrations: readonly Migration[] = [
     `
   }
 ] as const
+
+// Migration drift detection.
+//
+// A generic, module-independent check that the database has every migration the
+// server provisions for. It is intentionally NOT tied to any one feature (e.g.
+// vector storage): future migrations may touch core/oauth tables, so the check
+// reasons over the whole `migrations` list and the caller's declared features.
+//
+// The `schema_migrations(version, name, applied_at)` table is the convention
+// every mcp-rune migration runner writes to (the `db:migrate` scripts shipped by
+// consumers and the CLI scaffold). This is the canonical reader of that table.
+
+/** A feature group a migration belongs to (mirrors `Migration.feature`). */
+export type Feature = Migration['feature']
+
+export interface MigrationStatusOptions {
+  /**
+   * Feature groups the caller provisions. When given, only migrations whose
+   * `feature` is in this set are required — a server with `DATABASE_URL` but
+   * analysis disabled is not flagged for unapplied `analysis` migrations.
+   * Omit to require every migration.
+   */
+  features?: readonly Feature[]
+}
+
+/** Minimal slice of `pg.Pool` this module needs — just a `query` method. */
+type Queryable = Pick<Pool, 'query'>
+
+const SCHEMA_MIGRATIONS_TABLE = 'schema_migrations'
+const UNDEFINED_TABLE = '42P01'
+
+/**
+ * Read the set of applied migration versions from `schema_migrations`. A missing
+ * table (error 42P01) means no migration has ever run, so nothing is applied.
+ */
+async function readAppliedVersions(pool: Queryable): Promise<Set<string>> {
+  try {
+    const { rows } = await pool.query<{ version: string }>(
+      `SELECT version FROM ${SCHEMA_MIGRATIONS_TABLE}`
+    )
+    return new Set(rows.map((r) => r.version))
+  } catch (err) {
+    if ((err as { code?: string }).code === UNDEFINED_TABLE) return new Set()
+    throw err
+  }
+}
+
+/**
+ * Return the migrations that have NOT been applied to the database, scoped to the
+ * caller's declared `features` (or all migrations when none are given). The list
+ * preserves migration order.
+ *
+ * @example
+ * const pending = await getPendingMigrations(pool, { features: ['core', 'analysis'] })
+ */
+export async function getPendingMigrations(
+  pool: Queryable,
+  options: MigrationStatusOptions = {}
+): Promise<Migration[]> {
+  const applied = await readAppliedVersions(pool)
+  const required = options.features
+    ? migrations.filter((m) => options.features!.includes(m.feature))
+    : migrations
+  return required.filter((m) => !applied.has(m.version))
+}
+
+/** Thrown by {@link assertMigrationsCurrent} when the database is behind. */
+export class PendingMigrationsError extends Error {
+  /** The unapplied migrations, in order. */
+  readonly pending: readonly Migration[]
+
+  constructor(pending: readonly Migration[]) {
+    const list = pending.map((m) => `${m.version}_${m.name}`).join(', ')
+    super(`Database is behind on migrations (pending: ${list}). Run: npm run db:migrate`)
+    this.name = 'PendingMigrationsError'
+    this.pending = pending
+  }
+}
+
+/**
+ * Throw {@link PendingMigrationsError} if any required migration is unapplied.
+ * Call once at startup, right after the pool is created, to fail fast with an
+ * actionable message instead of surfacing a cryptic mid-request SQL error.
+ *
+ * @example
+ * await assertMigrationsCurrent(pool, { features: ['core', 'analysis'] })
+ */
+export async function assertMigrationsCurrent(
+  pool: Queryable,
+  options: MigrationStatusOptions = {}
+): Promise<void> {
+  const pending = await getPendingMigrations(pool, options)
+  if (pending.length > 0) throw new PendingMigrationsError(pending)
+}
