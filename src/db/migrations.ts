@@ -192,7 +192,7 @@ export const migrations: readonly Migration[] = [
   }
 ] as const
 
-// --- Migration drift detection ----------------------------------------------
+// Migration drift detection.
 //
 // A generic, module-independent check that the database has every migration the
 // server provisions for. It is intentionally NOT tied to any one feature (e.g.

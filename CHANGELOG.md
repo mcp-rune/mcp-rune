@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.104.0] - 2026-06-19
+
+### Added
+
+- **Module-independent migration-drift guard in `src/db/migrations.ts`.** New `getPendingMigrations(pool, { features })` and `assertMigrationsCurrent(pool, { features })` let a server fail fast at startup when the database is behind on migrations, instead of surfacing a cryptic mid-request SQL error (e.g. `column "embedding" does not exist`). The check reasons over the whole `migrations` list scoped to the caller's declared feature groups, so a core-only server (`DATABASE_URL` with analysis disabled) is not flagged for unapplied `analysis` migrations. It reads the canonical `schema_migrations` table and treats a missing table (Postgres `42P01`) as nothing applied. A typed `PendingMigrationsError` names the pending migrations and the `npm run db:migrate` remediation.
+- **Defense-in-depth schema hints for pgvector ingested-records ops (`src/runtime/vendor/pgvector/schema-errors.ts`).** `withSchemaHint` wraps the ingested-records operations so Postgres `42703`/`42P01` errors rethrow with `npm run db:migrate` remediation appended, preserving the original error code and stack; non-schema errors pass through untouched.
+
 ## [0.103.4] - 2026-06-16
 
 ### Dependencies
@@ -3179,6 +3186,7 @@ Initial public release. Extracted from production MCP servers.
 
 - 11 subpath exports: `mcp-kit/server`, `mcp-kit/tools`, `mcp-kit/prompts`, `mcp-kit/apps`, `mcp-kit/search`, `mcp-kit/domain`, `mcp-kit/oauth2`, `mcp-kit/services`, `mcp-kit/db`, `mcp-kit/core`
 
+[0.104.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.103.4...v0.104.0
 [0.103.4]: https://github.com/mcp-rune/mcp-rune/compare/v0.103.3...v0.103.4
 [0.103.3]: https://github.com/mcp-rune/mcp-rune/compare/v0.103.2...v0.103.3
 [0.103.2]: https://github.com/mcp-rune/mcp-rune/compare/v0.103.1...v0.103.2
