@@ -2,7 +2,7 @@
 
 # Writing a Custom MCP App
 
-mcp-rune ships seven **MCP App tools** — interactive iframe widgets the LLM can summon: `new_model_app`, `edit_model_app`, `find_model_app`, `show_model_app`, `pick_model_app`, `multi_pick_model_app`, `view_selection_app`. They share infrastructure: the [kind taxonomy](../03-the-prompt/attribute-kinds.md) from `src/mcp/models/kinds/`, the renderer registry from `apps/shared/kind-renderers.ts`, the form-schema generator, the selection store, theming.
+mcp-rune ships seven **MCP App tools** — interactive iframe widgets the LLM can summon: `new_model_app`, `edit_model_app`, `find_model_app`, `show_model_app`, `pick_model_app`, `multi_pick_model_app`, `view_selection_app`. They share infrastructure: the [kind taxonomy](../02-the-model/attributes-and-kinds.md) from `src/mcp/models/kinds/`, the renderer registry from `apps/shared/kind-renderers.ts`, the form-schema generator, the selection store, theming.
 
 > **Projection-layer rule.** App handlers consume only the `DataLayer` interface — `context.dataLayer` is the single data-access seam. Handlers never receive `searchClient`, `apiClient`, or any concrete adapter. See [The Projection-Layer Rule](../06-the-three-layers-up-close/data-layer.md#the-projection-layer-rule).
 
@@ -555,5 +555,5 @@ expect(html).toContain('en-GB')
 
 - [MCP Apps Guide](../05-apps/mcp-apps.md) — user-facing overview of the apps system.
 - [MCP Apps Architecture](../05-apps/mcp-apps-arch.md) — protocol-level reference for iframe ↔ host communication.
-- [Attribute Kinds](../03-the-prompt/attribute-kinds.md) — the kind taxonomy custom apps inherit.
+- [Attribute Kinds](../02-the-model/attributes-and-kinds.md) — the kind taxonomy custom apps inherit.
 - [Model Form Customization](../05-apps/model-form.md) — layout primitives for the generic `model-form` (often enough; you may not need a custom app).
