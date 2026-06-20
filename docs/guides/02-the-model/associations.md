@@ -4,7 +4,7 @@ The previous chapter covered single-attribute kinds. This chapter covers the sec
 
 ## Try it — wire `Book belongsTo Author`
 
-> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.104.1 · Node 24.
+> Verified against rune CLI 0.11.0 · @mcp-rune/mcp-rune 0.105.1 · Node 24.
 
 Three edits to your scaffolded `bookshelf-tour` project make the derivation visible: add a second model, declare the FK, and observe two surfaces that weren't there before.
 
