@@ -6,6 +6,7 @@ export type { Config, ConfigDescriptor, ConfigSchema } from './core/config.js'
 export { loadConfig } from './core/config.js'
 export { boolEnv, intEnv, optionalEnv, requireEnv } from './core/env.js'
 export { hintForError } from './core/error-hints.js'
+export { frameworkConfigSchema } from './core/framework-schema.js'
 export {
   coerceToObject,
   formatErrorResponse,

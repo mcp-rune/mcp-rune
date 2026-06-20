@@ -62,7 +62,7 @@ export {}
 
 | Subpath | What lives there |
 | --- | --- |
-| `@mcp-rune/mcp-rune/core` | Framework primitives — `ApiClient` (type), `Config`, `loadConfig`, env helpers, response helpers, startup tracker. **Does NOT contain `BaseModel`** — that moved to `/models`. |
+| `@mcp-rune/mcp-rune/core` | Framework primitives — `ApiClient` (type), `Config`, `loadConfig`, `frameworkConfigSchema` (logging/runtime fragment to spread into your schema), env helpers, response helpers, startup tracker. **Does NOT contain `BaseModel`** — that moved to `/models`. |
 | `@mcp-rune/mcp-rune/models` | `BaseModel`, `AttributeDefinition`, `AssociationConfig`, the 17 built-in kind descriptors. |
 | `@mcp-rune/mcp-rune/server` | `StdioServer`, `HttpServer`, `createServer` factory. |
 | `@mcp-rune/mcp-rune/tools` | `BaseTool`, `ToolRegistry`, `DATA_TOOL_CLASSES`, `FORM_STRATEGY_TOOL_CLASSES`, interceptors, types. |
