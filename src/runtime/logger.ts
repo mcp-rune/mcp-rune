@@ -6,17 +6,42 @@ import { getRequestId } from './request-context.js'
 
 const { combine, timestamp, printf, json } = winston.format
 
-const LOG_LEVEL = process.env.LOG_LEVEL || 'info'
+// Resolved logging settings the transports are built from. `configureLogging()`
+// recomputes these from injected config; until then the bootstrap reads them
+// from the environment (see `resolveEnvSettings`).
+interface LoggingSettings {
+  level: string
+  structuredConsole: boolean
+  structuredFiles: boolean
+  fileEnabled: boolean
+}
 
-// Independent format control for console (stderr) and file transports:
-//   LOG_FORMAT      — controls console format: 'text' (default) or 'json'
-//   LOG_FILE_FORMAT — controls file format: inherits from LOG_FORMAT if not set
-//   NODE_ENV=production forces both to JSON
-const STRUCTURED_CONSOLE =
-  process.env.LOG_FORMAT === 'json' || process.env.NODE_ENV === 'production'
-const STRUCTURED_FILES =
-  (process.env.LOG_FILE_FORMAT ?? process.env.LOG_FORMAT) === 'json' ||
-  process.env.NODE_ENV === 'production'
+/**
+ * Bootstrap settings, read straight from the environment.
+ *
+ * Honoring the logging env vars here is deliberate: the logger must work
+ * before any config is loaded (early startup lines, scripts, CLIs), and
+ * reading the LOG_LEVEL / LOG_FORMAT / LOG_FILE_FORMAT / LOG_FILE_ENABLED /
+ * NODE_ENV vars to configure logging is the usual, expected behavior for a
+ * logging subsystem. A schema-driven consumer
+ * spreads `frameworkConfigSchema`, then calls `configureLogging()` to make the
+ * validated, injected values authoritative — at which point these env reads no
+ * longer apply. App/business config never relies on env fallbacks like this.
+ *
+ *   LOG_FORMAT      — console format: 'text' (default) or 'json'
+ *   LOG_FILE_FORMAT — file format: inherits from LOG_FORMAT if not set
+ *   NODE_ENV=production forces both to JSON
+ */
+function resolveEnvSettings(): LoggingSettings {
+  return {
+    level: process.env.LOG_LEVEL || 'info',
+    structuredConsole: process.env.LOG_FORMAT === 'json' || process.env.NODE_ENV === 'production',
+    structuredFiles:
+      (process.env.LOG_FILE_FORMAT ?? process.env.LOG_FORMAT) === 'json' ||
+      process.env.NODE_ENV === 'production',
+    fileEnabled: process.env.LOG_FILE_ENABLED === 'true'
+  }
+}
 
 // Auto-detect color: on for TTY stderr, off when captured by host apps
 // (Claude Desktop, OpenCode) or piped to log collectors (Promtail).
@@ -240,64 +265,120 @@ const jsonFormat = combine(
 // Console keeps a compact HH:mm:ss.SSS timestamp (Astro-style); file
 // transport retains the full date so archived/rotated logs remain
 // interpretable when scrolling across day boundaries.
-const consoleFormat = STRUCTURED_CONSOLE
-  ? jsonFormat
-  : combine(injectRequestId, timestamp({ format: 'HH:mm:ss.SSS' }), consoleTextFormat)
-
-const fileFormat = STRUCTURED_FILES
-  ? jsonFormat
-  : combine(injectRequestId, timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }), fileTextFormat)
-
-const transports: winston.transport[] = [
-  new winston.transports.Console({
-    stderrLevels: ['error', 'warn', 'info', 'debug'], // Use stderr to avoid corrupting stdio MCP transport
-    format: consoleFormat
-  })
-]
-
-// File logging is conditional because:
-// - Claude Desktop runs MCP servers in a sandboxed read-only filesystem
-// - The sandbox prevents creating the logs/ directory (EROFS: read-only file system)
-// - For stdio transport (local dev), file logging is unnecessary anyway since
-//   Claude Desktop captures stderr and writes it to ~/Library/Logs/Claude/mcp-server-*.log
-// - Enable file logging for remote/HTTP deployments where no parent process captures stderr
-if (process.env.LOG_FILE_ENABLED === 'true') {
-  // `auditFile` is pinned to a stable path per transport. Without this,
-  // winston-daily-rotate-file derives the audit filename from a hash that
-  // includes a per-process nonce, so every restart creates a brand-new
-  // bookkeeping file (e.g. `.6a8385...-audit.json`) and tracks only the
-  // rotations it performed itself. Files written under previous audits
-  // become orphans the library never reaps — silently defeating
-  // `maxFiles: '7d'` retention on any long-lived deployment that restarts
-  // occasionally, and producing indefinitely-accumulating `combined-*.log`
-  // files in development. Pinning the audit path makes every process
-  // instance share the same ledger so retention actually applies.
-  transports.push(
-    new DailyRotateFile({
-      filename: 'logs/combined-%DATE%.log',
-      datePattern: 'YYYY-MM-DD',
-      maxSize: '20m',
-      maxFiles: '7d', // Match Loki retention
-      auditFile: 'logs/.combined-audit.json',
-      format: fileFormat
-    }),
-    new DailyRotateFile({
-      filename: 'logs/error-%DATE%.log',
-      datePattern: 'YYYY-MM-DD',
-      maxSize: '20m',
-      maxFiles: '7d', // Match Loki retention
-      auditFile: 'logs/.error-audit.json',
-      level: 'error',
-      format: fileFormat
-    })
-  )
+function consoleFormatFor(structured: boolean) {
+  return structured
+    ? jsonFormat
+    : combine(injectRequestId, timestamp({ format: 'HH:mm:ss.SSS' }), consoleTextFormat)
 }
 
+function fileFormatFor(structured: boolean) {
+  return structured
+    ? jsonFormat
+    : combine(injectRequestId, timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }), fileTextFormat)
+}
+
+// Build the transport set for a given settings snapshot. Called at bootstrap
+// and again by `configureLogging()` when injected config supersedes the env.
+function buildTransports(settings: LoggingSettings): winston.transport[] {
+  const transports: winston.transport[] = [
+    new winston.transports.Console({
+      stderrLevels: ['error', 'warn', 'info', 'debug'], // Use stderr to avoid corrupting stdio MCP transport
+      format: consoleFormatFor(settings.structuredConsole)
+    })
+  ]
+
+  // File logging is conditional because:
+  // - Claude Desktop runs MCP servers in a sandboxed read-only filesystem
+  // - The sandbox prevents creating the logs/ directory (EROFS: read-only file system)
+  // - For stdio transport (local dev), file logging is unnecessary anyway since
+  //   Claude Desktop captures stderr and writes it to ~/Library/Logs/Claude/mcp-server-*.log
+  // - Enable file logging for remote/HTTP deployments where no parent process captures stderr
+  if (settings.fileEnabled) {
+    const fileFormat = fileFormatFor(settings.structuredFiles)
+    // `auditFile` is pinned to a stable path per transport. Without this,
+    // winston-daily-rotate-file derives the audit filename from a hash that
+    // includes a per-process nonce, so every restart creates a brand-new
+    // bookkeeping file (e.g. `.6a8385...-audit.json`) and tracks only the
+    // rotations it performed itself. Files written under previous audits
+    // become orphans the library never reaps — silently defeating
+    // `maxFiles: '7d'` retention on any long-lived deployment that restarts
+    // occasionally, and producing indefinitely-accumulating `combined-*.log`
+    // files in development. Pinning the audit path makes every process
+    // instance share the same ledger so retention actually applies.
+    transports.push(
+      new DailyRotateFile({
+        filename: 'logs/combined-%DATE%.log',
+        datePattern: 'YYYY-MM-DD',
+        maxSize: '20m',
+        maxFiles: '7d', // Match Loki retention
+        auditFile: 'logs/.combined-audit.json',
+        format: fileFormat
+      }),
+      new DailyRotateFile({
+        filename: 'logs/error-%DATE%.log',
+        datePattern: 'YYYY-MM-DD',
+        maxSize: '20m',
+        maxFiles: '7d', // Match Loki retention
+        auditFile: 'logs/.error-audit.json',
+        level: 'error',
+        format: fileFormat
+      })
+    )
+  }
+
+  return transports
+}
+
+// Active settings drive `canPrintBanner()` and are swapped by
+// `configureLogging()`. Seeded from the environment at bootstrap.
+let activeSettings: LoggingSettings = resolveEnvSettings()
+
 const logger = winston.createLogger({
-  level: LOG_LEVEL,
+  level: activeSettings.level,
   defaultMeta: { app: 'mcp-servers' }, // Add app label for Loki queries
-  transports
+  transports: buildTransports(activeSettings)
 })
+
+/** Options accepted by `configureLogging` — typically the resolved
+ * `config.logging` slice plus the runtime environment flag. */
+export interface LoggingOptions {
+  /** Minimum level (error|warn|info|debug). Defaults to 'info'. */
+  level?: string
+  /** Console format. Unset = text, unless `production` forces json. */
+  format?: 'text' | 'json'
+  /** File format. Unset = inherits `format`, unless `production` forces json. */
+  fileFormat?: 'text' | 'json'
+  /** Write rotating daily log files under logs/. Defaults to false. */
+  fileEnabled?: boolean
+  /** Production runtime — forces JSON on both console and file transports. */
+  production?: boolean
+}
+
+/**
+ * Apply injected logging configuration, superseding the env-derived bootstrap.
+ *
+ * Call once during startup after `loadConfig()`, e.g.
+ *   configureLogging({ ...config.logging, production: config.runtime.environment === 'production' })
+ *
+ * Values come entirely from the caller — no `process.env` reads here — so the
+ * loaded config is the single source of truth. Rebuilds transports in place
+ * (preserving `defaultMeta`, so a prior `setApp()` survives).
+ */
+export function configureLogging(opts: LoggingOptions = {}): void {
+  const production = opts.production === true
+  activeSettings = {
+    level: opts.level ?? 'info',
+    structuredConsole: opts.format === 'json' || production,
+    structuredFiles: (opts.fileFormat ?? opts.format) === 'json' || production,
+    fileEnabled: opts.fileEnabled ?? false
+  }
+
+  logger.level = activeSettings.level
+  logger.clear() // drop bootstrap transports without touching defaultMeta
+  for (const transport of buildTransports(activeSettings)) {
+    logger.add(transport)
+  }
+}
 
 export interface LogMeta {
   [key: string]: unknown
@@ -364,7 +445,7 @@ export function child(defaultMeta: LogMeta = {}): ChildLogger {
  * log aggregation isn't deprived of the "started" event.
  */
 export function canPrintBanner(): boolean {
-  return COLORIZE && !STRUCTURED_CONSOLE
+  return COLORIZE && !activeSettings.structuredConsole
 }
 
 export interface BannerInput {

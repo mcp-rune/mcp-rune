@@ -9,6 +9,9 @@ vi.mock('winston', () => {
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
+    level: 'info',
+    clear: vi.fn(),
+    add: vi.fn(),
     defaultMeta: { app: 'mcp-servers' },
     child: vi.fn(() => ({
       info: vi.fn(),
@@ -565,6 +568,52 @@ describe('lib/services/logger', () => {
     it('does not construct DailyRotateFile transports when LOG_FILE_ENABLED is unset', async () => {
       const DailyRotateFile = await reloadLogger(false)
       expect(DailyRotateFile).not.toHaveBeenCalled()
+    })
+  })
+
+  // configureLogging() lets a schema-driven consumer override the env-derived
+  // bootstrap with validated, injected config. The injected options are the
+  // single source of truth — no process.env reads happen inside the call.
+  describe('configureLogging', () => {
+    it('applies the injected level to the logger', () => {
+      logger.configureLogging({ level: 'debug' })
+      expect(mockWinstonLogger.level).toBe('debug')
+    })
+
+    it('defaults the level to info when none is provided', () => {
+      mockWinstonLogger.level = 'debug'
+      logger.configureLogging({})
+      expect(mockWinstonLogger.level).toBe('info')
+    })
+
+    it('rebuilds transports in place (clear + re-add) without touching defaultMeta', () => {
+      mockWinstonLogger.defaultMeta.app = 'engineer-mcp'
+      logger.configureLogging({ fileEnabled: false })
+      expect(mockWinstonLogger.clear).toHaveBeenCalledOnce()
+      // console transport only
+      expect(mockWinstonLogger.add).toHaveBeenCalledOnce()
+      // defaultMeta (and thus a prior setApp) survives the swap
+      expect(mockWinstonLogger.defaultMeta.app).toBe('engineer-mcp')
+    })
+
+    it('adds console + two rotating file transports when fileEnabled is true', () => {
+      logger.configureLogging({ fileEnabled: true })
+      // console + 2 file transports re-added
+      expect(mockWinstonLogger.add).toHaveBeenCalledTimes(3)
+    })
+
+    it('honors injected fileEnabled over the LOG_FILE_ENABLED env var (no env fallback)', () => {
+      const prev = process.env.LOG_FILE_ENABLED
+      process.env.LOG_FILE_ENABLED = 'true'
+      try {
+        // Injected config says no file logging — the env var must NOT leak in,
+        // so only the console transport is added.
+        logger.configureLogging({ fileEnabled: false })
+        expect(mockWinstonLogger.add).toHaveBeenCalledOnce()
+      } finally {
+        if (prev === undefined) delete process.env.LOG_FILE_ENABLED
+        else process.env.LOG_FILE_ENABLED = prev
+      }
     })
   })
 })
