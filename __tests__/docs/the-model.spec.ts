@@ -299,7 +299,7 @@ describe('docs/guides/02-the-model/validation-and-defaults.md', () => {
         errors: [
           {
             field: 'status',
-            message: 'Invalid value "bogus". Valid options: unread, reading, finished'
+            message: 'status must be one of: unread, reading, finished (got "bogus")'
           }
         ],
         warnings: [],
