@@ -60,6 +60,8 @@ export interface PromptFieldDefinition {
   enumValues?: string[]
   enumDescriptions?: Record<string, string>
   format?: string
+  /** Upper bound consumed by bounded kinds (e.g. `format: 'rating'`). */
+  max?: number
   default?: unknown
   examples?: string[]
   validation?: FieldValidation
@@ -87,6 +89,8 @@ export interface FormSchemaFieldDefinition {
   examples?: string[]
   enumValues?: string[]
   format?: string
+  /** Upper bound consumed by bounded kinds (e.g. `format: 'rating'`). */
+  max?: number
   default?: unknown
   completion?: CompletionConfig
   validation?: Record<string, unknown>

@@ -19,7 +19,9 @@
  *      label / htmlInputType / promptType    (form + prompt metadata)
  *
  * One place, one responsibility. `prompts/` and `apps/` are downstream
- * readers — they call `getKind(name, format)` and consume whatever this
+ * readers — kinds are shared vocabulary (ADR 0009): they call
+ * `getKind(name, format)`, build opts with `kindOptsFrom(definition)`, and
+ * resolve input widening with `resolveInputType`, consuming whatever this
  * directory says. The browser DOM renderer in
  * `src/mcp/apps/shared/kind-renderers.ts` decorates a kind with a
  * `(value, opts) => Node` `format` function; that decoration is layered
@@ -27,8 +29,8 @@
  * directory DOM-free.
  *
  * To add a built-in kind: drop a new file here exporting
- * `Partial<KindDescriptor>` and register it below. Missing fields fall
- * back to `passthrough` in `registry.ts`.
+ * `Partial<KindDescriptor>` and add it to `BUILT_IN_KINDS` below. Missing
+ * fields fall back to `passthrough` in `registry.ts`.
  *
  * To add a deployer-defined kind: pass it via the `kinds:` option to
  * `new AppRegistry(apps, { kinds: { isbn: { …, render: { … } } } })`.
@@ -55,23 +57,38 @@ import { time } from './time.js'
 import { url } from './url.js'
 import { uuid } from './uuid.js'
 
-registerKind('string', string)
-registerKind('text', text)
-registerKind('integer', integer)
-registerKind('decimal', decimal)
-registerKind('boolean', boolean)
-registerKind('date', date)
-registerKind('datetime', datetime)
-registerKind('time', time)
-registerKind('enum', enumKind)
-registerKind('array', array)
-registerKind('uuid', uuid)
-registerKind('json', json)
-registerKind('color', color)
-registerKind('email', email)
-registerKind('url', url)
-registerKind('base64', base64)
-registerKind('rating', rating)
+const BUILT_IN_KINDS = {
+  string,
+  text,
+  integer,
+  decimal,
+  boolean,
+  date,
+  datetime,
+  time,
+  enum: enumKind,
+  array,
+  uuid,
+  json,
+  color,
+  email,
+  url,
+  base64,
+  rating
+} as const
 
-export type { KindDescriptor, KindOpts, KindRenderHint } from './registry.js'
-export { getKind, registerKind } from './registry.js'
+for (const [name, descriptor] of Object.entries(BUILT_IN_KINDS)) {
+  registerKind(name, descriptor)
+}
+
+/**
+ * Names of the built-in kinds. The live registry (built-ins plus
+ * `registerKind` extensions) is the runtime source of truth —
+ * `validateRegistries` enforces membership against it at boot. This type
+ * exists so TypeScript deployers get completion on `AttributeDefinition.type`
+ * without the union closing the extensible set.
+ */
+export type KnownKind = keyof typeof BUILT_IN_KINDS
+
+export type { KindDescriptor, KindOpts, KindOptsSource, KindRenderHint } from './registry.js'
+export { getKind, kindOptsFrom, registerKind, resolveInputType } from './registry.js'

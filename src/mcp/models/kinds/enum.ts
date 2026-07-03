@@ -3,6 +3,7 @@ import type { KindDescriptor } from './registry.js'
 
 export const enumKind: Partial<KindDescriptor> = {
   label: 'Choice',
+  htmlInputType: 'select',
   promptType: 'enum',
   describe: (v) => (v === null || v === undefined ? '' : humanize(String(v)))
 }

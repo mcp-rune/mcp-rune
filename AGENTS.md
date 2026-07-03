@@ -14,9 +14,11 @@ Never import `ApiClient`, `ModelService`, `searchClient`, `SearchService`, `Endp
 
 Synchronous, stateless, cached per model class. Bound to a single model at construction. Apps get it as `context.modelLayer(name)`; tools as `this.modelLayer?.(name)`. The interface lives at `src/mcp/model-layer/model-layer.ts`.
 
-Surface: `kindFor(attrName)`, `resolveDerivedFields(records)`, `validFieldNames()`, `promptSchema(options?)`, `checkRequired(params)`.
+Surface: `resolveDerivedFields(records)`.
 
-Never import `resolveDerivedFields`, `collectValidFieldNames`, `derivePromptSchema`, `deriveFieldDefinitions`, `validateRequired`, `validateEnum`, `validateUrl`, or `getKind` from `src/mcp/model-layer/*` or `src/mcp/models/kinds/` in a projection-layer file.
+Never import `resolveDerivedFields`, `collectValidFieldNames`, `derivePromptSchema`, `deriveFieldDefinitions`, `validateRequired`, `validateEnum`, or `validateUrl` from `src/mcp/model-layer/*` in a projection-layer file.
+
+Kind descriptors are NOT behind this layer: kinds are shared vocabulary (ADR 0009) — projection code reads them directly via `getKind` / `kindOptsFrom` / `resolveInputType` from `src/mcp/models/kinds/`.
 
 ### `AnalysisLayer` — per-model-bound, per-request analysis projections
 

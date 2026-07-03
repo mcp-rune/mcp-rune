@@ -18,8 +18,9 @@
  *
  * Used to reject unknown fields before they reach the API. The
  * `<target_model>_ids` form is accepted so callers can write the Rails-style
- * proper singular without us shipping a pluralization library. Reached
- * through `modelLayer.validFieldNames()` after PR2.
+ * proper singular without us shipping a pluralization library. Consumed by
+ * the boot-time validators (`prompt-validator`, `app-form-validator`); not
+ * part of the ModelLayer surface.
  */
 
 import type { ModelClassLike } from '#src/mcp/schema/types.js'

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { getKind, registerKind } from '../../../../src/mcp/models/kinds/index.js'
+import {
+  getKind,
+  kindOptsFrom,
+  registerKind,
+  resolveInputType
+} from '../../../../src/mcp/models/kinds/index.js'
 import { KIND_REGISTRY, UnknownKindError } from '../../../../src/mcp/models/kinds/registry.js'
 
 describe('lib/mcp/models/kinds', () => {
@@ -331,6 +336,80 @@ describe('lib/mcp/models/kinds', () => {
       expect(k.validate(6, { max: 10 })).toBe(null)
       expect(k.validate(-1)).toBe('must be between 0 and 5')
       expect(k.validate('three')).toBe('must be a number')
+    })
+  })
+
+  describe('enum', () => {
+    const k = getKind('enum')
+    it('htmlInputType is select', () => {
+      expect(k.htmlInputType).toBe('select')
+    })
+    it('describe humanizes the value', () => {
+      expect(k.describe('non_fiction')).toBe('Non Fiction')
+    })
+  })
+
+  describe('registry-level enumValues membership', () => {
+    it('rejects out-of-set scalars on any kind', () => {
+      expect(getKind('enum').validate('wat', { enumValues: ['a', 'b'] })).toBe(
+        'must be one of: a, b (got "wat")'
+      )
+      expect(getKind('string').validate('wat', { enumValues: ['a', 'b'] })).toBe(
+        'must be one of: a, b (got "wat")'
+      )
+      expect(getKind('string').validate('a', { enumValues: ['a', 'b'] })).toBe(null)
+    })
+    it('rejects out-of-set elements on array values', () => {
+      expect(getKind('array').validate(['a', 'wat'], { enumValues: ['a', 'b'] })).toBe(
+        'must be one of: a, b (got "wat")'
+      )
+      expect(getKind('array').validate(['a', 'b'], { enumValues: ['a', 'b'] })).toBe(null)
+    })
+    it('runs before the kind rules and skips empty values', () => {
+      expect(getKind('integer').validate(9, { enumValues: ['1', '2'] })).toBe(
+        'must be one of: 1, 2 (got "9")'
+      )
+      expect(getKind('enum').validate(null, { enumValues: ['a'] })).toBe(null)
+      expect(getKind('enum').validate('', { enumValues: ['a'] })).toBe(null)
+    })
+    it('wraps deployer-registered kinds too', () => {
+      registerKind('membership-probe', { label: 'Probe' })
+      expect(getKind('membership-probe').validate('x', { enumValues: ['y'] })).toBe(
+        'must be one of: y (got "x")'
+      )
+      KIND_REGISTRY.delete('membership-probe')
+    })
+  })
+
+  describe('resolveInputType', () => {
+    it('widens enumValues-carrying definitions to select', () => {
+      expect(resolveInputType('enum', undefined, { enumValues: ['a'] })).toBe('select')
+      expect(resolveInputType('string', undefined, { enumValues: ['a'] })).toBe('select')
+    })
+    it('widens array + enumValues to checkbox_group', () => {
+      expect(resolveInputType('array', undefined, { enumValues: ['a'] })).toBe('checkbox_group')
+    })
+    it('falls back to the descriptor htmlInputType', () => {
+      expect(resolveInputType('boolean', undefined)).toBe(getKind('boolean').htmlInputType)
+      expect(resolveInputType('integer', 'rating')).toBe('number')
+      expect(resolveInputType('array', undefined, { enumValues: [] })).toBe(
+        getKind('array').htmlInputType
+      )
+    })
+  })
+
+  describe('kindOptsFrom', () => {
+    it('extracts exactly the kind-facing fields of a definition', () => {
+      expect(kindOptsFrom({ format: 'rating', enumValues: ['a'], max: 10 })).toEqual({
+        format: 'rating',
+        enumValues: ['a'],
+        max: 10
+      })
+      expect(kindOptsFrom({})).toEqual({
+        format: undefined,
+        enumValues: undefined,
+        max: undefined
+      })
     })
   })
 })

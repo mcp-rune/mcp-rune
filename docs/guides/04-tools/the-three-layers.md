@@ -2,7 +2,7 @@
 
 Chapter 3 ended with a Prompt that knows how to read a Model. This chapter — the foundation for everything in Tools and Apps — answers the next question: _what does the code that actually runs see at runtime?_ The answer is **three peer interfaces**, injected per request, that every Tool, App, Prompt, and `ApiExtension` consumes.
 
-You will never write a tool that imports `ApiClient` directly, or `resolveDerivedFields`, or `extractEdgesFromRecord`. The eslint config forbids it. What you write instead is `this.dataLayer.find(...)`, `this.modelLayer('book').kindFor(...)`, `this.analysisLayer('book').extractEdges(...)`. The three layers are how your tool reaches the rest of the framework.
+You will never write a tool that imports `ApiClient` directly, or `resolveDerivedFields`, or `extractEdgesFromRecord`. The eslint config forbids it. What you write instead is `this.dataLayer.find(...)`, `this.modelLayer('book').resolveDerivedFields(...)`, `this.analysisLayer('book').extractEdges(...)`. The three layers are how your tool reaches the rest of the framework.
 
 ## The shape
 
@@ -77,25 +77,23 @@ override async execute(args: { id: string }): Promise<ToolResult> {
 
 **Surface:**
 
-- `kindFor(attrName)` → `KindDescriptor`
 - `resolveDerivedFields(records)` → flattens `derived: { from, field }` declarations in place
-- `validFieldNames()` → `Set<string>` of legal input keys
-- `promptSchema(options?)` → derived schema used by prompt validation
-- `checkRequired(params)` → structured pass/fail of required-field check
+
+Kind descriptors are not on this surface: kinds are shared vocabulary ([ADR 0009](../../architecture/decisions/0009-kinds-are-shared-vocabulary.md)) — read them directly via `getKind` / `kindOptsFrom` / `resolveInputType` from `@mcp-rune/mcp-rune/models`.
 
 **In a tool:**
 
 ```ts
-override async execute(args: { model: string; record: Record<string, unknown> }) {
+override async execute(args: { model: string; record_id: string }) {
+  const data = this.requireDataLayer()
   const layer = this.modelLayer?.(args.model)
-  if (!layer) return this.fail('Unknown model')
-  const violations = layer.checkRequired(args.record)
-  if (!violations.ok) return this.fail(violations.message)
+  const record = await data.find(args.model, args.record_id)
+  layer?.resolveDerivedFields([record])
   // …
 }
 ```
 
-**Why it exists:** chapter 2's [Definition vs consumption](../02-the-model/definition-vs-consumption.md) showed that helpers that _read_ a model live in `src/mcp/model-layer/`. `ModelLayer` is the public face of that folder. Projection-layer code must consume the interface, never import `resolveDerivedFields`, `getKind`, or `collectValidFieldNames` directly.
+**Why it exists:** chapter 2's [Definition vs consumption](../02-the-model/definition-vs-consumption.md) showed that helpers that _read_ a model live in `src/mcp/model-layer/`. `ModelLayer` is the public face of that folder. Projection-layer code must consume the interface, never import `resolveDerivedFields` or `collectValidFieldNames` directly.
 
 ## `AnalysisLayer` — per-model analysis projections
 

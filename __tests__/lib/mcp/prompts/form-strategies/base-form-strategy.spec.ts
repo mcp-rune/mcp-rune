@@ -140,7 +140,21 @@ describe('lib/mcp/prompts/form-strategies/base-form-strategy', () => {
         },
         {}
       )
-      expect(errors[0]).toContain('Invalid value')
+      expect(errors[0]).toBe('status must be one of: a, b (got "wat")')
+    })
+
+    it('rating honors a definition-level max', () => {
+      const def = {
+        type: 'integer',
+        format: 'rating',
+        required: false,
+        description: 'Rating',
+        max: 10
+      }
+      expect(BaseFormStrategy.validateField('rating', 8, def, {})).toEqual([])
+      expect(BaseFormStrategy.validateField('rating', 11, def, {})).toEqual([
+        'rating must be between 0 and 10'
+      ])
     })
   })
 })
