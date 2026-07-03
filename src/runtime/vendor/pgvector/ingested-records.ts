@@ -158,15 +158,33 @@ export async function storeRecords(
     ? new Map(params.embeddings.map((e) => [e.recordIndex, e]))
     : new Map()
 
+  // Deduplicate by record_id within the batch: `ON CONFLICT DO UPDATE` throws
+  // "cannot affect row a second time" if one INSERT names the same conflict key
+  // twice (e.g. an upstream page that repeated a row during pagination drift).
+  // Keep the last occurrence — latest data wins — and preserve its embedding by
+  // original index. Records with no id can't collide on the partial index and
+  // are all retained.
+  const rows = params.records.map((record, i) => ({
+    record,
+    embedding: embeddingsByIndex.get(i)
+  }))
+  const lastByRecordId = new Map<string, number>()
+  rows.forEach((r, j) => {
+    const id = r.record.id || (r.record.data.id as string) || null
+    if (id !== null) lastByRecordId.set(id, j)
+  })
+  const dedupedRows = rows.filter((r, j) => {
+    const id = r.record.id || (r.record.data.id as string) || null
+    return id === null || lastByRecordId.get(id) === j
+  })
+
   // Build a multi-row INSERT for efficiency
   const values: unknown[] = []
   const placeholders: string[] = []
   let paramIdx = 1
 
-  for (let i = 0; i < params.records.length; i++) {
-    const record = params.records[i]!
+  for (const { record, embedding } of dedupedRows) {
     const recordId = record.id || (record.data.id as string) || null
-    const embedding = embeddingsByIndex.get(i)
     const vectorStr = embedding ? `[${Array.from(embedding.vector).join(',')}]` : null
     const embeddingText = embedding ? embedding.text : null
     const embeddedAt = embedding ? new Date() : null
@@ -200,7 +218,7 @@ export async function storeRecords(
     values
   )
 
-  return params.records.length
+  return dedupedRows.length
 }
 
 /**
@@ -285,18 +303,25 @@ export async function updateRecordEmbeddings(
 ): Promise<number> {
   if (updates.length === 0) return 0
   const embeddedAt = new Date()
-  let updated = 0
+
+  // One set-based UPDATE ... FROM (VALUES ...) instead of a round-trip per row.
+  const params: unknown[] = [analysisId, model, embeddedAt]
+  const rows: string[] = []
+  let p = 4
   for (const u of updates) {
     const vectorStr = `[${Array.from(u.vector).join(',')}]`
-    const result = await pool.query(
-      `UPDATE ingested_records
-       SET embedding = $4, embedding_text = $5, embedded_at = $6
-       WHERE analysis_id = $1 AND model = $2 AND record_id = $3`,
-      [analysisId, model, u.recordId, vectorStr, u.text, embeddedAt]
-    )
-    updated += result.rowCount ?? 0
+    rows.push(`($${p++}::text, $${p++}::vector, $${p++}::text)`)
+    params.push(u.recordId, vectorStr, u.text)
   }
-  return updated
+
+  const result = await pool.query(
+    `UPDATE ingested_records AS r
+     SET embedding = v.embedding, embedding_text = v.embedding_text, embedded_at = $3
+     FROM (VALUES ${rows.join(', ')}) AS v(record_id, embedding, embedding_text)
+     WHERE r.analysis_id = $1 AND r.model = $2 AND r.record_id = v.record_id`,
+    params
+  )
+  return result.rowCount ?? 0
 }
 
 /** Query ingested records — aggregate, filter, or sample */
@@ -421,7 +446,7 @@ async function queryFilter(
   model: string,
   query: FilterQuery
 ): Promise<Record<string, unknown>[]> {
-  const limit = Math.min(query.limit || 20, 200)
+  const limit = Math.min(query.limit || 20, query.cap ?? 200)
 
   const conditions = [
     'analysis_id = $1',
@@ -453,7 +478,7 @@ async function querySample(
   model: string,
   query: SampleQuery
 ): Promise<Record<string, unknown>[]> {
-  const sampleSize = Math.min(query.sampleSize || 5, 50)
+  const sampleSize = Math.min(query.sampleSize || 5, query.cap ?? 50)
 
   // Delegate to proximity-aware path when where, proximity, or graph stratifiers are provided
   if (query.where || query.proximity || (query.stratifiers && query.stratifiers.length > 0)) {

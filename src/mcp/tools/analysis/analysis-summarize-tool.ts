@@ -135,17 +135,21 @@ When NOT to use: for the first ingestion of a session — use analysis_ingest, w
         this.validateModel(resolvedModel)
       }
 
+      // Records are aggregated into a summary server-side and never reach the
+      // LLM's context, so raise the per-query row ceiling to the advertised cap.
       const records =
         where && Object.keys(where).length > 0
           ? await queryIngestedData(analysis_id, {
               mode: 'filter',
               where,
               limit: max_records,
+              cap: MAX_RECORDS_CAP,
               model: resolvedModel
             })
           : await queryIngestedData(analysis_id, {
               mode: 'sample',
               sampleSize: max_records,
+              cap: MAX_RECORDS_CAP,
               model: resolvedModel
             })
 

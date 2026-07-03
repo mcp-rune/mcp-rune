@@ -128,13 +128,16 @@ export async function detectGaps(
 
   const conditions: string[] = []
   const baseParams: unknown[] = []
-  let paramIdx = 1
+  // $1 is the query embedding vector (prepended per template below), so filter
+  // placeholders start at $2.
+  let paramIdx = 2
 
   if (filters.recordId) {
     conditions.push(`tool_args->>'id' = $${paramIdx++}`)
     baseParams.push(filters.recordId)
   }
   if (filters.modelName) {
+    // Last condition — no further placeholders, so no increment needed.
     conditions.push(`tool_args->>'model' = $${paramIdx}`)
     baseParams.push(filters.modelName)
   }
