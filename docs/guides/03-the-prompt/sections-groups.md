@@ -55,7 +55,7 @@ Left column is what the LLM walks the user through; right column is what `valida
 | --- | --- | --- |
 | Purpose | User-facing workflow | Validation & technical organization |
 | Contains | `title`, `description`, `required`, `groups[]` | `fields[]`, `required`, `conditional`, `validateSection` |
-| Used by | `generateFlowDiagramFromConfig()`, `getSections()` | `validateSection()`, `getProgress()` |
+| Used by | `.flowDiagram()` (flow-diagram generator), `StatefulFormStrategy.getSections()` | `StatefulFormStrategy.validateSection()`, `getProgress()` |
 | Granularity | Coarse (user journey) | Fine (field validation) |
 
 ## Defining sections
@@ -140,7 +140,7 @@ Sections support a `content` property with `intro` and `notes` that are automati
 | `content.notes` | `string[]` | Array of notes rendered as a bullet list after the field table and enum tables. |
 | `askPrompt` | `string` | Custom prompt shown as "Ask the user: ..." at the end of the section. |
 
-**How it works**: When `allSections()` or `generateSectionDocumentation()` renders a section, it automatically:
+**How it works**: When `.allSections()` or `.section()` renders a section, it automatically:
 
 1. Adds `content.intro` before the field table
 2. Generates the field table from `fieldDefinitions`
@@ -159,7 +159,7 @@ When a section contains multiple groups (`groups: ['group_a', 'group_b']`), each
 - `context` defaults to title-cased group name if absent (`snake_case_name` → "Snake Case Name")
 - Groups without `content` render just a heading and field table (no intro/notes)
 - Single-group sections are completely unchanged — they read from `section.content` as before
-- `context` and `content` on fieldGroups are ignored by StatefulStrategy (no breaking changes to validation)
+- `context` and `content` on fieldGroups are ignored by `StatefulFormStrategy` (no breaking changes to validation)
 
 ## Defining fieldGroups (simplified)
 
@@ -201,18 +201,19 @@ static fieldGroups = {
 
 ## Section helper methods
 
-`BasePrompt` provides helper methods for working with sections:
+`BasePrompt` keeps a small set of section-related statics:
 
 | Method | Description |
 | --- | --- |
-| `getSectionFields(sectionName)` | Get all field definitions for a section (across all its groups) |
-| `getSectionFieldNames(sectionName)` | Get all field names for a section |
 | `getSectionForGroup(groupName)` | Reverse lookup: find which section a group belongs to |
-| `getSectionNumber(sectionName)` | Get 1-based section number for display |
+| `getDefaults()` | Collect default values across all field definitions |
+| `getStrategyIntro()` | Strategy-specific description fragment for `static description` |
+
+For section enumeration with metadata (fields, numbering, progress), use `StatefulFormStrategy.getSections(PromptClass)` from the [Stateful Strategies guide](./stateful.md).
 
 ## Flow diagram generation
 
-The `generateFlowDiagramFromConfig()` method uses sections to create a compact flow overview:
+The builder's `.flowDiagram()` step (backed by `generateFlowDiagram` in `generators/flow-diagram-generator.ts`) uses sections to create a compact flow overview:
 
 ```js file=examples/sections-groups-guide-03.js
 // Auto-generated from sections config

@@ -16,14 +16,14 @@ import { StdioServer, HttpServer, createServer } from '@mcp-rune/mcp-rune/server
 import {
   BaseTool,
   ToolRegistry,
-  TOOL_CATEGORIES,
   DATA_TOOL_CLASSES,
   FORM_STRATEGY_TOOL_CLASSES
 } from '@mcp-rune/mcp-rune/tools'
 import { wrapToolHandler, loggingInterceptor, errorInterceptor } from '@mcp-rune/mcp-rune/tools'
 import type { ToolInterceptor, ToolContext, ToolRegistryConfig } from '@mcp-rune/mcp-rune/tools'
 
-import { DataLayer } from '@mcp-rune/mcp-rune/data-layer'
+import { createInMemoryDataLayer } from '@mcp-rune/mcp-rune/data-layer'
+import type { DataLayer } from '@mcp-rune/mcp-rune/data-layer'
 import { ModelService, EndpointResolver } from '@mcp-rune/mcp-rune/model-service'
 import { jsonApiConvention, defaultConvention } from '@mcp-rune/mcp-rune/api-conventions'
 
@@ -62,28 +62,28 @@ export {}
 
 | Subpath | What lives there |
 | --- | --- |
-| `@mcp-rune/mcp-rune/core` | Framework primitives — `ApiClient` (type), `Config`, `loadConfig`, `frameworkConfigSchema` (logging/runtime fragment to spread into your schema), env helpers, response helpers, startup tracker. **Does NOT contain `BaseModel`** — that moved to `/models`. |
-| `@mcp-rune/mcp-rune/models` | `BaseModel`, `AttributeDefinition`, `AssociationConfig`, the 17 built-in kind descriptors. |
+| `@mcp-rune/mcp-rune/core` | Framework primitives — `ApiClient` + `ApiClientHttpError` (types), `Config`, `loadConfig`, `frameworkConfigSchema` (logging/runtime fragment to spread into your schema), env helpers, response helpers, startup tracker. **Does NOT contain `BaseModel`** — that moved to `/models`. |
+| `@mcp-rune/mcp-rune/models` | `BaseModel`; the kinds vocabulary — `getKind`, `kindOptsFrom`, `resolveInputType`, `registerKind`, `UnknownKindError`, `KnownKind`; `AttributeDefinition`, `AssociationConfig`; the boot validators (`validateRegistries`, `SchemaValidationError`); the 17 built-in kind descriptors. |
 | `@mcp-rune/mcp-rune/server` | `StdioServer`, `HttpServer`, `createServer` factory. |
-| `@mcp-rune/mcp-rune/tools` | `BaseTool`, `ToolRegistry`, `DATA_TOOL_CLASSES`, `FORM_STRATEGY_TOOL_CLASSES`, interceptors, types. |
-| `@mcp-rune/mcp-rune/data-layer` | `DataLayer` interface + in-memory stub. |
+| `@mcp-rune/mcp-rune/tools` | `BaseTool`, `SaveModelBaseTool`, `ToolRegistry`, all five `*_TOOL_CLASSES` maps (`DATA_`, `FORM_STRATEGY_`, `ANALYSIS_`, `OPERATIONS_`, `DOMAIN_`) and their tool + family-base classes, interceptors, `wrapToolHandler`, types. |
+| `@mcp-rune/mcp-rune/data-layer` | `DataLayer` interface (type) + in-memory stub (`createInMemoryDataLayer`, `InMemoryDataLayer`); re-exports `ModelService` / `EndpointResolver` and the api-conventions; the typed error taxonomy `DataLayerError`, `RecordNotFoundError`, `ApiRequestError`, `translateApiError`. |
 | `@mcp-rune/mcp-rune/model-service` | `ModelService`, `EndpointResolver` — the default `DataLayer` adapter. |
-| `@mcp-rune/mcp-rune/api-conventions` | `BaseConvention`, `jsonApiConvention`, `defaultConvention` — the wire-format layer. |
-| `@mcp-rune/mcp-rune/prompts` | `BasePrompt`, `PromptContentBuilder`, `derivePromptSchema`. |
+| `@mcp-rune/mcp-rune/api-conventions` | `BaseConvention`, `jsonApiConvention`, `defaultConvention`, `ErrorResponse` — the wire-format layer. |
+| `@mcp-rune/mcp-rune/prompts` | `BasePrompt`, `BasePromptRegistry`, `PromptContentBuilder`, `derivePromptSchema`, `validatePromptClass`. |
 | `@mcp-rune/mcp-rune/apps` | `AppRegistry`, `createDefaultAppRegistry`, generic app factories (`createFindModelApp`, `createShowModelApp`, `createPickModelApp`, `createMultiPickModelApp`, `createViewSelectionApp`, `createModelFormApp`, `createWorkflowPanelApp`). |
-| `@mcp-rune/mcp-rune/apps/kind-renderers` | DOM kind renderers (`getKindRenderer`, `registerKindRenderer`, `renderCellValue`) for custom-app authors. |
-| `@mcp-rune/mcp-rune/api-extensions` | `ApiExtension` contract. |
-| `@mcp-rune/mcp-rune/api-extensions/custom-actions` | Built-in: per-model non-CRUD verbs. |
-| `@mcp-rune/mcp-rune/api-extensions/search` | Built-in: `SearchService`, `SearchRequestShaper`, the `search_records` + `get_filters_guide` tools. |
-| `@mcp-rune/mcp-rune/domain` | `DomainRegistry`, `WorkflowDefinition`, business-rule types. |
+| `@mcp-rune/mcp-rune/apps/kind-renderers` | DOM kind renderers (`getKindRenderer`, `registerKindRenderer`, `renderCellValue`, `helpers`) for custom-app authors. |
+| `@mcp-rune/mcp-rune/api-extensions` | `ApiExtension` contract; the summary-strategy authoring types `SummaryStrategy`, `SummaryInput`, `SummaryOutput`. |
+| `@mcp-rune/mcp-rune/api-extensions/custom-actions` | Built-in: per-model non-CRUD verbs (`customActionsExtension`, `customActionsConfig`, `ModelActionTool`). |
+| `@mcp-rune/mcp-rune/api-extensions/search` | Built-in: `SearchService`, `SearchRequestShaper`, `RailsSearchRequestShaper`, `SearchEnabledDataLayer`, `withSearchEnabledDataLayer`, the `search_records` + `get_filters_guide` tools; types `SearchGroup`, `SearchServiceOptions`. |
+| `@mcp-rune/mcp-rune/domain` | `DomainRegistry`, `InMemoryDomainAdapter`, `WorkflowDefinition`, `WorkflowRegistry`, `SemanticSearch`, business-rule types. |
 | `@mcp-rune/mcp-rune/oauth2` | `OAuthService` — issuance, introspection, revocation, refresh. |
-| `@mcp-rune/mcp-rune/extensions` | `HttpExtension` contract; mount-order rules. |
+| `@mcp-rune/mcp-rune/extensions` | The `HttpExtension` and `ToolFlowExtension` contracts, `defineContextKey`; mount-order rules. |
 | `@mcp-rune/mcp-rune/extensions/cimd` | Built-in: Client ID Metadata Document. |
 | `@mcp-rune/mcp-rune/extensions/center-of-control` | Built-in: OAuth control-plane extension. |
-| `@mcp-rune/mcp-rune/runtime` | `logger`, `tracing`, `errorTracking`, `embeddings`, `vectorStorage`, `requestContext`, `toolOutputAdapters` facades. |
+| `@mcp-rune/mcp-rune/runtime` | `logger`, `tracing`, `errorTracking`, `embeddings`, `vectorStorage`, `requestContext`, `toolOutputAdapters` facades (record-semantic and path queries live inside the `vectorStorage` facade). |
 | `@mcp-rune/mcp-rune/runtime/vendor/pgvector` | `createPgvectorAdapter` — `VectorStorageAdapter` backed by Postgres + pgvector. |
-| `@mcp-rune/mcp-rune/db` | `setPool`, `query` — minimal PG client. |
-| `@mcp-rune/mcp-rune/db/migrations` | Versioned SQL migrations as a JS array — feed to your migration runner. |
+| `@mcp-rune/mcp-rune/db` | `getPool`, `setPool`, `query` — minimal PG client. |
+| `@mcp-rune/mcp-rune/db/migrations` | Versioned SQL migrations as a JS array plus the drift guards `getPendingMigrations`, `assertMigrationsCurrent`, `PendingMigrationsError` — feed to your migration runner. |
 
 ## Why subpath imports
 

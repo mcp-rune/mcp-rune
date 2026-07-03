@@ -36,7 +36,7 @@ The 2854-pages row is the outlier the **left** panel feeds in; the **middle** pa
 1. Bail out if the page has fewer than **4 records** (z-scores need a meaningful population). `appliesTo` enforces this.
 2. **Numeric fields**: compute mean + standard deviation per field; flag any record whose `|value − mean| / stddev > 2`. Skip fields with stddev = 0 (all values identical).
 3. **Categorical fields** (≤ 20 distinct values, by the same heuristic as `distribution`): flag any value whose share is < 5% (rounded).
-4. Collect `outlier_records` as an array of `{id, field, value, z_score?}` entries (limited to 20 per page to keep the memory row size bounded).
+4. Collect `numeric_outliers` as an array of `{id, field, value, z_score}` entries and `rare_values` as `{field, value, count, share}` entries (each list limited to 5 per page — `MAX_REPORTED` — to keep the memory row size bounded).
 
 Source: [`src/mcp/analysis-layer/summary-strategies/anomaly.ts`](../../../../src/mcp/analysis-layer/summary-strategies/anomaly.ts).
 

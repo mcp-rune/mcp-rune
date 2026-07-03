@@ -45,13 +45,14 @@ export class AnalysisQueryTool extends BaseAnalysisTool {
   }
 
   override get baseDescription(): string {
-    return `Query ingested data and stored findings from an analysis session. Supports five modes for different types of reasoning:
+    return `Query ingested data and stored findings from an analysis session. Supports six modes for different types of reasoning:
 
 - describe: Discover available fields, their types, and query syntax. Call this before querying to understand the data shape and learn which operators are available.
 - semantic: Search by meaning. target:'findings' (default) recalls stored findings and page summaries — use for qualitative questions ("what issues were found?"). target:'records' ranks the ingested records themselves by similarity to the query, composable with "where" for hybrid semantic + filter retrieval ("records like X, among status=active").
 - aggregate: Get counts and distributions by field. Use for quantitative questions ("how many records per status?", "what's the distribution of types?").
 - filter: Find specific records matching criteria. Supports exact match and range operators ($gt, $gte, $lt, $lte) for numeric and date fields.
 - sample: Get a sample of records. Supports stratify_by for discrete field stratification, "where" for pre-filtering, and "proximity" for date-windowed sampling with temporal bucket stratification. All three compose freely.
+- path: Explain how two records are connected. Walks the session's edge graph (from_model/from_id to to_model/to_id) and returns the shortest typed edge chains, e.g. book/1 —belongsTo:author→ author/7. Requires hop-expanded ingestion (hop_depth > 0).
 
 Typical reasoning flow:
 1. Start with describe to discover available fields and query syntax

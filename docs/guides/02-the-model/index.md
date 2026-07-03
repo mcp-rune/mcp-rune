@@ -12,7 +12,7 @@ That makes this section the foundation for everything in Parts I and II. The cha
 2. [Defining a model](./defining-a-model.md) — `BaseModel`, the static fields the framework reads, and the smallest realistic example.
 3. [Attributes and kinds](./attributes-and-kinds.md) — the `type:` taxonomy (17 built-in kinds) and how a single attribute value moves through API ⇄ internal ⇄ HTML representations.
 4. [Associations](./associations.md) — `belongsTo` and `hasMany`, how foreign keys are inferred, and what derivation gets from them.
-5. [Validation and defaults](./validation-and-defaults.md) — `required`, `default`, `validation: { min, max }`, and what fires at form-validate time vs at write time.
+5. [Validation and defaults](./validation-and-defaults.md) — `required`, `default`, `validation: { minimum, maximum }`, and what fires at form-validate time vs at write time.
 6. [Definition vs consumption](./definition-vs-consumption.md) — why model code lives in `models/` and the helpers that consume it live in sibling layers. The architectural seam the next chapter builds on.
 
-When you finish chapter 6, you'll have the full mental model needed to read chapter 3 (Prompt) the way the framework treats it: not as an independent thing, but as a Model projection with reasoning rules layered on top.
+When you finish the six guides in this chapter, you'll have the full mental model needed to read chapter 3 (Prompt) the way the framework treats it: not as an independent thing, but as a Model projection with reasoning rules layered on top.

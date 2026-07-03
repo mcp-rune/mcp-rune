@@ -40,8 +40,7 @@ mcp-rune/                              (the framework)
     │   ├─ model-layer/                What CONSUMES a Model — per-model-bound reads
     │   ├─ data-layer/                 Backend I/O seam — DataLayer + adapters + api-extensions
     │   ├─ analysis-layer/             Per-model analysis projections (edges, embeddings)
-    │   ├─ prompts/                    What a Prompt IS — BasePrompt + builders + generators
-    │   ├─ prompt-layer/               What CONSUMES a Prompt — registry, cache, validator
+    │   ├─ prompts/                    What a Prompt IS (BasePrompt + builders + generators) plus the registry/cache/validator that consume it (file-name split)
     │   ├─ apps/                       Schema-driven interactive UIs
     │   ├─ tools/                      Polymorphic CRUD + form-strategy tools
     │   ├─ domain/                     Concepts, business rules, workflows
@@ -82,20 +81,20 @@ Tools, apps, prompts, and api-extensions reach the rest of the framework through
 
 - **`DataLayer`** — per-authenticated-request backend I/O. Tools and apps call `this.dataLayer.find()`, `.list()`, `.searchNormalized()`, `.dispatch()`. Built-in implementations: in-memory stub, `ModelService` (HTTP via `ApiClient`), `SearchEnabledDataLayer` wrapper.
 - **`ModelLayer`** — per-model-bound, synchronous reads against the model's static config. Surface: `resolveDerivedFields(records)`. Constructed via `modelLayer(name)`; no I/O, no DB. Kind descriptors are shared vocabulary read directly from `src/mcp/models/kinds/` (ADR 0009), not a layer method.
-- **`AnalysisLayer`** — per-model-bound, per-request analysis projections that carry the authenticated `DataLayer` for any I/O they need. Surface today: `extractEdges(record)`, `buildEmbeddingText(record)`. Designed to host `walkHops`, `summarize`, `buildStratifier` next.
+- **`AnalysisLayer`** — per-model-bound, per-request analysis projections that carry the authenticated `DataLayer` for any I/O they need. Surface today: `extractEdges(record)`, `buildEmbeddingText(record)`, `walkHops(rootRecords, options)`. Designed to host `summarize` and `buildStratifier` next.
 
-Projection-layer code never imports the underlying helpers (`ModelService`, `ApiClient`, `resolveDerivedFields`, `extractEdgesFromRecord`, …) directly. The boundary is enforced by `no-restricted-imports` in `eslint.config.js`. See [`AGENTS.md`](../../../AGENTS.md) for the canonical rules.
+Projection-layer code never imports the underlying helpers directly. For layer-internal helpers (`resolveDerivedFields`, edge extraction, multi-hop fetch, …) the boundary is enforced by `no-restricted-imports` in `eslint.config.js`; keeping `ModelService` and `ApiClient` behind the `DataLayer` interface is a convention documented in [`AGENTS.md`](../../../AGENTS.md), which holds the canonical rules for both.
 
 ## Definition vs consumption
 
 The folder layout reflects a deliberate split: **what a thing IS** lives separately from **what consumes it**.
 
-| Declaration        | Consumption                                                              |
-| ------------------ | ------------------------------------------------------------------------ |
-| `src/mcp/models/`  | `src/mcp/model-layer/`, `src/mcp/data-layer/`, `src/mcp/analysis-layer/` |
-| `src/mcp/prompts/` | `src/mcp/prompt-layer/`                                                  |
+| Declaration | Consumption |
+| --- | --- |
+| `src/mcp/models/` | `src/mcp/model-layer/`, `src/mcp/data-layer/`, `src/mcp/analysis-layer/` |
+| `src/mcp/prompts/` declaration files | `src/mcp/prompts/` consumption files (`prompt-registry`, `prompt-cache`, `prompt-validator`, `form-strategies/`) |
 
-`models/` holds `base-model.ts`, `model-definitions.ts`, and the `kinds/` registry — purely descriptive. Helpers that read or transform a model belong in `model-layer/` or its peers. Same dichotomy for `prompts/` vs `prompt-layer/`. When future seams arrive (an `auth-layer`, a `workflow-layer`), they will follow the same pattern: a sibling consumption folder, never new helpers dumped into the declaration folder.
+`models/` holds `base-model.ts`, `model-definitions.ts`, and the `kinds/` registry — purely descriptive. Helpers that read or transform a model belong in `model-layer/` or its peers. The prompt subsystem applies the same dichotomy by file-name convention inside one folder. When future seams arrive (an `auth-layer`, a `workflow-layer`), they will follow the same pattern: consumption code kept clearly apart from the declarations it reads — by sibling folder or by file-name convention — never new helpers dumped into the declaration side.
 
 ## Design principles
 
@@ -104,7 +103,7 @@ The framework is held to seven invariants. They are the test you can apply to an
 - **Model is the single source of truth** — model declarations drive tools, prompts, forms, and docs. Change the model, everything downstream re-derives.
 - **Convention over configuration** — sensible defaults, override when needed. The default path should always be the short path.
 - **Polymorphic tools** — 9 bundled tools (6 CRUD + 3 form-strategy) serve all models, keeping LLM context clean. Adding the eleventh model does not add a tenth tool.
-- **Category-driven auth** — tools declare a category, the framework infers auth requirements. You never wire auth on a per-tool basis.
+- **Declarative auth** — tools declare static booleans (`requiresAuth`, `requiresVectorStorage`, `requiresDomainRegistry`, `requiresPromptRegistry`) and the registry wires auth and services from them. You never wire auth imperatively per tool call.
 - **API-agnostic** — pluggable `DataLayer`, conventions, and search request shapers for any REST backend. The framework knows nothing about your wire format until you tell it.
 - **Layer discipline** — projection-layer code consumes `DataLayer`, `ModelLayer`, `AnalysisLayer` only. Concrete adapters and internal helpers stay behind the interface. The eslint guard makes this a build error, not a guideline.
 - **Pure framework** — zero domain knowledge; your server adds the domain. mcp-rune ships no built-in business concepts.

@@ -123,7 +123,7 @@ The typecheck prints nothing on success; the test prints `1 passed`. Both run in
 
 ## The framework
 
-The published `mcp-rune` package surfaces its capabilities through a flat list of **subpath exports** — one entry per concern, so you only pull in the surface you actually need. The authoritative list is the `"exports"` field in `package.json`; verbatim today:
+The published `mcp-rune` package surfaces its capabilities through a flat list of **subpath exports** — one entry per concern, so you only pull in the surface you actually need. The authoritative list is the `"exports"` field in `package.json`; today:
 
 <!-- illustration: project-structure#framework -->
 
@@ -135,7 +135,7 @@ The published `mcp-rune` package surfaces its capabilities through a flat list o
     ├─ models                     BaseModel, AttributeDefinition, AssociationConfig,
     │                             kind descriptors
     ├─ prompts                    BasePrompt, PromptContentBuilder, derivePromptSchema
-    ├─ tools                      BaseTool, ToolRegistry, categories, interceptors
+    ├─ tools                      BaseTool, ToolRegistry, interceptors, tool pipeline
     ├─ apps                       AppRegistry, generic app factories
     │   └─ kind-renderers         DOM renderers (getKindRenderer, registerKindRenderer)
     ├─ server                     StdioServer, HttpServer, createServer

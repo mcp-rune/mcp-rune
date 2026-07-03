@@ -28,15 +28,15 @@ Every tool takes a `model:` argument and uses the registry to look up the matchi
 
 ## The bundled nine
 
-### CRUD — six tools that hit `DataLayer`
+### CRUD — the six tools of `DATA_TOOL_CLASSES`
 
 | Tool | What it does | Reaches |
 | --- | --- | --- |
-| `list_models` | Lists every registered model + its schema summary | `this.modelLayer` only — no I/O |
-| `find_records` | Paginated read for a model, with filters and includes | `this.dataLayer.list` |
-| `create_model` | Validated write — runs schema + association passes | `this.dataLayer.dispatch` |
-| `update_model` | Same as create, but updates by id | `this.dataLayer.dispatch` |
-| `delete_model` | Delete by id | `this.dataLayer.dispatch` |
+| `list_models` | Lists every registered model + its schema summary | `this.models` registry only — no I/O |
+| `find_records` | Paginated read for a model, with filters and includes | `this.dataLayer.find` / `.list` |
+| `create_model` | Validated write — runs schema + association passes | `this.dataLayer.create` |
+| `update_model` | Same as create, but updates by id | `this.dataLayer.update` |
+| `delete_model` | Delete by id | `this.dataLayer.delete` |
 | `bulk_action_models` | Batch create / update / delete in one call | `this.dataLayer.dispatch` |
 
 All six are wired in via `DATA_TOOL_CLASSES` from `@mcp-rune/mcp-rune/tools`. In your `config.ts`:
@@ -64,7 +64,7 @@ There is no per-model wiring. `ToolRegistry` reads the `models:` map and the too
 | Tool | What it does |
 | --- | --- |
 | `get_prompt_guide` | Returns the prompt content (chapter 3) for one model — the LLM's form filler |
-| `validate_form` | Runs the kind/association validators on a partial payload — no backend call |
+| `validate_form` | Runs the kind validators on a partial payload — no backend call |
 | `get_form_summary` | Returns the "what would I be submitting" human-readable summary |
 
 These three tools don't take an authenticated `dataLayer` — `validate_form` deliberately can't write, because its purpose is to give the LLM cheap feedback before it commits. They read kind descriptors from `src/mcp/models/kinds/` (shared vocabulary — ADR 0009) and consume `PromptRegistry` for the guide text.
@@ -76,7 +76,7 @@ These three tools don't take an authenticated `dataLayer` — `validate_form` de
 | `search_records`    | When the `search` ApiExtension is registered |
 | `get_filters_guide` | Same                                         |
 
-Both ship in `@mcp-rune/mcp-rune/data-layer/api-extensions/search`. They're not part of `DATA_TOOL_CLASSES` because not every backend has a search endpoint — opting in is a single line in `config.ts`. See [API extensions](../10-extensions/api-extensions.md).
+Both ship in `@mcp-rune/mcp-rune/api-extensions/search`. They're not part of `DATA_TOOL_CLASSES` because not every backend has a search endpoint — opting in is a single line in `config.ts`. See [API extensions](../10-extensions/api-extensions.md).
 
 ## Why the surface stops at nine
 
@@ -104,4 +104,4 @@ The [`bookshelf`](https://github.com/mcp-rune/examples/tree/main/bookshelf) exam
 
 ## What's next
 
-When a bespoke verb doesn't fit the polymorphic shape, you reach for [Tool creation](./tool-creation.md) and write a `BaseTool` subclass. The next chapter covers the contract: `paramsSchema`, `category`, `execute`, the interceptor pipeline, and the moments you'd customize each.
+When a bespoke verb doesn't fit the polymorphic shape, you reach for [Tool creation](./tool-creation.md) and write a `BaseTool` subclass. The next chapter covers the contract: `inputSchema` (a Zod raw shape), the static `requires*` flags, `execute`, the interceptor pipeline, and the moments you'd customize each.

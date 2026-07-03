@@ -1,6 +1,6 @@
-> **Customization:** none — this chapter is the architectural rule for where declaration code lives versus where consumption code lives. It applies equally to mcp-rune itself (`src/mcp/models/` vs `src/mcp/model-layer/`) and to your own server (your `models/` folder vs how the framework reads them). The split is enforced by `no-restricted-imports`; you cannot bypass it.
-
 # Definition vs consumption
+
+> **Customization:** none — this chapter is the architectural rule for where declaration code lives versus where consumption code lives. It applies equally to mcp-rune itself (`src/mcp/models/` vs `src/mcp/model-layer/`) and to your own server (your `models/` folder vs how the framework reads them). The split is enforced by `no-restricted-imports`; you cannot bypass it.
 
 You've now seen everything that goes _into_ a Model declaration. This chapter answers the next obvious question: _who reads it, and where does that reader live?_
 
@@ -39,15 +39,23 @@ The framework's own `eslint.config.js` declares:
     patterns: [
       {
         group: [
-          '#src/mcp/model-layer/derived-fields*',
-          '#src/mcp/model-layer/field-names*',
-          '#src/mcp/model-layer/schema-derivation*',
-          '#src/mcp/model-layer/validators*'
+          '**/model-layer/derived-fields*',
+          '**/model-layer/field-names*',
+          '**/model-layer/schema-derivation*',
+          '**/model-layer/validators*'
         ],
         message:
           'Use the modelLayer factory (deps.modelLayer / context.modelLayer) instead of importing model-layer helpers directly.'
+      },
+      {
+        group: [
+          '**/analysis-layer/edge-extraction*',
+          '**/analysis-layer/graph-stratifiers*',
+          '**/analysis-layer/multi-hop-fetch*'
+        ],
+        message:
+          'Use the analysisLayer factory (deps.analysisLayer / context.analysisLayer) instead of importing analysis-layer helpers directly.'
       }
-      // …
     ]
   }
 ]
@@ -76,7 +84,7 @@ The simple preset ships no eslint config. You don't need to repeat the guard bec
 
 - `base-model.ts` — the abstract class your models extend.
 - `model-definitions.ts` — the type definitions (`AttributeDefinition`, `AssociationConfig`, …) you write against.
-- `kinds/` — the 17 built-in kind descriptors (`string.ts`, `enum.ts`, `datetime.ts`, …) covered in chapter 2.
+- `kinds/` — the 17 built-in kind descriptors (`string.ts`, `enum.ts`, `datetime.ts`, …) covered earlier in this chapter.
 
 That's it. There is no logic in this folder that _reads_ a model: no derivation, no validation, no record transformation, no edge extraction. Everything that interprets a model lives one folder over, in `model-layer/`, `data-layer/`, or `analysis-layer/`.
 
@@ -107,7 +115,7 @@ Inside `src/mcp/prompts/`:
 - **Declaration side**: `base-prompt.ts`, `prompt-definitions.ts`, `prompt-content-builder.ts`, `association-transformers.ts`, `generators/`. A prompt class is purely descriptive — it declares `fieldGroups`, `sections`, a `promptContent` getter.
 - **Consumption side**: `prompt-registry.ts`, `prompt-cache.ts`, `prompt-validator.ts`, `form-strategies/`. These are the runtime pieces that _consume_ a prompt class to validate input, cache derived schemas, and route through the right form strategy.
 
-When you author a `BookPrompt`, you write it in your server's `prompts/` folder (which is to your project what `src/mcp/prompts/` is to the framework). The framework's registry, cache, and form strategies read it. You never reach back into the consumption files from inside your prompt class — the dependency only flows one way, enforced by the same `no-restricted-imports` block (`src/mcp/prompts/**` cannot import the internal helpers in `model-layer/derived-fields*`, `model-layer/validators*`, etc., or reach `ApiClient`/`ModelService` directly).
+When you author a `BookPrompt`, you write it in your server's `prompts/` folder (which is to your project what `src/mcp/prompts/` is to the framework). The framework's registry, cache, and form strategies read it. You never reach back into the consumption files from inside your prompt class — the dependency only flows one way, enforced by the same `no-restricted-imports` block (`src/mcp/prompts/**` cannot import the internal helpers in `model-layer/derived-fields*`, `model-layer/validators*`, and the other guarded layer modules).
 
 ## What the next chapter assumes
 
@@ -117,4 +125,4 @@ But before we get there, chapter 3 introduces the Prompt. The Model is now fully
 
 ## What's next
 
-The last chapter of this section, [Derivation overview](./derivation-overview.md), is a one-page map of every framework surface that's derived from your Model declaration, with a pointer to the chapter that covers each one. Skim it before moving on, then chapter 3 picks up with the Prompt.
+This closes the Model chapter. [Chapter 3 — The Prompt](../03-the-prompt/) picks up with the first major consumer of the Model: the prompt that teaches an LLM how to fill the form your model defines. If you want a recap of everything the Model drives before moving on, [Derivation overview](./derivation-overview.md) — the map you started this chapter with — is the one-page summary.

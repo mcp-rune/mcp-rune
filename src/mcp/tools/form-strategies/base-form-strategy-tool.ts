@@ -6,7 +6,7 @@
  * - Work with prompt classes and strategies
  * - Are generic and reusable across servers
  *
- * Examples: get_prompt_guide, validate_form, get_form_summary, get_form_progress
+ * Examples: get_prompt_guide, validate_form, get_form_summary
  */
 
 import type { BaseFormStrategy } from '#src/mcp/prompts/form-strategies/base-form-strategy.js'

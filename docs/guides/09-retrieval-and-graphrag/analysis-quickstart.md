@@ -8,14 +8,14 @@ You'll spend about twenty minutes: ~3 on infrastructure, ~7 on the field-level t
 
 ## Prerequisites
 
-- Part 1 of the [Quickstart](../01-getting-started/quickstart.md) running locally (i.e. the `bookshelf` example is scaffolded as `my-app` and starts).
+- Part 1 of the [Quickstart](../01-getting-started/quickstart.md) running locally — specifically the bookshelf template scaffolded as `bookshelf-demo` (`rune new bookshelf-demo --template bookshelf`), which ships the 5,000-book dataset this guide leans on.
 - Docker (for one container) and a free port on `5432`.
 
 The analysis tools (`analysis_ingest`, `analysis_summarize`, `analysis_query`, `analysis_act`, `analysis_clear`, `analysis_store`) are gated by `requiresVectorStorage`. Without pgvector, they don't show up in `tools/list` — that's by design (see [Analysis Memories](./analysis-memories.md#troubleshooting)).
 
 ## 1. Start pgvector
 
-Drop this `docker-compose.yml` next to `my-app/server.ts` and run `docker compose up -d`:
+Drop this `docker-compose.yml` into `bookshelf-demo/` (next to `src/server.ts`) and run `docker compose up -d`:
 
 ```yaml
 services:
@@ -29,7 +29,7 @@ services:
       - '5432:5432'
 ```
 
-Then apply mcp-rune's migrations against the new database. The framework ships migrations as data:
+Then apply mcp-rune's migrations against the new database. The framework ships migrations as data. (`ANALYSIS_ENABLED` below is only an input to this snippet's own filter expression — the framework itself never reads it.)
 
 ```bash
 DATABASE_URL=postgres://bookshelf:bookshelf@localhost:5432/bookshelf \
@@ -44,11 +44,11 @@ await pool.end();
 "
 ```
 
-That creates the two tables the feature relies on: `analysis_memories` (vectors, JSONB) and `ingested_records` (raw rows, JSONB).
+That creates the three tables the feature relies on: `analysis_memories` (vectors + JSONB), `ingested_records` (raw rows + optional per-record embeddings), and `ingested_edges` (the relationship graph).
 
 ## 2. Wire vector storage into the bookshelf
 
-Open `my-app/server.ts` and add the storage init before `createServer` is called:
+Open `bookshelf-demo/src/server.ts` and add the storage init before `createServer` is called:
 
 ```ts file=src/pool.ts
 import { Pool } from 'pg'
@@ -75,7 +75,49 @@ vectorStorage.initVectorStorage({
 })
 ```
 
-When the adapter is missing — say you forget `DATABASE_URL` and skip init — `initVectorStorage` returns `false` and the six analysis tools simply stay out of `tools/list`. No crash, no noisy error path.
+Storage init is only half the gate. The bookshelf template registers just the data and form-strategy tool classes, so the analysis tools also need to be spread into the registry's `toolClasses`, with `vectorStorageEnabled` telling the registry the adapter is live. In the same `src/server.ts`, extend the existing `new ToolRegistry({ … })` call:
+
+```ts file=src/server-registry.ts
+import {
+  ToolRegistry,
+  DATA_TOOL_CLASSES,
+  FORM_STRATEGY_TOOL_CLASSES,
+  ANALYSIS_TOOL_CLASSES
+} from '@mcp-rune/mcp-rune/tools'
+import { vectorStorage } from '@mcp-rune/mcp-rune/runtime'
+
+const toolRegistry = new ToolRegistry({
+  toolClasses: {
+    ...DATA_TOOL_CLASSES,
+    ...FORM_STRATEGY_TOOL_CLASSES,
+    ...ANALYSIS_TOOL_CLASSES // add: the analysis tools must be in the class map
+  },
+  // …keep the template's existing config here (models, serverContext, createApiClient)…
+  vectorStorageEnabled: vectorStorage.isVectorStorageEnabled() // add: lets requiresVectorStorage tools register
+})
+```
+
+```js file=src/server-registry.js
+import {
+  ToolRegistry,
+  DATA_TOOL_CLASSES,
+  FORM_STRATEGY_TOOL_CLASSES,
+  ANALYSIS_TOOL_CLASSES
+} from '@mcp-rune/mcp-rune/tools'
+import { vectorStorage } from '@mcp-rune/mcp-rune/runtime'
+
+const toolRegistry = new ToolRegistry({
+  toolClasses: {
+    ...DATA_TOOL_CLASSES,
+    ...FORM_STRATEGY_TOOL_CLASSES,
+    ...ANALYSIS_TOOL_CLASSES // add: the analysis tools must be in the class map
+  },
+  // …keep the template's existing config here (models, serverContext, createApiClient)…
+  vectorStorageEnabled: vectorStorage.isVectorStorageEnabled() // add: lets requiresVectorStorage tools register
+})
+```
+
+When the adapter is missing — say you forget `DATABASE_URL` and skip init — `initVectorStorage` returns `false`, `isVectorStorageEnabled()` stays `false`, and the six analysis tools simply stay out of `tools/list`. No crash, no noisy error path.
 
 > **Behind on migrations?** If `DATABASE_URL` is set but the analysis migrations haven't been applied (e.g. after upgrading mcp-rune), the analysis tools register but fail at call time with `column "embedding" does not exist`. Guard against it by calling `assertMigrationsCurrent(pool, { features: ['core', 'analysis'] })` before `initVectorStorage` — it fails fast at startup with the pending list and `Run: npm run db:migrate`. See [Database setup → Detecting drift at startup](../11-reference/database-setup.md#detecting-drift-at-startup).
 
@@ -83,12 +125,11 @@ When the adapter is missing — say you forget `DATABASE_URL` and skip init — 
 
 ```bash
 DATABASE_URL=postgres://bookshelf:bookshelf@localhost:5432/bookshelf \
-ANALYSIS_ENABLED=true \
 BOOKSHELF_DATASET=large \
-npx @modelcontextprotocol/inspector -- npx tsx server.ts
+npx @modelcontextprotocol/inspector -- npx tsx src/server.ts
 ```
 
-Inside the Inspector, confirm the analysis tools are now visible — `analysis_ingest`, `analysis_summarize`, `analysis_query`, `analysis_act`, `analysis_clear`, `analysis_store` should all appear alongside the CRUD tools. If they don't, double-check `ANALYSIS_ENABLED` is `true` and `initVectorStorage` was called with a live adapter.
+Inside the Inspector, confirm the analysis tools are now visible — `analysis_ingest`, `analysis_summarize`, `analysis_query`, `analysis_act`, `analysis_clear`, `analysis_store` should all appear alongside the CRUD tools. If they don't, double-check `initVectorStorage` was called with a live adapter and that the registry got both halves from step 2: the `ANALYSIS_TOOL_CLASSES` spread and `vectorStorageEnabled`.
 
 ## 4. One strategy at a time
 
@@ -190,9 +231,8 @@ Stop the running Inspector, then:
 
 ```bash
 DATABASE_URL=postgres://bookshelf:bookshelf@localhost:5432/bookshelf \
-ANALYSIS_ENABLED=true \
 BOOKSHELF_DATASET=graph \
-npx @modelcontextprotocol/inspector -- npx tsx server.ts
+npx @modelcontextprotocol/inspector -- npx tsx src/server.ts
 ```
 
 In the Inspector, run a fresh ingest. The new args are `hop_depth: 1` (follow declared `belongsTo` associations) and `embed_records: true` (the default — embeddings are needed for `semantic-cluster`):
@@ -287,11 +327,11 @@ With edges + embeddings + concepts in play, `analysis_query mode:"sample"` can b
 ```jsonc
 analysis_query({
   mode: "describe",
-  analysis_id: "graphrag",
-  model: "book"
+  analysis_id: "graphrag"
 })
 // → A "Graph dimensions available" section lists registered concepts,
-//   observed edge types, and embedding coverage %.
+//   observed edge types, and embedding coverage %. (describe takes no
+//   model param — it documents the whole session, listing every model.)
 ```
 
 A three-stratifier sample, pre-filtered to completed books:
@@ -307,7 +347,7 @@ analysis_query({
     { kind: "edge",    edge_type: "belongsTo:genre", bucket: "present" },
     { kind: "cluster", k: 3 }
   ],
-  sample_model: "book"
+  model: "book"
 })
 // → 12 completed-status books, balanced across:
 //   - concept (catalogue touched vs not)
@@ -316,6 +356,46 @@ analysis_query({
 ```
 
 When `kind: "cluster"` is requested on a session that was ingested with `embed_records: false`, the tool auto-back-fills missing embeddings before sampling. No re-ingest required.
+
+## 5.7 Path chains and semantic record ranking
+
+The hop-expanded session unlocks the two newest query surfaces. `path` mode walks the typed edge graph between two records — ask how two books are connected (swap in any two ids you saw in earlier results):
+
+```jsonc
+analysis_query({
+  analysis_id: "graphrag",
+  mode: "path",
+  from_model: "book",
+  from_id: "b34",
+  to_model: "book",
+  to_id: "b17",
+  max_depth: 4
+})
+// → "1 path(s) between book/b34 and book/b17 (shortest: 2 edge(s)):
+//    - book/b34 —belongsTo:author→ author/a7 ←belongsTo:author— book/b17"
+```
+
+Traversal is undirected over the directed edges, and each step renders with the direction it used — the chain above reads "b34 and b17 share author a7". When nothing connects within `max_depth` (default 4, capped at 6), the tool says so and suggests re-ingesting with a deeper `hop_depth`.
+
+`semantic` with `target: "records"` ranks the ingested rows themselves by meaning — and composes with `where` for hybrid semantic + filter retrieval in one SQL statement. Because `graphrag` holds three models, the `model` param is required (the error would name the candidates):
+
+```jsonc
+analysis_query({
+  analysis_id: "graphrag",
+  mode: "semantic",
+  target: "records",
+  model: "book",
+  query: "space exploration epics",
+  where: { status: "completed" },
+  min_similarity: 0.3,
+  top_k: 5
+})
+// → "Top 5 record(s) by similarity to \"space exploration epics\":
+//    - [61.2%] {\"id\":\"b201\",\"title\":\"Voyages Beyond #12\",\"status\":\"completed\",…}"
+//   …plus an embedding-coverage footer when not every record is embedded.
+```
+
+Only the query string pays for an embed. Because the §5.5 ingest ran with `embed_records: true` (the default), every record was embedded at write time; on a session ingested with `embed_records: false`, each records-targeted query back-fills up to 500 missing embeddings before ranking. `min_similarity` is an optional floor — omit it for rank-only results.
 
 ## 6. Recall by category
 
@@ -358,7 +438,7 @@ analysis_clear({ analysis_id: "tour-multi" })
 ## Where to go next
 
 - [Summary Strategies](./summary-strategies.md) — full catalog with links to each strategy's deep-dive guide, the `SummaryStrategy` contract, and a walk-through for shipping your own strategy via an `ApiExtension`.
-- Per-strategy guides under [`summary-strategies/`](./summary-strategies/) — one file each for the nine built-ins; explains the algorithm, inputs consumed, output shape, and edge cases.
-- [Analysis Memories](./analysis-memories.md) — the full feature reference: ingest modes, the five-mode `analysis_query` API, stratified sampling, `analysis_act`, lifecycle and retention.
+- Per-strategy guides linked from the [Summary Strategies catalog](./summary-strategies.md) — one file each for the nine built-ins; explains the algorithm, inputs consumed, output shape, and edge cases.
+- [Analysis Memories](./analysis-memories.md) — the full feature reference: ingest modes, the six-mode `analysis_query` API, stratified sampling, `analysis_act`, lifecycle and retention.
 - [Proximity Sampling](./proximity-sampling.md) — date-windowed bucketed sampling for the `analysis_query mode: sample` path.
 - [Domain Knowledge Guide](../08-domain-knowledge/domain-knowledge.md) — how `DomainConcept` and `BusinessRule` feed `concept-touch` and `rule-violation`.

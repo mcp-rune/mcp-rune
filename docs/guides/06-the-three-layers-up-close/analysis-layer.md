@@ -4,7 +4,7 @@
 
 `AnalysisLayer` is the third peer interface — alongside `DataLayer` and `ModelLayer` — and the one that powers the GraphRAG and retrieval tooling in Part III. Like `ModelLayer`, it's bound to a single model at construction; unlike `ModelLayer`, it carries a per-request `DataLayer` so its methods can fetch records when they need to.
 
-The split is deliberate: where `ModelLayer` answers "what does the model declare?", `AnalysisLayer` answers "what does the analysis pipeline see when it looks at a record?". Today that's edges and embedding text; designed to host hop walks, summaries, and stratifiers next.
+The split is deliberate: where `ModelLayer` answers "what does the model declare?", `AnalysisLayer` answers "what does the analysis pipeline see when it looks at a record?". Today that's edges, embedding text, and hop walks; designed to host summaries and stratifiers next.
 
 ## The interface
 
@@ -58,7 +58,7 @@ const book = await dataLayer.find('book', '42')
 const edges = bookAnalysis?.extractEdges(book) ?? []
 ```
 
-`createAnalysisLayerFactory({ models, dataLayer })` is called once per request — it threads the request's `DataLayer` into every analysis layer the request constructs. The factory's `(modelName)` call is cheap; the per-request rebuild is bounded by which models actually get touched.
+`createAnalysisLayerFactory(models, dataLayer)` is called once per request — it threads the request's `DataLayer` into every analysis layer the request constructs. The factory's `(modelName)` call is cheap; the per-request rebuild is bounded by which models actually get touched.
 
 ## Why `DataLayer` lives inside `AnalysisLayer`
 
@@ -72,13 +72,13 @@ This also keeps the projection layer's API narrow. A tool that wants graph expan
 - **In an analysis pipeline tool** (the `analysis_*` family in Part III): the framework already wires `analysisLayer` into every one of them.
 - **In an `ApiExtension`** that adds a search subsystem with semantic search: `buildEmbeddingText` is how you produce the document text the vector store indexes.
 
-The `analysis_*` tools shipped today (`analysis_ingest`, `analysis_summarize`, `analysis_query`, …) are the principal first-party consumers. [Analysis quickstart](../09-retrieval-and-graphrag/analysis-quickstart.md) walks through bringing them up against the `bookshelf-graph` fixtures.
+The `analysis_*` tools shipped today (`analysis_ingest`, `analysis_summarize`, `analysis_query`, …) are the principal first-party consumers. [Analysis quickstart](../09-retrieval-and-graphrag/analysis-quickstart.md) walks through bringing them up against the bookshelf-graph example's `graph` dataset.
 
 ## For framework contributors
 
 If you are contributing to mcp-rune itself (not a deployer extending a server) and you need a new analysis projection that today isn't on the interface, the rule — same as `ModelLayer` — is: **extend the interface** in `src/mcp/analysis-layer/analysis-layer.ts`. Never import `extractEdgesFromRecord`, `expandHops`, or anything from `graph-stratifiers.ts` / `multi-hop-fetch.ts` directly from projection-layer code; the eslint guard will reject it.
 
-The roadmap surface listed in the interface doc (`summarize`, `buildStratifier`) is what the layer is _designed_ to host next; if your use case maps to one of those, the right move is to PR them onto the interface rather than reach past it.
+The roadmap surface listed in the interface doc (summaries and stratifiers) is what the layer is _designed_ to host next; if your use case maps to one of those, the right move is to PR them onto the interface rather than reach past it.
 
 ## What's next
 

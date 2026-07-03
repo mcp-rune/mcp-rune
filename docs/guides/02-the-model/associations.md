@@ -73,9 +73,7 @@ Restart the Inspector and call `list_models` with `{}`. The `book` row now has a
 }
 ```
 
-Call `validate_form` with `{ "model": "book", "fields": { "name": "Dune" } }`. The required `author_id` foreign key (synthesised from the association name
-
-- `_id`) is missing, and the framework reports it with a humanised label:
+Call `validate_form` with `{ "model": "book", "fields": { "name": "Dune" } }`. The required `author_id` foreign key (synthesised from the association name + `_id`) is missing, and the framework reports it with a humanised label:
 
 ```json
 {
@@ -115,7 +113,7 @@ export class Task extends BaseModel {
 ```
 
 - **`belongsTo`** — a single foreign key from this model to another. The framework infers an attribute named `{key}_id` (here, `project_id`) and treats it as required-or-optional according to the association's `required:` flag.
-- **`hasMany`** — a collection foreign-key from this model to many records of another. The inferred attribute is `{key}_ids` (here, `tag_ids`), typed as an array. The `many: true` flag is currently redundant with the block label but kept for forward compatibility.
+- **`hasMany`** — a collection foreign-key from this model to many records of another. The inferred attribute is `{key}_ids` (here, `tag_ids`), typed as an array. The `many: true` flag is required by the type as an explicit discriminant.
 
 A single model can declare any mix: a `Task` belongs to a `Project` and has many `Tag`s; a `Book` belongs to an `Author` and a `Genre`.
 
@@ -139,11 +137,11 @@ A single `belongsTo` declaration causes the framework to:
 
 1. **Synthesize the FK attribute** — `project_id` shows up in `find_records({ model: 'task', filters: { project_id: 7 } })` and in the form payload. You don't list it under `attributes:`.
 2. **Wire the picker app** — `pick_model_app({ model: 'project' })` becomes the recommended UI for filling `project_id` in `new_task_app` / `edit_task_app`.
-3. **Validate the reference** — `validate_form` will fail with a clear error if the supplied `project_id` does not resolve to a real `Project` (subject to the `DataLayer`'s ability to do the lookup; the in-memory stub does it; some HTTP backends defer it to write time).
+3. **Validate the requirement** — `validate_form` treats the synthesized `project_id` as a first-class field: required when the association says so, checked for a well-formed value. Whether the ID points at a real `Project` is the backend's concern at write time.
 4. **Drive prompt content** — `get_prompt_guide({ guide_name: 'task' })` lists `project_id` under the _Routing_ section with the right type label and the LLM-facing prompt for using the picker.
 5. **Generate the join in docs** — auto-generated docs describe Task ↔ Project with the right cardinality.
 
-`hasMany` is symmetric: `tag_ids` is an array attribute, `multi_pick_model_app({ model: 'tag' })` is the recommended UI, and `validate_form` requires every supplied ID to resolve.
+`hasMany` is symmetric: `tag_ids` is an array attribute, `multi_pick_model_app({ model: 'tag' })` is the recommended UI, and `validate_form` applies the same required and shape checks to the array.
 
 ## When to declare it on each side
 
@@ -156,8 +154,8 @@ The `tasks` server declares both: `Task.belongsTo.project` is the canonical side
 
 ## What associations do NOT do
 
-- They do not load related records eagerly. `find_records({ model: 'task' })` returns task rows with `project_id` populated, not the project object. To pull in related data, use the data layer's `include:` option (see chapter 6) or model-derived attributes (see [Validation and defaults](./validation-and-defaults.md) and the `derived:` block explained in chapter 6).
-- They do not enforce referential integrity at write time. The framework validates the FK at form-validate time (via the `DataLayer`'s `find` call) but does not stop a backend from writing an orphan FK — that's a backend concern, not a framework concern.
+- They do not load related records eagerly. `find_records({ model: 'task' })` returns task rows with `project_id` populated, not the project object. To pull related display data onto a record, declare a `derived: { from, field }` attribute on the model (the `derived:` block is explained in chapter 6).
+- They do not enforce referential integrity — at validate-form time or at write time. The framework checks that a required FK is present and well-formed; whether it points at a real record is your backend's concern when the write lands.
 - They do not modify the table layout in the backend. Conventions and the `DataLayer` adapter decide how `project_id` is serialized to your API (flat REST: `project_id`; JSON:API: `relationships.project.data.id`). Chapter 6 covers conventions.
 
 ## A richer association graph
@@ -177,7 +175,7 @@ export class Book extends BaseModel {
   static override attributes: Record<string, AttributeDefinition> = {
     title: { type: 'string', required: true },
     status: { type: 'enum', enumValues: ['unread', 'reading', 'completed'], default: 'unread' },
-    rating: { type: 'integer', validation: { min: 1, max: 5 } }
+    rating: { type: 'integer', format: 'rating', max: 5 }
     // …
   }
 }
@@ -187,4 +185,4 @@ The `AnalysisLayer`'s `extractEdges` method consumes this declaration to produce
 
 ## What's next
 
-The `attributes` block plus the `associations` block together declare _which fields exist_. The next chapter, [Validation and defaults](./validation-and-defaults.md), covers _what makes a field valid_: the `required:`, `default:`, and `validation: { min, max }` knobs, and where in the request lifecycle each one fires.
+The `attributes` block plus the `associations` block together declare _which fields exist_. The next chapter, [Validation and defaults](./validation-and-defaults.md), covers _what makes a field valid_: the `required:`, `default:`, and `validation: { minimum, maximum }` knobs, and where in the request lifecycle each one fires.

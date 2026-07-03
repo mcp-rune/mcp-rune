@@ -1,10 +1,10 @@
 # OAuth 2.0 Discovery Flow
 
-This document describes the OAuth 2.0 flow implemented by the MCP servers in this repository, with explicit citations of the RFCs each route implements. It is the canonical, current reference for the HTTP transport's authentication story.
+This document describes the OAuth 2.0 flow implemented by servers built on mcp-rune's `HttpServer`, with explicit citations of the RFCs each route implements. It is the canonical, current reference for the HTTP transport's authentication story.
 
 ## Overview
 
-Any MCP server that enables OAuth via `lib/mcp/http-server.js` acts as an **OAuth 2.0 Resource Server**. It:
+Any server built on mcp-rune's `HttpServer` (`src/mcp/http-server.ts`) with OAuth enabled acts as an **OAuth 2.0 Resource Server**. It:
 
 - Exposes RFC 9728 Protected Resource Metadata so clients can discover the authorization server.
 - **Proxies** authorization-server metadata (RFC 8414), Dynamic Client Registration (RFC 7591), authorize/token endpoints (RFC 6749), and forwards PKCE (RFC 7636) and resource indicators (RFC 8707) parameters transparently to an upstream authorization server.
@@ -16,13 +16,13 @@ The MCP server never issues tokens itself (except via the M2M `/mcp/m2m/token` c
 
 | RFC | Title | Route(s) exposed | Implementation |
 | --- | --- | --- | --- |
-| RFC 6749 | The OAuth 2.0 Authorization Framework | `GET /oauth/authorize`, `POST /oauth/token` | `lib/mcp/middleware/oauth-router.js` — authorize handler, token proxy |
-| RFC 7591 | OAuth 2.0 Dynamic Client Registration Protocol (DCR) | `POST /oauth/register` | `lib/mcp/middleware/oauth-router.js` |
+| RFC 6749 | The OAuth 2.0 Authorization Framework | `GET /oauth/authorize`, `POST /oauth/token` | `src/mcp/middleware/oauth-router.ts` — authorize handler, token proxy |
+| RFC 7591 | OAuth 2.0 Dynamic Client Registration Protocol (DCR) | `POST /oauth/register` | `src/mcp/middleware/oauth-router.ts` |
 | RFC 7636 | Proof Key for Code Exchange (PKCE) | Forwarded through `/oauth/authorize` and `/oauth/token` | Client provides `code_challenge`/`code_verifier`; parameters pass through unchanged |
-| RFC 8414 | OAuth 2.0 Authorization Server Metadata | `GET /.well-known/oauth-authorization-server`, `GET /.well-known/openid-configuration` | `lib/mcp/middleware/oauth-router.js` — server metadata, openid alias |
-| RFC 8707 | Resource Indicators for OAuth 2.0 | `resource` query/body param forwarded on authorize + token | `lib/oauth2/service.js` |
-| RFC 9728 | OAuth 2.0 Protected Resource Metadata | `GET /.well-known/oauth-protected-resource`, `GET /.well-known/oauth-protected-resource/mcp` | `lib/mcp/middleware/oauth-router.js` — both forms share one handler |
-| MCP Authorization spec 2025-06-18 | MCP-specific framing of the above | `WWW-Authenticate` on `/mcp` with `resource_metadata` parameter | `lib/mcp/middleware/oauth-router.js` — `sendUnauthorized()` |
+| RFC 8414 | OAuth 2.0 Authorization Server Metadata | `GET /.well-known/oauth-authorization-server`, `GET /.well-known/openid-configuration` | `src/mcp/middleware/oauth-router.ts` — server metadata, openid alias |
+| RFC 8707 | Resource Indicators for OAuth 2.0 | `resource` query/body param forwarded on authorize + token | `src/oauth2/service.ts` |
+| RFC 9728 | OAuth 2.0 Protected Resource Metadata | `GET /.well-known/oauth-protected-resource`, `GET /.well-known/oauth-protected-resource/mcp` | `src/mcp/middleware/oauth-router.ts` — both forms share one handler |
+| MCP Authorization spec 2025-06-18 | MCP-specific framing of the above | `WWW-Authenticate` on `/mcp` with `resource_metadata` parameter | `src/mcp/middleware/oauth-router.ts` — `sendUnauthorized()` |
 
 ## End-to-End Discovery Flow
 
@@ -86,7 +86,7 @@ Example for this repo:
 | `http://localhost:4100/mcp` | `http://localhost:4100/.well-known/oauth-protected-resource/mcp` |
 | `https://example.com/my-mcp-server/mcp` | `https://example.com/.well-known/oauth-protected-resource/my-mcp-server/mcp` |
 
-`buildResourceMetadataUrl()` in `lib/mcp/middleware/oauth-router.js` constructs this form, and `sendUnauthorized()` advertises it in the `WWW-Authenticate: Bearer resource_metadata="…"` header whenever `/mcp` is hit without a token.
+`buildResourceMetadataUrl()` in `src/mcp/middleware/oauth-router.ts` constructs this form, and `sendUnauthorized()` advertises it in the `WWW-Authenticate: Bearer resource_metadata="…"` header whenever `/mcp` is hit without a token.
 
 ### Both forms are served
 
@@ -98,7 +98,7 @@ The router registers the same handler on **two paths**:
 **Why serve both?** Because the two groups of clients in the wild behave differently:
 
 - **Strict clients** (aligned with MCP spec 2025-06-18) parse the `resource_metadata` parameter from the `WWW-Authenticate` header and fetch it verbatim. They hit the `/mcp`-suffixed URL and expect a 200. If the server did not serve this form, these clients would fail discovery entirely.
-- **MCP Inspector** (up to current versions) implements an extra-spec fallback: if the path-suffixed URL 404s, it retries the origin-only URL. This behavior is **not required by RFC 9728** and must not be relied upon in new client implementations. We serve the origin-only form so the existing Inspector workflow keeps working.
+- **MCP Inspector** (up to current versions) implements an extra-spec fallback: if the path-suffixed URL 404s, it retries the origin-only URL. This behavior is **not required by RFC 9728** and must not be relied upon in new client implementations. mcp-rune serves the origin-only form so the existing Inspector workflow keeps working.
 
 ### Diagnostic: the two log lines
 
@@ -109,7 +109,7 @@ GET /.well-known/oauth-protected-resource       → 200 / 304
 GET /.well-known/oauth-protected-resource/mcp   → 404
 ```
 
-…the server is advertising the §3.1 URL in `WWW-Authenticate` but not serving it. MCP Inspector hides the problem via its fallback, but strict clients break. The fix is exactly what this repo now does: register both forms with the same handler. See `lib/mcp/middleware/oauth-router.js` around the `protectedResourceHandler` definition and the `__tests__/lib/mcp/middleware/oauth-router.spec.js` spec that covers the §3.1 path.
+…the server is advertising the §3.1 URL in `WWW-Authenticate` but not serving it. MCP Inspector hides the problem via its fallback, but strict clients break. The fix is exactly what mcp-rune does: register both forms with the same handler. See `src/mcp/middleware/oauth-router.ts` around the `protectedResourceHandler` definition and the `__tests__/lib/mcp/middleware/oauth-router.spec.ts` spec that covers the §3.1 path.
 
 ## Path-Prefixed Deployments (`/my-mcp-server/mcp` rather than `/mcp`)
 
@@ -156,8 +156,7 @@ This matches MCP spec 2025-06-18 (`§ Authorization`) and RFC 9728 §5.1. The `r
 
 | File | Role |
 | --- | --- |
-| `lib/mcp/middleware/oauth-router.js` | Express router with all OAuth routes + `buildResourceMetadataUrl` / `sendUnauthorized` helpers |
-| `lib/mcp/http-server.js` | HTTP server entry point; mounts the OAuth router and invokes `sendUnauthorized` on unauthenticated `/mcp` requests |
-| `lib/oauth2/service.js` | OAuth client logic: token introspection, client-credentials grant, resource indicator handling |
-| `__tests__/lib/mcp/middleware/oauth-router.spec.js` | Route-level unit tests, including RFC 9728 §3.1 coverage |
-| `docs/authorization-coverage.md` | Conformance coverage matrix — maps test cases to RFC sections |
+| `src/mcp/middleware/oauth-router.ts` | Express router with all OAuth routes + `buildResourceMetadataUrl` / `sendUnauthorized` helpers |
+| `src/mcp/http-server.ts` | HTTP server entry point; mounts the OAuth router and invokes `sendUnauthorized` on unauthenticated `/mcp` requests |
+| `src/oauth2/service.ts` | OAuth client logic: token introspection, client-credentials grant, resource indicator handling |
+| `__tests__/lib/mcp/middleware/oauth-router.spec.ts` | Route-level unit tests, including RFC 9728 §3.1 coverage |

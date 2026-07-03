@@ -10,6 +10,12 @@ export type {
   ModelRequestOptions,
   PaginationParams
 } from './data-layer.js'
+export {
+  ApiRequestError,
+  DataLayerError,
+  RecordNotFoundError,
+  translateApiError
+} from './errors.js'
 export * from './model-service/index.js'
 export type { InMemoryDataLayerOptions, StubFixtures, StubRecord } from './stub.js'
 export { createInMemoryDataLayer, InMemoryDataLayer, loadFixturesFromJson } from './stub.js'

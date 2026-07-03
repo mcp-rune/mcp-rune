@@ -18,10 +18,10 @@ If Part I is "the contract every projection consumes," Part II is "the contract 
 
 ### ModelLayer — per-model model-config reads
 
-8. [Model layer](./model-layer.md) — the synchronous, per-model-bound interface. `kindFor`, `resolveDerivedFields`, `validFieldNames`, `promptSchema`, `checkRequired`. No I/O.
+8. [Model layer](./model-layer.md) — the synchronous, per-model-bound interface: `model` + `resolveDerivedFields`. Kinds are shared vocabulary read beside it ([ADR 0009](../../architecture/decisions/0009-kinds-are-shared-vocabulary.md)). No I/O.
 
 ### AnalysisLayer — per-model analysis projections
 
-9. [Analysis layer](./analysis-layer.md) — the per-model-bound, per-request interface. `extractEdges`, `buildEmbeddingText`. The substrate Part III's analysis tools call into.
+9. [Analysis layer](./analysis-layer.md) — the per-model-bound, per-request interface. `extractEdges`, `buildEmbeddingText`, `walkHops`. The substrate Part III's analysis tools call into.
 
 When you finish this section, [chapter 7](../07-auth-and-transport/) covers the surrounding concerns — who can call your server (OAuth 2.1) and how they reach it (stdio vs HTTP). Then Part III ([Domain Knowledge](../08-domain-knowledge/), [Retrieval & GraphRAG](../09-retrieval-and-graphrag/)) is where the three layers earn their keep on something more interesting than CRUD.

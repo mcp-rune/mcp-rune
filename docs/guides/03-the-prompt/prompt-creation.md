@@ -8,7 +8,7 @@ A Prompt is a class that reads a Model and produces the instructions an LLM uses
 - [Prompt Strategies](#prompt-strategies)
 - [Sections & field groups](#sections--field-groups) — see [`sections-groups.md`](./sections-groups.md)
 - [Schema Derivation](#schema-derivation)
-- [PromptContentBuilder](#promptcontentgenerator)
+- [PromptContentBuilder](#promptcontentbuilder)
 - [Stateful prompts](#stateful-prompts) — see [`stateful.md`](./stateful.md)
 - [Stateless Prompts](#stateless-prompts)
 - [Registry Configuration](#registry-configuration)
@@ -52,7 +52,7 @@ The three strategies are an escalation: as form complexity grows, the framework 
         Simple forms       Medium forms          Complex forms
 ```
 
-Same model definition drives all three — choose by setting `static strategy = 'stateless' | 'hybrid' | 'stateful'` on the prompt class. Upgrading later doesn't change the model.
+Same model definition drives all three — choose by setting `static formStrategy = 'stateless' | 'hybrid' | 'stateful'` on the prompt class. Upgrading later doesn't change the model. Boot validation rejects unknown strategy strings ([ADR 0012](../../architecture/decisions/0012-boot-validation-runs-automatically.md)), but it cannot catch a wrong property _name_ — a typo like `static strategy = 'stateful'` silently falls back to the stateless default.
 
 | Strategy    | Use Case      | Fields       | Validation           |
 | ----------- | ------------- | ------------ | -------------------- |
@@ -80,7 +80,7 @@ Field definitions are derived from model classes via `derivePromptSchema()`. Thi
 ### How It Works
 
 ```js file=src/prompts/activity-prompt.js
-import { derivePromptSchema } from '#src/mcp/prompts/schema-derivation.js'
+import { derivePromptSchema } from '@mcp-rune/mcp-rune/prompts'
 import { Activity } from '../models/index.js'
 
 export class ActivityPrompt extends BasePrompt {
@@ -111,7 +111,7 @@ export class ActivityPrompt extends BasePrompt {
 ```
 
 ```ts file=src/prompts/activity-prompt.ts
-import { derivePromptSchema } from '#src/mcp/prompts/schema-derivation.js'
+import { derivePromptSchema } from '@mcp-rune/mcp-rune/prompts'
 import { Activity } from '../models/index.js'
 
 export class ActivityPrompt extends BasePrompt {
@@ -155,7 +155,7 @@ The `PromptContentBuilder` is a fluent builder for assembling prompt content fro
 ### Usage
 
 ```js file=examples/prompt-creation-guide-02.js
-import { PromptContentBuilder } from '#src/mcp/prompts/prompt-content-builder.js'
+import { PromptContentBuilder } from '@mcp-rune/mcp-rune/prompts'
 
 get promptContent() {
   return PromptContentBuilder.for(ActivityPrompt, 'activity')
@@ -164,14 +164,14 @@ get promptContent() {
 ## What is an Activity?
 ...custom intro text...`)
     .standard()           // flowDiagram → guidance → allSections → summary
-    .add(this.generateToolUsageSection())  // Custom tool usage
+    .toolUsage()          // Auto-generated tool docs
     .attributeReference() // Auto-generated attribute reference table
     .build()
 }
 ```
 
 ```ts file=examples/prompt-creation-guide-02.ts
-import { PromptContentBuilder } from '#src/mcp/prompts/prompt-content-builder.js'
+import { PromptContentBuilder } from '@mcp-rune/mcp-rune/prompts'
 
 get promptContent() {
   return PromptContentBuilder.for(ActivityPrompt, 'activity')
@@ -180,7 +180,7 @@ get promptContent() {
 ## What is an Activity?
 ...custom intro text...`)
     .standard()           // flowDiagram → guidance → allSections → summary
-    .add(this.generateToolUsageSection())  // Custom tool usage
+    .toolUsage()          // Auto-generated tool docs
     .attributeReference() // Auto-generated attribute reference table
     .build()
 }
@@ -197,18 +197,17 @@ get promptContent() {
 | `.section(groupName, num)` | Add single section documentation | Stateful |
 | `.allSections({ skip, customSections })` | Add all section docs | Stateful |
 | `.summary()` | Add standard summary template | Stateful |
+| `.toolUsage(overrides?)` | Add auto-generated tool usage docs from `static toolUsage` config | All |
 | `.attributeReference()` | Add auto-generated attribute table | All |
 | `.build(separator)` | Join all parts (default: `\n\n---\n\n`) | All |
 
-### Atomic Helpers on BasePrompt
+The `.for(Cls, name, options?)` factory accepts a third argument — `{ appsEnabled }` — a capability flag that lets generators vary their output based on whether the deployer wired up the apps registry.
 
-The builder delegates to these static methods on BasePrompt:
+### The builder delegates to generators
 
-| Method                                   | Description                           |
-| ---------------------------------------- | ------------------------------------- |
-| `generateEnumTable(fieldName)`           | Enum value table with descriptions    |
-| `generateAttributeReferenceFromConfig()` | Full attribute reference table        |
-| `generateSummaryTemplate(modelName)`     | Standard summary/confirmation section |
+The builder itself renders nothing. Every step delegates to a pure generator function in `src/mcp/prompts/generators/` — `.flowDiagram()` calls `generateFlowDiagram`, `.allSections()` calls `generateAllSections`, `.toolUsage()` calls `generateToolUsage`, and so on. Reach rendering only through the builder, never by importing a generator directly.
+
+`BasePrompt` keeps a small set of statics that are configuration reads rather than rendering: `getStrategyIntro()` (strategy-specific description fragment), `getSectionForGroup(groupName)` (reverse section lookup), `getDefaults()` (field defaults), and `toFormSchema()` (transport-safe schema serialization).
 
 ### Strategy Patterns
 
@@ -260,9 +259,9 @@ PromptContentBuilder.for(MyPrompt, 'model')
 
 ## Stateful prompts
 
-For complex (20+ field) forms, mcp-rune ships a stateful strategy that walks the agent through one section at a time and validates as it goes. The strategy supports two interaction modes — `guided` (step-by-step for humans) and `quick` (minimal questions for agentic flows) — and exposes section progress through the `StatefulStrategy` API.
+For complex (20+ field) forms, mcp-rune ships a stateful strategy that walks the agent through one section at a time and validates as it goes. The strategy supports two interaction modes — `guided` (step-by-step for humans) and `quick` (minimal questions for agentic flows) — and exposes section progress through the `StatefulFormStrategy` API.
 
-For mode configuration, the prompt class structure, the `BasePrompt` helpers, the validation flow, and the `StatefulStrategy.getSections()` / `getProgress()` reference, see the **[Stateful Strategies guide](./stateful.md)**.
+For mode configuration, the prompt class structure, the `BasePrompt` helpers, the validation flow, and the `StatefulFormStrategy.getSections()` / `getProgress()` reference, see the **[Stateful Strategies guide](./stateful.md)**.
 
 ## Stateless Prompts
 
@@ -270,7 +269,7 @@ For simple models (< 10 fields), use stateless strategy:
 
 ```js file=src/prompts/theme-prompt.js
 export class ThemePrompt extends BasePrompt {
-  static strategy = 'stateless'
+  static formStrategy = 'stateless'
 
   static fieldGroups = {
     theme_identity: {
@@ -286,7 +285,7 @@ export class ThemePrompt extends BasePrompt {
 
 ```ts file=src/prompts/theme-prompt.ts
 export class ThemePrompt extends BasePrompt {
-  static strategy = 'stateless'
+  static formStrategy = 'stateless'
 
   static fieldGroups = {
     theme_identity: {
@@ -308,49 +307,47 @@ Stateless prompts:
 
 ## Registry Configuration
 
-Register prompts in `prompts/registry.js`:
+Register prompts on a `BasePromptRegistry` via `register(name, promptClass, options)`:
 
 ```js file=examples/prompt-creation-guide-06.js
-const PROMPT_CLASSES = {
-  create_activity: {
-    promptClass: ActivityPrompt,
-    model: 'activity',
-    toolDocDescription: 'For tracking learning activities with timing and resources',
-    required: true,
-    recommendedForBulk: false
-  }
-}
+import { BasePromptRegistry } from '@mcp-rune/mcp-rune/prompts'
+
+const promptRegistry = new BasePromptRegistry()
+
+promptRegistry.register('create_activity', ActivityPrompt, {
+  description: 'For tracking learning activities with timing and resources',
+  model: 'activity',
+  required: true
+})
 ```
 
 ```ts file=examples/prompt-creation-guide-06.ts
-const PROMPT_CLASSES = {
-  create_activity: {
-    promptClass: ActivityPrompt,
-    model: 'activity',
-    toolDocDescription: 'For tracking learning activities with timing and resources',
-    required: true,
-    recommendedForBulk: false
-  }
-}
+import { BasePromptRegistry } from '@mcp-rune/mcp-rune/prompts'
+
+const promptRegistry = new BasePromptRegistry()
+
+promptRegistry.register('create_activity', ActivityPrompt, {
+  description: 'For tracking learning activities with timing and resources',
+  model: 'activity',
+  required: true
+})
 ```
 
-| Property             | Description                                                         |
-| -------------------- | ------------------------------------------------------------------- |
-| `promptClass`        | Reference to prompt class                                           |
-| `model`              | Model name for validation/creation                                  |
-| `toolDocDescription` | Shown in tool documentation                                         |
-| `required`           | If true, create_model/update_model blocked without get_prompt_guide |
-| `recommendedForBulk` | If true, suggest prompt for bulk operations                         |
+| Option | Description |
+| --- | --- |
+| `description` | Surfaced in MCP `prompts/list` and in tool-doc description lists |
+| `model` | Binds the prompt to a model — powers `getPromptClassByModel` lookups and includes the prompt in automatic boot validation via `getModelBoundClasses` ([ADR 0012](../../architecture/decisions/0012-boot-validation-runs-automatically.md)). One prompt per model; a second binding to the same model throws at registration. |
+| `required` | When `true`, `SaveModelBaseTool` injects a "call `get_prompt_guide` FIRST" usage rule into the `create_model`/`update_model` descriptions — guidance for the LLM, not hard blocking. |
 
 ## Testing Prompts
 
-Test files should verify sections architecture:
+Test files should verify sections architecture. One caveat on `static arguments`: it is a deployer convention — `BasePromptRegistry.getDefinitions()` surfaces only `name`, `description`, and `required`, so argument declarations reach MCP `prompts/list` only if your registry adds them.
 
 ```js file=src/arg-names.js
 describe('ActivityPrompt', () => {
   describe('static properties', () => {
-    it('should have strategy of stateful', () => {
-      expect(ActivityPrompt.strategy).toBe('stateful')
+    it('should have formStrategy of stateful', () => {
+      expect(ActivityPrompt.formStrategy).toBe('stateful')
     })
 
     it('should have mode in arguments', () => {
@@ -389,8 +386,8 @@ describe('ActivityPrompt', () => {
 ```ts file=src/arg-names.ts
 describe('ActivityPrompt', () => {
   describe('static properties', () => {
-    it('should have strategy of stateful', () => {
-      expect(ActivityPrompt.strategy).toBe('stateful')
+    it('should have formStrategy of stateful', () => {
+      expect(ActivityPrompt.formStrategy).toBe('stateful')
     })
 
     it('should have mode in arguments', () => {

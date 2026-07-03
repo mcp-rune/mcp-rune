@@ -36,7 +36,6 @@
  * | `get_prompt_guide`  | Returns `promptContent` verbatim      |
  * | `validate_form`     | Not supported — returns an error      |
  * | `get_form_summary`  | Not supported                         |
- * | `get_form_progress` | Not supported                         |
  *
  * The LLM reads the guide, gathers fields conversationally, then calls
  * `create_model` directly. Field-level validation happens at the API on

@@ -18,13 +18,13 @@ The guides that follow are arranged as a four-part book that mirrors the order y
 
 ## Example servers used throughout
 
-Every code snippet in the guides is drawn from one of the example servers in [`mcp-rune-examples`](https://github.com/mcp-rune/examples). You can clone any of them and follow along with a real running server while you read.
+Most code snippets in the guides are drawn from one of the example servers in [`mcp-rune-examples`](https://github.com/mcp-rune/examples); the hands-on "Try it" sections instead build on the tutorial project you scaffold yourself in the [Quickstart](../01-getting-started/quickstart.md). You can clone any example and follow along with a real running server while you read.
 
 | Example | Demonstrates | Used by |
 | --- | --- | --- |
 | `tasks` | Smallest realistic shape — `Project`, `Task`, `Tag`; belongsTo + hasMany | The Model, The Prompt (trivial illustrations) |
 | `bookshelf` | Hand-picked seed data, full polymorphic tool surface, MCP apps | Quickstart, Tools, Apps |
-| `bookshelf-graph` | Domain registry + analysis tools + 9 summary strategies over 500 books | Domain Knowledge, Retrieval & GraphRAG, workflows |
+| `bookshelf-graph` | Domain registry + analysis tools + 9 summary strategies over 5,000 books | Domain Knowledge, Retrieval & GraphRAG, workflows |
 | `bookshelf-rest` | Real `DataLayer` swap to HTTP via custom `ApiClient` + convention | Part II — data, api-client, convention, search |
 | `bookshelf-remote` | `HttpServer` deployment, static-token auth then OAuth 2.1 | Part II — auth & transport |
 

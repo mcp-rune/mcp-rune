@@ -67,7 +67,6 @@
  * | `validate_form`              | Validates all fields + attaches per-section progress    |
  * | `validate_form` *(`section:`)* | Validates just that section, returns `next_section`   |
  * | `get_form_summary`           | Human + technical via renderer, with progress appended  |
- * | `get_form_progress`          | Returns completion status per section                   |
  *
  * Expected LLM flow:
  *
@@ -86,10 +85,10 @@
  * The server keeps **no** persistent state between calls. The LLM is the
  * stateholder: it remembers the values it has gathered and resubmits the
  * full field set (or the section slice) on every validation call. Each
- * `validate_form` and `get_form_progress` call is a pure function of the
+ * `validate_form` and `get_form_summary` call is a pure function of the
  * fields the caller passes in.
  *
- * `get_form_progress` therefore reflects only what the caller has
+ * The progress they report therefore reflects only what the caller has
  * surfaced — it has no memory of what was filled "earlier" if the LLM
  * doesn't include those fields in the request.
  *

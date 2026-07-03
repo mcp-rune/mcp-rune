@@ -12,7 +12,7 @@ File: `src/mcp/tools/base-tool.ts`
 
 ```ts
 export interface ToolDependencies {
-  /** Per-request backend I/O. Absent for STRATEGY / no-auth tools. */
+  /** Per-request backend I/O. Absent for tools with `requiresAuth = false`. */
   dataLayer?: DataLayer
   /** Per-model-bound, synchronous model-config reads. */
   modelLayer?: ModelLayerFactory
@@ -52,10 +52,13 @@ export interface ToolDependencies {
 
 **Surface:**
 
-- `find(model, id)` / `list(model, params)` / `searchNormalized(model, params)` — read
-- `dispatch(model, action, payload)` — write
-- `lookupNormalized(model, query)` / `groupSearchNormalized(query)` — cross-model search
-- `buildPayload(modelInstance, modelConfig, attrs)` — convention-aware payload assembly
+- `find` / `list` / `listNormalized` / `searchNormalized` — read
+- `create` / `update` / `delete` — write
+- `dispatch(method, url, payload?, params?)` — raw HTTP for non-CRUD verbs and custom endpoints
+- `lookupNormalized` / `groupSearchNormalized` — cross-model search
+- `buildPayload(model, modelConfig, attrs)` — convention-aware payload assembly
+
+Failures cross the seam as typed `DataLayerError` subclasses — `RecordNotFoundError` and `ApiRequestError` (with `.status`) — whose messages were already parsed through the failing model's convention ([ADR 0014](../../architecture/decisions/0014-seam-error-taxonomy.md)). Tools never duck-type transport errors; `formatError()` just renders them.
 
 **In a tool:**
 
@@ -63,13 +66,13 @@ export interface ToolDependencies {
 override async execute(args: { id: string }): Promise<ToolResult> {
   const layer = this.requireDataLayer()
   const book = await layer.find('book', args.id)
-  return this.ok(book)
+  return this.formatResponse(book)
 }
 ```
 
-`requireDataLayer()` throws if the tool's category doesn't get one — STRATEGY tools (`get_prompt_guide`, `validate_form`) don't, because they're stateless and have no business hitting the backend.
+`requireDataLayer()` throws when the tool ran without auth — the form-strategy tools (`get_prompt_guide`, `validate_form`, `get_form_summary`) declare `static requiresAuth = false`, because they're stateless and have no business hitting the backend.
 
-**What's behind it:** built-in implementations are `createInMemoryDataLayer` (the stub used in the quickstart), `ModelService` (the default HTTP adapter, wrapping `ApiClient` + `EndpointResolver` + convention), and `SearchEnabledDataLayer` (the wrapper that adds search/lookup methods on top of either base). [Part II, chapter 6](../06-the-three-layers-up-close/data-layer.md) covers them in detail.
+**What's behind it:** built-in implementations are `createInMemoryDataLayer` (the stub used in the quickstart), `ModelService` (the default HTTP adapter, wrapping `ApiClient` + `EndpointResolver` + convention), and `SearchEnabledDataLayer` (the wrapper that adds search/lookup methods on top of either base). `ToolRegistry` wraps every per-request `DataLayer` in `SearchEnabledDataLayer` automatically, so tools always see the `*Normalized` methods. [Part II, chapter 6](../06-the-three-layers-up-close/data-layer.md) covers them in detail.
 
 ## `ModelLayer` — per-model model-config reads
 
@@ -103,8 +106,9 @@ override async execute(args: { model: string; record_id: string }) {
 
 - `extractEdges(record, options?)` → graph edges derived from associations
 - `buildEmbeddingText(record, options?)` → text used by vector-embedding tools
+- `walkHops(rootRecords, options)` → async-generator BFS across declared associations, fetching destination records through this request's `DataLayer` (cycle-safe, per-hop fan-out capped)
 
-Designed to host `walkHops`, `summarize`, `buildStratifier` in follow-up releases.
+Designed to host `summarize` and `buildStratifier` in follow-up releases.
 
 **In a tool:**
 
@@ -112,7 +116,7 @@ Designed to host `walkHops`, `summarize`, `buildStratifier` in follow-up release
 override async execute(args: { id: string }) {
   const book = await this.requireDataLayer().find('book', args.id)
   const edges = this.analysisLayer?.('book').extractEdges(book) ?? []
-  return this.ok({ book, edges })
+  return this.formatResponse({ book, edges })
 }
 ```
 
@@ -130,7 +134,7 @@ The storage backend is therefore called a `DomainAdapter` (see `src/mcp/domain/a
 
 ## The eslint guard
 
-The three layers are not a convention you can break by typo. `eslint.config.js` declares a `no-restricted-imports` block scoped to `src/mcp/apps/**`, `src/mcp/tools/**`, `src/mcp/prompts/**`, and `src/mcp/data-layer/api-extensions/**`. From those folders, importing `ApiClient`, `ModelService`, `SearchService`, `EndpointResolver`, `resolveDerivedFields`, `getKind`, `extractEdgesFromRecord`, or anything analogous fails the build.
+`eslint.config.js` declares a `no-restricted-imports` block scoped to `src/mcp/apps/**`, `src/mcp/tools/**`, `src/mcp/prompts/**`, and `src/mcp/data-layer/api-extensions/**`. From those folders, importing the model-layer helpers (`resolveDerivedFields`, `collectValidFieldNames`, `derivePromptSchema`) or the analysis-layer helpers fails the build. The adapter names (`ApiClient`, `ModelService`, `SearchService`, `EndpointResolver`) are AGENTS.md rules rather than lint errors. Kind helpers (`getKind`, `kindOptsFrom`, `resolveInputType`) are deliberately _not_ restricted — kinds are shared vocabulary ([ADR 0009](../../architecture/decisions/0009-kinds-are-shared-vocabulary.md)).
 
 If a method you need is missing from one of the three interfaces, the rule is **extend the interface** rather than reach past it. The interfaces are designed to grow; the projection layer is designed to stay narrow.
 
@@ -140,7 +144,7 @@ If a method you need is missing from one of the three interfaces, the rule is **
 
 `ToolDependencies` declares all three as optional because not every tool needs all three:
 
-- **STRATEGY / no-auth tools** (`get_prompt_guide`, `validate_form`, `get_form_summary`) get no `dataLayer` and no `analysisLayer`. They're stateless and the framework wouldn't have a token for them anyway. They get `modelLayer` because it's synchronous and stateless — useful for derived-field flattening even at validate time.
+- **`requiresAuth = false` tools** (the form-strategy family: `get_prompt_guide`, `validate_form`, `get_form_summary`) get no `dataLayer` and no `analysisLayer`. They're stateless and the framework wouldn't have a token for them anyway. They get `modelLayer` because it's synchronous and stateless — useful for derived-field flattening even at validate time.
 - **CRUD tools** get all three.
 - **Bare unit tests** that instantiate a tool with `new MyTool({})` get none, which is by design — every dependency is constructor-injected, so test setup is explicit.
 
@@ -148,4 +152,4 @@ Inside a tool, `this.requireDataLayer()` is the idiomatic way to assert presence
 
 ## What's next
 
-You now know what every tool actually sees at runtime. The next chapter, [Polymorphic tools](./polymorphic-tools.md), looks at the eight CRUD tools the framework ships — what they are, how they use the three layers, and why eight tools is enough to serve every model you define.
+You now know what every tool actually sees at runtime. The next chapter, [Polymorphic tools](./polymorphic-tools.md), looks at the nine bundled tools — six CRUD plus three form-strategy — what they are, how they use the three layers, and why so few tools are enough to serve every model you define.

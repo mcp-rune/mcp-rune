@@ -97,6 +97,8 @@ export class DescribeAttributeTool extends BaseTool {
 }
 ```
 
+If the attribute isn't declared on the model, `getKind` throws `UnknownKindError` — the loud-failure guard for code paths boot validation can't see.
+
 ### Validate user-supplied keys before they hit the backend
 
 Rejecting unknown `filters:` keys at the seam is `DataLayer`'s job — call `dataLayer.validateFilters(model, filters)` (see the [Data layer](./data-layer.md) chapter). It runs against the same model declaration, but it belongs to the I/O seam because the legal-key question only matters on the way to the backend.

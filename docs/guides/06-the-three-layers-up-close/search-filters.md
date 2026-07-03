@@ -41,7 +41,7 @@ The model's `extensions['search']` slice is the shared contract. The MCP framewo
 > })
 > ```
 
-> **Note:** This guide covers **direct search** — models with their own search endpoint. For **group search** (multiple models sharing one endpoint, e.g., Library search), see the Search Adapters section in the [Model service](./model-service.md). Group search also supports filter pass-through via the same adapter pipeline.
+> **Note:** This guide covers **direct search** — models with their own search endpoint. For **group search** (multiple models sharing one endpoint, e.g., a cross-model library search), see [`SearchGroup`: Multi-Model Routing](./search-request-shaper.md#searchgroup-multi-model-routing). Group search also supports filter pass-through via the same shaper pipeline.
 
 ## Step 1: Declare Filters via `searchConfig` in the Model's `extensions` Bag
 
@@ -53,7 +53,7 @@ Add an `extensions['search']` slice to the model class via the typed `searchConf
 
 ### Filter Types
 
-Five filter types cover the common cases. The model's declaration is what the LLM sees in `get_filters_guide`; the same key flows through the search adapter and lands as a Rails params row:
+Five filter types cover the common cases. The model's declaration is what the LLM sees in `get_filters_guide`; the same key flows through the search request shaper and lands as a Rails params row:
 
 <!-- illustration: search-filter-integration#filters -->
 
@@ -97,7 +97,7 @@ The table below restates the same contract row by row:
 
 ```js file=src/activity.js
 // src/{server}/models/activity.js
-import { BaseModel } from '@mcp-rune/mcp-rune/core'
+import { BaseModel } from '@mcp-rune/mcp-rune/models'
 import { searchConfig } from '@mcp-rune/mcp-rune/api-extensions/search'
 
 class Activity extends BaseModel {
@@ -134,8 +134,8 @@ class Activity extends BaseModel {
 ```
 
 ```ts file=src/activity.ts
-// src/{server}/models/activity.js
-import { BaseModel } from '@mcp-rune/mcp-rune/core'
+// src/{server}/models/activity.ts
+import { BaseModel } from '@mcp-rune/mcp-rune/models'
 import { searchConfig } from '@mcp-rune/mcp-rune/api-extensions/search'
 
 class Activity extends BaseModel {
@@ -355,7 +355,7 @@ Once a model declares `extensions['search']` via `searchConfig({...})` **and `se
 1. **`search_records` tool** — `getSearchableModelNames(models)` (exported from `@mcp-rune/mcp-rune/api-extensions/search`) includes the model
 2. **`get_filters_guide` tool** — generates markdown documentation from the filter spec
 3. **`list_models` tool** — shows `filterable_search: { available: true, filter_count: N }` (reads via `getSearchConfig(config)?.filters`)
-4. **Search view MCP App** — the server-author's `SEARCH_VIEW_MODELS` (or equivalent) registry can filter `getSearchConfig(M)?.filters` to pick eligible models
+4. **find_model_app** — advertises text query and filter chips for models whose `getSearchConfig(M)` declares them
 5. **`find_records` tool** — usage rules direct the LLM to use `search_records` for filterable models
 
 ## Step 5: LLM Workflows
@@ -377,13 +377,13 @@ User: "Analyze my activity patterns for Q1"
   ↓
 LLM: get_filters_guide("activity")
 LLM: search_records({ filters: { started_at: { from: "2024-01-01", to: "2024-03-31" } }, page: 1 })
-LLM: store_analysis_memory({ analysis_id: "q1-review", finding: "...", category: "patterns" })
+LLM: analysis_store({ analysis_id: "q1-review", findings: [{ finding: "...", category: "patterns" }] })
 LLM: search_records({ ..., page: 2 })
-LLM: store_analysis_memory({ ... })
+LLM: analysis_store({ ... })
   ...iterate pages...
-LLM: recall_analysis_memories({ analysis_id: "q1-review" })
+LLM: analysis_query({ analysis_id: "q1-review", mode: "semantic", query: "activity patterns" })
 LLM: synthesize and present findings
-LLM: clear_analysis_memories({ analysis_id: "q1-review" })
+LLM: analysis_clear({ analysis_id: "q1-review" })
 ```
 
 ## Checklist

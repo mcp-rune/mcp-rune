@@ -6,7 +6,7 @@
 
 |  |  |
 | --- | --- |
-| **Polymorphic CRUD & bulk** | 8 tools serve every model, including batch create / update / delete and compound-ID nested resources |
+| **Polymorphic CRUD & bulk** | 9 tools serve every model, including batch create / update / delete and compound-ID nested resources |
 | **Prompt DSL** | Declarative sections + field groups; stateless / hybrid / stateful strategies for 20+ field workflows |
 | **Interactive MCP Apps** | Schema-derived HTML forms in a sandboxed `ui://` iframe; bidirectional `ontoolinput` / `ontoolresult` channels |
 | **Domain intelligence** | `DomainConcept`, `BusinessRule`, `WorkflowDefinition`, `DiagramTemplate` — a declarative registry the LLM reaches for |
@@ -21,7 +21,7 @@
 
 ## Tech stack
 
-TypeScript 5.9 (strict) · Node.js ≥ 24 (ESM) · [`@modelcontextprotocol/sdk`](https://github.com/modelcontextprotocol/typescript-sdk) (spec 2025-11-25) · Zod v4 · Express 5 · `openid-client` · PostgreSQL + `pgvector` (analysis layer) · Vitest
+TypeScript 6 (strict) · Node.js ≥ 24 (ESM) · [`@modelcontextprotocol/sdk`](https://github.com/modelcontextprotocol/typescript-sdk) (spec 2025-11-25) · Zod v4 · Express 5 · `openid-client` · PostgreSQL + `pgvector` (analysis layer) · Vitest
 
 ## Community
 

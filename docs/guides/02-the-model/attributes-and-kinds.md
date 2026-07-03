@@ -37,7 +37,7 @@ Call `validate_form` with `{ "model": "book", "fields": {} }`:
 }
 ```
 
-The error message is shaped by two things: the `required: true` flag on the `name` attribute (the rule) and the kind's `describe()` (the `"Name"` label). Change the `description:` text in `book.ts` and the message updates on next boot.
+The error message is shaped by two things: the `required: true` flag on the `name` attribute (the rule) and the attribute's `description` field (the `"Name"` label). Change the `description:` text in `book.ts` and the message updates on next boot.
 
 **3. LLM representation — `get_prompt_guide` calls every kind's `describe`**
 
@@ -63,7 +63,7 @@ API value  ⇄  internal value  ⇄  HTML <input> value
    (parse / serialize)        (fromInput / toInput)
    describe(internal) -> string   (LLM-facing summary)
    validate(internal) -> string | null   (kind-aware errors)
-   format(internal)  -> DOM Node   (display rendering, browser only)
+   render(internal)  -> DOM Node   (display rendering, browser only)
 ```
 
 A concrete walk-through — an ISBN attribute declared as `string:isbn` — makes the boundaries obvious:
@@ -81,7 +81,7 @@ A concrete walk-through — an ISBN attribute declared as `string:isbn` — make
    │                  "9780132350884"  (normalized, hyphens out)  │
    └─────────┬───────────────┬─────────────────────┬──────────────┘
              │               │                     │
-   serialize │   describe    │      validate       │  format
+   serialize │   describe    │      validate       │  render
              ▼               ▼                     ▼
    API JSON          "ISBN-13: 978-0-13-235088-4"  "ok"  →  <code>9780132350884</code>
    { isbn: "..." }   (LLM-facing summary,          | null    (DOM node, browser
@@ -99,20 +99,22 @@ mcp-rune ships 17 built-in kinds (`string`, `integer`, `boolean`, `date`, `enum`
 - The **`validate_form` tool** to reject malformed inputs (`uuid`, `email`, `date`, `json`, …) before they hit the API.
 - The **server-side prompt summary** so the LLM's mental model of the form state matches what the user just saw on screen (boolean → `Yes`/`No`, enum → humanized label, base64 → `(binary)`).
 
-A deployer extends this taxonomy through a single declarative channel — `AppRegistry.formatters` — and both browser and server pick the change up automatically.
+A deployer extends this taxonomy through a single declarative channel — the `kinds:` option on `AppRegistry` — and both browser and server pick the change up automatically.
 
 ## Table of Contents
 
 - [Built-in Kinds](#built-in-kinds)
 - [The `KindDescriptor` Contract](#the-kinddescriptor-contract)
-- [Three Extension Paths](#three-extension-paths)
+- [Two Extension Paths](#two-extension-paths)
+  - [The `KindExtension` shape](#the-kindextension-shape)
 - [`getKind` Lookup Rules](#getkind-lookup-rules)
 - [Worked Example: ISBN as `string:isbn`](#worked-example-isbn-as-stringisbn)
-- [Worked Example: Currency Kind via `registerKind`](#worked-example-currency-kind-via-registerkind)
+- [Worked Example: Currency Kind](#worked-example-currency-kind)
+  - [Where each half runs](#where-each-half-runs)
 - [Worked Example: DOM-Only Override](#worked-example-dom-only-override)
 - [How a Kind Flows Through the System](#how-a-kind-flows-through-the-system)
 - [Testing Custom Kinds](#testing-custom-kinds)
-- [Migrating from v0.50 `formatterScript`](#migrating-from-v050-formatterscript)
+- [Migrating from `AppRegistry.formatters`](#migrating-from-appregistryformatters)
 
 ## Built-in Kinds
 
@@ -128,7 +130,7 @@ All 17 kinds are registered in `src/mcp/models/kinds/` — one file per built-in
 | `date`     | `date`           | `date`       | `2026-05-28`                     |
 | `datetime` | `datetime-local` | `datetime`   | `2026-05-28T14:30:00.000Z`       |
 | `time`     | `time`           | `time`       | `14:30`                          |
-| `enum`     | `text`           | `enum`       | `In Progress` (humanized)        |
+| `enum`     | `select`         | `enum`       | `In Progress` (humanized)        |
 | `array`    | `text`           | `array`      | `Physical, Pdf` (humanized join) |
 | `uuid`     | `text`           | `uuid`       | `550e8400-e29b-41d4-…`           |
 | `json`     | `textarea`       | `object`     | `{"foo":1}`                      |
@@ -138,12 +140,14 @@ All 17 kinds are registered in `src/mcp/models/kinds/` — one file per built-in
 | `base64`   | `text`           | `string`     | `(binary)`                       |
 | `rating`   | `number`         | `integer`    | `3/5`                            |
 
-`describe` is the LLM-facing summary — it's what shows up in `generate_form_summary` and in the human-readable section of `validate_form` responses. It deliberately humanizes (`Yes`/`No`, not `true`/`false`; `In Progress`, not `in_progress`) so the LLM's mental model of the form state matches what the user saw on screen.
+The `htmlInputType` column is the kind's own default; any attribute definition carrying `enumValues` widens its input through `resolveInputType` regardless of kind — `select` for scalar kinds, `checkbox_group` when the kind is `array`.
+
+`describe` is the LLM-facing summary — it's what shows up in `get_form_summary` and in the human-readable section of `validate_form` responses. It deliberately humanizes (`Yes`/`No`, not `true`/`false`; `In Progress`, not `in_progress`) so the LLM's mental model of the form state matches what the user saw on screen.
 
 ## The `KindDescriptor` Contract
 
-```ts file=src/kind-opts.ts
-import type { KindDescriptor, KindOpts } from '@mcp-rune/mcp-rune/core'
+```ts file=examples/kind-descriptor-contract.ts
+import type { KindDescriptor, KindOpts } from '@mcp-rune/mcp-rune/models'
 
 interface KindOpts {
   format?: string
@@ -164,7 +168,7 @@ interface KindDescriptor {
 }
 ```
 
-```js file=src/kind-opts.js
+```js file=examples/kind-descriptor-contract.js
 /**
  * Per-attribute kind configuration. Passed to every KindDescriptor method
  * so kinds can specialize (e.g. `format: 'iso8601'` for dates).
@@ -195,12 +199,12 @@ interface KindDescriptor {
 
 Each method has a precise role. Read them as a contract between three caller groups:
 
-- **`form-schema.ts` (server)** reads `htmlInputType` when generating `FormFieldDefinition.type` so the iframe knows which `<input>` widget to render.
+- **`src/mcp/apps/lib/app-form-schema.ts` (server)** resolves each field's widget through `resolveInputType(attr.type, attr.format, kindOptsFrom(attr))` when generating `FormFieldDefinition.type`, so the iframe knows which `<input>` widget to render.
 - **`schema-derivation.ts` (server)** reads `promptType` to populate the "Type" column of LLM-facing attribute reference tables.
 - **`shared/model-form/main.js` (iframe)** calls `parse(apiValue)` to hydrate the form from a record, then `toInput(internal)` to write the `<input value="…">`. On submit, it calls `fromInput(rawString)` then `serialize(internal)` to produce the API payload.
-- **`find-model-app-ui` / `show-model-app-ui` / `view-selection-app-ui`** call `parse` then `format` (the DOM-returning function from `formatters.ts`, which is layered on top of the descriptor and not part of it).
-- **`HybridStrategy.generateHumanSummary` and `BasePrompt.generateHumanReadableSummary`** (server) call `describe(value)` for every populated field so the LLM-facing summary mirrors the iframe's `format()` output.
-- **`BaseStrategy.validateField` (server)** calls `validate(value)` for kind-aware error messages. Range / length / pattern checks from `FieldValidation` are orthogonal and live in `base-strategy.ts`.
+- **`find-model-app-ui` / `show-model-app-ui` / `view-selection-app-ui`** call `parse` then `render` (the DOM-returning function from `kind-renderers.ts`, which is layered on top of the descriptor and not part of it).
+- **`HybridFormStrategy.generateSummary` (server)** delegates to the `DefaultFormSummaryRenderer`, which calls `getKind().describe` for every populated field so the LLM-facing summary mirrors the iframe's rendering.
+- **`BaseFormStrategy.validateField` (server)** calls `validate(value)` for kind-aware error messages. Range / length / pattern checks from `FieldValidation` are orthogonal and live in `src/mcp/prompts/form-strategies/base-form-strategy.ts`.
 
 `parse / serialize / toInput / fromInput` follow the standard rule: `parse` accepts whatever the API gave you (string, number, boolean, null); `toInput` produces a value the HTML `<input>` is happy with (always a string); `fromInput` accepts the raw `<input>.value` string; `serialize` returns the shape your API expects.
 
@@ -215,14 +219,14 @@ Each method has a precise role. Read them as a contract between three caller gro
 
 ### The `KindExtension` shape
 
-```ts file=src/kind-extension.ts
+```ts file=examples/kind-extension-shape.ts
 import type { KindExtension, KindDescriptor, KindRenderHint } from '@mcp-rune/mcp-rune/apps'
 
 // KindExtension = Partial<KindDescriptor> & { render?: KindRenderHint }
 //
 // Partial<KindDescriptor>: label, htmlInputType, promptType, plus the
 //   functions parse / serialize / toInput / fromInput / describe / validate.
-//   These run server-side (and in the browser when the bundle ships them).
+//   These run server-side.
 //
 // KindRenderHint: declarative DOM rendering forwarded to the iframe runtime
 //   through `window.__MCP_RUNE_KIND_RENDERERS__`. A closed allowlist of
@@ -238,13 +242,13 @@ interface KindRenderHint {
 }
 ```
 
-```js file=src/kind-extension.js
+```js file=examples/kind-extension-shape.js
 /**
  * KindExtension = Partial<KindDescriptor> & { render?: KindRenderHint }
  *
  * Partial<KindDescriptor>: label, htmlInputType, promptType, plus the
  *   functions parse / serialize / toInput / fromInput / describe / validate.
- *   These run server-side (and in the browser when the bundle ships them).
+ *   These run server-side.
  *
  * KindRenderHint: declarative DOM rendering forwarded to the iframe runtime
  *   through `window.__MCP_RUNE_KIND_RENDERERS__`. A closed allowlist of
@@ -270,7 +274,7 @@ import { getKind } from '@mcp-rune/mcp-rune/models'
 getKind('string', 'isbn') // 1. exact kind:format narrowing
 getKind('string', 'url') // 2. format hop — 'url' is a top-level kind
 getKind('uuid') // 3. base kind
-getKind('totally-fake') // 4. falls back to 'string'
+getKind('totally-fake') // 4. throws UnknownKindError
 ```
 
 ```js file=examples/attribute-kinds-guide-03.js
@@ -278,10 +282,10 @@ import { getKind } from '@mcp-rune/mcp-rune/models'
 getKind('string', 'isbn') // 1. exact kind:format narrowing
 getKind('string', 'url') // 2. format hop — 'url' is a top-level kind
 getKind('uuid') // 3. base kind
-getKind('totally-fake') // 4. falls back to 'string'
+getKind('totally-fake') // 4. throws UnknownKindError
 ```
 
-Both arguments are case-insensitive (`getKind('URL')` and `getKind('url')` are the same). The format-hop fallback (step 2) is what makes JSON-schema-style `format: 'email'` or `format: 'date-time'` work without each deployer registering every narrowing.
+Both arguments are case-insensitive (`getKind('URL')` and `getKind('url')` are the same). The format-hop fallback (step 2) is what makes JSON-schema-style `format: 'email'` or `format: 'date-time'` work without each deployer registering every narrowing. Boot validation (`validateRegistries`) catches every model-driven call site before the throw can surface at runtime; the iframe display layer instead degrades unknown kinds to string semantics with a console warning ([ADR 0010](../../architecture/decisions/0010-server-authoritative-kinds-declarative-iframes.md)).
 
 ## Worked Example: ISBN as `string:isbn`
 
@@ -292,7 +296,7 @@ Suppose your books have an `isbn` attribute and you want:
 - The LLM-facing prompt docs to say "ISBN" instead of "string."
 - A clear label in the form.
 
-```ts file=src/registries/app-registry.ts
+```ts file=src/config.ts
 // your-server/config.ts
 import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
 import { MODEL_CLASSES } from './models'
@@ -317,8 +321,8 @@ export const appRegistry = createDefaultAppRegistry({
 })
 ```
 
-```js file=src/registries/app-registry.js
-// your-server/config.ts
+```js file=src/config.js
+// your-server/config.js
 import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
 import { MODEL_CLASSES } from './models'
 export const appRegistry = createDefaultAppRegistry({
@@ -463,8 +467,8 @@ When the form inputs should inherit a built-in's handling (number coercion for c
 
 Sometimes you want to keep a kind's contract intact but change the rendered widget. Example: render `rating` as a slider instead of stars.
 
-```ts file=src/max.ts
-// your-server/apps/rating-slider.js
+```ts file=src/apps/rating-slider.ts
+// your-server/apps/rating-slider.ts
 import { registerKindRenderer, helpers } from '@mcp-rune/mcp-rune/apps/kind-renderers'
 
 registerKindRenderer('rating', {
@@ -480,7 +484,7 @@ registerKindRenderer('rating', {
 })
 ```
 
-```js file=src/max.js
+```js file=src/apps/rating-slider.js
 // your-server/apps/rating-slider.js
 import { registerKindRenderer } from '@mcp-rune/mcp-rune/apps/kind-renderers'
 registerKindRenderer('rating', {
@@ -496,7 +500,7 @@ registerKindRenderer('rating', {
 })
 ```
 
-`registerKindRenderer` is **DOM-only**. It accepts only `{ render: (value, opts) => Node }` and throws if you try to pass `parse`, `serialize`, or any other key — those belong in the kind descriptor (configured via `AppRegistry({ kinds })`). The deliberate narrowing prevents drift where the server-side prompts and validation diverge from what the iframe rendered.
+`registerKindRenderer` is **DOM-only**. It accepts only `{ render: (value, opts) => Node }` — anything without a `render` function throws. `parse`, `serialize`, and the other descriptor fields belong in the kind descriptor (configured via `AppRegistry({ kinds })`). The deliberate narrowing prevents drift where the server-side prompts and validation diverge from what the iframe rendered.
 
 To register a brand-new kind, use `AppRegistry({ kinds })` above. `registerKindRenderer` only overrides the DOM rendering of an existing kind.
 
@@ -508,7 +512,7 @@ Trace a single `published_at` attribute (`type: 'datetime'`) from definition to 
 
 2. **Prompt docs**: `schema-derivation.ts` calls `getKind('datetime').promptType` → `'datetime'`. Renders in the LLM-facing attribute reference table.
 
-3. **Form schema**: `form-schema.ts` calls `getKind('datetime').htmlInputType` → `'datetime-local'`. Renders as `<input type="datetime-local">` in the form-app iframes.
+3. **Form schema**: `src/mcp/apps/lib/app-form-schema.ts` calls `resolveInputType(attr.type, attr.format, kindOptsFrom(attr))` → `'datetime-local'`. Renders as `<input type="datetime-local">` in the form-app iframes.
 
 4. **Form prefill**: `shared/model-form/main.js` receives an API value `"2026-05-28T14:30:00Z"`, calls `getKindRenderer('datetime').parse(...)` → `Date`, then `.toInput(date)` → `"2026-05-28T14:30"`. Sets the `<input value="…">`.
 
@@ -516,9 +520,9 @@ Trace a single `published_at` attribute (`type: 'datetime'`) from definition to 
 
 6. **Form submit**: user changes the input to `"2026-06-01T09:00"`. `shared/model-form/main.js` calls `getKindRenderer('datetime').fromInput(raw)` → `Date`, then `.serialize(date)` → `"2026-06-01T09:00:00.000Z"`. Sent to the API.
 
-7. **`validate_form`**: if the user instead pasted `"garbage"`, `BaseStrategy.validateField` calls `getKind('datetime').validate('garbage')` → `'must be a valid datetime'`. The tool returns the error before any API call.
+7. **`validate_form`**: if the user instead pasted `"garbage"`, `BaseFormStrategy.validateField` calls `getKind('datetime').validate('garbage')` → `'must be a valid datetime'`. The tool returns the error before any API call.
 
-8. **LLM summary**: when the prompt's `generate_form_summary` runs, `HybridStrategy.generateHumanSummary` calls `getKind('datetime').describe(date)` → full ISO string. The LLM sees the same value the iframe just displayed (in ISO form for unambiguous downstream reasoning).
+8. **LLM summary**: when `get_form_summary` runs, `HybridFormStrategy.generateSummary` (through the `DefaultFormSummaryRenderer`) calls `getKind('datetime').describe(date)` → full ISO string. The LLM sees the same value the iframe just displayed (in ISO form for unambiguous downstream reasoning).
 
 Same kind, eight call sites, one descriptor.
 
@@ -563,7 +567,7 @@ describe('currency kind', () => {
 
 Round-trips:
 
-```ts file=src/k.ts
+```ts file=test/currency-kind.test.ts
 it('round-trips through input', () => {
   const k = getKind('currency')
   const api = '$42.99'
@@ -574,7 +578,7 @@ it('round-trips through input', () => {
 })
 ```
 
-```js file=src/k.js
+```js file=test/currency-kind.test.js
 it('round-trips through input', () => {
   const k = getKind('currency')
   const api = '$42.99'
@@ -585,9 +589,9 @@ it('round-trips through input', () => {
 })
 ```
 
-The DOM `format()` is tested in `happy-dom`:
+The DOM `render()` is tested in `happy-dom`:
 
-```ts file=src/node.ts
+```ts file=test/rating-renderer.test.ts
 /**
  * @vitest-environment happy-dom
  */
@@ -600,7 +604,7 @@ it('rating renders a custom widget after override', () => {
 })
 ```
 
-```js file=src/node.js
+```js file=test/rating-renderer.test.js
 /**
  * @vitest-environment happy-dom
  */
@@ -670,7 +674,7 @@ What changed:
 
 - `formatters:` → `kinds:` (the option is honest about what it configures).
 - `display:` → `render:` (the sub-block is honest about being DOM-only).
-- `validation: { pattern, minLength, maxLength, … }` → write a `validate(v)` function instead. Same field, runs on the server (and in the browser bundle), no longer drifts from `KindDescriptor.validate`.
+- `validation: { pattern, minLength, maxLength, … }` → write a `validate(v)` function instead. Same field, runs on the server, no longer drifts from `KindDescriptor.validate`.
 - `parser:` removed — it was never wired up.
 - `label`, `htmlInputType`, `promptType` are no longer silently ignored — they register with the kind descriptor on the server.
 

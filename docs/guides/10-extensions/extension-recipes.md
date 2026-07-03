@@ -58,7 +58,7 @@ Use the built-in `customActionsExtension`. Declare per-model verbs in the model'
 
 ```ts file=src/models/post.ts
 import { BaseModel } from '@mcp-rune/mcp-rune'
-import type { AttributeDefinition } from '@mcp-rune/mcp-rune/core'
+import type { AttributeDefinition } from '@mcp-rune/mcp-rune/models'
 import { customActionsConfig } from '@mcp-rune/mcp-rune/api-extensions/custom-actions'
 
 export class Post extends BaseModel {
@@ -69,8 +69,10 @@ export class Post extends BaseModel {
   }
   static override extensions = {
     'custom-actions': customActionsConfig({
-      publish: { method: 'POST', path: ':id/publish' },
-      archive: { method: 'POST', path: ':id/archive' }
+      actions: {
+        publish: { path: ':id/publish' },
+        archive: { path: ':id/archive' }
+      }
     })
   }
 }
@@ -88,8 +90,10 @@ export class Post extends BaseModel {
   }
   static extensions = {
     'custom-actions': customActionsConfig({
-      publish: { method: 'POST', path: ':id/publish' },
-      archive: { method: 'POST', path: ':id/archive' }
+      actions: {
+        publish: { path: ':id/publish' },
+        archive: { path: ':id/archive' }
+      }
     })
   }
 }
@@ -127,7 +131,7 @@ const registry = new ToolRegistry({
 
 **Why this lives in `ApiExtension`:** custom verbs reach into `ModelService` to share HTTP dispatch, payload building, and endpoint resolution. The `ApiExtension` boundary gives them typed access to those primitives without exposing the rest of the registry.
 
-→ Full reference: [API Extensions](./api-extensions.md). Built-in custom-actions source: [`src/api-extensions/custom-actions.ts`](../../../src/api-extensions/custom-actions.ts).
+→ Full reference: [API Extensions](./api-extensions.md). Built-in custom-actions source: [`src/mcp/data-layer/api-extensions/custom-actions/custom-actions.ts`](../../../src/mcp/data-layer/api-extensions/custom-actions/custom-actions.ts).
 
 ---
 
@@ -137,13 +141,10 @@ When a tool isn't a CRUD operation on one of your models — a workflow helper, 
 
 ```ts file=src/tools/audit-tool.ts
 import type { ApiExtension } from '@mcp-rune/mcp-rune/api-extensions'
-import { BaseTool, TOOL_CATEGORIES, type ToolResult } from '@mcp-rune/mcp-rune/tools'
+import { BaseTool, type ToolResult } from '@mcp-rune/mcp-rune/tools'
 import { z } from 'zod'
 
 class AuditRecentTool extends BaseTool {
-  static override get category() {
-    return TOOL_CATEGORIES.DATA
-  }
   override get name() {
     return 'audit_recent'
   }
@@ -167,13 +168,10 @@ export const auditExtension: ApiExtension = {
 ```
 
 ```js file=src/tools/audit-tool.js
-import { BaseTool, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
+import { BaseTool } from '@mcp-rune/mcp-rune/tools'
 import { z } from 'zod'
 
 class AuditRecentTool extends BaseTool {
-  static get category() {
-    return TOOL_CATEGORIES.DATA
-  }
   get name() {
     return 'audit_recent'
   }
@@ -324,7 +322,7 @@ To write a similar approval flow against a different review surface (Slack, an i
 
 ## Add a new way to summarize a page of records for `analysis_ingest`
 
-`analysis_ingest` writes one memory per page using a `SummaryStrategy`. Five strategies ship built-in (`distribution`, `coverage`, `anomaly`, `temporal`, `entity-extraction`). Contribute a new one through `ApiExtension.registerSummaryStrategy` — strategies are deterministic pure functions over the records array.
+`analysis_ingest` writes one memory per page using a `SummaryStrategy`. Nine strategies ship built-in (`distribution`, `coverage`, `anomaly`, `temporal`, `entity-extraction`, `relationship-coverage`, `concept-touch`, `rule-violation`, `semantic-cluster`). Contribute a new one through `ApiExtension.registerSummaryStrategy` — strategies are deterministic pure functions over the records array.
 
 ```ts file=src/extensions/sales-narrative-strategy.ts
 import type { ApiExtension } from '@mcp-rune/mcp-rune/api-extensions'
@@ -378,48 +376,59 @@ Once registered, callers select your strategy via `analysis_ingest(summary_strat
 If your API doesn't follow JSON:API — different envelope shape, different association resolution, different error format — implement `BaseConvention` and attach it per-model. No extension is needed; this is a plain model-config field.
 
 ```ts file=src/conventions/hal-convention.ts
-import type { BaseConvention } from '@mcp-rune/mcp-rune/prompts'
+import type { ErrorResponse, NormalizedListResponse } from '@mcp-rune/mcp-rune/api-conventions'
+import { BaseConvention } from '@mcp-rune/mcp-rune/api-conventions'
 
-export const halConvention: BaseConvention = {
-  parseRecords(response, model) {
-    return response._embedded?.[model] ?? []
-  },
-  parseErrorResponse(response) {
-    return { message: response.message, details: response.errors }
-  },
-  normalizeRecord(record) {
-    const { _links, _embedded, ...attrs } = record
-    return attrs
+export class HalConvention extends BaseConvention {
+  override normalizeListResponse(
+    response: Record<string, unknown> | unknown[],
+    options: { page: number; perPage: number }
+  ): NormalizedListResponse {
+    const embedded = (response as { _embedded?: Record<string, unknown[]> })._embedded ?? {}
+    const records = (Object.values(embedded)[0] ?? []) as Record<string, unknown>[]
+    return {
+      records,
+      pagination: { page: options.page, per_page: options.perPage, total: records.length }
+    }
   }
-  // ...full surface in api-convention-guide.md
+
+  override parseErrorResponse(response: ErrorResponse): string[] {
+    const data = response.data as { message?: string } | undefined
+    return data?.message ? [data.message] : super.parseErrorResponse(response)
+  }
+  // ...full surface in api-convention.md
 }
 ```
 
 ```js file=src/conventions/hal-convention.js
-export const halConvention = {
-  parseRecords(response, model) {
-    return response._embedded?.[model] ?? []
-  },
-  parseErrorResponse(response) {
-    return { message: response.message, details: response.errors }
-  },
-  normalizeRecord(record) {
-    const { _links, _embedded, ...attrs } = record
-    return attrs
+import { BaseConvention } from '@mcp-rune/mcp-rune/api-conventions'
+
+export class HalConvention extends BaseConvention {
+  normalizeListResponse(response, options) {
+    const embedded = response._embedded ?? {}
+    const records = Object.values(embedded)[0] ?? []
+    return {
+      records,
+      pagination: { page: options.page, per_page: options.perPage, total: records.length }
+    }
   }
-  // ...full surface in api-convention-guide.md
+
+  parseErrorResponse(response) {
+    return response.data?.message ? [response.data.message] : super.parseErrorResponse(response)
+  }
+  // ...full surface in api-convention.md
 }
 ```
 
 ```ts file=src/models/legacy-record.ts
 import { BaseModel } from '@mcp-rune/mcp-rune'
-import type { AttributeDefinition } from '@mcp-rune/mcp-rune/core'
-import { halConvention } from '../conventions/hal-convention.js'
+import type { AttributeDefinition } from '@mcp-rune/mcp-rune/models'
+import { HalConvention } from '../conventions/hal-convention.js'
 
 export class LegacyRecord extends BaseModel {
   static override api = {
     endpoint: 'records',
-    convention: halConvention
+    convention: new HalConvention()
   }
   static override attributes: Record<string, AttributeDefinition> = {
     title: { type: 'string', required: true }
@@ -429,12 +438,12 @@ export class LegacyRecord extends BaseModel {
 
 ```js file=src/models/legacy-record.js
 import { BaseModel } from '@mcp-rune/mcp-rune'
-import { halConvention } from '../conventions/hal-convention.js'
+import { HalConvention } from '../conventions/hal-convention.js'
 
 export class LegacyRecord extends BaseModel {
   static api = {
     endpoint: 'records',
-    convention: halConvention
+    convention: new HalConvention()
   }
   static attributes = { title: { type: 'string', required: true } }
 }
@@ -452,7 +461,7 @@ When you want to exercise the tool surface end-to-end without a live API — for
 
 ```ts file=src/registry-in-memory.ts
 import { ToolRegistry, DATA_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
-import { createInMemoryDataLayer } from '@mcp-rune/mcp-rune/core'
+import { createInMemoryDataLayer } from '@mcp-rune/mcp-rune/data-layer'
 
 const registry = new ToolRegistry({
   toolClasses: DATA_TOOL_CLASSES,
@@ -471,7 +480,7 @@ const registry = new ToolRegistry({
 
 ```js file=src/registry-in-memory.js
 import { ToolRegistry, DATA_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
-import { createInMemoryDataLayer } from '@mcp-rune/mcp-rune/core'
+import { createInMemoryDataLayer } from '@mcp-rune/mcp-rune/data-layer'
 
 const registry = new ToolRegistry({
   toolClasses: DATA_TOOL_CLASSES,
@@ -504,7 +513,7 @@ Real integrations rarely fit cleanly in one extension type. A Stripe integration
 - A `/webhooks/stripe` route handler (via `HttpExtension`) to receive Stripe events
 - A `stripe_charge_review` app tool with `'collect'` submit mode (via `ToolFlowExtension`)
 
-**Co-locate the pieces in one file** and export them as siblings. The deployer imports from one place and wires to the three config maps. Naming convention: `<feature>Integration.ts` for the filename, `<feature><Surface>Extension` for the exports.
+**Co-locate the pieces in one file** and export them as siblings. The deployer imports from one place and wires to the three config maps. Naming convention: `<feature>-integration.ts` for the filename, `<feature><Surface>Extension` for the exports.
 
 ```ts file=src/integrations/stripe-integration.ts
 import type { ApiExtension } from '@mcp-rune/mcp-rune/api-extensions'

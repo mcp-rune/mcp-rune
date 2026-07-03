@@ -1,21 +1,21 @@
-> **Customization:** per-model via `static api.convention`, server-wide via `defaultConvention:` on `ToolRegistry`. Ships `jsonApiConvention` (also exported as `defaultConvention`). Write a custom one for HAL, flat envelopes, or proprietary wrappers.
+> **Customization:** per-model via `static api.convention`, server-wide via `defaultConvention:` on `ToolRegistry` or `AppRegistry`. Ships `jsonApiConvention` (also exported as `defaultConvention`). Write a custom one for HAL, flat envelopes, or proprietary wrappers.
 
 # API convention
 
 A **convention** owns everything wire-format-specific about your API: how request payloads are wrapped, how association IDs translate into the form your backend expects, how list responses are unpacked into `{ records, pagination }`, and how response envelopes are stripped of protocol noise before reaching tools and prompts.
 
-The previous two chapters covered `ModelService` (the default `DataLayer` implementation) and `ApiClient` (the HTTP seam it composes). This chapter covers the third collaborator — the convention — and the v0.85.0 change that moved the default-convention seam from `BaseModel` to the `DataLayer` factory.
+Two sibling guides in this chapter cover [`ModelService`](./model-service.md) (the default `DataLayer` implementation) and [`ApiClient`](./api-client.md) (the HTTP seam it composes). This guide covers the third collaborator — the convention — and the v0.85.0 change that moved the default-convention seam from `BaseModel` to the `DataLayer` factory.
 
-mcp-rune ships two conventions in `src/mcp/api-conventions/`:
+mcp-rune ships two conventions in `src/mcp/data-layer/api-conventions/`:
 
-- **`jsonApiConvention`** — JSON:API wrapping (`{ data: { type, attributes, relationships } }`), used as the default.
+- **`jsonApiConvention`** — Rails-style JSON wrapping: request bodies go under the model key (`{ book: {…} }`) with flat `{rel}_id` / `{singular}_ids` foreign keys, and list responses are read from `{ data: [...], meta: {...} }`. Used as the default.
 - **`defaultConvention`** — re-exports `jsonApiConvention`. The framework's "use this if you don't know what you need" entry point.
 
 You write a custom convention when your API:
 
 - Is **HAL** (`_embedded`, `_links`).
 - Uses **flat unwrapped payloads** and a hand-rolled pagination scheme (`{ items, page, total }`).
-- Has an **idiosyncratic envelope** (Rails-style `{ data: [...], meta: {...} }`, or a wrapper your team invented years ago).
+- Has an **idiosyncratic envelope** (anything beyond the `{ data: [...], meta: {...} }` lists `jsonApiConvention` reads — say, a wrapper your team invented years ago).
 
 The seam isolates that idiosyncrasy. Tools, prompts, apps, and the form-app iframes never see your envelope — they see normalized records.
 
@@ -36,27 +36,26 @@ The same `belongsTo` and `hasMany` declarations produce different wire payloads 
                           │
             ┌─────────────┴─────────────┐
             ▼                           ▼
-        HAL                       JSON:API
-   ┌─────────────────────┐   ┌──────────────────────────────┐
-   │  {                  │   │  {                           │
-   │    title: "...",    │   │    data: {                   │
-   │    author_link:     │   │      type: "books",          │
-   │      "/authors/7",  │   │      attributes: {           │
-   │    author_id: 7,    │   │        title: "..."          │
-   │    tag_ids: [1, 3]  │   │      },                      │
-   │  }                  │   │      relationships: {        │
-   │                     │   │        author: { data: {     │
-   │  belongsTo:         │   │          type: "authors",    │
-   │   {rel}_link +      │   │          id: "7" } },        │
-   │   {rel}_id          │   │        tags:   { data: [...] │
-   │                     │   │      }                       │
-   │  hasMany:           │   │    }                         │
-   │   {singular}_ids[]  │   │  }                           │
-   │                     │   │                              │
-   └─────────────────────┘   └──────────────────────────────┘
+        HAL                     jsonApiConvention
+   ┌─────────────────────┐   ┌─────────────────────────┐
+   │  {                  │   │  {                      │
+   │    title: "...",    │   │    book: {              │
+   │    author_link:     │   │      title: "...",      │
+   │      "/authors/7",  │   │      author_id: 7,      │
+   │    author_id: 7,    │   │      tag_ids: [1, 3]    │
+   │    tag_ids: [1, 3]  │   │    }                    │
+   │  }                  │   │  }                      │
+   │                     │   │                         │
+   │  belongsTo:         │   │  belongsTo:             │
+   │   {rel}_link +      │   │   {rel}_id              │
+   │   {rel}_id          │   │                         │
+   │                     │   │  hasMany:               │
+   │  hasMany:           │   │   {singular}_ids[]      │
+   │   {singular}_ids[]  │   │                         │
+   └─────────────────────┘   └─────────────────────────┘
 ```
 
-Tools and prompts above the convention only see the _internal_ record — they never branch on HAL vs JSON:API. Adding a third convention (custom envelope) is a single class; nothing in the layer above changes.
+Tools and prompts above the convention only see the _internal_ record — they never branch on HAL vs model-key wrapping. Adding a third convention (custom envelope) is a single class; nothing in the layer above changes.
 
 ## Table of Contents
 
@@ -74,13 +73,15 @@ Tools and prompts above the convention only see the _internal_ record — they n
 ```ts file=src/conventions/my-convention.ts
 import {
   BaseConvention,
-  type AssociationConfig,
-  type BelongsToAssociation,
   type ErrorResponse,
   type FieldDefinition,
-  type HasManyAssociation,
   type NormalizedListResponse
-} from '@mcp-rune/mcp-rune/prompts'
+} from '@mcp-rune/mcp-rune/api-conventions'
+import type {
+  AssociationConfig,
+  BelongsToAssociation,
+  HasManyAssociation
+} from '@mcp-rune/mcp-rune/models'
 
 class MyConvention extends BaseConvention {
   get name(): string { return 'my-convention' }
@@ -112,7 +113,7 @@ class MyConvention extends BaseConvention {
 ```
 
 ```js file=src/conventions/my-convention.js
-import { BaseConvention } from '@mcp-rune/mcp-rune/prompts'
+import { BaseConvention } from '@mcp-rune/mcp-rune/api-conventions'
 class MyConvention extends BaseConvention {
   get name() {
     return 'my-convention'
@@ -120,7 +121,7 @@ class MyConvention extends BaseConvention {
 }
 ```
 
-The first five are the must-implement methods. The bottom three have sensible defaults you can override when your wire format demands it.
+The first five are the must-implement methods. The bottom four have sensible defaults you can override when your wire format demands it.
 
 ## Method Roles
 
@@ -148,15 +149,17 @@ Wraps the attribute hash into the API's expected request body.
 
 ### `normalizeListResponse(response, { page, perPage })`
 
-Unpacks a list response into `{ records, pagination }`. Pagination is `{ page, perPage, total, totalPages, hasMore }`. Tools and apps never see raw response envelopes.
+Unpacks a list response into `{ records, pagination }`. Pagination is a `PaginationInfo`: `{ page, per_page, total, total_pages? }`. Tools and apps never see raw response envelopes.
+
+Note the asymmetry: the options argument comes in camelCase (`page`, `perPage`, mirroring `PaginationParams` at the call site), while the returned `PaginationInfo` is snake_case (`per_page`, `total_pages`) — it mirrors the wire-format pagination meta rather than the caller.
 
 ### `cleanResponse(data)`
 
-Strips protocol noise. HAL strips `_links` and `_embedded` (after expansion). JSON:API drops the `data.type` and unwraps `data.attributes`. Called at the `ApiClient` boundary so every consumer sees clean records.
+Strips protocol noise. The base implementation is a no-op; `jsonApiConvention` strips `_links` recursively (and nothing else). A HAL convention would also strip `_embedded` (after expansion). Applied at the `ApiClient` boundary so every consumer sees clean records.
 
 ### `parseErrorResponse(response)`
 
-Turns a non-2xx response into a flat list of error message strings the framework can show in tool responses. Default implementation handles strings and JSON-dumps objects; override when your API has a structured error envelope worth flattening.
+Turns a non-2xx response into a flat list of error message strings. Its consumer is `translateApiError`, which runs once at the `ModelService` boundary and packs the parsed list into `ApiRequestError.messages`. Default implementation passes strings through, stringifies other primitives, and JSON-dumps objects; override when your API has a structured error envelope worth flattening.
 
 ## Worked Example: HAL Convention
 
@@ -166,11 +169,10 @@ HAL wraps lists in `_embedded.{collection}` and pagination in `_links`. Associat
 // your-server/conventions/hal-convention.ts
 import {
   BaseConvention,
-  type BelongsToAssociation,
-  type HasManyAssociation,
   type FieldDefinition,
   type NormalizedListResponse
-} from '@mcp-rune/mcp-rune/prompts'
+} from '@mcp-rune/mcp-rune/api-conventions'
+import type { BelongsToAssociation, HasManyAssociation } from '@mcp-rune/mcp-rune/models'
 
 export class HalConvention extends BaseConvention {
   get name() {
@@ -245,7 +247,7 @@ export class HalConvention extends BaseConvention {
     if (Array.isArray(response)) {
       return {
         records: response as Record<string, unknown>[],
-        pagination: { page, perPage, total: response.length, totalPages: 1, hasMore: false }
+        pagination: { page, per_page: perPage, total: response.length, total_pages: 1 }
       }
     }
     const embedded = (response._embedded ?? {}) as Record<string, unknown>
@@ -255,7 +257,7 @@ export class HalConvention extends BaseConvention {
     const totalPages = Math.max(1, Math.ceil(total / perPage))
     return {
       records,
-      pagination: { page, perPage, total, totalPages, hasMore: page < totalPages }
+      pagination: { page, per_page: perPage, total, total_pages: totalPages }
     }
   }
 
@@ -281,8 +283,8 @@ export const halConvention = new HalConvention()
 ```
 
 ```js file=src/conventions/hal-convention.js
-// your-server/conventions/hal-convention.ts
-import { BaseConvention } from '@mcp-rune/mcp-rune/prompts'
+// your-server/conventions/hal-convention.js
+import { BaseConvention } from '@mcp-rune/mcp-rune/api-conventions'
 export class HalConvention extends BaseConvention {
   get name() {
     return 'hal'
@@ -341,7 +343,7 @@ export class HalConvention extends BaseConvention {
     if (Array.isArray(response)) {
       return {
         records: response,
-        pagination: { page, perPage, total: response.length, totalPages: 1, hasMore: false }
+        pagination: { page, per_page: perPage, total: response.length, total_pages: 1 }
       }
     }
     const embedded = response._embedded ?? {}
@@ -351,7 +353,7 @@ export class HalConvention extends BaseConvention {
     const totalPages = Math.max(1, Math.ceil(total / perPage))
     return {
       records,
-      pagination: { page, perPage, total, totalPages, hasMore: page < totalPages }
+      pagination: { page, per_page: perPage, total, total_pages: totalPages }
     }
   }
   cleanResponse(data) {
@@ -378,8 +380,7 @@ export const halConvention = new HalConvention()
 For a hand-rolled REST API with `{ items: [...], page, total }` lists and unwrapped POST bodies:
 
 ```ts file=src/conventions/flat-rest-convention.ts
-import { BaseConvention } from '@mcp-rune/mcp-rune/prompts'
-import { jsonApiConvention } from '@mcp-rune/mcp-rune/prompts'
+import { BaseConvention, jsonApiConvention } from '@mcp-rune/mcp-rune/api-conventions'
 
 export class FlatRestConvention extends BaseConvention {
   get name() {
@@ -400,7 +401,7 @@ export class FlatRestConvention extends BaseConvention {
     const totalPages = Math.max(1, Math.ceil(total / perPage))
     return {
       records,
-      pagination: { page, perPage, total, totalPages, hasMore: page < totalPages }
+      pagination: { page, per_page: perPage, total, total_pages: totalPages }
     }
   }
 
@@ -413,8 +414,7 @@ export const flatRestConvention = new FlatRestConvention()
 ```
 
 ```js file=src/conventions/flat-rest-convention.js
-import { BaseConvention } from '@mcp-rune/mcp-rune/prompts'
-import { jsonApiConvention } from '@mcp-rune/mcp-rune/prompts'
+import { BaseConvention, jsonApiConvention } from '@mcp-rune/mcp-rune/api-conventions'
 
 export class FlatRestConvention extends BaseConvention {
   get name() {
@@ -435,7 +435,7 @@ export class FlatRestConvention extends BaseConvention {
     const totalPages = Math.max(1, Math.ceil(total / perPage))
     return {
       records,
-      pagination: { page, perPage, total, totalPages, hasMore: page < totalPages }
+      pagination: { page, per_page: perPage, total, total_pages: totalPages }
     }
   }
 
@@ -503,35 +503,33 @@ Different models in the same server can use different conventions. The framework
 
 ## Wiring Globally
 
-If every model in your server uses the same custom convention, write a small base class and have your models extend it:
+If every model in your server uses the same custom convention, pass it once as `defaultConvention:` — the option exists on both `ToolRegistry` and `AppRegistry`. It is forwarded into the `DataLayer` factory, where the default `ModelService` adapter applies it to any model that does not declare `api.convention`:
 
-```ts file=src/models/base-hal-model.ts
-class BaseHalModel extends BaseModel {
-  static api = {
-    endpoint: '',
-    convention: halConvention
-  }
-}
+```ts file=src/server.ts
+import { DATA_TOOL_CLASSES, ToolRegistry } from '@mcp-rune/mcp-rune/tools'
+import { halConvention } from './conventions/hal-convention'
 
-class Book extends BaseHalModel {
-  static api = { ...BaseHalModel.api, endpoint: 'books' }
-  // …
-}
+const registry = new ToolRegistry({
+  toolClasses: DATA_TOOL_CLASSES,
+  models: { book: Book, author: Author },
+  createApiClient,
+  defaultConvention: halConvention
+})
 ```
 
-```js file=src/models/base-hal-model.js
-class BaseHalModel extends BaseModel {
-  static api = {
-    endpoint: '',
-    convention: halConvention
-  }
-}
-class Book extends BaseHalModel {
-  static api = { ...BaseHalModel.api, endpoint: 'books' }
-}
+```js file=src/server.js
+import { DATA_TOOL_CLASSES, ToolRegistry } from '@mcp-rune/mcp-rune/tools'
+import { halConvention } from './conventions/hal-convention'
+
+const registry = new ToolRegistry({
+  toolClasses: DATA_TOOL_CLASSES,
+  models: { book: Book, author: Author },
+  createApiClient,
+  defaultConvention: halConvention
+})
 ```
 
-There's no `AppRegistry.defaultConvention` setting today — convention is a model-level property by design, because it tracks the API endpoint, not the deployment.
+The full fallback chain per call is: model `api.convention` → registry `defaultConvention` → `jsonApiConvention`. (Before v0.85.0 the only way to share a convention across models was a base class that pre-set `api.convention`; the registry-level option replaces that pattern.)
 
 ## Testing a Convention
 
@@ -558,7 +556,7 @@ describe('HalConvention', () => {
     const out = convention.normalizeListResponse(response, { page: 1, perPage: 10 })
     expect(out.records).toHaveLength(2)
     expect(out.pagination.total).toBe(42)
-    expect(out.pagination.hasMore).toBe(true)
+    expect(out.pagination.total_pages).toBe(5)
   })
 
   it('rewrites belongsTo _id into _link on submit', () => {
@@ -596,7 +594,7 @@ describe('HalConvention', () => {
     const out = convention.normalizeListResponse(response, { page: 1, perPage: 10 })
     expect(out.records).toHaveLength(2)
     expect(out.pagination.total).toBe(42)
-    expect(out.pagination.hasMore).toBe(true)
+    expect(out.pagination.total_pages).toBe(5)
   })
   it('rewrites belongsTo _id into _link on submit', () => {
     const out = convention.resolveAssociationValues(
@@ -617,15 +615,15 @@ Integration-test the end-to-end pipeline through `ModelService`:
 
 ```ts file=src/clients/api-client.ts
 const apiClient = createInMemoryClient(/* … */)
-const service = new ModelService(apiClient, models, { convention: halConvention })
-const result = await service.list('book', {})
+const service = new ModelService({ apiClient, models, defaultConvention: halConvention })
+const result = await service.listNormalized('book', {})
 // Assert records came back normalized, no _links etc.
 ```
 
 ```js file=src/clients/api-client.js
 const apiClient = createInMemoryClient(/* … */)
-const service = new ModelService(apiClient, models, { convention: halConvention })
-const result = await service.list('book', {})
+const service = new ModelService({ apiClient, models, defaultConvention: halConvention })
+const result = await service.listNormalized('book', {})
 // Assert records came back normalized, no _links etc.
 ```
 

@@ -7,8 +7,8 @@ mcp-rune works at the **application** level. You describe your domain, the frame
 ```
   You write                         mcp-rune generates
  ┌──────────────────┐     ┌────────────────────────────────────────┐
- │  Model           │────▶│  Polymorphic CRUD tools (8 tools       │
- │  attributesConfig│     │    serve ALL models, not N × 5)        │
+ │  Model           │────▶│  Polymorphic CRUD tools (9 tools       │
+ │  attributes      │     │    serve ALL models, not N × 5)        │
  └──────────────────┘     ├────────────────────────────────────────┤
  ┌──────────────────┐     │  Prompt guide with validation          │
  │  Prompt          │────▶│    (stateless / hybrid / stateful)     │

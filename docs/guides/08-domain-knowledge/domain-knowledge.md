@@ -12,7 +12,8 @@ This guide explains how to extend the domain intelligence layer with new concept
 6. [Wiring It Up — The Domain Registry](#wiring-it-up--the-domain-registry)
 7. [How Domain Tools Consume the Registry](#how-domain-tools-consume-the-registry)
 8. [Step-by-Step: Adding Domain Intelligence to a New Server](#step-by-step-adding-domain-intelligence-to-a-new-server)
-9. [Testing](#testing)
+9. [Semantic Search](#semantic-search)
+10. [Testing](#testing)
 
 ---
 
@@ -32,7 +33,7 @@ src/mcp/domain/                      # Framework classes (shared)
     └── inmemory.ts                  # InMemoryDomainAdapter (the default)
 
 src/mcp/tools/domain/                # Domain tools (shared)
-├── base-domain-tool.ts              # BaseDomainTool (DOMAIN category, no auth)
+├── base-domain-tool.ts              # BaseDomainTool (requiresAuth = false, requiresDomainRegistry = true)
 ├── get-domain-context-tool.ts       # Retrieves composed context for a model/concept
 ├── check-business-rules-tool.ts     # Validates data against business rules
 ├── suggest-workflow-tool.ts         # Returns a workflow roadmap + first step
@@ -74,7 +75,7 @@ new InMemoryDomainAdapter([taskModule, projectModule, bookModule])
 
 ### DomainAdapter — the storage backend
 
-`DomainRegistry` accepts any `DomainAdapter` implementation. The default is `InMemoryDomainAdapter` — items live in process memory, search uses MiniLM embeddings. Remote adapters (PGVector, Qdrant) are not yet shipped; the interface supports them once a seeding/sync mechanism is designed.
+`DomainRegistry` accepts any `DomainAdapter` implementation. The default is `InMemoryDomainAdapter` — items live in process memory, search defaults to substring matching with MiniLM embeddings available opt-in via `initSearch('embedding')`. Remote adapters (PGVector, Qdrant) are not yet shipped; the interface supports them once a seeding/sync mechanism is designed.
 
 ---
 
@@ -101,14 +102,14 @@ If you find yourself writing a concept with an `evaluate` function, make it a ru
 
 ## DomainConcept — Cross-Entity Knowledge
 
-**Source:** `lib/mcp/domain/knowledge.js`
+**Source:** `src/mcp/domain/knowledge.ts`
 
 A `DomainConcept` captures knowledge that spans multiple models and cannot be expressed in any single model's `static attributes`. Field-level knowledge (enum descriptions, conditionals, examples) belongs in models — concepts add cross-entity relationships on top.
 
 ### Constructor
 
 ```js file=examples/domain-knowledge-guide-01.js
-import { DomainConcept } from '#src/mcp/domain/knowledge.js'
+import { DomainConcept } from '@mcp-rune/mcp-rune/domain'
 
 new DomainConcept({
   name: 'project_task_hierarchy',              // Unique identifier (snake_case)
@@ -121,7 +122,7 @@ new DomainConcept({
 ```
 
 ```ts file=examples/domain-knowledge-guide-01.ts
-import { DomainConcept } from '#src/mcp/domain/knowledge.js'
+import { DomainConcept } from '@mcp-rune/mcp-rune/domain'
 
 new DomainConcept({
   name: 'project_task_hierarchy',              // Unique identifier (snake_case)
@@ -302,60 +303,53 @@ export function createMutabilityConcept(modelClasses) {
 
 ### Where to Put Concepts
 
-Add concepts to `src/<server>/domain/knowledge/concepts.js`. Organize them by logical groups with section comments:
+Concepts live in a `DomainModule` alongside their related rules and workflows. Group by domain area (tasks, projects, books), not by component type — add each concept to the module for the area it describes:
 
 ```js file=src/concepts.js
-export const concepts = [
-  // ============================================================================
-  // HIERARCHY & STRUCTURE CONCEPTS
-  // ============================================================================
-  new DomainConcept({ name: 'project_task_hierarchy', ... }),
-  new DomainConcept({ name: 'two_step_tag_assignment', ... }),
+// src/<server>/domain/modules/projects.js
+import { DomainConcept } from '@mcp-rune/mcp-rune/domain'
 
-  // ============================================================================
-  // RIGHTS VALIDATION CONCEPTS
-  // ============================================================================
-  new DomainConcept({ name: 'task_completion_status', ... }),
-
-  // ============================================================================
-  // TERMINOLOGY & WINDOWS CONCEPTS
-  // ============================================================================
-  new DomainConcept({ name: 'project_terminology', ... }),
-]
+export const projectModule = {
+  concepts: [
+    new DomainConcept({ name: 'project_task_hierarchy', ... }),
+    new DomainConcept({ name: 'two_step_tag_assignment', ... }),
+    new DomainConcept({ name: 'task_completion_status', ... }),
+    new DomainConcept({ name: 'project_terminology', ... })
+  ],
+  rules: [/* rules about projects */],
+  workflows: [/* project-related workflows */]
+}
 ```
 
 ```ts file=src/concepts.ts
-export const concepts = [
-  // ============================================================================
-  // HIERARCHY & STRUCTURE CONCEPTS
-  // ============================================================================
-  new DomainConcept({ name: 'project_task_hierarchy', ... }),
-  new DomainConcept({ name: 'two_step_tag_assignment', ... }),
+// src/<server>/domain/modules/projects.ts
+import type { DomainModule } from '@mcp-rune/mcp-rune/domain'
+import { DomainConcept } from '@mcp-rune/mcp-rune/domain'
 
-  // ============================================================================
-  // RIGHTS VALIDATION CONCEPTS
-  // ============================================================================
-  new DomainConcept({ name: 'task_completion_status', ... }),
-
-  // ============================================================================
-  // TERMINOLOGY & WINDOWS CONCEPTS
-  // ============================================================================
-  new DomainConcept({ name: 'project_terminology', ... }),
-]
+export const projectModule: DomainModule = {
+  concepts: [
+    new DomainConcept({ name: 'project_task_hierarchy', ... }),
+    new DomainConcept({ name: 'two_step_tag_assignment', ... }),
+    new DomainConcept({ name: 'task_completion_status', ... }),
+    new DomainConcept({ name: 'project_terminology', ... })
+  ],
+  rules: [/* rules about projects */],
+  workflows: [/* project-related workflows */]
+}
 ```
 
 ---
 
 ## BusinessRule — Declarative Constraints
 
-**Source:** `lib/mcp/domain/business-rules.js`
+**Source:** `src/mcp/domain/business-rules.ts`
 
 A `BusinessRule` validates constraints between entities that individual model validation cannot express. Each rule is a data structure with an evaluate function — testable, auditable, introspectable.
 
 ### Constructor
 
 ```js file=examples/domain-knowledge-guide-06.js
-import { BusinessRule } from '#src/mcp/domain/business-rules.js'
+import { BusinessRule } from '@mcp-rune/mcp-rune/domain'
 
 new BusinessRule({
   name: 'task_requires_due_date', // Unique identifier (snake_case)
@@ -371,7 +365,7 @@ new BusinessRule({
 ```
 
 ```ts file=examples/domain-knowledge-guide-06.ts
-import { BusinessRule } from '#src/mcp/domain/business-rules.js'
+import { BusinessRule } from '@mcp-rune/mcp-rune/domain'
 
 new BusinessRule({
   name: 'task_requires_due_date', // Unique identifier (snake_case)
@@ -656,7 +650,7 @@ export const taskModule: DomainModule = {
 
 ## WorkflowDefinition — Multi-Step Guides
 
-**Source:** `lib/mcp/domain/workflows.js`
+**Source:** `src/mcp/domain/workflows.ts`
 
 A `WorkflowDefinition` is a structured multi-step process guide. It can include tool calls, decision points, and tips. Two common patterns:
 
@@ -666,7 +660,7 @@ A `WorkflowDefinition` is a structured multi-step process guide. It can include 
 ### Constructor
 
 ```js file=examples/domain-knowledge-guide-15.js
-import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
+import { WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
 
 new WorkflowDefinition({
   name: 'create_project_workflow',                    // Unique identifier (snake_case)
@@ -682,7 +676,7 @@ new WorkflowDefinition({
 ```
 
 ```ts file=examples/domain-knowledge-guide-15.ts
-import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
+import { WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
 
 new WorkflowDefinition({
   name: 'create_project_workflow',                    // Unique identifier (snake_case)
@@ -840,7 +834,7 @@ new WorkflowDefinition({
       title: 'Find a demo project',
       description: 'Search for a recognizable project.',
       tool: 'find_records',
-      toolArgs: { model: 'project', search: { name: 'The Hobbit' } },
+      toolArgs: { model: 'project', search: { name: 'Website Redesign' } },
       tips: ['Choose a project the audience will recognize']
     }
     // ... more steps
@@ -869,7 +863,7 @@ new WorkflowDefinition({
       title: 'Find a demo project',
       description: 'Search for a recognizable project.',
       tool: 'find_records',
-      toolArgs: { model: 'project', search: { name: 'The Hobbit' } },
+      toolArgs: { model: 'project', search: { name: 'Website Redesign' } },
       tips: ['Choose a project the audience will recognize']
     }
     // ... more steps
@@ -879,29 +873,36 @@ new WorkflowDefinition({
 
 ### Where to Put Workflows
 
-Add workflows to `src/<server>/domain/workflows/<category>.js`. Each file exports an array:
+Workflows live in a `DomainModule` alongside their related concepts and rules. Group related workflows in the same module (e.g., setup + demo variant of the same process):
 
 ```js file=src/project-workflows.js
-// src/<server>/domain/workflows/project-tasks.js
-import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
+// src/<server>/domain/modules/projects.js
+import { WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
 
-export const projectWorkflows = [
-  new WorkflowDefinition({ ... }),  // Setup
-  new WorkflowDefinition({ ... }),  // Demo
-]
+export const projectModule = {
+  concepts: [/* concepts about projects */],
+  rules: [/* rules about projects */],
+  workflows: [
+    new WorkflowDefinition({ ... }),  // Setup
+    new WorkflowDefinition({ ... })   // Demo
+  ]
+}
 ```
 
 ```ts file=src/project-workflows.ts
-// src/<server>/domain/workflows/project-tasks.js
-import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
+// src/<server>/domain/modules/projects.ts
+import type { DomainModule } from '@mcp-rune/mcp-rune/domain'
+import { WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
 
-export const projectWorkflows = [
-  new WorkflowDefinition({ ... }),  // Setup
-  new WorkflowDefinition({ ... }),  // Demo
-]
+export const projectModule: DomainModule = {
+  concepts: [/* concepts about projects */],
+  rules: [/* rules about projects */],
+  workflows: [
+    new WorkflowDefinition({ ... }),  // Setup
+    new WorkflowDefinition({ ... })   // Demo
+  ]
+}
 ```
-
-Group related workflows in the same file (e.g., setup + demo variant of the same process).
 
 ---
 
@@ -954,27 +955,29 @@ Pass the domain registry when creating the tool registry. The tool registry inje
 
 ```js file=src/registries/domain-registry.js
 // src/<server>/config.js
+import { DATA_TOOL_CLASSES, DOMAIN_TOOL_CLASSES, ToolRegistry } from '@mcp-rune/mcp-rune/tools'
+
 const domainRegistry = createMyDomainRegistry()
 
-const toolRegistry = createToolRegistry({
-  logger,
+const toolRegistry = new ToolRegistry({
+  toolClasses: { ...DATA_TOOL_CLASSES, ...DOMAIN_TOOL_CLASSES },
   models: MODEL_CLASSES,
-  promptRegistry,
-  serverContext,
-  domainRegistry // <-- injected here
+  domainRegistry, // <-- injected here
+  createApiClient
 })
 ```
 
 ```ts file=src/registries/domain-registry.ts
-// src/<server>/config.js
+// src/<server>/config.ts
+import { DATA_TOOL_CLASSES, DOMAIN_TOOL_CLASSES, ToolRegistry } from '@mcp-rune/mcp-rune/tools'
+
 const domainRegistry = createMyDomainRegistry()
 
-const toolRegistry = createToolRegistry({
-  logger,
+const toolRegistry = new ToolRegistry({
+  toolClasses: { ...DATA_TOOL_CLASSES, ...DOMAIN_TOOL_CLASSES },
   models: MODEL_CLASSES,
-  promptRegistry,
-  serverContext,
-  domainRegistry // <-- injected here
+  domainRegistry, // <-- injected here
+  createApiClient
 })
 ```
 
@@ -986,7 +989,7 @@ If `domainRegistry` is `undefined` (not configured for this server), the four do
 
 ## How Domain Tools Consume the Registry
 
-Four tools expose domain intelligence to users. All extend `BaseDomainTool` (category `DOMAIN`, no auth required).
+Four tools expose domain intelligence to users. All extend `BaseDomainTool`, which sets the static booleans `requiresAuth = false` and `requiresDomainRegistry = true`.
 
 ### `get_domain_context`
 
@@ -1053,22 +1056,20 @@ If your server doesn't have domain intelligence yet, follow these steps:
 
 ```
 src/<server>/domain/
-├── registry.js
-├── knowledge/
-│   └── concepts.js
-├── rules/
-│   └── <domain>-rules.js
-└── workflows/
-    └── <category>.js
+├── registry.ts                      # Factory: createMyDomainRegistry()
+└── modules/
+    └── <area>.ts                    # DomainModule: { concepts, rules, workflows }
 ```
+
+One `DomainModule` file per domain area — each bundles the concepts, rules, and workflows for that area. Steps 2–4 fill in one module file (`src/<server>/domain/modules/my-area.ts`); step 5 bundles the arrays and wires the registry.
 
 ### 2. Define concepts
 
 ```js file=src/concepts.js
-// src/<server>/domain/knowledge/concepts.js
-import { DomainConcept } from '#src/mcp/domain/knowledge.js'
+// src/<server>/domain/modules/my-area.js — the module's concepts
+import { DomainConcept } from '@mcp-rune/mcp-rune/domain'
 
-export const concepts = [
+const concepts = [
   new DomainConcept({
     name: 'your_concept_name',
     title: 'Human-Readable Title',
@@ -1084,10 +1085,10 @@ export const concepts = [
 ```
 
 ```ts file=src/concepts.ts
-// src/<server>/domain/knowledge/concepts.js
-import { DomainConcept } from '#src/mcp/domain/knowledge.js'
+// src/<server>/domain/modules/my-area.ts — the module's concepts
+import { DomainConcept } from '@mcp-rune/mcp-rune/domain'
 
-export const concepts = [
+const concepts = [
   new DomainConcept({
     name: 'your_concept_name',
     title: 'Human-Readable Title',
@@ -1105,10 +1106,10 @@ export const concepts = [
 ### 3. Define business rules
 
 ```js file=src/my-rules.js
-// src/<server>/domain/rules/<domain>-rules.js
-import { BusinessRule } from '#src/mcp/domain/business-rules.js'
+// src/<server>/domain/modules/my-area.js — the module's rules
+import { BusinessRule } from '@mcp-rune/mcp-rune/domain'
 
-export const myRules = [
+const rules = [
   new BusinessRule({
     name: 'my_validation_rule',
     description: 'What this rule checks',
@@ -1130,10 +1131,10 @@ export const myRules = [
 ```
 
 ```ts file=src/my-rules.ts
-// src/<server>/domain/rules/<domain>-rules.js
-import { BusinessRule } from '#src/mcp/domain/business-rules.js'
+// src/<server>/domain/modules/my-area.ts — the module's rules
+import { BusinessRule } from '@mcp-rune/mcp-rune/domain'
 
-export const myRules = [
+const rules = [
   new BusinessRule({
     name: 'my_validation_rule',
     description: 'What this rule checks',
@@ -1157,10 +1158,10 @@ export const myRules = [
 ### 4. Define workflows
 
 ```js file=src/my-workflows.js
-// src/<server>/domain/workflows/<category>.js
-import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
+// src/<server>/domain/modules/my-area.js — the module's workflows
+import { WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
 
-export const myWorkflows = [
+const workflows = [
   new WorkflowDefinition({
     name: 'my_setup_workflow',
     title: 'Set Up Feature X',
@@ -1190,10 +1191,10 @@ export const myWorkflows = [
 ```
 
 ```ts file=src/my-workflows.ts
-// src/<server>/domain/workflows/<category>.js
-import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
+// src/<server>/domain/modules/my-area.ts — the module's workflows
+import { WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
 
-export const myWorkflows = [
+const workflows = [
   new WorkflowDefinition({
     name: 'my_setup_workflow',
     title: 'Set Up Feature X',
@@ -1222,71 +1223,85 @@ export const myWorkflows = [
 ]
 ```
 
-### 5. Assemble the registry
+### 5. Bundle the module and assemble the registry
+
+At the bottom of the module file, bundle the three arrays from steps 2–4 into one `DomainModule`:
+
+```js file=src/my-module.js
+// src/<server>/domain/modules/my-area.js
+export const myAreaModule = { concepts, rules, workflows }
+```
+
+```ts file=src/my-module.ts
+// src/<server>/domain/modules/my-area.ts
+import type { DomainModule } from '@mcp-rune/mcp-rune/domain'
+
+export const myAreaModule: DomainModule = { concepts, rules, workflows }
+```
+
+Then wrap the modules in an adapter and registry:
 
 ```js file=src/registries/create-my-domain-registry.js
 // src/<server>/domain/registry.js
-import { DomainKnowledge } from '#src/mcp/domain/knowledge.js'
-import { RuleSet } from '#src/mcp/domain/business-rules.js'
-import { WorkflowRegistry } from '#src/mcp/domain/workflows.js'
-import { DomainRegistry } from '#src/mcp/domain/registry.js'
+import { DomainRegistry, InMemoryDomainAdapter } from '@mcp-rune/mcp-rune/domain'
 import { MODEL_CLASSES } from '../models/index.js'
 
-import { concepts } from './knowledge/concepts.js'
-import { myRules } from './rules/my-rules.js'
-import { myWorkflows } from './workflows/my-category.js'
+import { myAreaModule } from './modules/my-area.js'
 
 export function createMyDomainRegistry() {
-  const knowledge = new DomainKnowledge({ concepts, models: MODEL_CLASSES })
-  const rules = new RuleSet([...myRules])
-  const workflows = new WorkflowRegistry([...myWorkflows])
-  return new DomainRegistry({ knowledge, rules, workflows })
+  return new DomainRegistry({
+    adapter: new InMemoryDomainAdapter([myAreaModule]),
+    models: MODEL_CLASSES
+  })
 }
 ```
 
 ```ts file=src/registries/create-my-domain-registry.ts
-// src/<server>/domain/registry.js
-import { DomainKnowledge } from '#src/mcp/domain/knowledge.js'
-import { RuleSet } from '#src/mcp/domain/business-rules.js'
-import { WorkflowRegistry } from '#src/mcp/domain/workflows.js'
-import { DomainRegistry } from '#src/mcp/domain/registry.js'
+// src/<server>/domain/registry.ts
+import { DomainRegistry, InMemoryDomainAdapter } from '@mcp-rune/mcp-rune/domain'
 import { MODEL_CLASSES } from '../models/index.js'
 
-import { concepts } from './knowledge/concepts.js'
-import { myRules } from './rules/my-rules.js'
-import { myWorkflows } from './workflows/my-category.js'
+import { myAreaModule } from './modules/my-area.js'
 
-export function createMyDomainRegistry() {
-  const knowledge = new DomainKnowledge({ concepts, models: MODEL_CLASSES })
-  const rules = new RuleSet([...myRules])
-  const workflows = new WorkflowRegistry([...myWorkflows])
-  return new DomainRegistry({ knowledge, rules, workflows })
+export function createMyDomainRegistry(): DomainRegistry {
+  return new DomainRegistry({
+    adapter: new InMemoryDomainAdapter([myAreaModule]),
+    models: MODEL_CLASSES
+  })
 }
 ```
 
 ### 6. Inject into the server config
 
-```js file=src/registries/domain-registry.js
+```js file=src/registries/inject-domain-registry.js
 // src/<server>/config.js
+import { DATA_TOOL_CLASSES, DOMAIN_TOOL_CLASSES, ToolRegistry } from '@mcp-rune/mcp-rune/tools'
+
 import { createMyDomainRegistry } from './domain/registry.js'
 
 const domainRegistry = createMyDomainRegistry()
 
-const toolRegistry = createToolRegistry({
-  // ... other dependencies
-  domainRegistry
+const toolRegistry = new ToolRegistry({
+  toolClasses: { ...DATA_TOOL_CLASSES, ...DOMAIN_TOOL_CLASSES },
+  models: MODEL_CLASSES,
+  domainRegistry,
+  createApiClient
 })
 ```
 
-```ts file=src/registries/domain-registry.ts
-// src/<server>/config.js
+```ts file=src/registries/inject-domain-registry.ts
+// src/<server>/config.ts
+import { DATA_TOOL_CLASSES, DOMAIN_TOOL_CLASSES, ToolRegistry } from '@mcp-rune/mcp-rune/tools'
+
 import { createMyDomainRegistry } from './domain/registry.js'
 
 const domainRegistry = createMyDomainRegistry()
 
-const toolRegistry = createToolRegistry({
-  // ... other dependencies
-  domainRegistry
+const toolRegistry = new ToolRegistry({
+  toolClasses: { ...DATA_TOOL_CLASSES, ...DOMAIN_TOOL_CLASSES },
+  models: MODEL_CLASSES,
+  domainRegistry,
+  createApiClient
 })
 ```
 
@@ -1296,11 +1311,11 @@ That's it. The four domain tools will automatically appear in the tool list and 
 
 ## Semantic Search
 
-Domain tools use **embedding-based semantic search** over the domain knowledge base (~60 items). Instead of substring matching, queries and items are converted to 384-dimensional vectors and compared by cosine similarity. This enables natural language queries, synonym matching ("permissions" finds "rights"), and ranked results.
+Domain search defaults to **case-insensitive substring matching** — instant, no model loading. **Embedding-based semantic search** is opt-in per registry via `domainRegistry.initSearch('embedding')`: queries and items are converted to 384-dimensional vectors and compared by cosine similarity. This enables natural language queries, synonym matching ("permissions" finds "rights"), and ranked results.
 
 ### How It Works
 
-1. At server startup, `domainRegistry.initEmbeddings()` is called (fire-and-forget)
+1. At server startup, `domainRegistry.initSearch('embedding')` is called (fire-and-forget)
 2. Each registry (knowledge, workflows) converts its items to text using a text function
 3. Text is embedded into 384-dim vectors via `embedBatch()` (local MiniLM-L6-v2, no API keys)
 4. At search time, the query is embedded via `embed()` and compared against all pre-computed vectors
@@ -1308,10 +1323,10 @@ Domain tools use **embedding-based semantic search** over the domain knowledge b
 
 ### The `SemanticSearch` Class
 
-`lib/mcp/domain/semantic-search.js` is a composable utility — each registry gets its own instance:
+`src/mcp/domain/semantic-search.ts` is a composable utility — each registry gets its own instance:
 
 ```js file=src/search.js
-import { SemanticSearch } from '#src/mcp/domain/semantic-search.js'
+import { SemanticSearch } from '@mcp-rune/mcp-rune/domain'
 
 const search = new SemanticSearch({ threshold: 0.3, topK: 20 })
 await search.initialize(items, (item) => `${item.name} ${item.title}: ${item.description}`)
@@ -1321,7 +1336,7 @@ const results = await search.search('project hierarchy')
 ```
 
 ```ts file=src/search.ts
-import { SemanticSearch } from '#src/mcp/domain/semantic-search.js'
+import { SemanticSearch } from '@mcp-rune/mcp-rune/domain'
 
 const search = new SemanticSearch({ threshold: 0.3, topK: 20 })
 await search.initialize(items, (item) => `${item.name} ${item.title}: ${item.description}`)
@@ -1338,7 +1353,7 @@ const results = await search.search('project hierarchy')
 
 ### Graceful Fallback
 
-If `initEmbeddings()` hasn't completed yet (startup warmup ~2-5s) or failed, search methods fall back to substring matching automatically. Domain tools always work, even without the embedding model.
+If `initSearch('embedding')` hasn't completed yet (startup warmup ~2-5s) or failed, search methods fall back to substring matching automatically. Domain tools always work, even without the embedding model.
 
 ```js file=src/results.js
 async searchConcepts(query) {
@@ -1368,14 +1383,13 @@ Each registry converts items to searchable text:
 | --------- | ------------------------------------------------------ |
 | Concepts  | `{name} {title}: {description} {tags joined by space}` |
 | Workflows | `{name} {title}: {description} {tags joined by space}` |
-| Diagrams  | `{name} {title}: {description} {tags joined by space}` |
 
 ### Configuration
 
-| Option      | Default | Description                                         |
-| ----------- | ------- | --------------------------------------------------- |
-| `threshold` | 0.3     | Minimum cosine similarity to include in results     |
-| `topK`      | 10-20   | Maximum results (20 for concepts, 10 for workflows) |
+| Option | Default | Description |
+| --- | --- | --- |
+| `threshold` | 0.3 | Minimum cosine similarity to include in results |
+| `topK` | 10 | Maximum results (same default for concepts and workflows; overridable per instance and per search call) |
 
 **Why threshold 0.3:** MiniLM-L6-v2 normalized embeddings produce lower similarity scores than larger models. A threshold of 0.3 catches semantically relevant results without noise. The threshold is configurable per-instance and overridable per-search call.
 
@@ -1386,7 +1400,7 @@ Each registry converts items to searchable text:
 ```js file=examples/domain-knowledge-guide-33.js
 // src/<server>/config.js — fire-and-forget, same pattern as vector storage and tracing
 domainRegistry
-  .initEmbeddings()
+  .initSearch('embedding')
   .then(() => logger.info('Domain semantic search initialized', { service: 'mcp-config' }))
   .catch((err) =>
     logger.warn('Domain semantic search unavailable, using substring fallback', {
@@ -1397,9 +1411,9 @@ domainRegistry
 ```
 
 ```ts file=examples/domain-knowledge-guide-33.ts
-// src/<server>/config.js — fire-and-forget, same pattern as vector storage and tracing
+// src/<server>/config.ts — fire-and-forget, same pattern as vector storage and tracing
 domainRegistry
-  .initEmbeddings()
+  .initSearch('embedding')
   .then(() => logger.info('Domain semantic search initialized', { service: 'mcp-config' }))
   .catch((err) =>
     logger.warn('Domain semantic search unavailable, using substring fallback', {
@@ -1419,10 +1433,10 @@ Rules are pure functions — test them directly:
 
 ```js file=src/rule.js
 import { describe, it, expect } from 'vitest'
-import { myRules } from '../src/<server>/domain/rules/my-rules.js'
+import { myAreaModule } from '../src/<server>/domain/modules/my-area.js'
 
 describe('my_validation_rule', () => {
-  const rule = myRules.find((r) => r.name === 'my_validation_rule')
+  const rule = myAreaModule.rules.find((r) => r.name === 'my_validation_rule')
 
   it('passes when required_field is present', () => {
     const result = rule.evaluate({ required_field: 'value' })
@@ -1444,10 +1458,10 @@ describe('my_validation_rule', () => {
 
 ```ts file=src/rule.ts
 import { describe, it, expect } from 'vitest'
-import { myRules } from '../src/<server>/domain/rules/my-rules.js'
+import { myAreaModule } from '../src/<server>/domain/modules/my-area.js'
 
 describe('my_validation_rule', () => {
-  const rule = myRules.find((r) => r.name === 'my_validation_rule')
+  const rule = myAreaModule.rules.find((r) => r.name === 'my_validation_rule')
 
   it('passes when required_field is present', () => {
     const result = rule.evaluate({ required_field: 'value' })
@@ -1476,8 +1490,8 @@ import { createMyDomainRegistry } from '../src/<server>/domain/registry.js'
 describe('domain registry', () => {
   const registry = createMyDomainRegistry()
 
-  it('provides context for known models', () => {
-    const context = registry.getContextForModel('model_a')
+  it('provides context for known models', async () => {
+    const context = await registry.getContextForModel('model_a')
     expect(context.model).toBe('model_a')
     expect(context.concepts.length).toBeGreaterThan(0)
   })
@@ -1487,8 +1501,8 @@ describe('domain registry', () => {
     expect(results.length).toBeGreaterThan(0)
   })
 
-  it('evaluates rules for a model', () => {
-    const result = registry.checkRules('model_a', { required_field: 'value' })
+  it('evaluates rules for a model', async () => {
+    const result = await registry.checkRules('model_a', { required_field: 'value' })
     expect(result.passed).toBe(true)
   })
 })
@@ -1501,8 +1515,8 @@ import { createMyDomainRegistry } from '../src/<server>/domain/registry.js'
 describe('domain registry', () => {
   const registry = createMyDomainRegistry()
 
-  it('provides context for known models', () => {
-    const context = registry.getContextForModel('model_a')
+  it('provides context for known models', async () => {
+    const context = await registry.getContextForModel('model_a')
     expect(context.model).toBe('model_a')
     expect(context.concepts.length).toBeGreaterThan(0)
   })
@@ -1512,8 +1526,8 @@ describe('domain registry', () => {
     expect(results.length).toBeGreaterThan(0)
   })
 
-  it('evaluates rules for a model', () => {
-    const result = registry.checkRules('model_a', { required_field: 'value' })
+  it('evaluates rules for a model', async () => {
+    const result = await registry.checkRules('model_a', { required_field: 'value' })
     expect(result.passed).toBe(true)
   })
 })
@@ -1521,4 +1535,4 @@ describe('domain registry', () => {
 
 ### Test File Naming
 
-Test files must use the `.spec.js` extension (not `.test.js`). Place them in `__tests__/` mirroring the source structure.
+Test files must use the `.spec.ts` extension (not `.test.ts`). Place them in `__tests__/` mirroring the source structure.
