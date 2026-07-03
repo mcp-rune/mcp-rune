@@ -105,6 +105,12 @@ class MyConvention extends BaseConvention {
     options: { page: number; perPage: number }
   ): NormalizedListResponse
 
+  serializeListParams(params: {
+    page?: number
+    perPage?: number
+    filters?: Record<string, unknown>
+  }): Record<string, unknown>
+
   cleanResponse(data: unknown): unknown
   parseErrorResponse(response: ErrorResponse): string[]
   flattenExpandedResources(...)
@@ -121,7 +127,15 @@ class MyConvention extends BaseConvention {
 }
 ```
 
-The first five are the must-implement methods. The bottom four have sensible defaults you can override when your wire format demands it.
+The first five are the must-implement methods. The rest have sensible defaults you can override when your wire format demands it. `serializeListParams` is one such hook: it defaults to flat `{ ...filters, page, per_page }`, but a backend that paginates as JSON:API `page[number]` / `page[size]` overrides it so the pagination shape lives here at the convention rather than being hardcoded in the data layer ([ADR 0017](../../architecture/decisions/0017-list-params-and-list-normalization-live-at-the-convention-seam.md)):
+
+```ts file=examples/json-api-pagination.ts
+class JsonApiConvention extends BaseConvention {
+  override serializeListParams({ page = 1, perPage = 20, filters = {} }) {
+    return { ...filters, 'page[number]': page, 'page[size]': perPage }
+  }
+}
+```
 
 ## Method Roles
 

@@ -1,4 +1,5 @@
 import type { ApiClient } from '../../../../../src/core/api-client.js'
+import { BaseConvention } from '../../../../../src/mcp/data-layer/api-conventions/base-convention.js'
 import { jsonApiConvention } from '../../../../../src/mcp/data-layer/api-conventions/index.js'
 import {
   MissingRequiredFieldsError,
@@ -191,6 +192,33 @@ describe('lib/mcp/services/model-service', () => {
         status: 'active',
         page: 2,
         per_page: 10
+      })
+    })
+
+    it('serializes pagination through the model convention (JSON:API page[number])', async () => {
+      class JsonApiPageConvention extends BaseConvention {
+        override serializeListParams(params: {
+          page?: number
+          perPage?: number
+          filters?: Record<string, unknown>
+        }): Record<string, unknown> {
+          const { page = 1, perPage = 20, filters = {} } = params
+          return { ...filters, 'page[number]': page, 'page[size]': perPage }
+        }
+      }
+      const { service, apiClient } = makeService(undefined, {
+        book: {
+          attributes: { title: { type: 'string' } },
+          api: { endpoint: 'books', convention: new JsonApiPageConvention() }
+        }
+      })
+
+      await service.list('book', { status: 'active' }, { page: 3, perPage: 25 })
+
+      expect(apiClient.get).toHaveBeenCalledWith('books', {
+        status: 'active',
+        'page[number]': 3,
+        'page[size]': 25
       })
     })
   })

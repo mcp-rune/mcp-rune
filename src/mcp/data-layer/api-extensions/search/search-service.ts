@@ -25,6 +25,7 @@
  * surface; SearchService only handles the search-specific dispatch paths.
  */
 
+import type { BaseConvention } from '#src/mcp/data-layer/api-conventions/base-convention.js'
 import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 
 import { getSearchConfig } from './capabilities.js'
@@ -307,6 +308,10 @@ export class SearchService {
     const searchCfg = getSearchConfig(ModelClass)
     const queryConfig = searchCfg?.query
     const method = (queryConfig!.method || 'POST').toUpperCase()
+    // Only delegate normalization to an *explicitly* declared convention. A
+    // model with no convention keeps the best-effort format guessing, which
+    // handles more envelope shapes (HAL, model-keyed) than a bare default.
+    const convention = ModelClass.api?.convention
 
     if (method === 'POST') {
       const adapter = (queryConfig!.shaper as SearchRequestShaper) || this._defaultShaper
@@ -321,7 +326,7 @@ export class SearchService {
         ? `${queryConfig!.endpoint}?${queryParams}`
         : queryConfig!.endpoint!
       const response = await this._dataLayer.dispatch('POST', endpoint, body)
-      return this._normalizeResponse(response, { page, perPage })
+      return this._normalizeResponse(response, { page, perPage }, convention)
     }
 
     // GET request. Forward the caller's filters, and only bind the query param
@@ -337,14 +342,24 @@ export class SearchService {
     }
 
     const data = await this._dataLayer.dispatch('GET', queryConfig!.endpoint!, undefined, params)
-    return this._normalizeResponse(data, { page, perPage })
+    return this._normalizeResponse(data, { page, perPage }, convention)
   }
 
-  /** Normalize API response into { records, pagination } shape. */
+  /**
+   * Normalize an API response into `{ records, pagination }`. When the model
+   * declares a `convention`, delegate to its `normalizeListResponse` so the
+   * envelope shape lives at the convention seam; otherwise fall back to the
+   * best-effort format guessing below.
+   */
   private _normalizeResponse(
     response: Record<string, unknown>,
-    { page, perPage }: { page: number; perPage: number }
+    { page, perPage }: { page: number; perPage: number },
+    convention?: BaseConvention
   ): SearchResult {
+    if (convention) {
+      const normalized = convention.normalizeListResponse(response, { page, perPage })
+      return { records: normalized.records, pagination: normalized.pagination }
+    }
     const records = this._extractRecords(response)
     const pagination = this._extractPagination(response, records, { page, perPage })
     return { records, pagination }
