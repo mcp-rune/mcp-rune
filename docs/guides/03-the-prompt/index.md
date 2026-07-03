@@ -2,7 +2,7 @@
 
 Chapter 2 ended with a Model — a static declaration that exists, but does nothing on its own. This chapter introduces the first thing that _reads_ a Model: the Prompt. Where the Model defines the nouns (what fields exist, what kinds they are, how they associate), the Prompt defines the verbs of reasoning — how an LLM should think about and fill the form your Model implies.
 
-A Prompt is itself a class. It declares **sections** (the user-facing chapters of the form), **field groups** (the validation-facing partitions), and an optional **strategy** (`stateless`, `hybrid`, or `stateful`). The framework derives the rest from the underlying Model: the schema, the required-field check, the kind-aware input hints, the LLM-facing summary of the current form state.
+A Prompt is itself a class. It declares **sections** (the user-facing chapters of the form), **field groups** (the validation-facing partitions), and an optional **form strategy** (`stateless`, `hybrid`, or `stateful`, via `static formStrategy`). The framework derives the rest from the underlying Model: the schema, the required-field check, the kind-aware input hints, the LLM-facing summary of the current form state.
 
 **Read in this order:**
 

@@ -1,4 +1,4 @@
-> **Customization:** per-model via `searchConfig({ shaper: ... })`, or globally via `defaultShaper:` on the `search` ApiExtension. Default spreads filters flat into the POST body. Subclass `SearchRequestShaper` for Ransack, Elasticsearch DSL, or any nested-filter API.
+> **Customization:** per-model via `searchConfig({ query: { shaper } })`; globally via `defaultShaper:` on `ToolRegistry` / `AppRegistry` (or `createDefaultAppRegistry`). Default spreads filters flat into the POST body. Subclass `SearchRequestShaper` for Ransack, Elasticsearch DSL, or any nested-filter API.
 
 # Search request shaper
 
@@ -6,18 +6,19 @@ A **search request shaper** translates the MCP-generic search format (`{ query, 
 
 > **v0.77.0:** the `SearchAdapter` type was renamed to `SearchRequestShaper`. The shape is unchanged; the new name reflects the verb (shaping a request) rather than the architectural role ("adapter," which was already overloaded with `DataLayer` adapters).
 
-You write a custom adapter when your API expects filters in a specific envelope and you want LLMs and forms to keep using the simple `filters: { author_id: 7, status: 'published' }` shape on the front end.
+You write a custom shaper when your API expects filters in a specific envelope and you want LLMs and forms to keep using the simple `filters: { author_id: 7, status: 'published' }` shape on the front end.
 
-The adapter is purely about request shaping. Response normalization is the [convention's](./api-convention.md) job; URL composition is the `EndpointResolver`'s job.
+The shaper is purely about request shaping. Response normalization is the [convention's](./api-convention.md) job; URL composition is the `EndpointResolver`'s job.
 
 ## Table of Contents
 
 - [The Class](#the-class)
 - [`buildBody` vs `buildRequest` vs `_buildQueryParams`](#buildbody-vs-buildrequest-vs-_buildqueryparams)
-- [Worked Example: Rails Ransack Adapter](#worked-example-rails-ransack-adapter)
-- [Worked Example: Elasticsearch DSL Adapter](#worked-example-elasticsearch-dsl-adapter)
+- [Built-in Shapers](#built-in-shapers)
+- [Worked Example: Rails Ransack Shaper](#worked-example-rails-ransack-shaper)
+- [Worked Example: Elasticsearch DSL Shaper](#worked-example-elasticsearch-dsl-shaper)
 - [Per-Model Registration](#per-model-registration)
-- [Global Default Adapter](#global-default-adapter)
+- [Global Default Shaper](#global-default-shaper)
 - [`SearchGroup`: Multi-Model Routing](#searchgroup-multi-model-routing)
 - [Testing](#testing)
 
@@ -25,10 +26,10 @@ The adapter is purely about request shaping. Response normalization is the [conv
 
 `SearchRequestShaper` lives at `@mcp-rune/mcp-rune/api-extensions/search`. It exposes one method you'll override (`buildBody`) and two extension hooks (`buildRequest`, `_buildQueryParams`).
 
-```ts file=src/search/my-adapter.ts
+```ts file=src/search/my-shaper.ts
 import { SearchRequestShaper } from '@mcp-rune/mcp-rune/api-extensions/search'
 
-class MyAdapter extends SearchRequestShaper {
+class MyShaper extends SearchRequestShaper {
   override buildBody(
     query: string | null,
     filters: Record<string, unknown> | undefined,
@@ -40,10 +41,10 @@ class MyAdapter extends SearchRequestShaper {
 }
 ```
 
-```js file=src/search/my-adapter.js
+```js file=src/search/my-shaper.js
 import { SearchRequestShaper } from '@mcp-rune/mcp-rune/api-extensions/search'
 
-class MyAdapter extends SearchRequestShaper {
+class MyShaper extends SearchRequestShaper {
   buildBody(query, filters, pagination, searchConfig) {
     // shape the body
   }
@@ -89,7 +90,7 @@ The three hooks are concentric scopes — pick the **narrowest** one that does t
 
 `buildRequest` is the top-level entry point `SearchService` calls. It returns `{ body, queryParams }` — a body POSTed to the endpoint and an optional query string appended to the URL.
 
-```ts file=examples/search-adapter-guide-01.ts
+```ts file=examples/search-shaper-guide-01.ts
 buildRequest(query, filters, pagination, searchConfig) {
   return {
     body: this.buildBody(query, filters, pagination, searchConfig),
@@ -98,7 +99,7 @@ buildRequest(query, filters, pagination, searchConfig) {
 }
 ```
 
-```js file=examples/search-adapter-guide-01.js
+```js file=examples/search-shaper-guide-01.js
 buildRequest(query, filters, pagination, searchConfig)
 {
   return {
@@ -114,16 +115,25 @@ Override:
 - **`_buildQueryParams`** when your API takes additional concerns (expansion hints, sparse fieldsets) as URL params rather than body params. The default supports `searchConfig.query.expand`.
 - **`buildRequest`** itself only when body and query params have to be derived together (rare).
 
-## Worked Example: Rails Ransack Adapter
+## Built-in Shapers
+
+Two shapers ship with the framework:
+
+- **`SearchRequestShaper`** — the default; spreads filters flat into the POST body alongside the query and pagination params.
+- **`RailsSearchRequestShaper`** — for Rails-convention endpoints. It nests filters under a configurable `filtersParam` key — set server-wide via the constructor (`new RailsSearchRequestShaper({ filtersParam: 'filters' })`) or per model via `shaperConfig.filtersParam` — and flattens `{ from, to }` range values into the flat keys your API expects via per-model `shaperConfig.rangeMappings` (e.g., `duration_minutes: { from: 'min_duration', to: 'max_duration' }`).
+
+`QueryConfig.shaperConfig` is the typed per-model knob bag for shaper-specific settings; per-model `shaperConfig` values take precedence over constructor defaults. The custom shapers in the worked examples below read their own knobs from the same bag.
+
+## Worked Example: Rails Ransack Shaper
 
 Rails Ransack expects filters under a `q` key with predicates encoded in the field name (`q[author_id_eq]=7`, `q[title_cont]=clean`):
 
-```ts file=src/adapters/ransack-adapter.ts
-// your-server/search/ransack-adapter.ts
+```ts file=src/shapers/ransack-shaper.ts
+// your-server/shapers/ransack-shaper.ts
 import { SearchRequestShaper } from '@mcp-rune/mcp-rune/api-extensions/search'
 import type { Pagination, SearchConfig } from '@mcp-rune/mcp-rune/api-extensions/search'
 
-export class RansackAdapter extends SearchRequestShaper {
+export class RansackShaper extends SearchRequestShaper {
   override buildBody(
     query: string | null,
     filters: Record<string, unknown> | undefined,
@@ -134,8 +144,8 @@ export class RansackAdapter extends SearchRequestShaper {
     const q: Record<string, unknown> = {}
 
     if (query) {
-      // Full-text search field configured on the model
-      const textField = searchConfig?.query?.fullTextField ?? 'name'
+      // Full-text search field, read from the model's shaperConfig knob bag
+      const textField = (searchConfig?.query?.shaperConfig?.fullTextField as string) ?? 'name'
       q[`${textField}_cont`] = query
     }
 
@@ -153,18 +163,20 @@ export class RansackAdapter extends SearchRequestShaper {
     return body
   }
 }
+
+export const ransackShaper = new RansackShaper()
 ```
 
-```js file=src/adapters/ransack-adapter.js
-// your-server/search/ransack-adapter.ts
+```js file=src/shapers/ransack-shaper.js
+// your-server/shapers/ransack-shaper.js
 import { SearchRequestShaper } from '@mcp-rune/mcp-rune/api-extensions/search'
-export class RansackAdapter extends SearchRequestShaper {
+export class RansackShaper extends SearchRequestShaper {
   buildBody(query, filters, { page, perPage }, searchConfig) {
     const body = { page, per_page: perPage }
     const q = {}
     if (query) {
-      // Full-text search field configured on the model
-      const textField = searchConfig?.query?.fullTextField ?? 'name'
+      // Full-text search field, read from the model's shaperConfig knob bag
+      const textField = searchConfig?.query?.shaperConfig?.fullTextField ?? 'name'
       q[`${textField}_cont`] = query
     }
     if (filters) {
@@ -180,19 +192,21 @@ export class RansackAdapter extends SearchRequestShaper {
     return body
   }
 }
+
+export const ransackShaper = new RansackShaper()
 ```
 
-The LLM still calls `search` with `filters: { author_id: 7, status: 'published' }` — the adapter rewrites that into `q: { author_id_eq: 7, status_eq: 'published' }` on the wire.
+The LLM still calls `search` with `filters: { author_id: 7, status: 'published' }` — the shaper rewrites that into `q: { author_id_eq: 7, status_eq: 'published' }` on the wire. The full-text field comes from `query.shaperConfig` — the typed knob bag for shaper-specific settings — so a model declares `shaperConfig: { fullTextField: 'title' }` in its search config.
 
-## Worked Example: Elasticsearch DSL Adapter
+## Worked Example: Elasticsearch DSL Shaper
 
 Elasticsearch expects a `query` object with `bool.must` arrays. The MCP-generic filter format maps cleanly:
 
-```ts file=src/adapters/elastic-adapter.ts
+```ts file=src/shapers/elastic-shaper.ts
 import { SearchRequestShaper } from '@mcp-rune/mcp-rune/api-extensions/search'
 import type { Pagination, SearchConfig } from '@mcp-rune/mcp-rune/api-extensions/search'
 
-export class ElasticAdapter extends SearchRequestShaper {
+export class ElasticShaper extends SearchRequestShaper {
   override buildBody(
     query: string | null,
     filters: Record<string, unknown> | undefined,
@@ -202,7 +216,7 @@ export class ElasticAdapter extends SearchRequestShaper {
     const must: Record<string, unknown>[] = []
 
     if (query) {
-      const fields = searchConfig?.query?.searchFields ?? ['_all']
+      const fields = (searchConfig?.query?.shaperConfig?.searchFields as string[]) ?? ['_all']
       must.push({ multi_match: { query, fields, type: 'best_fields' } })
     }
 
@@ -224,15 +238,17 @@ export class ElasticAdapter extends SearchRequestShaper {
     }
   }
 }
+
+export const elasticShaper = new ElasticShaper()
 ```
 
-```js file=src/adapters/elastic-adapter.js
+```js file=src/shapers/elastic-shaper.js
 import { SearchRequestShaper } from '@mcp-rune/mcp-rune/api-extensions/search'
-export class ElasticAdapter extends SearchRequestShaper {
+export class ElasticShaper extends SearchRequestShaper {
   buildBody(query, filters, { page, perPage }, searchConfig) {
     const must = []
     if (query) {
-      const fields = searchConfig?.query?.searchFields ?? ['_all']
+      const fields = searchConfig?.query?.shaperConfig?.searchFields ?? ['_all']
       must.push({ multi_match: { query, fields, type: 'best_fields' } })
     }
     if (filters) {
@@ -252,16 +268,18 @@ export class ElasticAdapter extends SearchRequestShaper {
     }
   }
 }
+
+export const elasticShaper = new ElasticShaper()
 ```
 
-`SearchService` POSTs this to your Elasticsearch endpoint. The response normalization (`hits.hits[]._source` → records) belongs in your [convention](./api-convention.md), not in the adapter.
+`SearchService` POSTs this to your Elasticsearch endpoint. The response normalization (`hits.hits[]._source` → records) belongs in your [convention](./api-convention.md), not in the shaper. The `searchFields` list is read from the model's `query.shaperConfig` knob bag, same as the Ransack example above.
 
 ## Per-Model Registration
 
-Attach an adapter to the model's search config:
+Attach a shaper to the model's search config:
 
 ```ts file=src/book.ts
-import { ransackShaper } from './search/ransack-adapter'
+import { ransackShaper } from './shapers/ransack-shaper'
 
 class Book extends BaseModel {
   static singularName = 'book'
@@ -272,11 +290,11 @@ class Book extends BaseModel {
       query: {
         endpoint: 'books/search',
         queryParam: 'q',
-        searchFields: ['title', 'author_name'],
+        shaperConfig: { fullTextField: 'title' },
         shaper: ransackShaper
       },
       filters: {
-        author_id: { type: 'integer', description: 'Filter by author' },
+        author_id: { type: 'relation', relatedModel: 'author', description: 'Filter by author' },
         status: { type: 'enum', enumValues: ['draft', 'published'] }
       }
     }
@@ -285,7 +303,7 @@ class Book extends BaseModel {
 ```
 
 ```js file=src/book.js
-import { ransackShaper } from './search/ransack-adapter'
+import { ransackShaper } from './shapers/ransack-shaper'
 class Book extends BaseModel {
   static singularName = 'book'
   static api = { endpoint: 'books' }
@@ -294,11 +312,11 @@ class Book extends BaseModel {
       query: {
         endpoint: 'books/search',
         queryParam: 'q',
-        searchFields: ['title', 'author_name'],
+        shaperConfig: { fullTextField: 'title' },
         shaper: ransackShaper
       },
       filters: {
-        author_id: { type: 'integer', description: 'Filter by author' },
+        author_id: { type: 'relation', relatedModel: 'author', description: 'Filter by author' },
         status: { type: 'enum', enumValues: ['draft', 'published'] }
       }
     }
@@ -306,15 +324,16 @@ class Book extends BaseModel {
 }
 ```
 
-The `search` extension picks the adapter from `Model.extensions.search.query.adapter` per call. Different models can use different adapters in the same server.
+The data layer picks the shaper from `Model.extensions.search.query.shaper` per call. Different models can use different shapers in the same server.
 
-## Global Default Adapter
+## Global Default Shaper
 
-If most of your models share an adapter, set it once on `AppRegistry` (or pass it to `createDefaultAppRegistry`):
+If most of your models share a shaper, declare the instance once and pass it to **both** registries — `search_records` (tools) and the MCP apps then shape requests identically. `ToolRegistry` and `AppRegistry` accept the same `defaultShaper` (and `searchGroups`) options; `createDefaultAppRegistry` forwards them to the `AppRegistry` it builds:
 
 ```ts file=src/registries/app-registry.ts
 import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
-import { ransackShaper } from './search/ransack-adapter'
+
+import { ransackShaper } from '../shapers/ransack-shaper'
 
 export const appRegistry = createDefaultAppRegistry({
   modelClasses: MODEL_CLASSES,
@@ -325,7 +344,7 @@ export const appRegistry = createDefaultAppRegistry({
 
 ```js file=src/registries/app-registry.js
 import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
-import { ransackShaper } from './search/ransack-adapter'
+import { ransackShaper } from '../shapers/ransack-shaper'
 export const appRegistry = createDefaultAppRegistry({
   modelClasses: MODEL_CLASSES,
   namespace: 'bookshelf',
@@ -333,7 +352,37 @@ export const appRegistry = createDefaultAppRegistry({
 })
 ```
 
-Per-model `query.adapter` overrides the default — use the global as a baseline.
+```ts file=src/registries/tool-registry.ts
+import { searchExtension } from '@mcp-rune/mcp-rune/api-extensions/search'
+import { DATA_TOOL_CLASSES, ToolRegistry } from '@mcp-rune/mcp-rune/tools'
+
+import { ransackShaper } from '../shapers/ransack-shaper'
+
+export const toolRegistry = new ToolRegistry({
+  toolClasses: DATA_TOOL_CLASSES,
+  models: MODEL_CLASSES,
+  createApiClient,
+  apiExtensions: { search: searchExtension() },
+  // Same instance as the AppRegistry above — tools and apps shape requests identically
+  defaultShaper: ransackShaper
+})
+```
+
+```js file=src/registries/tool-registry.js
+import { searchExtension } from '@mcp-rune/mcp-rune/api-extensions/search'
+import { DATA_TOOL_CLASSES, ToolRegistry } from '@mcp-rune/mcp-rune/tools'
+import { ransackShaper } from '../shapers/ransack-shaper'
+export const toolRegistry = new ToolRegistry({
+  toolClasses: DATA_TOOL_CLASSES,
+  models: MODEL_CLASSES,
+  createApiClient,
+  apiExtensions: { search: searchExtension() },
+  // Same instance as the AppRegistry above — tools and apps shape requests identically
+  defaultShaper: ransackShaper
+})
+```
+
+Per-model `query.shaper` overrides the default — use the global as a baseline.
 
 ## `SearchGroup`: Multi-Model Routing
 
@@ -348,14 +397,22 @@ POST /search { type: 'book', q: 'clean code', page: 1 }
 ```ts file=src/registries/app-registry.ts
 import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
 
+import { ransackShaper } from '../shapers/ransack-shaper'
+
 export const appRegistry = createDefaultAppRegistry({
   modelClasses: MODEL_CLASSES,
   namespace: 'library',
   searchGroups: {
     catalog: {
+      // Routing half — drives request shaping
       endpoint: 'search',
       modelsParam: 'type',
-      shaper: ransackShaper
+      shaper: ransackShaper,
+      // Presentation half — drives the pick-model app UI
+      label: 'Library Catalog',
+      description: 'Books and authors in one search',
+      typeField: 'type',
+      models: ['book', 'author']
     }
   }
 })
@@ -363,18 +420,27 @@ export const appRegistry = createDefaultAppRegistry({
 
 ```js file=src/registries/app-registry.js
 import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
+import { ransackShaper } from '../shapers/ransack-shaper'
 export const appRegistry = createDefaultAppRegistry({
   modelClasses: MODEL_CLASSES,
   namespace: 'library',
   searchGroups: {
     catalog: {
+      // Routing half — drives request shaping
       endpoint: 'search',
       modelsParam: 'type',
-      shaper: ransackShaper
+      shaper: ransackShaper,
+      // Presentation half — drives the pick-model app UI
+      label: 'Library Catalog',
+      description: 'Books and authors in one search',
+      typeField: 'type',
+      models: ['book', 'author']
     }
   }
 })
 ```
+
+A `SearchGroup` carries two halves: the routing half (`endpoint`, `modelsParam`, `shaper`) drives `groupSearch` request shaping, and the presentation half (`label`, `description`, `typeField`, `models`) drives pickers that expose the group. `createDefaultAppRegistry` forwards the same group objects to the pick-model app, so one declaration serves both the tools and the apps.
 
 Each model opts into a group:
 
@@ -394,27 +460,27 @@ class Book extends BaseModel {
 }
 ```
 
-The group's adapter handles body shaping; the group's endpoint receives the request. Models in the same group share the adapter and endpoint.
+The group's shaper handles body shaping; the group's endpoint receives the request. Models in the same group share the shaper and endpoint.
 
 ## Testing
 
-Adapters are pure classes — no DOM, no framework dependencies. Unit-test `buildBody` directly:
+Shapers are pure classes — no DOM, no framework dependencies. Unit-test `buildBody` directly:
 
-```ts file=src/adapter.ts
+```ts file=test/ransack-shaper.test.ts
 import { describe, expect, it } from 'vitest'
-import { RansackAdapter } from '../src/search/ransack-adapter'
+import { RansackShaper } from '../src/shapers/ransack-shaper'
 
-const adapter = new RansackAdapter()
-const searchConfig = { query: { fullTextField: 'title' } }
+const shaper = new RansackShaper()
+const searchConfig = { query: { shaperConfig: { fullTextField: 'title' } } }
 
-describe('RansackAdapter', () => {
+describe('RansackShaper', () => {
   it('wraps filters under q with _eq predicate by default', () => {
-    const body = adapter.buildBody(null, { author_id: 7 }, { page: 1, perPage: 10 }, searchConfig)
+    const body = shaper.buildBody(null, { author_id: 7 }, { page: 1, perPage: 10 }, searchConfig)
     expect(body).toEqual({ page: 1, per_page: 10, q: { author_id_eq: 7 } })
   })
 
   it('preserves an explicit predicate in the field name', () => {
-    const body = adapter.buildBody(
+    const body = shaper.buildBody(
       null,
       { title_cont: 'clean' },
       { page: 1, perPage: 10 },
@@ -424,12 +490,12 @@ describe('RansackAdapter', () => {
   })
 
   it('maps full-text query through fullTextField with _cont', () => {
-    const body = adapter.buildBody('haskell', undefined, { page: 1, perPage: 10 }, searchConfig)
+    const body = shaper.buildBody('haskell', undefined, { page: 1, perPage: 10 }, searchConfig)
     expect(body.q).toEqual({ title_cont: 'haskell' })
   })
 
   it('skips null and undefined filter values', () => {
-    const body = adapter.buildBody(
+    const body = shaper.buildBody(
       null,
       { author_id: null, status: 'published' },
       { page: 1, perPage: 10 },
@@ -440,18 +506,18 @@ describe('RansackAdapter', () => {
 })
 ```
 
-```js file=src/adapter.js
+```js file=test/ransack-shaper.test.js
 import { describe, expect, it } from 'vitest'
-import { RansackAdapter } from '../src/search/ransack-adapter'
-const adapter = new RansackAdapter()
-const searchConfig = { query: { fullTextField: 'title' } }
-describe('RansackAdapter', () => {
+import { RansackShaper } from '../src/shapers/ransack-shaper'
+const shaper = new RansackShaper()
+const searchConfig = { query: { shaperConfig: { fullTextField: 'title' } } }
+describe('RansackShaper', () => {
   it('wraps filters under q with _eq predicate by default', () => {
-    const body = adapter.buildBody(null, { author_id: 7 }, { page: 1, perPage: 10 }, searchConfig)
+    const body = shaper.buildBody(null, { author_id: 7 }, { page: 1, perPage: 10 }, searchConfig)
     expect(body).toEqual({ page: 1, per_page: 10, q: { author_id_eq: 7 } })
   })
   it('preserves an explicit predicate in the field name', () => {
-    const body = adapter.buildBody(
+    const body = shaper.buildBody(
       null,
       { title_cont: 'clean' },
       { page: 1, perPage: 10 },
@@ -460,11 +526,11 @@ describe('RansackAdapter', () => {
     expect(body.q).toEqual({ title_cont: 'clean' })
   })
   it('maps full-text query through fullTextField with _cont', () => {
-    const body = adapter.buildBody('haskell', undefined, { page: 1, perPage: 10 }, searchConfig)
+    const body = shaper.buildBody('haskell', undefined, { page: 1, perPage: 10 }, searchConfig)
     expect(body.q).toEqual({ title_cont: 'haskell' })
   })
   it('skips null and undefined filter values', () => {
-    const body = adapter.buildBody(
+    const body = shaper.buildBody(
       null,
       { author_id: null, status: 'published' },
       { page: 1, perPage: 10 },
@@ -475,13 +541,13 @@ describe('RansackAdapter', () => {
 })
 ```
 
-Integration-test end-to-end through `SearchService` with a stub `ApiClient` — assertions check that the POSTed body matches what you'd expect for the LLM's input.
+Integration-test end-to-end through `SearchService` with a stub `DataLayer` — assertions check that the POSTed body matches what you'd expect for the LLM's input.
 
 ---
 
 **Related guides:**
 
 - [Search Filter Integration Guide](../06-the-three-layers-up-close/search-filters.md) — the MCP-side and Rails-side story for structured filters.
-- [API Extensions](../10-extensions/api-extensions.md) — `searchExtension` registers `SearchService` as a `ModelService` mixin.
+- [API Extensions](../10-extensions/api-extensions.md) — `searchExtension()` contributes the `search_records` and `get_filters_guide` tools; the registries construct `SearchService` via `createSearchService` and hide it behind `SearchEnabledDataLayer`.
 - [Custom API Convention](./api-convention.md) — response shaping (where records and pagination come out) is the convention's job.
 - [Model service](./model-service.md) — `SearchService` composition.

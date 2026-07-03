@@ -1,4 +1,4 @@
-> **Customization:** the 5-layer pipeline itself is not replaceable — these layers explain how the framework turns your model + prompt config into a string. The deployer-facing API documented in this chapter is [`PromptContentBuilder`](#promptcontentgenerator-api), which you call inside your `BasePrompt.promptContent` to assemble the result. You consume the pipeline; you do not replace it.
+> **Customization:** the 5-layer pipeline itself is not replaceable — these layers explain how the framework turns your model + prompt config into a string. The deployer-facing API documented in this chapter is [`PromptContentBuilder`](#promptcontentbuilder-api), which you call inside your `BasePrompt.promptContent` to assemble the result. You consume the pipeline; you do not replace it.
 
 # Prompt derivation
 
@@ -14,7 +14,7 @@ A 5-layer architecture for generating prompt documentation from model and prompt
 - [Layer 3: Section Documentation](#layer-3-section-documentation)
 - [Layer 4: Assembly Pipeline](#layer-4-assembly-pipeline)
 - [Layer 5: Behavioral](#layer-5-behavioral)
-- [PromptContentBuilder API](#promptcontentgenerator-api)
+- [PromptContentBuilder API](#promptcontentbuilder-api)
 - [Migration Guide](#migration-guide)
 - [Content Categories](#content-categories)
 
@@ -24,20 +24,20 @@ A 5-layer architecture for generating prompt documentation from model and prompt
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│ Layer 5: BEHAVIORAL — generateStatefulGuidanceInstructions()    │
-│ (BasePrompt) Turn-taking, validation, mode selection            │
+│ Layer 5: BEHAVIORAL — generateGuidance()                        │
+│ (generators/guidance-generator.ts) Turn-taking, mode selection  │
 ├──────────────────────────────────────────────────────────────────┤
 │ Layer 4: ASSEMBLY — PromptContentBuilder.build()              │
 │ Composes all layers into final promptContent                    │
 ├──────────────────────────────────────────────────────────────────┤
-│ Layer 3: SECTION DOCS — PromptContentBuilder + BasePrompt     │
+│ Layer 3: SECTION DOCS — PromptContentBuilder + generators/    │
 │ Per-section field tables, enum tables, content notes            │
 ├──────────────────────────────────────────────────────────────────┤
 │ Layer 2: GROUPING — sections + fieldGroups                      │
 │ (BasePrompt static config) Workflow structure, field org        │
 ├──────────────────────────────────────────────────────────────────┤
 │ Layer 1: SCHEMA — derivePromptSchema()                          │
-│ (schema-derivation.js) fieldDefinitions from model config       │
+│ (model-layer/schema-derivation.ts) fieldDefinitions from model  │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -45,12 +45,12 @@ A 5-layer architecture for generating prompt documentation from model and prompt
 
 ## Layer 1: Schema Derivation
 
-**File**: `lib/mcp/prompts/schema-derivation.js`
+**File**: `src/mcp/model-layer/schema-derivation.ts` (public import: `@mcp-rune/mcp-rune/prompts`)
 
 Generates `fieldDefinitions` from model's `attributes`. This is the foundation — all field metadata comes from the model.
 
 ```js file=src/schema.js
-import { derivePromptSchema } from '#src/mcp/prompts/schema-derivation.js'
+import { derivePromptSchema } from '@mcp-rune/mcp-rune/prompts'
 import { Activity } from '../models/index.js'
 
 static {
@@ -72,7 +72,7 @@ static {
 ```
 
 ```ts file=src/schema.ts
-import { derivePromptSchema } from '#src/mcp/prompts/schema-derivation.js'
+import { derivePromptSchema } from '@mcp-rune/mcp-rune/prompts'
 import { Activity } from '../models/index.js'
 
 static {
@@ -167,7 +167,7 @@ static fieldGroups = {
 
 ## Layer 3: Section Documentation
 
-**Files**: `lib/mcp/prompts/base-prompt.js`, `lib/mcp/prompts/prompt-content-builder.js`
+**Files**: `src/mcp/prompts/generators/`, `src/mcp/prompts/prompt-content-builder.ts`
 
 Generates per-section documentation from config. Includes:
 
@@ -178,14 +178,16 @@ Generates per-section documentation from config. Includes:
 - "Ask the user" prompts
 - Validation reminders
 
-### Atomic Helpers (BasePrompt static methods)
+### Generator functions
 
-| Method | Input | Output |
+Rendering lives in pure functions under `src/mcp/prompts/generators/`, reached only through `PromptContentBuilder` — never import a generator directly:
+
+| Function | File | Output |
 | --- | --- | --- |
-| `generateSectionDocumentation(group, num, model)` | fieldGroup name, section number, model name | Complete section doc with field table, enum tables, ask prompt |
-| `generateEnumTable(fieldName)` | Field name with enumValues | Markdown table of enum values with descriptions |
-| `generateAttributeReferenceFromConfig()` | (uses this.fieldDefinitions) | Full attribute reference table |
-| `generateSummaryTemplate(modelName)` | Model name | Standard summary/confirmation section |
+| `generateSection` / `generateAllSections` | `generators/section-generator.ts` | Complete section doc(s) with field table, enum tables, ask prompt |
+| `renderEnumTable` / `renderEnumTables` | `generators/helpers.ts` | Markdown table(s) of enum values with descriptions |
+| `generateAttributeReference` | `generators/attribute-reference-generator.ts` | Full attribute reference table |
+| `generateSummary` | `generators/summary-generator.ts` | Standard summary/confirmation section |
 
 ### Enum Tables
 
@@ -230,12 +232,20 @@ static attributes = {
 Generated output:
 
 ```markdown
-**`status` values:** | Value | Description | |-------|-------------| | `"planned"` | Not yet started **(default)** | | `"active"` | Currently in progress | | `"paused"` | Temporarily on hold | | `"completed"` | Finished | | `"archived"` | No longer relevant |
+**`status` values:**
+
+| Value         | Description                   |
+| ------------- | ----------------------------- |
+| `"planned"`   | Not yet started **(default)** |
+| `"active"`    | Currently in progress         |
+| `"paused"`    | Temporarily on hold           |
+| `"completed"` | Finished                      |
+| `"archived"`  | No longer relevant            |
 ```
 
 ## Layer 4: Assembly Pipeline
 
-**File**: `lib/mcp/prompts/prompt-content-builder.js`
+**File**: `src/mcp/prompts/prompt-content-builder.ts`
 
 The `PromptContentBuilder` builder composes all layers into final `promptContent`.
 
@@ -247,7 +257,7 @@ get promptContent() {
 ## What is an Activity?
 Custom intro text...`)
     .standard()           // flowDiagram → guidance → allSections → summary
-    .add(this.generateToolUsageSection())  // Custom tool usage
+    .toolUsage()          // Auto-generated tool docs
     .attributeReference() // Layer 3: attribute reference table
     .build()              // Join with '\n\n---\n\n'
 }
@@ -261,7 +271,7 @@ get promptContent() {
 ## What is an Activity?
 Custom intro text...`)
     .standard()           // flowDiagram → guidance → allSections → summary
-    .add(this.generateToolUsageSection())  // Custom tool usage
+    .toolUsage()          // Auto-generated tool docs
     .attributeReference() // Layer 3: attribute reference table
     .build()              // Join with '\n\n---\n\n'
 }
@@ -271,7 +281,7 @@ Parts are joined with `\n\n---\n\n` (horizontal rules) by default.
 
 ## Layer 5: Behavioral
 
-**File**: `lib/mcp/prompts/base-prompt.js` — `generateStatefulGuidanceInstructions()`
+**File**: `src/mcp/prompts/generators/guidance-generator.ts` — `generateGuidance()`
 
 Only applies to stateful prompts. Generates:
 
@@ -280,7 +290,7 @@ Only applies to stateful prompts. Generates:
 - Section-by-section validation requirements
 - Forbidden/correct behavior patterns
 
-Accessed via `.guidance()` in the builder.
+Accessed via `.guidance()` in the builder, which `.standard()` already includes.
 
 ## PromptContentBuilder API
 
@@ -300,10 +310,12 @@ PromptContentBuilder.for(PromptClass, 'model_name')
 | --- | --- | --- |
 | `.add(content)` | Add custom markdown content | All strategies |
 | `.standard(options?)` | Canonical: flowDiagram → guidance → beforeSections → allSections → summary | All |
+| `.flowDiagram()` | Step-by-step roadmap from sections/fieldGroups config | All strategies |
 | `.guidance()` | Stateful guidance instructions (Layer 5) | Stateful only |
 | `.section(groupName, num, options)` | Single section documentation | Stateful |
 | `.allSections({ skip, customSections })` | All sections from config | Stateful |
 | `.summary()` | Standard summary/confirmation template | Stateful |
+| `.toolUsage(overrides?)` | Auto-generated tool usage docs from `static toolUsage` config | All strategies |
 | `.attributeReference()` | Auto-generated attribute table | All strategies |
 | `.build(separator)` | Join parts (default: `\n\n---\n\n`) | All |
 
@@ -376,26 +388,26 @@ ${this.generateAttributeReference()}  ← Custom method per prompt
 ### After (framework)
 
 ```js file=examples/prompt-derivation-framework-guide-09.js
-import { PromptContentBuilder } from '#src/mcp/prompts/prompt-content-builder.js'
+import { PromptContentBuilder } from '@mcp-rune/mcp-rune/prompts'
 
 get promptContent() {
   return PromptContentBuilder.for(MyPrompt, 'my_model')
     .add(`# My Guide\n\n...intro...`)
     .standard()
-    .add(this.generateToolUsageSection())
+    .toolUsage()
     .attributeReference()  // One line replaces 20+ lines
     .build()
 }
 ```
 
 ```ts file=examples/prompt-derivation-framework-guide-09.ts
-import { PromptContentBuilder } from '#src/mcp/prompts/prompt-content-builder.js'
+import { PromptContentBuilder } from '@mcp-rune/mcp-rune/prompts'
 
 get promptContent() {
   return PromptContentBuilder.for(MyPrompt, 'my_model')
     .add(`# My Guide\n\n...intro...`)
     .standard()
-    .add(this.generateToolUsageSection())
+    .toolUsage()
     .attributeReference()  // One line replaces 20+ lines
     .build()
 }
@@ -403,7 +415,7 @@ get promptContent() {
 
 ### Migration Steps
 
-1. Add `import { PromptContentBuilder } from '#src/mcp/prompts/prompt-content-builder.js'`
+1. Add `import { PromptContentBuilder } from '@mcp-rune/mcp-rune/prompts'`
 2. Replace `promptContent` getter with builder pipeline
 3. Remove `generateAttributeReference()` → replaced by `.attributeReference()`
 4. Remove `generateSummarySection()` → replaced by `.summary()` (stateful)

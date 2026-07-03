@@ -12,7 +12,7 @@ Tools are the primary way MCP servers expose functionality to AI agents. Each to
 
 - Has a unique name (snake_case)
 - Provides a description for LLM understanding
-- Defines an input schema (JSON Schema)
+- Defines an input schema (a Zod raw shape)
 - Executes an action and returns results
 
 ## Tool Architecture
@@ -27,15 +27,19 @@ mcp-rune/src/mcp/tools/
 ├── save-model-base-tool.ts   # SaveModelBaseTool — base for create/update tools
 ├── tool-registry.ts          # ToolRegistry — convention-based tool registration
 ├── tool-pipeline.ts          # ToolInterceptor + wrapToolHandler
-├── interceptors.ts           # Built-in interceptors (logging, tracing, error-catch)
-├── validators.ts             # Generic model validators
-├── categories.ts             # Tool category definitions
-└── data/                     # Generic CRUD tools (reusable across servers)
-    ├── list-models-tool.ts
-    ├── find-records-tool.ts
-    ├── create-model-tool.ts
-    ├── update-model-tool.ts
-    └── delete-model-tool.ts
+├── interceptors.ts           # Built-in interceptors (logging, error-catch)
+├── validators.ts             # Boot-time input-schema validator
+├── data/                     # Generic CRUD tools (reusable across servers)
+│   ├── list-models-tool.ts
+│   ├── find-records-tool.ts
+│   ├── create-model-tool.ts
+│   ├── update-model-tool.ts
+│   ├── delete-model-tool.ts
+│   └── bulk-action-models-tool.ts
+├── form-strategies/          # Form-strategy tools (get_prompt_guide, validate_form, get_form_summary)
+├── analysis/                 # Analysis tools (vector-storage-backed sessions)
+├── operations/               # Operations tools (CRUD retrospectives over vector storage)
+└── domain/                   # Domain intelligence tools (concepts, rules, workflows)
 
 your-server/tools/
 ├── base-tool.js              # ServerBaseTool — extends mcp-rune BaseTool
@@ -56,7 +60,7 @@ BaseTool (mcp-rune)
 
 ### Generic CRUD Tools
 
-The following CRUD tools are provided in `lib/mcp/tools/crud/` and shared across all servers:
+The following CRUD tools are provided in `src/mcp/tools/data/` (exported together as `DATA_TOOL_CLASSES`) and shared across all servers:
 
 | Tool | Description |
 | --- | --- |
@@ -65,12 +69,13 @@ The following CRUD tools are provided in `lib/mcp/tools/crud/` and shared across
 | `create_model` | Creates records with model-key payload wrapping. Supports `parent_path` for nested model creation. |
 | `update_model` | Updates records with model-key payload wrapping. Supports compound IDs. |
 | `delete_model` | Deletes records by ID. Supports compound IDs. |
+| `bulk_action_models` | Batch create/update/delete in one call |
 
 These tools are completely generic — they have zero server-specific logic. They receive their configuration (models, serverContext) via constructor dependency injection.
 
 ### How tools reach data
 
-Tools call **only** the three peer interfaces from [chapter 4](./the-three-layers.md): `this.dataLayer`, `this.modelLayer`, `this.analysisLayer`. The diagram below shows the historical decomposition behind `DataLayer` — `ModelService` (the default `DataLayer` implementation) composes `EndpointResolver` + convention + `ApiClient`, and `SearchEnabledDataLayer` adds search/lookup on top — but **projection-layer code (tools, apps) must not reference these names directly**; the eslint guard rejects it. Use the three layers; the rest is internal.
+Tools call **only** the three peer interfaces from [chapter 4](./the-three-layers.md): `this.dataLayer`, `this.modelLayer`, `this.analysisLayer`. The diagram below shows the historical decomposition behind `DataLayer` — `ModelService` (the default `DataLayer` implementation) composes `EndpointResolver` + convention + `ApiClient`, and `SearchEnabledDataLayer` adds search/lookup on top — but **projection-layer code (tools, apps) must not reference these names directly** — AGENTS.md forbids it and the eslint layer-guard enforces the layer-helper half. Use the three layers; the rest is internal.
 
 <!-- illustration: tool-creation#service -->
 
@@ -114,115 +119,86 @@ Every tool call passes through the same interceptor pipeline before reaching you
    MCP request: { tool: "create_model", args: {...} }
                               │
                               ▼
-       ┌─────────────────────────────────────────────┐
-       │  wrapToolHandler(handler, [interceptors])   │
-       └─────────────────────────────────────────────┘
-                              │
-                              ▼
-       ┌─────────────────────────────────────────────┐
-       │  loggingInterceptor     (start, args)       │  ← before
-       └──────────────────────┬──────────────────────┘
-                              ▼
-       ┌─────────────────────────────────────────────┐
-       │  tracingInterceptor     (span open)         │  ← before
-       └──────────────────────┬──────────────────────┘
-                              ▼
-       ┌─────────────────────────────────────────────┐
-       │  errorInterceptor       (try { ... } catch) │  ← around
-       │   ┌─────────────────────────────────────┐   │
-       │   │  YourTool.execute(args, context)    │   │  ← your code
-       │   │   - input validation                │   │
-       │   │   - service calls (DataLayer)       │   │
-       │   │   - return shaped result            │   │
-       │   └─────────────────────────────────────┘   │
-       │                                             │
-       │   catch → MCP-shaped error response         │
-       └─────────────────────────────────────────────┘
-                              │
-                              ▼  result or error response
-       ┌─────────────────────────────────────────────┐
-       │  tracingInterceptor     (span close)        │  ← after
-       │  loggingInterceptor     (duration, status)  │  ← after
-       └──────────────────────┬──────────────────────┘
-                              ▼
-                       MCP response
+   ┌──────────────────────────────────────────────────────┐
+   │  traceToolCall (tracing wraps the entire chain)      │
+   │                                                      │
+   │    ┌─────────────────────────────────────────────┐   │
+   │    │  wrapToolHandler(handler, [interceptors])   │   │
+   │    └──────────────────────┬──────────────────────┘   │
+   │                           ▼                          │
+   │    ┌─────────────────────────────────────────────┐   │
+   │    │  loggingInterceptor     (start, args)       │   │  ← before
+   │    └──────────────────────┬──────────────────────┘   │
+   │                           ▼                          │
+   │    ┌─────────────────────────────────────────────┐   │
+   │    │  errorInterceptor       (try { ... } catch) │   │  ← around
+   │    │   ┌─────────────────────────────────────┐   │   │
+   │    │   │  YourTool.execute(args, context)    │   │   │  ← your code
+   │    │   │   - input validation                │   │   │
+   │    │   │   - service calls (DataLayer)       │   │   │
+   │    │   │   - return shaped result            │   │   │
+   │    │   └─────────────────────────────────────┘   │   │
+   │    │                                             │   │
+   │    │   catch → MCP-shaped error response         │   │
+   │    └──────────────────────┬──────────────────────┘   │
+   │                           │                          │
+   └───────────────────────────┼──────────────────────────┘
+                               ▼  result or error response
+                        MCP response
 ```
 
-Built-in interceptors (`loggingInterceptor`, `tracingInterceptor`, `errorInterceptor`) cover the common cases. Add your own via `ToolRegistry` to insert tenant-scoped header injection, rate limiting, or audit logging — the pipeline is composable and runs in declaration order.
+Built-in interceptors (`loggingInterceptor`, `errorInterceptor`) cover the common cases; tracing is applied outside the chain via `traceToolCall`, and the exported `tracingInterceptor` is only a timing placeholder for manual pipeline composition. Add your own via `ToolRegistry` to insert tenant-scoped header injection, rate limiting, or audit logging — the pipeline is composable and runs in declaration order.
 
-## Tool Categories
+## Tool families and static requirement flags
 
-Tools are organized by category which determines authentication requirements:
+There is no category enum. Each tool class declares what it needs through four static boolean flags, all defined on `BaseTool` with safe defaults:
 
-| Category       | Auth Required | Description                                             |
-| -------------- | ------------- | ------------------------------------------------------- |
-| `STRATEGY`     | No            | Prompt strategies (get_prompt_guide, etc.)              |
-| `DATA`         | Yes           | API operations — generic CRUD tools                     |
-| `AUTOCOMPLETE` | Yes           | Field value suggestions                                 |
-| `ANALYSIS`     | No            | Qualitative data analysis (requires vector storage)     |
-| `OPERATIONS`   | No            | CRUD operation retrospectives (requires vector storage) |
-| `DOMAIN`       | No            | Domain intelligence (concepts, rules, workflows)        |
-| `CUSTOM`       | Varies        | Server-specific behavior                                |
+| Flag | Default on `BaseTool` | Effect |
+| --- | --- | --- |
+| `requiresAuth` | `true` | When `true`, `ToolRegistry` resolves the session's access token and constructs a fresh `DataLayer` per invocation. When `false`, the tool is instantiated without one — calling `requireDataLayer()` throws. |
+| `requiresVectorStorage` | `false` | When `true`, the tool is skipped at registration unless the registry was configured with `vectorStorageEnabled: true`. |
+| `requiresDomainRegistry` | `false` | When `true`, the tool is skipped at registration unless a `domainRegistry` was passed to the registry. |
+| `requiresPromptRegistry` | `false` | When `true`, the tool is skipped at registration unless a `promptRegistry` was passed to the registry. |
 
-> **Shared embedding infrastructure:** Both `ANALYSIS`/`OPERATIONS` and `DOMAIN` categories use the same embedding service (MiniLM-L6-v2, 384 dims) and cosine similarity. ANALYSIS/OPERATIONS tools store embeddings in pgvector. DOMAIN tools keep embeddings in memory for semantic search over concepts, workflows, and diagrams.
+The bundled tools ship in families. Each family base class overrides the flags declaratively and sets `static defaultAnnotations` to match the family's read-only / destructive character:
 
-### Setting Tool Category
+| Family base | Flags overridden | Ships as |
+| --- | --- | --- |
+| `BaseTool` (CRUD tools extend it directly) | — (defaults: auth required, no special services) | `DATA_TOOL_CLASSES` |
+| `BaseFormStrategyTool` | `requiresAuth = false`, `requiresPromptRegistry = true` | `FORM_STRATEGY_TOOL_CLASSES` |
+| `BaseAnalysisTool` | `requiresAuth = false`, `requiresVectorStorage = true` | `ANALYSIS_TOOL_CLASSES` |
+| `BaseOperationsTool` | `requiresAuth = false`, `requiresVectorStorage = true` | `OPERATIONS_TOOL_CLASSES` |
+| `BaseDomainTool` | `requiresAuth = false`, `requiresDomainRegistry = true` | `DOMAIN_TOOL_CLASSES` |
 
-Override the static `category` property:
+> **Shared embedding infrastructure:** the analysis/operations tool families and the domain tools use the same embedding service (all-MiniLM-L6-v2, 384 dims) and cosine similarity. Analysis and operations tools store embeddings in pgvector; domain tools keep embeddings in memory for semantic search over concepts, rules, and workflows.
 
-```js file=src/tools/my-tool.js
-import { TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
+### Choosing a base
 
-export class MyTool extends ServerBaseTool {
-  static get category() {
-    return TOOL_CATEGORIES.STRATEGY
-  } // No auth required
-  // ...
-}
-```
+Extend `BaseTool` directly for anything CRUD-shaped — the defaults (authenticated `DataLayer` per invocation, no special services) are the common case. Reach for a family base when your tool belongs to that family's infrastructure: `BaseFormStrategyTool` for tools that read prompt classes, `BaseAnalysisTool` or `BaseOperationsTool` for vector-storage-backed tools, `BaseDomainTool` for tools that read the domain registry. The base class buys you the right flags and `defaultAnnotations` in one declaration.
 
-```ts file=src/tools/my-tool.ts
-import { TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
+### Overriding a flag per tool
 
-export class MyTool extends ServerBaseTool {
-  static get category() {
-    return TOOL_CATEGORIES.STRATEGY
-  } // No auth required
-  // ...
-}
-```
+When a tool departs from its family default — for example, an analysis tool that fetches records from the upstream API and therefore needs auth despite the family being no-auth — override the flag as a static field:
 
-Default category is `DATA` (requires authentication).
+```ts file=src/tools/my-ingest-tool.ts
+import { BaseAnalysisTool } from '@mcp-rune/mcp-rune/tools'
 
-### Overriding `requiresAuth` per tool
-
-Most tools inherit the auth requirement from their category. When a tool needs to depart from the category default — for example, an `ANALYSIS` tool that fetches records from the upstream API and therefore needs auth despite the category being vector-storage-gated — declare a per-tool override as a static field:
-
-```ts file=src/tools/analysis-ingest-tool.ts
-import { BaseTool, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
-
-export class AnalysisIngestTool extends BaseTool {
-  static override get category() {
-    return TOOL_CATEGORIES.ANALYSIS
-  }
-  // ANALYSIS defaults to no-auth; this tool fetches from the API, so opts in.
+export class MyIngestTool extends BaseAnalysisTool {
+  // BaseAnalysisTool sets requiresAuth = false; this tool fetches from the API, so opts back in.
   static override requiresAuth = true
 }
 ```
 
-```js file=src/tools/analysis-ingest-tool.js
-import { BaseTool, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
+```js file=src/tools/my-ingest-tool.js
+import { BaseAnalysisTool } from '@mcp-rune/mcp-rune/tools'
 
-export class AnalysisIngestTool extends BaseTool {
-  static get category() {
-    return TOOL_CATEGORIES.ANALYSIS
-  }
-  // ANALYSIS defaults to no-auth; this tool fetches from the API, so opts in.
+export class MyIngestTool extends BaseAnalysisTool {
+  // BaseAnalysisTool sets requiresAuth = false; this tool fetches from the API, so opts back in.
   static requiresAuth = true
 }
 ```
 
-`ToolRegistry` resolves the effective auth requirement through `ToolCls.getRequiresAuth()`, which returns the per-tool field if set or falls back to `getCategoryConfig(category).requiresAuth` otherwise. Always call `getRequiresAuth()` rather than reading `requiresAuth` directly — unset tools have `requiresAuth === undefined` and only the helper applies the category default.
+`ToolRegistry` reads `ToolCls.requiresAuth` directly — the flag is always defined because `BaseTool` declares a default.
 
 ## Multi-product disambiguation (deployer recipe)
 
@@ -290,67 +266,72 @@ The `list_models` tool exposes these associations in its output. Nested resource
 
 ## Generic Validators
 
-`lib/mcp/tools/validators.js` provides reusable validation functions:
-
-| Function                   | Description                                                  |
-| -------------------------- | ------------------------------------------------------------ |
-| `validateSearchParams()`   | Validates search params against a model's searchable fields  |
-| `validateNestedResource()` | Validates nested resource relationships using `associations` |
+`src/mcp/tools/validators.ts` exports one function: `validateToolInputSchema(toolName, inputSchema)` — the boot-time check `ToolRegistry` runs on every tool's Zod shape. Filter and nested-resource validation live on the `DataLayer` seam instead: `dataLayer.validateFilters(model, filters)` and `dataLayer.validateNestedResource(parentModel, childResource)`.
 
 ## Tool Registration
 
 ### ToolRegistry
 
-`ToolRegistry` from `@mcp-rune/mcp-rune/tools` handles all registration boilerplate: schema validation, auth wrapping per tool category, tracing, logging, and error catching.
+`ToolRegistry` from `@mcp-rune/mcp-rune/tools` handles all registration boilerplate: schema validation, auth wrapping per tool's static `requiresAuth` flag, tracing, logging, and error catching.
 
 ```js file=src/registries/tool-registry.js
-import { ToolRegistry, DATA_TOOL_CLASSES, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
-import { STRATEGY_TOOL_CLASSES } from '@mcp-rune/mcp-rune/prompts'
+import {
+  DATA_TOOL_CLASSES,
+  FORM_STRATEGY_TOOL_CLASSES,
+  ToolRegistry
+} from '@mcp-rune/mcp-rune/tools'
 
 const toolRegistry = new ToolRegistry({
   toolClasses: {
     ...DATA_TOOL_CLASSES,
-    ...STRATEGY_TOOL_CLASSES,
+    ...FORM_STRATEGY_TOOL_CLASSES,
     my_custom_tool: MyCustomTool
   },
   models: MODEL_CLASSES,
-  serverContext: { name: 'My Server', namespace: 'my-server' },
+  serverContext: { name: 'My Server' },
+  namespace: 'my-server',
   createApiClient: (token) => createApiClient(token, { apiUrl }),
+  // Gating is implicit: tools with requiresPromptRegistry register because
+  // promptRegistry is present; tools with requiresDomainRegistry register
+  // because domainRegistry is present.
   promptRegistry,
-  // Feature gates: disable categories when their dependencies are unavailable
-  gates: {
-    [TOOL_CATEGORIES.ANALYSIS]: vectorStorage.isVectorStorageEnabled(),
-    [TOOL_CATEGORIES.DOMAIN]: !!domainRegistry
-  }
+  domainRegistry,
+  // Tools with requiresVectorStorage register only when this is true.
+  vectorStorageEnabled: vectorStorage.isEnabled()
 })
 ```
 
 ```ts file=src/registries/tool-registry.ts
-import { ToolRegistry, DATA_TOOL_CLASSES, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
-import { STRATEGY_TOOL_CLASSES } from '@mcp-rune/mcp-rune/prompts'
+import {
+  DATA_TOOL_CLASSES,
+  FORM_STRATEGY_TOOL_CLASSES,
+  ToolRegistry
+} from '@mcp-rune/mcp-rune/tools'
 
 const toolRegistry = new ToolRegistry({
   toolClasses: {
     ...DATA_TOOL_CLASSES,
-    ...STRATEGY_TOOL_CLASSES,
+    ...FORM_STRATEGY_TOOL_CLASSES,
     my_custom_tool: MyCustomTool
   },
   models: MODEL_CLASSES,
-  serverContext: { name: 'My Server', namespace: 'my-server' },
+  serverContext: { name: 'My Server' },
+  namespace: 'my-server',
   createApiClient: (token) => createApiClient(token, { apiUrl }),
+  // Gating is implicit: tools with requiresPromptRegistry register because
+  // promptRegistry is present; tools with requiresDomainRegistry register
+  // because domainRegistry is present.
   promptRegistry,
-  // Feature gates: disable categories when their dependencies are unavailable
-  gates: {
-    [TOOL_CATEGORIES.ANALYSIS]: vectorStorage.isVectorStorageEnabled(),
-    [TOOL_CATEGORIES.DOMAIN]: !!domainRegistry
-  }
+  domainRegistry,
+  // Tools with requiresVectorStorage register only when this is true.
+  vectorStorageEnabled: vectorStorage.isEnabled()
 })
 ```
 
 For each tool, ToolRegistry automatically:
 
 1. Creates a definition instance to read `description`, `inputSchema`, and `annotations`
-2. Validates the schema at startup (skips broken tools instead of crashing)
+2. Validates the schema at boot and throws if a tool's schema cannot serialize — a broken schema is a programming error, so boot fails loudly instead of shipping the server with the tool silently missing
 3. Registers with `mcpServer.registerTool()` including annotations
 4. Wraps the handler with the interceptor chain: logging -> custom interceptors -> error-catch
 5. Wraps everything in `traceToolCall()` as the outermost layer
@@ -466,6 +447,8 @@ For tools with server-specific logic:
 #### 1. Create the Tool Class
 
 ```js file=src/tools/my-new-tool.js
+import { z } from 'zod'
+
 import { ServerBaseTool } from './base-tool.js'
 
 export class MyNewTool extends ServerBaseTool {
@@ -483,23 +466,16 @@ Include:
   }
 
   get inputSchema() {
+    // A Zod raw shape — field name to Zod schema, not a JSON Schema object
     return {
-      type: 'object',
-      properties: {
-        required_param: {
-          type: 'string',
-          description: 'Description of this parameter'
-        }
-      },
-      required: ['required_param']
+      required_param: z.string().describe('Description of this parameter')
     }
   }
 
   async execute(args) {
     try {
-      this.requireApiClient()
-      const { required_param } = args
-      const data = await this.apiClient.get(`endpoint/${required_param}`)
+      const dataLayer = this.requireDataLayer()
+      const data = await dataLayer.find('book', args.required_param)
       return this.formatResponse(data)
     } catch (error) {
       return this.formatError(error)
@@ -509,6 +485,8 @@ Include:
 ```
 
 ```ts file=src/tools/my-new-tool.ts
+import { z } from 'zod'
+
 import { ServerBaseTool } from './base-tool.js'
 
 export class MyNewTool extends ServerBaseTool {
@@ -526,23 +504,16 @@ Include:
   }
 
   get inputSchema() {
+    // A Zod raw shape — field name to Zod schema, not a JSON Schema object
     return {
-      type: 'object',
-      properties: {
-        required_param: {
-          type: 'string',
-          description: 'Description of this parameter'
-        }
-      },
-      required: ['required_param']
+      required_param: z.string().describe('Description of this parameter')
     }
   }
 
   async execute(args) {
     try {
-      this.requireApiClient()
-      const { required_param } = args
-      const data = await this.apiClient.get(`endpoint/${required_param}`)
+      const dataLayer = this.requireDataLayer()
+      const data = await dataLayer.find('book', args.required_param)
       return this.formatResponse(data)
     } catch (error) {
       return this.formatError(error)
@@ -600,34 +571,36 @@ export class MyGenericTool extends BaseTool {}
 
 ### Required Overrides
 
-| Method                  | Description                |
-| ----------------------- | -------------------------- |
-| `get name()`            | Tool name (snake_case)     |
-| `get baseDescription()` | Tool description for LLM   |
-| `get inputSchema()`     | JSON Schema for parameters |
-| `execute(args)`         | Main execution logic       |
+| Method                  | Description                  |
+| ----------------------- | ---------------------------- |
+| `get name()`            | Tool name (snake_case)       |
+| `get baseDescription()` | Tool description for LLM     |
+| `get inputSchema()`     | Zod raw shape for parameters |
+| `execute(args)`         | Main execution logic         |
 
 ### Available Helpers
 
 | Method | Description |
 | --- | --- |
-| `requireApiClient()` | Throws if not authenticated |
-| `this.modelService` | ModelService instance (optional, for CRUD) |
+| `requireDataLayer()` | Returns `this.dataLayer`, or throws `"Not authenticated. Please authenticate first."` when the tool ran without auth |
+| `this.dataLayer` | The per-request `DataLayer` seam (present when `requiresAuth = true`) |
 | `formatResponse(data)` | Wrap successful response |
-| `formatError(error)` | Wrap error response (delegates to convention for structured parsing) |
+| `formatError(error)` | Formats a seam error into an LLM-facing error result — backend failures arrive as typed `DataLayerError` subclasses with messages already parsed through the model's convention |
 | `storeToolMemory(params)` | Fire-and-forget vector storage of tool operations |
 | `validateModel(name)` | Check model exists in config |
 | `getModelConfig(name)` | Get model configuration |
-| `getModelEnum()` | Get list of available models |
+| `getModelNames()` / `getWritableModelNames()` | List available model names (all / write-enabled) |
+| `zodEnum(values)` | Build a Zod enum from a value list (falls back to `z.string()` when empty) |
 | `truncateString(s, n)` | Truncate string to max length |
 | `sanitizeResponseData(data)` | JSON stringify for display |
 
 ### Optional Overrides
 
-| Method                  | Description                         |
-| ----------------------- | ----------------------------------- |
-| `static get category()` | Tool category (auth requirements)   |
-| `getUsageRules()`       | Add behavioral rules to description |
+| Method | Description |
+| --- | --- |
+| `static requiresAuth` / `requiresVectorStorage` / `requiresDomainRegistry` / `requiresPromptRegistry` | Dependency flags — override when the tool departs from its base's default |
+| `static defaultAnnotations` / `get annotations()` | MCP tool annotations (read-only / destructive / idempotent hints) |
+| `getUsageRules()` | Add behavioral rules to description |
 
 ## Best Practices
 
@@ -653,7 +626,7 @@ Always wrap execute logic in try/catch:
 ```js file=examples/tool-creation-guide-09.js
 async execute(args) {
   try {
-    this.requireApiClient()
+    this.requireDataLayer()
     // ... tool logic
     return this.formatResponse(data)
   } catch (error) {
@@ -665,7 +638,7 @@ async execute(args) {
 ```ts file=examples/tool-creation-guide-09.ts
 async execute(args) {
   try {
-    this.requireApiClient()
+    this.requireDataLayer()
     // ... tool logic
     return this.formatResponse(data)
   } catch (error) {
@@ -674,13 +647,13 @@ async execute(args) {
 }
 ```
 
-`formatError()` delegates to the model's API convention to parse structured error responses into LLM-optimized text. The convention's `parseErrorResponse()` extracts field-level errors, and the tool layer joins them with semicolons and appends the HTTP status inline:
+By the time an error reaches `formatError()`, the seam has already translated it into a typed `DataLayerError` subclass (`RecordNotFoundError`, `ApiRequestError`) whose message was parsed through the failing model's convention — field errors joined with semicolons, HTTP status appended inline. `formatError()` truncates, logs, and wraps it into an `isError: true` result:
 
 ```
 title: can't be blank; status: is not included in the list (422)
 ```
 
-No "Error:" prefix is added — `isError: true` on the MCP response already signals it.
+`formatError()` adds no "Error:" prefix — `isError: true` on the MCP response already signals it. Only errors thrown past your try/catch get an `Error: ` prefix, prepended by the built-in `errorInterceptor`.
 
 ### Tool Memory (Vector Storage)
 
@@ -710,20 +683,10 @@ this.storeToolMemory({
 
 This is fire-and-forget — it never blocks the tool response. The `sessionId` is extracted automatically from `this.serverContext`. If vector storage is not configured, the call is a no-op.
 
-## Tool Tiers
-
-Tools can be organized into tiers for progressive disclosure:
-
-| Tier       | Description                          | Examples                       |
-| ---------- | ------------------------------------ | ------------------------------ |
-| `core`     | Essential tools always visible       | `find_records`, `create_model` |
-| `standard` | Common tools, visible by default     | `list_models`, `update_model`  |
-| `advanced` | Specialized tools, hidden by default | `delete_model`                 |
-
 ## Checklist for new tools
 
 - [ ] Create tool class with required methods (`name`, `baseDescription`, `inputSchema`, `execute`)
-- [ ] Set appropriate category (`static get category()`)
+- [ ] Pick the right base class (`BaseTool` or a family base); override a static `requires*` flag only when the tool departs from its family default
 - [ ] Add to `toolClasses` in your ToolRegistry configuration
 - [ ] Add comprehensive tests
 - [ ] Document in tool descriptions what it does, when to use it, and constraints

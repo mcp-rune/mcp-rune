@@ -60,8 +60,8 @@ Six pieces work together. Author-facing pieces are on the left; framework-facing
 
 The two built-in extensions show what this looks like in practice:
 
-- **[`custom-actions`](../../../src/api-extensions/custom-actions.ts)** — single-file extension; contributes one MCP tool (`model_action`) and one mixin (`action()` on `ModelService`).
-- **[`search`](../../../src/api-extensions/search/)** — directory-shaped extension; contributes two MCP tools (`search_records`, `get_filters_guide`), a `createSearchService` factory, and a `SearchService` used by apps and `analysis-ingest-tool` as a module import (independent of registration).
+- **[`custom-actions`](../../../src/mcp/data-layer/api-extensions/custom-actions/custom-actions.ts)** — single-file extension; contributes one MCP tool (`model_action`) and one mixin (`action()` on `ModelService`).
+- **[`search`](../../../src/mcp/data-layer/api-extensions/search/extension.ts)** — directory-shaped extension; contributes two MCP tools (`search_records`, `get_filters_guide`), a `createSearchService` factory, and a `SearchService` used by apps and `analysis-ingest-tool` as a module import (independent of registration).
 
 ## The `ModelService` mixin contract (stable surface mixins compose)
 
@@ -221,7 +221,7 @@ register(ctx)
 
 Tool names must be **globally unique** across core tools and all registered extensions. Collisions throw at boot with both extension keys in the error — never silent overwrites.
 
-The contributed `ToolClass` follows the same contract as core tools: it extends `BaseTool`, declares `category` and `requiresAuth`, exposes `inputSchema`, and implements `execute()`. Tools registered through extensions go through the same auth pipeline, interceptor chain, and tracing wrapper as core tools.
+The contributed `ToolClass` follows the same contract as core tools: it extends `BaseTool`, declares its static booleans — `requiresAuth` (default `true`), and where relevant `requiresVectorStorage` / `requiresDomainRegistry` / `requiresPromptRegistry` — exposes `inputSchema`, and implements `execute()`. Tools registered through extensions go through the same auth pipeline, interceptor chain, and tracing wrapper as core tools.
 
 ### `ModelService` mixins
 
@@ -306,7 +306,7 @@ The optional `appliesTo(input)` returns `false` to silently skip the strategy fo
 
 See [Summary Strategies](../09-retrieval-and-graphrag/summary-strategies.md) for the full catalog of built-ins, the strategy interface, and an authoring walkthrough.
 
-Mixins run lazily: each `BaseTool` instance constructs its own `ModelService` on first access, and mixins are applied at that moment. There is one `ModelService` per tool instance; mixin state does not leak between tools.
+Mixins run lazily: the registry's default `DataLayer` factory wraps `ModelService` and applies mixins per tool invocation — each authenticated call gets a fresh `DataLayer` built from the fresh `ApiClient`. Tools reach mixin methods via `this.requireDataLayer()`; there is no `tool.modelService` member, and mixin state does not leak between invocations.
 
 ## Model configuration: the `extensions` bag
 
@@ -394,12 +394,11 @@ A minimal "echo" extension that contributes one tool and one mixin method:
 
 ```ts file=src/tools/echo-tool.ts
 import type { ApiExtension } from '@mcp-rune/mcp-rune/api-extensions'
-import { BaseTool, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
+import { BaseTool } from '@mcp-rune/mcp-rune/tools'
+import { z } from 'zod'
 
 class EchoTool extends BaseTool {
-  static override get category() {
-    return TOOL_CATEGORIES.STRATEGY
-  }
+  static override requiresAuth = false // echo needs no API client
   get name() {
     return 'echo'
   }
@@ -438,11 +437,10 @@ new ToolRegistry({
 ```
 
 ```js file=src/tools/echo-tool.js
-import { BaseTool, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
+import { BaseTool } from '@mcp-rune/mcp-rune/tools'
+import { z } from 'zod'
 class EchoTool extends BaseTool {
-  static get category() {
-    return TOOL_CATEGORIES.STRATEGY
-  }
+  static requiresAuth = false // echo needs no API client
   get name() {
     return 'echo'
   }

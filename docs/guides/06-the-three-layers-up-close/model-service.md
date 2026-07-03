@@ -32,6 +32,8 @@ You don't construct `ModelService` directly inside a tool — that would violate
 
 `ModelService` itself is a thin orchestrator. The three pieces it composes are what you'd actually customize.
 
+**Errors.** `ModelService` is also the seam's single error-translation point: every request funnels through one internal `_call` helper that passes rejections to `translateApiError`, producing `RecordNotFoundError` for record-scoped 404s and `ApiRequestError` for everything else — with the response body parsed by the failing model's convention and the original rejection preserved on `cause`. The full taxonomy is documented in the data layer chapter's [error contract](./data-layer.md#error-contract).
+
 ## When to use the default
 
 The default `ModelService` is the right pick when:
@@ -63,7 +65,7 @@ You rarely touch `EndpointResolver` directly. You touch it indirectly when you d
 
 A convention answers "what does the payload look like on the wire?" Flat REST puts the model fields at the top level; JSON:API wraps them in `data.attributes`. Your custom convention can do anything in between.
 
-As of v0.85.0, the **default convention lives on `DataLayer`**, not on `BaseModel`. You set it via the `dataLayer` factory's `defaultConvention:` option (or implicitly through `ToolRegistry`'s `defaultConvention:` which forwards into the factory). Per-model overrides still live where they always did — on `static api.convention`.
+As of v0.85.0, the **default convention lives on `DataLayer`**, not on `BaseModel`. You set it via the `dataLayer` factory's `defaultConvention:` option (or implicitly through `ToolRegistry` / `AppRegistry`'s `defaultConvention:` which forwards into the factory). Per-model overrides still live where they always did — on `static api.convention`.
 
 ```ts
 import { jsonApiConvention } from '@mcp-rune/mcp-rune/api-conventions'
@@ -88,7 +90,7 @@ In both cases you skip `ModelService` and supply a different `DataLayer` directl
 
 ## Adding search
 
-`ModelService` covers CRUD. Search (free-text, filter pass-through, lookup, group search) is a separate concern bolted on by `SearchEnabledDataLayer`, which wraps any base `DataLayer` (in-memory or `ModelService`) and adds `searchNormalized`, `lookupNormalized`, `groupSearchNormalized`. The wrap is opt-in because not every backend has a search endpoint. See [data layer](./data-layer.md) for the wiring.
+`ModelService` covers CRUD. Search (free-text, filter pass-through, lookup, group search) is a separate concern bolted on by `SearchEnabledDataLayer`, which wraps any base `DataLayer` (in-memory or `ModelService`). Both registries apply the wrap automatically to every per-request DataLayer — configure it with `searchGroups` / `defaultShaper` on the registry config; the wrapper routes `searchNormalized`, `lookupNormalized`, `groupSearchNormalized` through `SearchService`. See [data layer](./data-layer.md) for the wiring.
 
 ## What's next
 

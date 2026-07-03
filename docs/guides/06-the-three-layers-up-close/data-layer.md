@@ -6,7 +6,7 @@ This chapter is the entry point to Part II. [Chapter 4](../04-tools/the-three-la
 
 `DataLayer` is the seam between mcp-rune's projection layer (polymorphic CRUD tools, prompt strategies, schema-driven apps, domain workflows) and any concrete data backend. It declares the operations the projection layer needs; the default implementation is `ModelService` wrapping an `ApiClient` (covered in the [next chapter](./model-service.md)), but you can swap in an in-memory stub, a fetch-only adapter, or a third-party library wrapper without changing tools, prompts, or apps.
 
-> **v0.85.0:** the default API convention moved from `BaseModel` to the `DataLayer` factory. The `defaultConvention:` option on `ToolRegistry` (and the underlying `dataLayer` factory) is now the canonical place to set the server-wide wire format. Per-model `static api.convention` overrides still work exactly as before.
+> **v0.85.0:** the default API convention moved from `BaseModel` to the `DataLayer` factory. The `defaultConvention:` option on `ToolRegistry` / `AppRegistry` (and the underlying `dataLayer` factory) is now the canonical place to set the server-wide wire format. Per-model `static api.convention` overrides still work exactly as before.
 
 The seam exists for two reasons:
 
@@ -33,19 +33,20 @@ At a glance, the seam and what sits above and below it:
                           │
                           ▼
    ┌────────────────────────────────────────────────────┐
-   │   Default shaper: ModelService                     │
+   │   Default adapter: ModelService                    │
    │     ├─ ApiClient   (HTTP verbs against URLs)       │
    │     └─ Convention  (payload / association shape)   │
    └────────────────────────────────────────────────────┘
 ```
 
-The projection layer never imports `ApiClient`, `SearchClient`, or a `Convention` directly — `DataLayer` is the only seam it crosses. Swap the adapter (in-memory stub, fetch-only, third-party wrapper) without touching anything above the line.
+The projection layer never imports `ApiClient`, `SearchService`, or a `Convention` directly — `DataLayer` is the only seam it crosses. Swap the adapter (in-memory stub, fetch-only, third-party wrapper) without touching anything above the line.
 
 > [`ModelLayer`](./model-layer.md) is the read-only peer seam for static model metadata — sync, no I/O, and unlike `DataLayer` it is **not** swappable on the Registry. Tools and apps consume both: `this.dataLayer` for I/O, `this.modelLayer('book')` for the static reads.
 
 ## Table of Contents
 
 - [The Interface](#the-interface)
+- [Error contract](#error-contract)
 - [The Projection-Layer Rule](#the-projection-layer-rule)
 - [The Default Adapter](#the-default-adapter)
   - [Adding search to the default adapter](#adding-search-to-the-default-adapter)
@@ -58,7 +59,7 @@ The projection layer never imports `ApiClient`, `SearchClient`, or a `Convention
 ## The Interface
 
 ```ts file=src/layers/data-layer.ts
-import type { DataLayer } from '@mcp-rune/mcp-rune/core'
+import type { DataLayer } from '@mcp-rune/mcp-rune/data-layer'
 
 interface DataLayer {
   // CRUD
@@ -78,7 +79,13 @@ interface DataLayer {
   dispatch(method, url, payload?, params?, options?)
   buildPayload(model, modelConfig, attrs)
 
+  // Request validation — filters and nested resources are checked at the seam
+  validateFilters(model, filters)
+  normalizeFilters(model, filters)
+  validateNestedResource(parentModel, childResource)
+
   readonly models: ModelsRegistry
+  readonly defaultConvention: BaseConvention
   readonly endpointResolver: EndpointResolver // unstable; for custom-actions
 }
 ```
@@ -101,14 +108,48 @@ interface DataLayer {
  * @property {(group: string, query: string, options?: { perPage?: number, models?: string[] }) => Promise<NormalizedListResponse>} groupSearchNormalized
  * @property {(method: string, url: string, payload?: Object, params?: Object, options?: Object) => Promise<Object>} dispatch
  * @property {(model: string, modelConfig: Object, attrs: Object) => Object} buildPayload
+ * @property {(model: string, filters?: Object) => FilterValidationResult} validateFilters
+ * @property {(model: string, filters?: Object) => (Object | undefined)} normalizeFilters
+ * @property {(parentModel: string, childResource: string) => NestedValidationResult} validateNestedResource
  * @property {ModelsRegistry} models
+ * @property {BaseConvention} defaultConvention  wire-format default resolved at construction
  * @property {EndpointResolver} endpointResolver  unstable; for custom-actions
  */
 ```
 
 Every CRUD method returns `Promise<Record<string, unknown>>`; the four `*Normalized` methods return `Promise<NormalizedListResponse>` (`{ records, pagination }`). Adapters are responsible for their own response normalization upstream of this boundary; the projection layer treats payloads as opaque.
 
-The read surface splits by intent: `listNormalized` for "give me a page", `searchNormalized` for "find records matching a text query and/or filters", `lookupNormalized` for "single-model typeahead", `groupSearchNormalized` for "multi-model typeahead across a configured group". Base adapters without a search backend may delegate the latter three to `listNormalized`; the [`SearchEnabledDataLayer`](#adding-search-to-the-default-adapter) decorator is what actually implements text-search routing.
+The read surface splits by intent: `listNormalized` for "give me a page", `searchNormalized` for "find records matching a text query and/or filters", `lookupNormalized` for "single-model typeahead", `groupSearchNormalized` for "multi-model typeahead across a configured group". Base adapters without a search backend may delegate `searchNormalized` and `lookupNormalized` to `listNormalized`; `groupSearchNormalized` requires group config, so base adapters throw a clear error. The [`SearchEnabledDataLayer`](#adding-search-to-the-default-adapter) decorator is what actually implements text-search routing.
+
+Filter validation also lives at the seam: `validateFilters` checks each filter key against the model's declared filterable attributes (including enum values), `normalizeFilters` splits comma-separated enum strings, and `validateNestedResource` checks a nested-resource name against the parent model's declared associations. Because these are interface members rather than adapter internals, every adapter — the default `ModelService`, the in-memory stub, or your own — enforces the same request validation the projection layer relies on.
+
+## Error contract
+
+Backend failures cross the seam as a typed taxonomy ([ADR 0014](../../architecture/decisions/0014-seam-error-taxonomy.md)), so projection code branches on error class instead of duck-typing transport shapes:
+
+- **`DataLayerError`** — base class for every backend-failure error the seam throws; carries the `model` the operation failed on.
+- **`RecordNotFoundError`** — a record lookup the backend answered with 404; carries `model` and `recordId`, with a message like `No book found with id "9"`.
+- **`ApiRequestError`** — any other backend failure; carries the HTTP `status` and `messages` already parsed through the **failing model's** convention (the server-wide default only applies when no model convention is declared).
+
+```ts file=src/errors.ts
+import {
+  ApiRequestError,
+  DataLayerError,
+  RecordNotFoundError,
+  translateApiError
+} from '@mcp-rune/mcp-rune/data-layer'
+```
+
+```js file=src/errors.js
+import {
+  ApiRequestError,
+  DataLayerError,
+  RecordNotFoundError,
+  translateApiError
+} from '@mcp-rune/mcp-rune/data-layer'
+```
+
+Translation happens exactly once, at the adapter boundary: the default `ModelService` funnels every request through one internal `_call` helper that passes rejections to `translateApiError`, which maps a 404 on a record-scoped call to `RecordNotFoundError` and everything else to `ApiRequestError` — always preserving the original rejection on `cause`. Rejections without a `response` (network failures, timeouts, programming errors) pass through untouched. Above the seam, tools and apps never parse error bodies.
 
 ## The Projection-Layer Rule
 
@@ -116,7 +157,7 @@ The read surface splits by intent: `listNormalized` for "give me a page", `searc
 
 This is the load-bearing contract that lets alternative adapters slot in. Three things hold the rule up:
 
-- **`AppRegistry.registerTools`** wraps the configured DataLayer factory output in `SearchEnabledDataLayer` and exposes only `context.dataLayer` to app handlers. There is no `context.searchClient`. Apps cannot violate the rule because the seam doesn't expose it.
+- **Both registries** wrap the configured DataLayer factory output in `SearchEnabledDataLayer`; app handlers see only `context.dataLayer`, tools only the bound seam. There is no `context.searchClient`. Apps cannot violate the rule because the seam doesn't expose it.
 - **`BaseTool.requireDataLayer()`** is the only sanctioned way for tools to read the seam. It throws if the tool ran without authentication; it never hands back an `ApiClient`.
 - **`InMemoryDataLayer`** has no HTTP transport and no search engine. Code paths that reach past the interface (e.g., importing `ModelService` to coerce a method) fail loudly when run against the stub, surfacing the leak at test time rather than in production.
 
@@ -163,7 +204,7 @@ The decorator is a thin proxy: every CRUD method forwards to the base adapter; t
 Both `ToolRegistry` and `AppRegistry` accept a `dataLayer` factory option:
 
 ```ts file=src/registry.ts
-import { createInMemoryDataLayer } from '@mcp-rune/mcp-rune/core'
+import { createInMemoryDataLayer } from '@mcp-rune/mcp-rune/data-layer'
 
 const registry = new ToolRegistry({
   toolClasses: { ...DATA_TOOL_CLASSES, custom_tool: MyTool },
@@ -180,7 +221,7 @@ const registry = new ToolRegistry({
 ```
 
 ```js file=src/registry.js
-import { createInMemoryDataLayer } from '@mcp-rune/mcp-rune/core'
+import { createInMemoryDataLayer } from '@mcp-rune/mcp-rune/data-layer'
 
 const registry = new ToolRegistry({
   toolClasses: { ...DATA_TOOL_CLASSES, custom_tool: MyTool },
@@ -203,6 +244,7 @@ type DataLayerFactory = (ctx: {
   apiClient?: ApiClient
   models: ModelsRegistry
   namespace?: string
+  defaultConvention?: BaseConvention
   logger?: ToolLogger
 }) => DataLayer
 ```
@@ -217,24 +259,23 @@ type DataLayerFactory = (ctx: {
  * @property {ApiClient} [apiClient]
  * @property {ModelsRegistry} models
  * @property {string} [namespace]
+ * @property {BaseConvention} [defaultConvention]
  * @property {ToolLogger} [logger]
  *
  * @typedef {(ctx: DataLayerFactoryCtx) => DataLayer} DataLayerFactory
  */
 ```
 
-`apiClient` is passed by the registry whenever `createApiClient` is configured. Adapters that don't need HTTP (in-memory stub, library-backed wrappers) can ignore it.
+`apiClient` is passed by the registry whenever `createApiClient` is configured. Adapters that don't need HTTP (in-memory stub, library-backed wrappers) can ignore it. `defaultConvention` carries the server-wide wire-format default set on the registry; the default `ModelService` factory consumes it, and custom factories may honor or ignore it (same contract as `namespace`).
 
 ## Using DataLayer in a Custom Tool
 
 ```ts file=src/tools/archive-project-tool.ts
-import { BaseTool, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
+import { BaseTool } from '@mcp-rune/mcp-rune/tools'
 
 export class ArchiveProjectTool extends BaseTool {
-  static override get category() {
-    return TOOL_CATEGORIES.CUSTOM
-  }
-
+  // Inherits BaseTool's static requiresAuth = true, so the registry injects
+  // an authenticated DataLayer per invocation.
   override get name() {
     return 'archive_project'
   }
@@ -247,13 +288,11 @@ export class ArchiveProjectTool extends BaseTool {
 ```
 
 ```js file=src/tools/archive-project-tool.js
-import { BaseTool, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
+import { BaseTool } from '@mcp-rune/mcp-rune/tools'
 
 export class ArchiveProjectTool extends BaseTool {
-  static get category() {
-    return TOOL_CATEGORIES.CUSTOM
-  }
-
+  // Inherits BaseTool's static requiresAuth = true, so the registry injects
+  // an authenticated DataLayer per invocation.
   get name() {
     return 'archive_project'
   }
@@ -287,10 +326,10 @@ const books = await this.requireDataLayer().list(
 
 ## In-Memory Stub for Tests
 
-`InMemoryDataLayer` (also exported from `@mcp-rune/mcp-rune/core`) is the reference adapter for offline tool tests:
+`InMemoryDataLayer` (also exported from `@mcp-rune/mcp-rune/data-layer`) is the reference adapter for offline tool tests:
 
 ```ts file=src/__tests__/find-tool.test.ts
-import { InMemoryDataLayer } from '@mcp-rune/mcp-rune/core'
+import { InMemoryDataLayer } from '@mcp-rune/mcp-rune/data-layer'
 
 const dataLayer = new InMemoryDataLayer({
   models: { book: { api: { endpoint: 'books' } } },
@@ -302,7 +341,7 @@ const result = await tool.execute({ model: 'book', record_id: '1' })
 ```
 
 ```js file=src/__tests__/find-tool.test.js
-import { InMemoryDataLayer } from '@mcp-rune/mcp-rune/core'
+import { InMemoryDataLayer } from '@mcp-rune/mcp-rune/data-layer'
 
 const dataLayer = new InMemoryDataLayer({
   models: { book: { api: { endpoint: 'books' } } },
@@ -315,18 +354,22 @@ const result = await tool.execute({ model: 'book', record_id: '1' })
 
 The stub is deliberately convention-free — it does not implement HAL `_link` decoration or any other API-specific shape. Use it to verify projection-layer behavior, not to mock a particular backend.
 
+It also honors the seam's [error contract](#error-contract): `find`, `update`, and `delete` throw `RecordNotFoundError` for missing records, so error-handling paths behave the same under test as against the default adapter.
+
 ## Writing Your Own Adapter
 
 An adapter is any class or object that satisfies the `DataLayer` interface. Minimal example wrapping a fetch-based REST client:
 
 ```ts file=src/adapters/fetch-data-layer.ts
-import type { DataLayer, NormalizedListResponse } from '@mcp-rune/mcp-rune/core'
+import { jsonApiConvention } from '@mcp-rune/mcp-rune/data-layer'
+import type { DataLayer, NormalizedListResponse } from '@mcp-rune/mcp-rune/data-layer'
 import type { ModelsRegistry } from '@mcp-rune/mcp-rune/tools'
 import { EndpointResolver } from '@mcp-rune/mcp-rune/model-service'
 
 export class FetchDataLayer implements DataLayer {
   readonly models: ModelsRegistry
   readonly endpointResolver = new EndpointResolver()
+  readonly defaultConvention = jsonApiConvention
 
   constructor(
     public baseUrl: string,
@@ -345,7 +388,8 @@ export class FetchDataLayer implements DataLayer {
     return res.json()
   }
 
-  // ... find / list / update / delete / dispatch / buildPayload
+  // ... find / list / update / delete / dispatch / buildPayload,
+  // plus validateFilters / normalizeFilters / validateNestedResource
 
   async listNormalized(model, filters, pagination): Promise<NormalizedListResponse> {
     const raw = await this.list(model, filters, pagination)
@@ -369,10 +413,12 @@ export class FetchDataLayer implements DataLayer {
 ```
 
 ```js file=src/adapters/fetch-data-layer.js
+import { jsonApiConvention } from '@mcp-rune/mcp-rune/data-layer'
 import { EndpointResolver } from '@mcp-rune/mcp-rune/model-service'
 
 export class FetchDataLayer {
   endpointResolver = new EndpointResolver()
+  defaultConvention = jsonApiConvention
 
   constructor(baseUrl, models) {
     this.baseUrl = baseUrl
@@ -389,7 +435,8 @@ export class FetchDataLayer {
     return res.json()
   }
 
-  // ... find / list / update / delete / dispatch / buildPayload
+  // ... find / list / update / delete / dispatch / buildPayload,
+  // plus validateFilters / normalizeFilters / validateNestedResource
 
   async listNormalized(model, filters, pagination) {
     const raw = await this.list(model, filters, pagination)
@@ -409,6 +456,8 @@ export class FetchDataLayer {
   }
 }
 ```
+
+Custom adapters should throw the seam's [error taxonomy](#error-contract) rather than leaking transport errors: raise `RecordNotFoundError` when a record-scoped call comes back empty, and `ApiRequestError` for other backend failures — adapters whose rejections carry an `ApiClient`-shaped `response` can reuse `translateApiError` instead of hand-rolling the mapping. The in-memory stub throws `RecordNotFoundError` too, so tests that swap adapters exercise the same contract your production adapter must honor.
 
 Adapters that already speak HTTP can usually subclass `ModelService` and override the convention or endpoint-resolution behavior instead of reimplementing the whole interface. To add text search, compose with `withSearchEnabledDataLayer` rather than reimplementing the routing chain.
 

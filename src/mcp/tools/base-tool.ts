@@ -44,8 +44,8 @@ export interface ServerContext {
 /** Dependencies injected into tool constructors */
 export interface ToolDependencies {
   /**
-   * The data-access seam. Set by `ToolRegistry` for tools whose category
-   * requires authentication; absent for STRATEGY / no-auth tools that do
+   * The data-access seam. Set by `ToolRegistry` for tools with
+   * `requiresAuth = true`; absent for `requiresAuth = false` tools that do
    * not touch CRUD. Constructed via the registry's `dataLayer` factory
    * with any registered `ApiExtension` mixins already applied.
    */

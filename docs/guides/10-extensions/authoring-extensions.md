@@ -5,7 +5,7 @@ This guide walks you through writing an extension from scratch. mcp-rune has two
 | Type | Lives in | Best for | Reference |
 | --- | --- | --- | --- |
 | **`HttpExtension`** | `@mcp-rune/mcp-rune/extensions` | HTTP routes and route-scoped middleware on top of `/oauth/*`, `/health`, and `/mcp` | [Extensions Guide](./extensions-http.md), worked example [`cimd`](../../../src/extensions/cimd.ts) |
-| **`ApiExtension`** | `@mcp-rune/mcp-rune/api-extensions` | MCP tools + `ModelService` mixins + per-model config that's only relevant when the extension is registered | [API Extensions Guide](./api-extensions.md), worked examples [`custom-actions`](../../../src/api-extensions/custom-actions.ts) and [`search`](../../../src/api-extensions/search/) |
+| **`ApiExtension`** | `@mcp-rune/mcp-rune/api-extensions` | MCP tools + `ModelService` mixins + per-model config that's only relevant when the extension is registered | [API Extensions Guide](./api-extensions.md), worked examples [`custom-actions`](../../../src/mcp/data-layer/api-extensions/custom-actions/custom-actions.ts) and [`search`](../../../src/mcp/data-layer/api-extensions/search/) |
 
 Both follow the same authoring contract — `requires?` capability declaration, `register(ctx)` entrypoint, narrowed context, explicit opt-in, no auto-registration. The framework's promise is that "what's actually running" is answerable by reading one call site (your `new HttpServer({...})` or `new ToolRegistry({...})`).
 
@@ -48,7 +48,7 @@ The pattern is symmetric and intentional: pieces 1–3 are pure types/functions 
 
 If your extension's capability is something the projection layer should consume — something an app or tool would want to call — extend `DataLayer` with a method and ship a decorator adapter that implements it. The `search` ApiExtension is the worked example: it added `searchNormalized`, `lookupNormalized`, and `groupSearchNormalized` to the interface, then shipped `SearchEnabledDataLayer` to implement them. Apps and tools now call `dataLayer.searchNormalized(...)` and never see `SearchService`.
 
-If your capability is service-internal — transport helpers, request shaping, response normalization that other code uses through your own service — compose `ApiClient` privately inside your extension's service and don't surface a method on `DataLayer`. The `custom-actions` extension is this shape: it adds a `ModelService` mixin (`action()`) callable from tools that already hold a `ModelService` instance, but the contract is "tools call `this.modelService.action(...)`," not "tools reach for a generic `DataLayer` method."
+If your capability is service-internal — transport helpers, request shaping, response normalization that other code uses through your own service — compose `ApiClient` privately inside your extension's service and don't surface a method on `DataLayer`. The `custom-actions` extension is this shape: it adds a `ModelService` mixin (`action()`) callable from tools that already hold a `ModelService` instance, but the contract is "tools call the `action()` method on the `DataLayer` returned by `requireDataLayer()`," not "tools reach for a generic `DataLayer` method."
 
 Rule of thumb:
 
@@ -197,7 +197,7 @@ export class BulkUpdateRecordsTool extends BaseTool {
 
   override async execute(args: Record<string, unknown>): Promise<ToolResult> {
     try {
-      const service = this.requireModelService() as unknown as BulkActionServiceMethods
+      const service = this.requireDataLayer() as unknown as BulkActionServiceMethods
       const { model, ids, attributes } = args as {
         model: string
         ids: string[]
@@ -283,7 +283,7 @@ export class BulkUpdateRecordsTool extends BaseTool {
   }
   async execute(args) {
     try {
-      const service = this.requireModelService()
+      const service = this.requireDataLayer()
       const { model, ids, attributes } = args
       this.validateModel(model)
       const data = await service.bulkUpdate(model, ids, attributes)
@@ -346,7 +346,7 @@ That's the entire extension. Now wire it up.
 ### 6. Register on a model
 
 ```ts file=src/book.ts
-import { BaseModel } from '@mcp-rune/mcp-rune/core'
+import { BaseModel } from '@mcp-rune/mcp-rune/models'
 import { bulkActionsConfig } from './bulk-actions/index.js'
 
 class Book extends BaseModel {
@@ -358,7 +358,7 @@ class Book extends BaseModel {
 ```
 
 ```js file=src/book.js
-import { BaseModel } from '@mcp-rune/mcp-rune/core'
+import { BaseModel } from '@mcp-rune/mcp-rune/models'
 import { bulkActionsConfig } from './bulk-actions/index.js'
 class Book extends BaseModel {
   static api = { endpoint: 'books' }
@@ -402,7 +402,7 @@ The convention is to use the same key in three places: the extension's directory
 ## What you got for free
 
 - The `bulk_update_records` MCP tool is registered automatically when `bulkActionsExtension()` is registered. Pure-REST servers that omit it have zero `bulk_update_records` in their tool catalogue.
-- The mixin lets call sites do `tool.modelService.bulkUpdate(...)` as if it were a built-in method.
+- The mixin lets call sites treat `bulkUpdate(...)` as if it were a built-in method — the `DataLayer` a tool gets via `requireDataLayer()` exposes it.
 - Filter-validation, error handling, logging, tracing, auth — all already wrapped around the tool by the framework's tool pipeline.
 - Tool-name collisions across extensions or against core tools throw at boot with both extension keys in the message — never silent overwrites.
 
@@ -410,9 +410,9 @@ The convention is to use the same key in three places: the extension's directory
 
 The built-in extensions ship the test patterns you should mirror — they exercise both authoring surfaces (registering on `ToolRegistry` + per-model slice) without re-testing the framework itself:
 
-- **Tool tests** (`__tests__/lib/api-extensions/custom-actions/model-action-tool.spec.ts`): construct the tool directly with mocked dependencies, capture the mixin via the real extension factory.
-- **Service-mixin tests** (`__tests__/lib/api-extensions/custom-actions/action-service.spec.ts`): construct a real `ModelService`, apply the captured mixin via `Object.assign`, then exercise the new methods end-to-end through the convention pipeline.
-- **End-to-end registration tests** (`__tests__/lib/api-extensions/custom-actions/extension.spec.ts`): construct a `ToolRegistry` with and without your extension; assert the contributed tool surfaces (or doesn't), and that `list_models` output reflects the model config (or doesn't).
+- **Tool tests** (`__tests__/lib/mcp/data-layer/api-extensions/custom-actions/model-action-tool.spec.ts`): construct the tool directly with mocked dependencies, capture the mixin via the real extension factory.
+- **Service-mixin tests** (`__tests__/lib/mcp/data-layer/api-extensions/custom-actions/action-service.spec.ts`): construct a real `ModelService`, apply the captured mixin via `Object.assign`, then exercise the new methods end-to-end through the convention pipeline.
+- **End-to-end registration tests** (`__tests__/lib/mcp/data-layer/api-extensions/custom-actions/extension.spec.ts`): construct a `ToolRegistry` with and without your extension; assert the contributed tool surfaces (or doesn't), and that `list_models` output reflects the model config (or doesn't).
 
 The "capture the mixin" helper is small and worth copying verbatim:
 
@@ -493,16 +493,13 @@ import {
   type HttpExtension,
   type ToolFlowExtension
 } from '@mcp-rune/mcp-rune/extensions'
-import { BaseTool, TOOL_CATEGORIES, type ToolResult } from '@mcp-rune/mcp-rune/tools'
+import { BaseTool, type ToolResult } from '@mcp-rune/mcp-rune/tools'
 import { z } from 'zod'
 
 /** Shared store typed key — consumers import this to read the audit log. */
 export const AUDIT_LOG_KEY = defineContextKey<Map<string, unknown>>('auditLog')
 
 class AuditRecentTool extends BaseTool {
-  static override get category() {
-    return TOOL_CATEGORIES.DATA
-  }
   override get name() {
     return 'audit_recent'
   }
@@ -544,15 +541,12 @@ export const auditToolFlowExtension: ToolFlowExtension = {
 
 ```js file=src/integrations/audit-integration.js
 import { defineContextKey } from '@mcp-rune/mcp-rune/extensions'
-import { BaseTool, TOOL_CATEGORIES } from '@mcp-rune/mcp-rune/tools'
+import { BaseTool } from '@mcp-rune/mcp-rune/tools'
 import { z } from 'zod'
 
 export const AUDIT_LOG_KEY = defineContextKey('auditLog')
 
 class AuditRecentTool extends BaseTool {
-  static get category() {
-    return TOOL_CATEGORIES.DATA
-  }
   get name() {
     return 'audit_recent'
   }
@@ -682,7 +676,7 @@ For per-model config that one of the surfaces consumes (e.g. an `ApiExtension`'s
 
 ### Why no `defineExtension({...})` wrapper
 
-A "one function that registers all three surfaces" sugar layer would have to keep a parallel API in sync with the three underlying typed contexts, hide the layer model from deployers when something breaks at the wrong layer, and encourage cross-cutting extensions that should be split into independent units. The framework deliberately preserves the **"one call site answers what is running"** invariant (`extensions.md:23`) — that property is more valuable than saving two lines of wiring boilerplate per integration.
+A "one function that registers all three surfaces" sugar layer would have to keep a parallel API in sync with the three underlying typed contexts, hide the layer model from deployers when something breaks at the wrong layer, and encourage cross-cutting extensions that should be split into independent units. The framework deliberately preserves the **"one call site answers what is running"** invariant ([Extensions Guide — What the framework guarantees](./extensions-http.md#what-the-framework-guarantees)) — that property is more valuable than saving two lines of wiring boilerplate per integration.
 
 The decision is documented in the extensibility ADR with a concrete trigger for revisiting: if real-world deployers consistently ship integrations where >50% of LOC is wiring boilerplate across the three config maps, the sugar becomes justified. Until then, the convention is documentation, not API. For the deployer-facing version of this recipe, see [Extension Recipes — Stripe-style integration](./extension-recipes.md#add-a-feature-that-touches-more-than-one-surface-stripe-style-integration).
 
@@ -707,6 +701,6 @@ If you publish your extension as a separate package, pin a `peerDependencies` ra
 - [Model service](../06-the-three-layers-up-close/model-service.md) — what `ModelService.dispatch`, `buildPayload`, `endpointResolver`, `apiClient`, `models` actually do — the stable mixin contract
 - [API Configuration Guide](../06-the-three-layers-up-close/api-configuration.md) — how `BaseModel.api` and `static extensions` interact
 - Source of the built-ins:
-  - [`src/api-extensions/custom-actions.ts`](../../../src/api-extensions/custom-actions.ts) — single-file extension (tool + mixin + helper + reader)
-  - [`src/api-extensions/search/`](../../../src/api-extensions/search/) — directory-shaped extension (multiple modules including a factory)
+  - [`src/mcp/data-layer/api-extensions/custom-actions/custom-actions.ts`](../../../src/mcp/data-layer/api-extensions/custom-actions/custom-actions.ts) — single-file extension (tool + mixin + helper + reader)
+  - [`src/mcp/data-layer/api-extensions/search/`](../../../src/mcp/data-layer/api-extensions/search/) — directory-shaped extension (multiple modules including a factory)
   - [`src/extensions/cimd.ts`](../../../src/extensions/cimd.ts) — minimal `HttpExtension`

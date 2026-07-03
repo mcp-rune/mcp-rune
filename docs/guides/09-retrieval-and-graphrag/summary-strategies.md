@@ -2,12 +2,12 @@
 
 mcp-rune's `analysis_ingest` and `analysis_summarize` tools persist a **page summary** for every batch of records they process. The summary is embedded and recallable via `analysis_query mode: semantic` — it's the LLM's "starter pack" before any qualitative findings have been written.
 
-A **summary strategy** decides _what_ that page summary contains. Different agents want different lenses: a data-quality audit wants coverage and anomalies; a relationship-mapping task wants entity crosswalks; a temporal investigation wants cadence and gaps. Rather than hard-code one shape, mcp-rune ships a small interface, five built-ins, and an extension point so hosts can register their own.
+A **summary strategy** decides _what_ that page summary contains. Different agents want different lenses: a data-quality audit wants coverage and anomalies; a relationship-mapping task wants entity crosswalks; a temporal investigation wants cadence and gaps. Rather than hard-code one shape, mcp-rune ships a small interface, nine built-ins, and an extension point so hosts can register their own.
 
 This guide covers:
 
 - [The contract](#the-contract) — what a strategy is and how the framework calls it.
-- [Built-ins](#built-ins) — the five strategies the framework ships with.
+- [Built-ins](#built-ins) — the nine strategies the framework ships with.
 - [Choosing a strategy at call time](#choosing-a-strategy-at-call-time) — how the LLM picks.
 - [Authoring a custom strategy](#authoring-a-custom-strategy) — full TypeScript walkthrough.
 - [Category scheme and semantic recall](#category-scheme-and-semantic-recall) — how the stored memories are organized.
@@ -50,6 +50,40 @@ A field-level strategy works on any page with records. A GraphRAG-aware strategy
 A strategy is a deterministic pure function over a page of records.
 
 ```ts file=src/summary-input.ts
+export interface SummaryEdge {
+  src_id: string
+  dst_model: string
+  dst_id: string
+  edge_type: string
+}
+
+export type SummaryRequirement = 'edges' | 'embeddings' | 'domainRegistry'
+
+export interface SummaryConcept {
+  readonly name: string
+  readonly title?: string
+  readonly description?: string
+  readonly models: ReadonlyArray<string>
+}
+
+export interface SummaryRule {
+  readonly name: string
+  readonly description?: string
+  readonly scope: ReadonlyArray<string>
+  readonly severity?: 'error' | 'warning' | 'info'
+  evaluate(
+    data: Record<string, unknown>,
+    context?: Record<string, unknown>
+  ): { passed: boolean; message?: string } | Promise<{ passed: boolean; message?: string }>
+}
+
+// Loosely-typed view of the DomainRegistry, so strategies stay decoupled
+// from the domain module.
+export interface SummaryDomainRegistry {
+  knowledge?: { getConceptsForModel?: (model: string) => ReadonlyArray<SummaryConcept> }
+  rules?: { getRulesForModel?: (model: string) => ReadonlyArray<SummaryRule> }
+}
+
 export interface SummaryInput {
   analysisId: string
   model: string
@@ -58,6 +92,9 @@ export interface SummaryInput {
   records: ReadonlyArray<Record<string, unknown>>
   fields?: ReadonlyArray<string>
   options?: Readonly<Record<string, unknown>>
+  edges?: ReadonlyArray<SummaryEdge> // populated only for `requires: ['edges', …]`
+  embeddings?: ReadonlyMap<string, Float32Array> // record-id → 384-dim vector; only for `requires: ['embeddings', …]`
+  domainRegistry?: SummaryDomainRegistry // concepts + rules; only for `requires: ['domainRegistry', …]`
 }
 
 export interface SummaryOutput {
@@ -69,12 +106,29 @@ export interface SummaryOutput {
 export interface SummaryStrategy {
   readonly name: string // lowercase kebab-case, globally unique
   readonly description: string // one-line LLM-facing hint
+  readonly requires?: ReadonlyArray<SummaryRequirement> // auxiliary data the dispatcher loads per page
   appliesTo?(input: SummaryInput): boolean // optional gate; omit = always applies
   generate(input: SummaryInput): SummaryOutput | Promise<SummaryOutput>
 }
 ```
 
 ```js file=src/summary-input.js
+/**
+ * One typed edge originating from a record on the page.
+ *
+ * @typedef {Object} SummaryEdge
+ * @property {string} src_id
+ * @property {string} dst_model
+ * @property {string} dst_id
+ * @property {string} edge_type
+ */
+
+/**
+ * Auxiliary data a strategy can declare via `requires`.
+ *
+ * @typedef {'edges' | 'embeddings' | 'domainRegistry'} SummaryRequirement
+ */
+
 /**
  * What the framework hands to a SummaryStrategy when it asks for a
  * per-page summary during `analysis_ingest`.
@@ -87,6 +141,9 @@ export interface SummaryStrategy {
  * @property {ReadonlyArray<Object>} records
  * @property {ReadonlyArray<string>} [fields]
  * @property {Readonly<Object>} [options]
+ * @property {ReadonlyArray<SummaryEdge>} [edges]           populated only for `requires: ['edges', …]`
+ * @property {ReadonlyMap<string, Float32Array>} [embeddings]  record-id → 384-dim vector; only for `requires: ['embeddings', …]`
+ * @property {Object} [domainRegistry]                      concepts + rules; only for `requires: ['domainRegistry', …]`
  */
 
 /**
@@ -107,6 +164,7 @@ export interface SummaryStrategy {
  * @typedef {Object} SummaryStrategy
  * @property {string} name                       lowercase kebab-case, globally unique
  * @property {string} description                one-line LLM-facing hint
+ * @property {ReadonlyArray<SummaryRequirement>} [requires]  auxiliary data the dispatcher loads per page
  * @property {(input: SummaryInput) => boolean} [appliesTo]  optional gate; omit = always applies
  * @property {(input: SummaryInput) => SummaryOutput | Promise<SummaryOutput>} generate
  */
@@ -311,6 +369,9 @@ function topEntry(counts) {
 Register it on `ToolRegistry` via an `ApiExtension`:
 
 ```ts file=examples/summary-strategies-03.ts
+import { ToolRegistry, DATA_TOOL_CLASSES, ANALYSIS_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
+import { vectorStorage } from '@mcp-rune/mcp-rune/runtime'
+
 import { dealNarrativeStrategy } from './deal-narrative-strategy.js'
 
 const salesExtension: ApiExtension = {
@@ -320,23 +381,35 @@ const salesExtension: ApiExtension = {
 }
 
 new ToolRegistry({
-  toolClasses: DATA_TOOL_CLASSES,
+  // Strategies run inside analysis_ingest / analysis_summarize, so the
+  // analysis tool classes must be registered alongside the data tools…
+  toolClasses: { ...DATA_TOOL_CLASSES, ...ANALYSIS_TOOL_CLASSES },
   models: MODEL_CLASSES,
-  apiExtensions: { sales: salesExtension }
+  apiExtensions: { sales: salesExtension },
+  // …and the vector-storage gate must pass (initVectorStorage ran with an adapter).
+  vectorStorageEnabled: vectorStorage.isVectorStorageEnabled()
 })
 ```
 
 ```js file=examples/summary-strategies-03.js
+import { ToolRegistry, DATA_TOOL_CLASSES, ANALYSIS_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
+import { vectorStorage } from '@mcp-rune/mcp-rune/runtime'
+
 import { dealNarrativeStrategy } from './deal-narrative-strategy.js'
+
 const salesExtension = {
   register(ctx) {
     ctx.registerSummaryStrategy(dealNarrativeStrategy)
   }
 }
 new ToolRegistry({
-  toolClasses: DATA_TOOL_CLASSES,
+  // Strategies run inside analysis_ingest / analysis_summarize, so the
+  // analysis tool classes must be registered alongside the data tools…
+  toolClasses: { ...DATA_TOOL_CLASSES, ...ANALYSIS_TOOL_CLASSES },
   models: MODEL_CLASSES,
-  apiExtensions: { sales: salesExtension }
+  apiExtensions: { sales: salesExtension },
+  // …and the vector-storage gate must pass (initVectorStorage ran with an adapter).
+  vectorStorageEnabled: vectorStorage.isVectorStorageEnabled()
 })
 ```
 

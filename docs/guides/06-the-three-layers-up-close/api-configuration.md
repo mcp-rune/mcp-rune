@@ -1,6 +1,6 @@
 # API configuration
 
-This guide is the reference for the `static api` block on a `BaseModel`: `endpoint`, `convention`, `namespace`, `readOnly`, per-action overrides, custom actions, and compound IDs. It pairs with three sibling guides in this chapter — [Model service](./model-service.md) routes against the `api` block, [API client](./api-client.md) ships the requests, and [API convention](./api-convention.md) decides the wire format. Read this one when you're ready to point a model at a real backend.
+This guide is the reference for the `static api` block on a `BaseModel` — `endpoint`, `convention`, `namespace`, `readOnly`, per-action overrides, and compound IDs — plus the `custom-actions` extension that layers non-CRUD verbs on top of it. It pairs with three sibling guides in this chapter — [Model service](./model-service.md) routes against the `api` block, [API client](./api-client.md) ships the requests, and [API convention](./api-convention.md) decides the wire format. Read this one when you're ready to point a model at a real backend.
 
 > **Custom actions (non-CRUD verbs) moved to the [`custom-actions` ApiExtension](../10-extensions/api-extensions.md) in v0.44.0.** Sections in this guide that reference `api.actions`, `ActionDefinition`, or `ModelActionTool` describe behavior that now lives in the extension. The configuration shape is unchanged — only the registration site moved. Register `customActionsExtension()` on `ToolRegistry` and declare actions on `static extensions['custom-actions']` via the `customActionsConfig()` helper.
 >
@@ -20,7 +20,7 @@ This guide is the reference for the `static api` block on a `BaseModel`: `endpoi
   - [parent / standalone](#parent--standalone)
   - [namespace](#namespace)
   - [endpoints (CRUD overrides)](#endpoints-crud-overrides)
-  - [actions (custom actions)](#actions-custom-actions)
+  - [Custom actions (extension)](#custom-actions-extension)
 - [ActionDefinition Reference](#actiondefinition-reference)
   - [method](#method)
   - [path](#path)
@@ -46,7 +46,7 @@ This guide is the reference for the `static api` block on a `BaseModel`: `endpoi
 
 ## Overview
 
-`EndpointResolver` walks a five-step chain to produce the URL for any `(model, action)` pair. First match wins:
+`EndpointResolver` walks a layered chain to produce the URL for any `(model, action)` pair. First match wins:
 
 <!-- illustration: api-config#chain -->
 
@@ -61,63 +61,106 @@ This guide is the reference for the `static api` block on a `BaseModel`: `endpoi
                  │ no
                  ▼
    ┌────────────────────────────┐  yes
-   │ Collection override?       │ ──────▶ api.endpoint
-   │ api.endpoint               │
+   │ Collection override?       │ ──────▶ endpoints.collection
+   │ api.endpoints.collection   │
    └─────────────┬──────────────┘
                  │ no
                  ▼
    ┌────────────────────────────┐  yes
-   │ Parent path?               │ ──────▶ parent.endpoint + own
-   │ api.parent                 │
-   └─────────────┬──────────────┘
-                 │ no
-                 ▼
-   ┌────────────────────────────┐  yes
-   │ Namespace?                 │ ──────▶ namespace + default
-   │ api.namespace              │
+   │ Parent path at call site?  │ ──────▶ parentPath as given
+   │ options.parentPath         │
    └─────────────┬──────────────┘
                  │ no
                  ▼
    ┌────────────────────────────┐
    │ Default                    │
-   │   pluralize(model name)    │
-   │   "book" → /books          │
+   │   namespace + api.endpoint │
+   │   used verbatim — nothing  │
+   │   pluralizes               │
    └────────────────────────────┘
 ```
 
-Later steps only fire when the prior one declined to provide a path. Custom actions (publish, archive) follow the same chain but consult `api.endpoints[<action>]` first, then fall through to `api.endpoint + ':id/<action>'`.
+Later steps only fire when the prior one declined to provide a path. Record operations (find, update, delete) swap the parent-path step for a compound-ID check: a `recordId` containing `/` is used as the full path. Custom actions (publish, archive) never consult `api.endpoints` — the `custom-actions` extension resolves the action's own `path` template, prepends the model's base endpoint unless the record ID is compound, and applies the namespace.
 
-Every model declares a `static api` configuration that describes how it maps to a REST API:
+Every model declares a `static api` configuration that describes how it maps to a REST API. Custom actions are **not** part of `static api` — they are declared under `static extensions['custom-actions']` via the `customActionsConfig()` helper:
 
 ```ts file=src/models/book.ts
+import { customActionsConfig } from '@mcp-rune/mcp-rune/api-extensions/custom-actions'
+import { jsonApiConvention } from '@mcp-rune/mcp-rune/api-conventions'
+import { type ApiConfig, BaseModel } from '@mcp-rune/mcp-rune/models'
+
 class Book extends BaseModel {
   static api: ApiConfig = {
     endpoint: 'books',
     convention: jsonApiConvention,
     namespace: 'api/v1',
-    endpoints: { create: 'books/draft' },
-    actions: { publish: { path: ':id/publish' } }
+    endpoints: { create: 'books/draft' }
+  }
+
+  static extensions = {
+    'custom-actions': customActionsConfig({
+      actions: { publish: { path: ':id/publish' } }
+    })
   }
 }
 ```
 
 ```js file=src/models/book.js
+import { customActionsConfig } from '@mcp-rune/mcp-rune/api-extensions/custom-actions'
+import { jsonApiConvention } from '@mcp-rune/mcp-rune/api-conventions'
+import { BaseModel } from '@mcp-rune/mcp-rune/models'
+
 class Book extends BaseModel {
   static api = {
     endpoint: 'books',
     convention: jsonApiConvention,
     namespace: 'api/v1',
-    endpoints: { create: 'books/draft' },
-    actions: { publish: { path: ':id/publish' } }
+    endpoints: { create: 'books/draft' }
+  }
+
+  static extensions = {
+    'custom-actions': customActionsConfig({
+      actions: { publish: { path: ':id/publish' } }
+    })
   }
 }
+```
+
+The extension itself is registered once, on the registry — this enables the `model_action` MCP tool and the `ModelService.action()` mixin method. Every custom-action example in this guide assumes this wiring:
+
+```ts file=src/server.ts
+import { customActionsExtension } from '@mcp-rune/mcp-rune/api-extensions/custom-actions'
+import { DATA_TOOL_CLASSES, ToolRegistry } from '@mcp-rune/mcp-rune/tools'
+
+const registry = new ToolRegistry({
+  toolClasses: DATA_TOOL_CLASSES,
+  models: { book: Book },
+  createApiClient,
+  apiExtensions: {
+    'custom-actions': customActionsExtension()
+  }
+})
+```
+
+```js file=src/server.js
+import { customActionsExtension } from '@mcp-rune/mcp-rune/api-extensions/custom-actions'
+import { DATA_TOOL_CLASSES, ToolRegistry } from '@mcp-rune/mcp-rune/tools'
+
+const registry = new ToolRegistry({
+  toolClasses: DATA_TOOL_CLASSES,
+  models: { book: Book },
+  createApiClient,
+  apiExtensions: {
+    'custom-actions': customActionsExtension()
+  }
+})
 ```
 
 This configuration is consumed by:
 
 - **EndpointResolver** — builds URLs from model config + action context
 - **ModelService** — orchestrates CRUD and custom actions through the resolver + convention + ApiClient pipeline
-- **ModelActionTool** — MCP tool surface that exposes custom actions to LLMs
+- **ModelActionTool** — MCP tool surface (registered by the `custom-actions` extension) that exposes custom actions to LLMs
 - **Convention** — formats request payloads and normalizes responses
 
 ---
@@ -126,31 +169,35 @@ This configuration is consumed by:
 
 ```ts file=src/config/api-config.ts
 interface ApiConfig {
-  endpoint?: string
+  /** Base API path for this model (e.g., 'books'). */
+  endpoint: string
   convention?: BaseConvention
   readOnly?: boolean
+  /** Parent model name(s) for nested resources. */
   parent?: string | string[]
+  /** Whether the model has a standalone (non-nested) endpoint. Default: true. */
   standalone?: boolean
+  /** API namespace prefix (e.g., 'api/v1'). Overrides server-wide default. */
   namespace?: string
+  /** Per-action endpoint overrides for non-standard API paths. */
   endpoints?: EndpointOverrides
-  actions?: Record<string, ActionDefinition>
 }
 ```
 
 ```js file=src/config/api-config.js
 /**
- * The full shape of `static api` on a model. All fields are optional;
- * see the per-field sections below for resolution rules and defaults.
+ * The full shape of `static api` on a model. `endpoint` is required;
+ * every other field is optional — see the per-field sections below for
+ * resolution rules and defaults.
  *
  * @typedef {Object} ApiConfig
- * @property {string} [endpoint]
+ * @property {string} endpoint
  * @property {BaseConvention} [convention]
  * @property {boolean} [readOnly]
  * @property {string | string[]} [parent]
  * @property {boolean} [standalone]
  * @property {string} [namespace]
  * @property {EndpointOverrides} [endpoints]
- * @property {Object<string, ActionDefinition>} [actions]
  */
 ```
 
@@ -172,7 +219,9 @@ api = { endpoint: 'books' }
 
 ### convention
 
-**Type:** `BaseConvention` — **Optional** (defaults to `jsonApiConvention`)
+**Type:** `BaseConvention` — **Optional**
+
+Fallback chain: model `api.convention` → registry `defaultConvention` → `jsonApiConvention`.
 
 Controls how request payloads are built and responses are normalized. The convention determines:
 
@@ -184,21 +233,24 @@ Controls how request payloads are built and responses are normalized. The conven
 static api = { endpoint: 'books', convention: jsonApiConvention }
 // create payload: { "book": { "title": "Test" } }
 
-static api = { endpoint: 'books', convention: flatConvention }
+static api = { endpoint: 'books', convention: flatRestConvention }
 // create payload: { "title": "Test" }
 ```
 
 ```js file=examples/api-config-guide-03.js
 api = { endpoint: 'books', convention: jsonApiConvention }
-api = { endpoint: 'books', convention: flatConvention }
+// create payload: { "book": { "title": "Test" } }
+api = { endpoint: 'books', convention: flatRestConvention }
 // create payload: { "title": "Test" }
 ```
+
+`flatRestConvention` is a custom convention — the framework only ships `jsonApiConvention`. See the [flat REST worked example](./api-convention.md#worked-example-flat-rest-convention) for its full implementation.
 
 ### readOnly
 
 **Type:** `boolean` — **Optional** (defaults to `false`)
 
-When `true`, ModelService blocks write operations (create, update, delete) on this model with a `ModelReadOnlyError`. Custom actions are **not** blocked by `readOnly` — they use `_validateModel` instead of `_validateWritable`.
+When `true`, ModelService blocks write operations (create, update, delete) on this model with a `ModelReadOnlyError`. Custom actions are **not** blocked by `readOnly` — the `custom-actions` mixin only checks that the model exists, so read-only models can still expose actions.
 
 ```ts file=examples/api-config-guide-04.ts
 static api = { endpoint: 'reports', readOnly: true }
@@ -365,41 +417,45 @@ api = {
 
 **Note:** Explicit overrides bypass namespace — they are treated as full paths.
 
-### actions (custom actions)
+### Custom actions (extension)
 
-**Type:** `Record<string, ActionDefinition>` — **Optional**
+**Type:** `CustomActionsConfig` (`{ actions: Record<string, ActionDefinition> }`) — **Opt-in**, declared under `static extensions['custom-actions']`, not on `ApiConfig`
 
-Custom actions beyond CRUD. Each key is the action name, each value defines the HTTP method, URL path template, and behavior options. See [ActionDefinition Reference](#actiondefinition-reference).
+Custom actions beyond CRUD. Each key under `actions` is the action name, each value defines the HTTP method, URL path template, and behavior options. See [ActionDefinition Reference](#actiondefinition-reference) and the registry wiring in [Overview](#overview).
 
 ```ts file=examples/api-config-guide-10.ts
-static api = {
-  endpoint: 'books',
-  actions: {
-    publish:         { path: ':id/publish', description: 'Publish a draft book' },
-    archive:         { path: ':id/archive', method: 'PATCH' },
-    export:          { path: ':id/export', method: 'GET' },
-    approve_chapter: { path: ':id/chapters/:chapter_id/approve' },
-    bulk_publish:    { path: 'bulk-publish', recordLevel: false, rawPayload: true }
-  }
+static extensions = {
+  'custom-actions': customActionsConfig({
+    actions: {
+      publish:         { path: ':id/publish', description: 'Publish a draft book' },
+      archive:         { path: ':id/archive', method: 'PATCH' },
+      export:          { path: ':id/export', method: 'GET' },
+      approve_chapter: { path: ':id/chapters/:chapter_id/approve' },
+      bulk_publish:    { path: 'bulk-publish', recordLevel: false, rawPayload: true }
+    }
+  })
 }
 ```
 
 ```js file=examples/api-config-guide-10.js
-api = {
-  endpoint: 'books',
-  actions: {
-    publish: { path: ':id/publish', description: 'Publish a draft book' },
-    archive: { path: ':id/archive', method: 'PATCH' },
-    export: { path: ':id/export', method: 'GET' },
-    approve_chapter: { path: ':id/chapters/:chapter_id/approve' },
-    bulk_publish: { path: 'bulk-publish', recordLevel: false, rawPayload: true }
-  }
+static extensions = {
+  'custom-actions': customActionsConfig({
+    actions: {
+      publish: { path: ':id/publish', description: 'Publish a draft book' },
+      archive: { path: ':id/archive', method: 'PATCH' },
+      export: { path: ':id/export', method: 'GET' },
+      approve_chapter: { path: ':id/chapters/:chapter_id/approve' },
+      bulk_publish: { path: 'bulk-publish', recordLevel: false, rawPayload: true }
+    }
+  })
 }
 ```
 
 ---
 
 ## ActionDefinition Reference
+
+`ActionDefinition` is exported from `@mcp-rune/mcp-rune/api-extensions/custom-actions`.
 
 ```ts file=src/action-definition.ts
 interface ActionDefinition {
@@ -413,8 +469,9 @@ interface ActionDefinition {
 
 ```js file=src/action-definition.js
 /**
- * A custom action declared under `static api.actions[name]`. The path
- * supports `:id` and arbitrary `:param` substitution.
+ * A custom action declared under `extensions['custom-actions']` via
+ * `customActionsConfig()`. The path supports `:id` and arbitrary
+ * `:param` substitution.
  *
  * @typedef {Object} ActionDefinition
  * @property {'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'} [method]
@@ -435,7 +492,7 @@ The HTTP method used for this action. Any standard method is supported.
 
 **Type:** `string` — **Required**
 
-URL path template with Rails-style named parameters. Relative paths are resolved against the model's base endpoint by `EndpointResolver.resolveAction()`.
+URL path template with Rails-style named parameters. Relative paths are resolved against the model's base endpoint by the extension's `ActionResolver`.
 
 Supports two kinds of placeholders:
 
@@ -472,7 +529,7 @@ path: 'bulk-publish'
 
 ### Path Parameter Substitution
 
-`EndpointResolver.resolveAction()` substitutes path parameters in this order:
+`ActionResolver.resolveAction()` substitutes path parameters in this order:
 
 1. `:id` is replaced with `recordId` (if present in both path and context)
 2. All remaining `:param_name` placeholders are replaced from `pathParams`
@@ -486,7 +543,7 @@ path: 'bulk-publish'
 'reports/:report_type/:year/generate' → 'books/reports/sales/2026/generate'
 
 // recordId='42', no pathParams with :chapter_id
-':id/chapters/:chapter_id/approve' → Error: "Unresolved path parameters: :chapter_id"
+':id/chapters/:chapter_id/approve' → Error: "Unresolved path parameters in action 'approve_chapter' on 'book': :chapter_id. Provide values via recordId or pathParams."
 ```
 
 ```js file=examples/api-config-guide-13.js
@@ -498,7 +555,7 @@ path: 'bulk-publish'
 'books/reports/sales/2026/generate'
 // recordId='42', no pathParams with :chapter_id
 ':id/chapters/:chapter_id/approve'
-Error: 'Unresolved path parameters: :chapter_id'
+Error: "Unresolved path parameters in action 'approve_chapter' on 'book': :chapter_id. Provide values via recordId or pathParams."
 ```
 
 **Compound IDs:** When `recordId` contains `/` (e.g., `'titles/42/assets/7'`), it is treated as a compound ID. After `:id` substitution, the base endpoint is **not** prepended — the compound ID already encodes the full resource hierarchy.
@@ -570,9 +627,9 @@ When `true`, `ModelService.action()` sends attributes as-is without convention w
 
 ### Action Resolution Chain
 
-`resolveAction()` resolves custom actions:
+Custom-action URLs are resolved by `ActionResolver` (from the `custom-actions` extension), which composes `pathForType()` and `applyNamespace()` from `EndpointResolver`. Its `resolveAction()` method:
 
-1. Look up `ActionDefinition` from `modelConfig.api.actions`
+1. Look up the `ActionDefinition` from the model's `extensions['custom-actions']` slice
 2. Substitute `:id` with `recordId`
 3. Substitute remaining `:param_name` from `pathParams`
 4. Validate no unresolved placeholders remain
@@ -586,6 +643,9 @@ Returns `{ url: string, method: string }`.
 Effective namespace: model-level > server-wide > none.
 
 ```ts file=src/resolver.ts
+import { ActionResolver } from '@mcp-rune/mcp-rune/api-extensions/custom-actions'
+import { EndpointResolver } from '@mcp-rune/mcp-rune/model-service'
+
 const resolver = new EndpointResolver({ namespace: 'api/v1' })
 
 // Server-wide:
@@ -595,20 +655,33 @@ resolver.resolveCollection({ model: 'book', modelConfig }) // → 'api/v1/books'
 // modelConfig.api.namespace = 'api/v2'
 resolver.resolveCollection({ model: 'book', modelConfig }) // → 'api/v2/books'
 
-// Actions also respect namespace:
-resolver.resolveAction({ model: 'book', modelConfig, action: 'publish', recordId: '42' })
+// Actions also respect namespace — ActionResolver composes the resolver:
+new ActionResolver(resolver).resolveAction({
+  model: 'book',
+  modelConfig,
+  action: 'publish',
+  recordId: '42'
+})
 // → { url: 'api/v1/books/42/publish', method: 'POST' }
 ```
 
 ```js file=src/resolver.js
+import { ActionResolver } from '@mcp-rune/mcp-rune/api-extensions/custom-actions'
+import { EndpointResolver } from '@mcp-rune/mcp-rune/model-service'
+
 const resolver = new EndpointResolver({ namespace: 'api/v1' })
 // Server-wide:
 resolver.resolveCollection({ model: 'book', modelConfig }) // → 'api/v1/books'
 // Model override:
 // modelConfig.api.namespace = 'api/v2'
 resolver.resolveCollection({ model: 'book', modelConfig }) // → 'api/v2/books'
-// Actions also respect namespace:
-resolver.resolveAction({ model: 'book', modelConfig, action: 'publish', recordId: '42' })
+// Actions also respect namespace — ActionResolver composes the resolver:
+new ActionResolver(resolver).resolveAction({
+  model: 'book',
+  modelConfig,
+  action: 'publish',
+  recordId: '42'
+})
 // → { url: 'api/v1/books/42/publish', method: 'POST' }
 ```
 
@@ -671,6 +744,8 @@ await modelService.create('book', attrs, { userId: 'user-123' })
 ```
 
 ### Custom Actions
+
+`action()` is contributed by the `custom-actions` extension's `ModelService` mixin — register the extension as shown in [Overview](#overview) before calling it.
 
 ```ts file=examples/api-config-guide-19.ts
 // Simple record action (POST)
@@ -763,10 +838,17 @@ await modelService.action('book', 'publish', {
 | `UnknownModelError` | Model name not in registry | `availableModels: string[]` |
 | `ModelReadOnlyError` | Write CRUD on read-only model | — |
 | `MissingRequiredFieldsError` | Create missing required attrs | `missingFields: string[]` |
-| `MissingParentError` | Nested-only model without parentPath | — |
-| `UnknownActionError` | Action not declared on model | — |
+| `MissingParentError` | Nested-only model without parentPath | `model`, `childEndpoint`, `parentModels: string[]` |
+| `DataLayerError` | Base class for every backend-failure error the seam throws | `model?: string` |
+| `RecordNotFoundError` | Record-scoped call the backend answered with 404 | `recordId?: string` (extends `DataLayerError`) |
+| `ApiRequestError` | Any other backend failure with an HTTP response | `status?: number`, `messages: string[]` (extends `DataLayerError`) |
+| `UnknownActionError`\* | Action not declared on model | — |
 
-**Note:** `ModelReadOnlyError` only applies to CRUD write operations (create, update, delete). Custom actions use `_validateModel` — read-only models can still have custom actions (e.g., GET export).
+The typed backend-failure taxonomy — `DataLayerError`, `RecordNotFoundError`, `ApiRequestError`, and the `translateApiError` helper — is exported from `@mcp-rune/mcp-rune/data-layer`.
+
+\* `UnknownActionError` is owned by the `custom-actions` extension (`@mcp-rune/mcp-rune/api-extensions/custom-actions`), not by `ModelService`.
+
+**Note:** `ModelReadOnlyError` only applies to CRUD write operations (create, update, delete). The `custom-actions` mixin only validates that the model exists and never checks `readOnly`, so read-only models can still expose custom actions (e.g., GET export).
 
 ---
 
@@ -805,35 +887,34 @@ The convention also handles:
 
 ### Error Parsing
 
-Each convention knows its API's error response shape. `BaseTool.formatError()` delegates to the convention's `parseErrorResponse()` to extract structured errors and format them as compact, LLM-optimized text.
+Each convention knows its API's error response shape, but parsing happens exactly once — at the adapter boundary, not in the tool layer. `ModelService` wraps every `ApiClient` call in `_call`, which routes transport failures through `translateApiError` using the failing model's convention (`api.convention`, falling back to the service's `defaultConvention`). A record-scoped 404 becomes `RecordNotFoundError`; any other HTTP failure becomes `ApiRequestError` with `messages` already parsed through the convention. `BaseTool.formatError()` then just renders `error.message` and logs `ApiRequestError.status` — it never touches the convention. See [ADR 0014](../../architecture/decisions/0014-seam-error-taxonomy.md) for the full reasoning.
 
-The method receives an `ErrorResponse` object (`{ status?, data? }`) and returns a flat `string[]` of error messages:
+The convention method receives an `ErrorResponse` object (`{ status?, data? }`) and returns a flat `string[]` of error messages:
 
 ```ts file=src/data.ts
-import type { ErrorResponse } from '@mcp-rune/mcp-rune/prompts'
+import type { ErrorResponse } from '@mcp-rune/mcp-rune/api-conventions'
 
-// Base implementation: extracts from response.data, JSON dump for objects
+// Base implementation: strings pass through, other primitives are
+// stringified, objects are JSON-dumped
 parseErrorResponse(response: ErrorResponse): string[] {
   const data = response.data
   if (data === undefined || data === null) return []
   if (typeof data === 'string') return [data]
+  if (typeof data !== 'object') return [String(data)]
   return [JSON.stringify(data, null, 2)]
 }
 ```
 
 ```js file=src/data.js
-// Base implementation: extracts from response.data, JSON dump for objects
-parseErrorResponse(response, ErrorResponse);
-string[];
-{
-    const data = response.data;
-    if (data === undefined || data === null)
-        return [];
-    if (typeof data === 'string')
-        return [data];
-    return [JSON.stringify(data, null, 2)];
+// Base implementation: strings pass through, other primitives are
+// stringified, objects are JSON-dumped
+parseErrorResponse(response) {
+  const data = response.data
+  if (data === undefined || data === null) return []
+  if (typeof data === 'string') return [data]
+  if (typeof data !== 'object') return [String(data)]
+  return [JSON.stringify(data, null, 2)]
 }
-export {};
 ```
 
 **JSON API convention** handles Rails error shapes:
@@ -846,7 +927,7 @@ export {};
 
 **Custom conventions** should override to handle their API's specific error envelope. For example, a HAL convention might extract errors from `_embedded.errors` or a different structure.
 
-The tool layer joins multiple errors with semicolons and appends the HTTP status inline:
+`ApiRequestError`'s constructor joins the parsed messages with semicolons and appends the HTTP status inline (falling back to `Unknown error` when the convention returned nothing):
 
 ```
 title: can't be blank; status: is not included in the list (422)
@@ -866,10 +947,15 @@ class Asset extends BaseModel {
   static api = {
     endpoint: 'assets',
     parent: 'title',
-    standalone: false,
-    actions: {
-      publish: { path: ':id/publish' }
-    }
+    standalone: false
+  }
+
+  static extensions = {
+    'custom-actions': customActionsConfig({
+      actions: {
+        publish: { path: ':id/publish' }
+      }
+    })
   }
 }
 ```
@@ -880,10 +966,15 @@ class Asset extends BaseModel {
   static api = {
     endpoint: 'assets',
     parent: 'title',
-    standalone: false,
-    actions: {
-      publish: { path: ':id/publish' }
-    }
+    standalone: false
+  }
+
+  static extensions = {
+    'custom-actions': customActionsConfig({
+      actions: {
+        publish: { path: ':id/publish' }
+      }
+    })
   }
 }
 ```
@@ -1017,12 +1108,17 @@ class Book extends BaseModel {
 class Book extends BaseModel {
   static api = {
     endpoint: 'books',
-    convention: jsonApiConvention,
-    actions: {
-      publish: { path: ':id/publish', description: 'Publish a draft book' },
-      archive: { path: ':id/archive', method: 'PATCH', description: 'Archive a book' },
-      export: { path: ':id/export', method: 'GET', description: 'Export book data' }
-    }
+    convention: jsonApiConvention
+  }
+
+  static extensions = {
+    'custom-actions': customActionsConfig({
+      actions: {
+        publish: { path: ':id/publish', description: 'Publish a draft book' },
+        archive: { path: ':id/archive', method: 'PATCH', description: 'Archive a book' },
+        export: { path: ':id/export', method: 'GET', description: 'Export book data' }
+      }
+    })
   }
 }
 
@@ -1046,12 +1142,17 @@ await modelService.action('book', 'export', {
 class Book extends BaseModel {
   static api = {
     endpoint: 'books',
-    convention: jsonApiConvention,
-    actions: {
-      publish: { path: ':id/publish', description: 'Publish a draft book' },
-      archive: { path: ':id/archive', method: 'PATCH', description: 'Archive a book' },
-      export: { path: ':id/export', method: 'GET', description: 'Export book data' }
-    }
+    convention: jsonApiConvention
+  }
+
+  static extensions = {
+    'custom-actions': customActionsConfig({
+      actions: {
+        publish: { path: ':id/publish', description: 'Publish a draft book' },
+        archive: { path: ':id/archive', method: 'PATCH', description: 'Archive a book' },
+        export: { path: ':id/export', method: 'GET', description: 'Export book data' }
+      }
+    })
   }
 }
 await modelService.action('book', 'publish', { recordId: '42' })
@@ -1072,20 +1173,23 @@ await modelService.action('book', 'export', {
 
 ```ts file=src/book.ts
 class Book extends BaseModel {
-  static api = {
-    endpoint: 'books',
-    actions: {
-      approve_chapter: {
-        path: ':id/chapters/:chapter_id/approve',
-        description: 'Approve a specific chapter'
-      },
-      generate_report: {
-        path: 'reports/:report_type/:year/generate',
-        method: 'GET',
-        recordLevel: false,
-        description: 'Generate a report'
+  static api = { endpoint: 'books' }
+
+  static extensions = {
+    'custom-actions': customActionsConfig({
+      actions: {
+        approve_chapter: {
+          path: ':id/chapters/:chapter_id/approve',
+          description: 'Approve a specific chapter'
+        },
+        generate_report: {
+          path: 'reports/:report_type/:year/generate',
+          method: 'GET',
+          recordLevel: false,
+          description: 'Generate a report'
+        }
       }
-    }
+    })
   }
 }
 
@@ -1103,20 +1207,23 @@ await modelService.action('book', 'generate_report', {
 
 ```js file=src/book.js
 class Book extends BaseModel {
-  static api = {
-    endpoint: 'books',
-    actions: {
-      approve_chapter: {
-        path: ':id/chapters/:chapter_id/approve',
-        description: 'Approve a specific chapter'
-      },
-      generate_report: {
-        path: 'reports/:report_type/:year/generate',
-        method: 'GET',
-        recordLevel: false,
-        description: 'Generate a report'
+  static api = { endpoint: 'books' }
+
+  static extensions = {
+    'custom-actions': customActionsConfig({
+      actions: {
+        approve_chapter: {
+          path: ':id/chapters/:chapter_id/approve',
+          description: 'Approve a specific chapter'
+        },
+        generate_report: {
+          path: 'reports/:report_type/:year/generate',
+          method: 'GET',
+          recordLevel: false,
+          description: 'Generate a report'
+        }
       }
-    }
+    })
   }
 }
 await modelService.action('book', 'approve_chapter', {
@@ -1137,11 +1244,16 @@ class Asset extends BaseModel {
   static api = {
     endpoint: 'assets',
     parent: 'title',
-    standalone: false,
-    actions: {
-      publish: { path: ':id/publish', description: 'Publish an asset' },
-      transcode: { path: ':id/transcode', method: 'POST', description: 'Start transcoding' }
-    }
+    standalone: false
+  }
+
+  static extensions = {
+    'custom-actions': customActionsConfig({
+      actions: {
+        publish: { path: ':id/publish', description: 'Publish an asset' },
+        transcode: { path: ':id/transcode', method: 'POST', description: 'Start transcoding' }
+      }
+    })
   }
 }
 
@@ -1165,11 +1277,16 @@ class Asset extends BaseModel {
   static api = {
     endpoint: 'assets',
     parent: 'title',
-    standalone: false,
-    actions: {
-      publish: { path: ':id/publish', description: 'Publish an asset' },
-      transcode: { path: ':id/transcode', method: 'POST', description: 'Start transcoding' }
-    }
+    standalone: false
+  }
+
+  static extensions = {
+    'custom-actions': customActionsConfig({
+      actions: {
+        publish: { path: ':id/publish', description: 'Publish an asset' },
+        transcode: { path: ':id/transcode', method: 'POST', description: 'Start transcoding' }
+      }
+    })
   }
 }
 // CRUD uses compound IDs / parentPath:
@@ -1191,11 +1308,16 @@ await modelService.action('asset', 'transcode', {
 class Report extends BaseModel {
   static api = {
     endpoint: 'reports',
-    readOnly: true,
-    actions: {
-      download: { path: ':id/download', method: 'GET', description: 'Download report' },
-      preview: { path: ':id/preview', method: 'GET', description: 'Preview report' }
-    }
+    readOnly: true
+  }
+
+  static extensions = {
+    'custom-actions': customActionsConfig({
+      actions: {
+        download: { path: ':id/download', method: 'GET', description: 'Download report' },
+        preview: { path: ':id/preview', method: 'GET', description: 'Preview report' }
+      }
+    })
   }
 }
 
@@ -1214,11 +1336,16 @@ await modelService.action('report', 'download', {
 class Report extends BaseModel {
   static api = {
     endpoint: 'reports',
-    readOnly: true,
-    actions: {
-      download: { path: ':id/download', method: 'GET', description: 'Download report' },
-      preview: { path: ':id/preview', method: 'GET', description: 'Preview report' }
-    }
+    readOnly: true
+  }
+
+  static extensions = {
+    'custom-actions': customActionsConfig({
+      actions: {
+        download: { path: ':id/download', method: 'GET', description: 'Download report' },
+        preview: { path: ':id/preview', method: 'GET', description: 'Preview report' }
+      }
+    })
   }
 }
 // CRUD writes blocked:
@@ -1235,16 +1362,19 @@ await modelService.action('report', 'download', {
 
 ```ts file=src/book.ts
 class Book extends BaseModel {
-  static api = {
-    endpoint: 'books',
-    actions: {
-      bulk_publish: {
-        path: 'bulk-publish',
-        recordLevel: false,
-        rawPayload: true,
-        description: 'Publish multiple books at once'
+  static api = { endpoint: 'books' }
+
+  static extensions = {
+    'custom-actions': customActionsConfig({
+      actions: {
+        bulk_publish: {
+          path: 'bulk-publish',
+          recordLevel: false,
+          rawPayload: true,
+          description: 'Publish multiple books at once'
+        }
       }
-    }
+    })
   }
 }
 
@@ -1256,16 +1386,19 @@ await modelService.action('book', 'bulk_publish', {
 
 ```js file=src/book.js
 class Book extends BaseModel {
-  static api = {
-    endpoint: 'books',
-    actions: {
-      bulk_publish: {
-        path: 'bulk-publish',
-        recordLevel: false,
-        rawPayload: true,
-        description: 'Publish multiple books at once'
+  static api = { endpoint: 'books' }
+
+  static extensions = {
+    'custom-actions': customActionsConfig({
+      actions: {
+        bulk_publish: {
+          path: 'bulk-publish',
+          recordLevel: false,
+          rawPayload: true,
+          description: 'Publish multiple books at once'
+        }
       }
-    }
+    })
   }
 }
 await modelService.action('book', 'bulk_publish', {

@@ -2,7 +2,7 @@
 
 # API client
 
-`ApiClient` is the universal CRUD HTTP contract `ModelService` (the [previous chapter](./model-service.md)) depends on. It sits one layer below the [`DataLayer`](./data-layer.md) seam — projection-layer code never imports it directly; only `ModelService` does. `DataLayer` is "data operations against models"; `ApiClient` is "HTTP verbs against URLs." Most deployers never need to write their own — they pass the bundled axios-based client. You write a custom one when:
+`ApiClient` is the universal CRUD HTTP contract `ModelService` ([covered earlier in this chapter](./model-service.md)) depends on. It sits one layer below the [`DataLayer`](./data-layer.md) seam — projection-layer code never imports it directly; only `ModelService` does. `DataLayer` is "data operations against models"; `ApiClient` is "HTTP verbs against URLs." Most deployers never need to write their own — they pass the bundled axios-based client. You write a custom one when:
 
 - Your backend uses a transport that isn't HTTP (gRPC bridge, message queue).
 - You need request-level instrumentation that wrappers can't reach (per-tenant header injection, request signing, mTLS).
@@ -46,7 +46,7 @@ The lifecycle is per-request — never reuse a client across users:
               └──────────────────────────────┘
 ```
 
-The factory shape — `createApiClient(token, { apiUrl })` — is the only contract the framework cares about. The implementation can be axios, fetch, gRPC bridge, or an in-memory stub for tests. The framework calls this factory **once per request**, so the token stays bound to a single user's call and never bleeds between concurrent sessions.
+The factory is the only contract the framework cares about, and the two registries invoke it with slightly different shapes: `ToolRegistry` calls it as `createApiClient(token)`, while `AppRegistry` calls it as `createApiClient(token, { apiUrl })`. The implementation can be axios, fetch, gRPC bridge, or an in-memory stub for tests. The framework calls this factory **once per request**, so the token stays bound to a single user's call and never bleeds between concurrent sessions.
 
 ## Table of Contents
 
@@ -120,7 +120,9 @@ interface ApiClient {
  */
 ```
 
-Five methods, all returning `Promise<Record<string, unknown>>`. The framework treats payloads as opaque — response normalization is the [convention's](./api-convention.md) job, not the client's. Your `ApiClient` is allowed to throw on non-2xx responses (the framework expects this), but everything else passes through.
+Five methods, all returning `Promise<Record<string, unknown>>`. The framework treats payloads as opaque — response normalization is the [convention's](./api-convention.md) job, not the client's.
+
+Errors, though, have a declared contract: `ApiClientHttpError` (import it from `@mcp-rune/mcp-rune/core`). A client that fails an HTTP call must throw an `Error` carrying an optional `response` property shaped `{ status?: number; data?: unknown }`. That shape is what `ModelService` translates at the adapter boundary into the typed DataLayer taxonomy ([ADR 0014](../../architecture/decisions/0014-seam-error-taxonomy.md)): a 404 on a record-scoped call becomes `RecordNotFoundError`, and every other HTTP failure becomes `ApiRequestError` with the body parsed through the failing model's convention — both classes, plus `translateApiError` itself, export from `@mcp-rune/mcp-rune/data-layer`. An error with no `response` (a network failure, a timeout, or a client that throws some other shape) forfeits typed errors, and does so visibly: it surfaces to projection code as-is rather than as a typed domain error.
 
 `RequestOptions` is intentionally open. mcp-rune populates `userId` when impersonating a user (OAuth flow); custom apps can pass any other keys and your client can pluck what it needs.
 
@@ -188,14 +190,14 @@ const appRegistry = new AppRegistry(apps, {
 
 Same factory, both registries. Tools call the factory when they receive a tool invocation; apps call it when they handle their tool invocation.
 
-If you're using [`createDefaultAppRegistry`](../05-apps/mcp-apps.md), pass `createApiClient` as one of its options — it threads through to both internal registries.
+If you're using [`createDefaultAppRegistry`](../05-apps/mcp-apps.md), pass `createApiClient` as one of its options — it threads through to the AppRegistry it assembles.
 
 ## Worked Example: Fetch-Based Client
 
 A minimal `fetch` implementation with bearer-token auth and a tenant header:
 
 ```ts file=your-server/api-client.ts
-import type { ApiClient, RequestOptions } from '@mcp-rune/mcp-rune/core'
+import type { ApiClient, ApiClientHttpError, RequestOptions } from '@mcp-rune/mcp-rune/core'
 
 interface FetchClientOpts {
   apiUrl: string
@@ -239,8 +241,12 @@ export function createFetchClient(token: string, opts: FetchClientOpts): ApiClie
       body: body === undefined ? undefined : JSON.stringify(body)
     })
     if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      throw new Error(`${method} ${url} failed: ${res.status} ${res.statusText} ${text}`)
+      const data = await res.json().catch(() => undefined)
+      const err = new Error(
+        `${method} ${url} failed: ${res.status} ${res.statusText}`
+      ) as ApiClientHttpError
+      err.response = { status: res.status, data }
+      throw err
     }
     if (res.status === 204) return {} as T
     return res.json() as Promise<T>
@@ -291,8 +297,11 @@ export function createFetchClient(token, opts) {
       body: body === undefined ? undefined : JSON.stringify(body)
     })
     if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      throw new Error(`${method} ${url} failed: ${res.status} ${res.statusText} ${text}`)
+      const data = await res.json().catch(() => undefined)
+      // ApiClientHttpError contract: { response?: { status?, data? } }
+      const err = new Error(`${method} ${url} failed: ${res.status} ${res.statusText}`)
+      err.response = { status: res.status, data }
+      throw err
     }
     if (res.status === 204) return {}
     return res.json()
@@ -345,7 +354,7 @@ The factory closes over `apiUrl` and `tenant` at startup; the token rotates per 
 
 ## Composing with `OAuthService`
 
-When OAuth is enabled, the token comes from the [`OAuthService`](../07-auth-and-transport/oauth2-discovery.md) — you don't fetch it yourself in the factory. `ToolRegistry.registerTools` accepts a `getAccessToken` callback that closes over the request context:
+When OAuth is enabled, the token comes from the [`OAuthService`](../07-auth-and-transport/oauth2-discovery.md) — you don't fetch it yourself in the factory. `HttpServer` hands your `mcp.createServer` factory a per-session `getAccessToken` callback; pass it straight through to `ToolRegistry.registerTools`:
 
 ```ts file=src/oauth.ts
 import { HttpServer } from '@mcp-rune/mcp-rune/server'
@@ -356,19 +365,21 @@ const oauth = new OAuthService({
   clientId: process.env.CLIENT_ID!,
   clientSecret: process.env.CLIENT_SECRET!,
   redirectUri: 'https://example.com/oauth/callback',
-  scopes: ['mcp:read', 'mcp:write'],
+  scopes: 'mcp:read mcp:write',
   resourceUri: 'https://api.example.com',
   isProduction: true
 })
 
 const httpServer = new HttpServer({
+  port: 3000,
   oauth,
-  createServer: ({ sessionId, transport }) => {
-    const mcpServer = createMcpServer(/* … */)
-    toolRegistry.registerTools(mcpServer, {
-      getAccessToken: async () => oauth.getAccessToken(sessionId)
-    })
-    return mcpServer
+  mcp: {
+    name: 'bookshelf',
+    createServer: ({ sessionId, transport, getAccessToken }) => {
+      const mcpServer = createMcpServer(/* … */)
+      toolRegistry.registerTools(mcpServer, { getAccessToken })
+      return mcpServer
+    }
   }
 })
 ```
@@ -381,34 +392,38 @@ const oauth = new OAuthService({
   clientId: process.env.CLIENT_ID,
   clientSecret: process.env.CLIENT_SECRET,
   redirectUri: 'https://example.com/oauth/callback',
-  scopes: ['mcp:read', 'mcp:write'],
+  scopes: 'mcp:read mcp:write',
   resourceUri: 'https://api.example.com',
   isProduction: true
 })
 const httpServer = new HttpServer({
+  port: 3000,
   oauth,
-  createServer: ({ sessionId, transport }) => {
-    const mcpServer = createMcpServer(/* … */)
-    toolRegistry.registerTools(mcpServer, {
-      getAccessToken: async () => oauth.getAccessToken(sessionId)
-    })
-    return mcpServer
+  mcp: {
+    name: 'bookshelf',
+    createServer: ({ sessionId, transport, getAccessToken }) => {
+      const mcpServer = createMcpServer(/* … */)
+      toolRegistry.registerTools(mcpServer, { getAccessToken })
+      return mcpServer
+    }
   }
 })
 ```
 
 `registerTools` calls `getAccessToken` once per tool invocation, then invokes `createApiClient(token)`. Your factory stays simple — it doesn't know OAuth exists.
 
-For requests that need impersonation, pass `userId` through the tool invocation context, and the framework threads it into `RequestOptions`:
+For requests that need impersonation, take `user_id` from the tool's arguments and pass it as `RequestOptions.userId` — the `DataLayer` threads it through to your client:
 
 ```ts file=examples/api-client-guide-07.ts
-// Inside a custom tool's execute():
-await this.dataLayer.find('book', recordId, { userId: this.context.userId })
+// Inside a custom tool's execute(args):
+const { record_id, user_id } = args
+await this.requireDataLayer().find('book', record_id, user_id ? { userId: user_id } : undefined)
 ```
 
 ```js file=examples/api-client-guide-07.js
-// Inside a custom tool's execute():
-await this.dataLayer.find('book', recordId, { userId: this.context.userId })
+// Inside a custom tool's execute(args):
+const { record_id, user_id } = args
+await this.requireDataLayer().find('book', record_id, user_id ? { userId: user_id } : undefined)
 ```
 
 Your client picks `userId` out of `options` and sets the impersonation header. The token still belongs to the application — `userId` just tells the API which user to act as.
@@ -419,7 +434,7 @@ For integration tests, you usually want to bypass HTTP entirely. Provide a stub 
 
 ```ts file=src/clients/create-in-memory-client.ts
 // __tests__/helpers/in-memory-client.ts
-import type { ApiClient } from '@mcp-rune/mcp-rune/core'
+import type { ApiClient, ApiClientHttpError } from '@mcp-rune/mcp-rune/core'
 
 export function createInMemoryClient(seed: Record<string, unknown[]> = {}): ApiClient {
   const store = new Map<string, Map<string, Record<string, unknown>>>()
@@ -444,7 +459,11 @@ export function createInMemoryClient(seed: Record<string, unknown[]> = {}): ApiC
         return { data: Array.from(bucket(url).values()) }
       }
       const record = bucket(url).get(segments[1]!)
-      if (!record) throw new Error(`Not found: ${url}`)
+      if (!record) {
+        const err = new Error(`Not found: ${url}`) as ApiClientHttpError
+        err.response = { status: 404 }
+        throw err
+      }
       return { data: record }
     },
     async post(url, data) {
@@ -492,7 +511,12 @@ export function createInMemoryClient(seed = {}) {
         return { data: Array.from(bucket(url).values()) }
       }
       const record = bucket(url).get(segments[1])
-      if (!record) throw new Error(`Not found: ${url}`)
+      if (!record) {
+        // ApiClientHttpError contract: { response?: { status?, data? } }
+        const err = new Error(`Not found: ${url}`)
+        err.response = { status: 404 }
+        throw err
+      }
       return { data: record }
     },
     async post(url, data) {
@@ -544,7 +568,7 @@ const toolRegistry = new ToolRegistry({
 })
 ```
 
-For stub testing at the higher `DataLayer` boundary (so you don't have to mock the wire format), see the [In-Memory DataLayer](./data-layer.md#in-memory-stub-for-tests) section instead — it bypasses both `ApiClient` and the convention.
+The `err.response = { status: 404 }` line is what keeps the stub inside the `ApiClientHttpError` contract, so `translateApiError` still turns a missing record into `RecordNotFoundError` in your tests instead of surfacing a raw `Error`. For tests that assert on the error taxonomy, though, stubbing at the higher `DataLayer` boundary is usually easier (no wire format to mock) — see the [In-Memory DataLayer](./data-layer.md#in-memory-stub-for-tests) section instead; it bypasses both `ApiClient` and the convention.
 
 ## `SearchApiClient`: The Read-Only Subset
 

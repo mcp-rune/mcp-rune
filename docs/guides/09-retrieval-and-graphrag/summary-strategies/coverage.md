@@ -55,9 +55,9 @@ A representative `analysis_memories` row:
     "model": "book",
     "record_count": 50,
     "coverage": {
-      "title": { "present": 50, "missing": 0, "rate": 1.0 },
-      "rating": { "present": 38, "missing": 12, "rate": 0.76 },
-      "notes": { "present": 29, "missing": 21, "rate": 0.58 }
+      "title": { "present": 50, "missing": 0, "missing_rate": 0.0 },
+      "rating": { "present": 38, "missing": 12, "missing_rate": 0.24 },
+      "notes": { "present": 29, "missing": 21, "missing_rate": 0.42 }
     },
     "sparse_threshold": 0.5,
     "sparse_fields": []

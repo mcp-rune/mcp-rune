@@ -2,14 +2,14 @@
 
 This is the first chapter of the Apps section. Apps consume the same three layers Tools do (`DataLayer`, `ModelLayer`, `AnalysisLayer` from [chapter 4](../04-tools/the-three-layers.md)) plus a small bidirectional message protocol that lets a sandboxed iframe call back to the server. Once you understand how the protocol works, the next chapter shows how the framework wires it; the chapter after that covers `BaseAppForm` for when the default synthesized form needs customization.
 
-MCP Apps are interactive HTML user interfaces that render inside MCP clients (Claude Desktop, COC, MCP Inspector). They use the `@modelcontextprotocol/ext-apps` extension protocol to communicate bidirectionally with the MCP server.
+MCP Apps are interactive HTML user interfaces that render inside MCP clients with UI support (e.g. Claude Desktop, MCP Inspector). They use the `@modelcontextprotocol/ext-apps` extension protocol to communicate bidirectionally with the MCP server.
 
 ## Architecture Overview
 
 <!-- illustration: mcp-apps-guide#overview -->
 
 ```
-┌─ MCP Client (Claude Desktop, COC) ──────────┐
+┌─ MCP Client ─────────────────────────────────┐
 │                                               │
 │  ┌─ Sandboxed iframe ──────────────────────┐  │
 │  │  MCP App HTML/JS/CSS                    │  │
@@ -18,19 +18,19 @@ MCP Apps are interactive HTML user interfaces that render inside MCP clients (Cl
 │  │  ← ontoolresult (schema + defaults)     │  │
 │  │  ← onhostcontextchanged (theme)         │  │
 │  │                                          │  │
-│  │  → callServerTool('validate_form', ...)  │  │
 │  │  → callServerTool('create_model', ...)   │  │
+│  │  → callServerTool('update_model', ...)   │  │
 │  └──────────────────────────────────────────┘  │
 │                                               │
 └───────────────────────────────────────────────┘
                     ↕ MCP protocol
 ┌─ MCP Server ─────────────────────────────────┐
 │                                               │
-│  Tool: create_book                            │
-│    → handleToolCall(args, { apiClient })      │
-│    → Returns: { schema, defaults }            │
+│  Tool: new_model_app                          │
+│    → handleToolCall(args, { dataLayer })      │
+│    → Returns: { schema, defaults, mode }      │
 │                                               │
-│  Resource: ui://engineer/create-book          │
+│  Resource: ui://bookshelf/new-model-app       │
 │    → Returns: single-file HTML                │
 │                                               │
 └───────────────────────────────────────────────┘
@@ -42,8 +42,8 @@ MCP Apps are interactive HTML user interfaces that render inside MCP clients (Cl
 
 Each MCP App consists of two MCP primitives:
 
-- **Tool**: The LLM calls this tool to launch the app (e.g., `create_book`)
-- **Resource**: The client fetches HTML from this URI (e.g., `ui://engineer/create-book`)
+- **Tool**: The LLM calls this tool to launch the app. The form tools are model-parameterized — one `new_model_app` tool covers every model (`new_model_app({ model: 'book', mode: 'form' })`), and one `edit_model_app` covers every edit (`edit_model_app({ model: 'book', record_id: 'abc-123' })`). There are no per-model tools.
+- **Resource**: The client fetches HTML from this URI (e.g., `ui://bookshelf/new-model-app`, where `bookshelf` is the `namespace` you pass to `createDefaultAppRegistry`)
 
 The tool declares its UI resource via `_meta.ui.resourceUri`, which tells the MCP client to render the HTML in an iframe when the tool is called.
 
@@ -56,9 +56,9 @@ The same HTML app handles both create and update — the mode is determined by t
 ```
 User: "Create a book"
   ↓
-LLM calls create_book_form tool
+LLM calls new_model_app({ model: 'book', mode: 'form' })
   ↓
-MCP Server: handleToolCall() → returns { schema, defaults, mode: 'create' }
+MCP Server: handleToolCall() → returns { schema, defaults, mode: 'create', submitMode }
   ↓
 App renders empty form with defaults → User fills → create_model
 ```
@@ -68,12 +68,14 @@ App renders empty form with defaults → User fills → create_model
 ```
 User: "Edit book abc-123"
   ↓
-LLM calls update_book_form tool with record_id
+LLM calls edit_model_app({ model: 'book', record_id: 'abc-123' })
   ↓
-MCP Server: handleToolCall() → fetches existing record → returns { schema, defaults, mode: 'update', recordId }
+MCP Server: handleToolCall() → fetches existing record via the DataLayer → returns { schema, defaults, mode: 'update', recordId }
   ↓
-App renders pre-filled form → User edits → update_model with record_id
+App renders pre-filled form → User edits → update_model with the record id
 ```
+
+Both flows submit directly by default (`submitMode: 'direct'` on the tool result). When a tool-flow extension flips the registry to `'collect'` (the built-in `centerOfControlExtension` does this), the form instead stages its data via `collect_form_data` and the LLM owns the review/confirm/submit handoff.
 
 ### 3. Communication
 
@@ -100,25 +102,30 @@ Instead of building a custom HTML form for each model, we use a **schema-driven 
 ```
 ┌─ MCP Server ──────────────────────────────────────────────┐
 │                                                            │
-│  Book.attributes         → field types, validations, enums │
-│  Book.associations       → which fields need API options   │
-│  BookPrompt.fieldGroups  → field grouping (fieldsets)       │
-│  BookPrompt.sections     → section titles, ordering        │
+│  Book.attributes       → field kinds, validations, enums   │
+│  Book.associations     → which fields need options          │
+│  BookForm.fields       → which attributes render             │
+│  BookForm.fieldsets    → grouping + section titles           │
+│  BookPrompt            → getDefaultFormState() only          │
 │                                                            │
-│  generateFormSchema()    → JSON schema (pure, no API)      │
+│  bindAppForm(BookForm, Book)      → BoundAppForm            │
+│  generateAppFormSchema(boundForm) → JSON schema (pure)      │
 │       │                                                    │
 │       │  For association fields only:                      │
-│       │  apiClient.get('/locations') → select options      │
-│       │  apiClient.get('/tags')      → multiselect options │
+│       │  resolveAssociationOptions(fields, dataLayer,      │
+│       │    defaults) → select / multiselect options         │
 │                                                            │
 └────────────────────────────────────────────────────────────┘
               ↓ JSON via ontoolresult
 ┌─ Generic Form MCP App ────────────────────────────────────┐
 │  Receives schema → dynamically renders form               │
-│  Validates via callServerTool('validate_form')            │
-│  Submits via callServerTool('create_model')               │
+│  Gates submit on required fields (client-side)            │
+│  Submits via callServerTool('create_model' / 'update_model')│
+│  Renders backend validation errors (422) inline           │
 └────────────────────────────────────────────────────────────┘
 ```
+
+The pipeline is one straight line: `bindAppForm(FormClass, ModelClass)` merges the form class with the model's attribute and association metadata into a `BoundAppForm`; `generateAppFormSchema(boundForm)` turns that into pure JSON with no I/O; `resolveAssociationOptions(fields, dataLayer, defaults)` then fills in option lists for association fields through the `DataLayer` — the pipeline is backend-neutral and never assumes a particular API framework.
 
 ### Why Schema-Driven?
 
@@ -126,15 +133,15 @@ The MCP server **already has** all metadata needed to render a form:
 
 | What's needed | Where it lives | Example |
 | --- | --- | --- |
-| Field types, labels | `Model.attributes` | `title: { type: 'string', label: 'Title' }` |
+| Field kinds, labels | `Model.attributes` | `title: { type: 'string', label: 'Title' }` |
 | Enum options | `Model.attributes` | `status: { enumValues: ['unread', ...] }` |
 | Validations | `Model.attributes` | `rating: { validation: { min: 1, max: 5 } }` |
-| Field grouping | `Prompt.fieldGroups` | `identity: { fields: ['title', 'author'] }` |
-| Section titles | `Prompt.sections` | `identity: { title: 'Book Identity' }` |
-| Defaults | `Prompt.getDefaultFormState()` | `{ status: 'unread' }` |
+| Which fields render | `FormClass.fields` | `static fields = ['title', 'author_id', 'status']` |
+| Fieldset grouping, titles | `FormClass.fieldsets` | `identity: { title: 'Book Identity', fields: [...] }` |
+| Defaults | `Prompt.getDefaultFormState()` (optional) | `{ status: 'unread' }` |
 | Associations | `Model.associations` | `belongsTo: { location }` |
 
-The **only** thing from the Rails API is association option values (the user's locations, tags) — fetched at form-open time with the user's access token.
+The **only** thing fetched from the backend is association option values (the user's locations, tags) — resolved through the `DataLayer` at form-open time. Prompt classes contribute exactly one thing to forms: `getDefaultFormState()`. When no prompt class is supplied, defaults come from the attributes' own `default` values.
 
 ### Form Schema Structure
 
@@ -200,206 +207,82 @@ The **only** thing from the Rails API is association option values (the user's l
 
 ### Supported Field Types
 
-| Schema Type      | HTML Rendered             | Source                                     |
-| ---------------- | ------------------------- | ------------------------------------------ |
-| `text`           | `<input type="text">`     | `type: 'string'`                           |
-| `number`         | `<input type="number">`   | `type: 'integer'` or `type: 'number'`      |
-| `url`            | `<input type="url">`      | `format: 'URL'`                            |
-| `date`           | `<input type="date">`     | `type: 'date'`                             |
-| `textarea`       | `<textarea>`              | `type: 'text'`                             |
-| `select`         | `<select>`                | `type: 'enum'` or `belongsTo` association  |
-| `multiselect`    | Checkbox list             | `type: 'array'` with `hasMany` association |
-| `checkbox_group` | Checkbox group            | `type: 'array'` with `enumValues`          |
-| `checkbox`       | `<input type="checkbox">` | `type: 'boolean'`                          |
-| `file`           | Skipped                   | `format: 'base64'`                         |
+Field types are not hardcoded in the schema generator — each attribute's `type` names a **kind**, and the kinds registry owns the kind → input mapping via `resolveInputType(kind, format, opts)` (`src/mcp/models/kinds/registry.ts`). Registering or overriding a kind (through the `kinds` option on the registry) changes this table without touching the form code. See [Attributes and kinds](../02-the-model/attributes-and-kinds.md) for the full taxonomy.
+
+| Kind (attribute `type`) | Schema type | HTML rendered |
+| --- | --- | --- |
+| `string`, `uuid` | `text` | `<input type="text">` |
+| `text`, `json` | `textarea` | `<textarea>` |
+| `integer`, `decimal`, `rating` | `number` | `<input type="number">` (min/max from validation) |
+| `boolean` | `checkbox` | `<input type="checkbox">` |
+| `date` / `datetime` / `time` | `date` / `datetime-local` / `time` | native date/time inputs |
+| `email`, `url`, `color` | `email` / `url` / `color` | native inputs |
+| `enum` (any kind + `enumValues`) | `select` | `<select>` (searchable when >10 options) |
+| `array` with `enumValues` | `checkbox_group` | checkbox group |
+| `base64` | `text` | plain text input; list and detail views exclude `format: 'base64'` fields |
+
+Associations override the kind-derived type: a field bound to a `belongsTo` association becomes a `select`, a `hasMany` field becomes a `multiselect` (checkbox list), with options filled by `resolveAssociationOptions`.
 
 ## Adding a New Model Form
 
-Adding a form for a new model requires **zero new HTML** — just one entry in the app registry. Both create and update forms are generated automatically.
+Adding a form for a new model requires **zero new HTML, zero new tools, and zero rebuilds** — there is exactly one step: add the model class to `createDefaultAppRegistry`. Both `new_model_app` and `edit_model_app` pick it up automatically.
 
-### Step 1: Ensure Model Has Attributes and Associations
+```js file=src/apps/registry.js
+// src/apps/registry.js
+import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
 
-```js file=src/project.js
-// src/engineer/models/project.js
-export class Project extends BaseModel {
-  static api = { endpoint: 'projects' }
+import { Book } from '../models/book.js'
+import { Review } from '../models/review.js'
+import { BookForm } from '../forms/book-form.js'
+import { BookPrompt } from '../prompts/book-prompt.js'
 
-  static associations = {
-    belongsTo: {
-      category: { rel: 'category', target_model: 'category' }
-    }
-  }
-
-  static attributes = {
-    name: {
-      type: 'string',
-      required: true,
-      description: 'Project name',
-      examples: ['My App']
-    },
-    status: {
-      type: 'enum',
-      enumValues: ['planning', 'active', 'completed'],
-      default: 'planning',
-      description: 'Project status'
-    },
-    category_id: {
-      type: 'integer',
-      label: 'Category',
-      description: 'Category this project belongs to'
-    }
-    // ...
-  }
+// One call wires every framework app (pickers, tables, forms, …).
+// formClasses and promptClasses are optional refinements per model.
+export function buildAppRegistry() {
+  return createDefaultAppRegistry({
+    modelClasses: { book: Book, review: Review },
+    formClasses: { book: BookForm },
+    promptClasses: { book: BookPrompt },
+    namespace: 'bookshelf'
+  })
 }
 ```
 
-```ts file=src/project.ts
-// src/engineer/models/project.js
-export class Project extends BaseModel {
-  static api = { endpoint: 'projects' }
+```ts file=src/apps/registry.ts
+// src/apps/registry.ts
+import { createDefaultAppRegistry, type AppRegistry } from '@mcp-rune/mcp-rune/apps'
 
-  static associations = {
-    belongsTo: {
-      category: { rel: 'category', target_model: 'category' }
-    }
-  }
+import { Book } from '../models/book.js'
+import { Review } from '../models/review.js'
+import { BookForm } from '../forms/book-form.js'
+import { BookPrompt } from '../prompts/book-prompt.js'
 
-  static attributes = {
-    name: {
-      type: 'string',
-      required: true,
-      description: 'Project name',
-      examples: ['My App']
-    },
-    status: {
-      type: 'enum',
-      enumValues: ['planning', 'active', 'completed'],
-      default: 'planning',
-      description: 'Project status'
-    },
-    category_id: {
-      type: 'integer',
-      label: 'Category',
-      description: 'Category this project belongs to'
-    }
-    // ...
-  }
+// One call wires every framework app (pickers, tables, forms, …).
+// formClasses and promptClasses are optional refinements per model.
+export function buildAppRegistry(): AppRegistry {
+  return createDefaultAppRegistry({
+    modelClasses: { book: Book, review: Review },
+    formClasses: { book: BookForm },
+    promptClasses: { book: BookPrompt },
+    namespace: 'bookshelf'
+  })
 }
 ```
 
-### Step 2: Ensure Prompt Has fieldGroups and sections
+That's the whole workflow. `review` has no form class above, so the registry synthesizes one from `Review.attributes` — every attribute not marked `prompt_visible: false` becomes a field, in declaration order. The two optional dictionaries refine per-model behavior:
 
-```js file=src/prompts/project-prompt.js
-// src/engineer/prompts/project_prompt.js
-export class ProjectPrompt extends BasePrompt {
-  static strategy = 'hybrid'
-  static title = 'Create Project'
+- **`formClasses`** — a `BaseAppForm` subclass controls which fields render, fieldset grouping, and which associations must be resolved before the form opens. See the [Model Form Customization Guide](./model-form.md).
+- **`promptClasses`** — forms consult a prompt class for exactly one thing, `getDefaultFormState()`. Everything else on the prompt (e.g. `static formStrategy = 'hybrid'`) belongs to the Guided/Quick prompt flows, not to the form app.
 
-  static fieldGroups = {
-    identity: {
-      fields: ['name', 'status', 'category_id'],
-      context: 'Project Identity'
-    }
-  }
+### Boot validation is automatic
 
-  static sections = {
-    identity: {
-      title: 'Project Identity',
-      groups: ['identity'],
-      required: true
-    }
-  }
+You don't have to remember a validation call: `createDefaultAppRegistry` runs `validateRegistries` over the models, the resolved form classes (explicit and synthesized), and any prompt classes as part of construction ([ADR 0012](../../architecture/decisions/0012-boot-validation-runs-automatically.md)). The `validate` option sets the policy:
 
-  getDefaultFormState() {
-    return { name: '', status: 'planning', category_id: null }
-  }
-}
-```
+- `'throw'` (default) — error-level issues (an `enum` without `enumValues`, a form field that isn't a model attribute, an unknown kind) raise `SchemaValidationError` at boot with a full report.
+- `'warn'` — logs the report and continues; the migration hatch for deployments cleaning up latent declaration errors.
+- `'off'` — skips validation.
 
-```ts file=src/prompts/project-prompt.ts
-// src/engineer/prompts/project_prompt.js
-export class ProjectPrompt extends BasePrompt {
-  static strategy = 'hybrid'
-  static title = 'Create Project'
-
-  static fieldGroups = {
-    identity: {
-      fields: ['name', 'status', 'category_id'],
-      context: 'Project Identity'
-    }
-  }
-
-  static sections = {
-    identity: {
-      title: 'Project Identity',
-      groups: ['identity'],
-      required: true
-    }
-  }
-
-  getDefaultFormState() {
-    return { name: '', status: 'planning', category_id: null }
-  }
-}
-```
-
-### Step 3: Register in App Registry
-
-Add an entry to `MODEL_FORM_CONFIGS` in `src/engineer/apps/index.js`. Both `create_project_form` and `update_project_form` tools are generated automatically:
-
-```js file=examples/mcp-apps-guide-03.js
-// src/engineer/apps/index.js — MODEL_FORM_CONFIGS array
-{
-  ModelClass: Project,
-  PromptClass: ProjectPrompt,
-  slug: 'project',
-  prefillSchema: {
-    name: z.string().describe('Pre-fill the project name').optional()
-  }
-}
-```
-
-```ts file=examples/mcp-apps-guide-03.ts
-// src/engineer/apps/index.js — MODEL_FORM_CONFIGS array
-{
-  ModelClass: Project,
-  PromptClass: ProjectPrompt,
-  slug: 'project',
-  prefillSchema: {
-    name: z.string().describe('Pre-fill the project name').optional()
-  }
-}
-```
-
-### Step 4: Register in Prompt Registry
-
-```js file=examples/mcp-apps-guide-04.js
-// src/engineer/prompts/registry.js
-create_project: {
-  promptClass: ProjectPrompt,
-  model: 'project',
-  toolDocDescription: 'For creating projects',
-  appToolName: 'create_project_form'  // Links prompt to MCP App
-}
-```
-
-```ts file=examples/mcp-apps-guide-04.ts
-// src/engineer/prompts/registry.js
-create_project: {
-  promptClass: ProjectPrompt,
-  model: 'project',
-  toolDocDescription: 'For creating projects',
-  appToolName: 'create_project_form'  // Links prompt to MCP App
-}
-```
-
-### Step 5: Rebuild
-
-```bash
-npm run build:engineer:apps
-```
-
-That's it. The generic form app handles the rest — fieldsets, validation, submission, theming.
+No rebuild is ever needed. The app HTML bundles ship prebuilt inside the npm package; adding a model only changes the JSON schema the server sends to the same bundle.
 
 ## File Structure
 
@@ -408,15 +291,13 @@ That's it. The generic form app handles the rest — fieldsets, validation, subm
 ```
 src/mcp/apps/
 ├── new-model-app/              # Create-record form
-│   ├── index.ts                # Factory + handleToolCall (server)
 │   └── ui/                     # Thin shim → shared/model-form/main.js
 │       ├── index.html
 │       └── app.js
-├── edit-model-app/             # Edit-record form (mirrors new-model-app)
-│   ├── index.ts
+├── edit-model-app/             # Edit-record form (same shim, update mode)
 │   └── ui/
 ├── find-model-app/             # Browseable table — query + filter popover + selection
-│   ├── index.ts
+│   ├── index.ts                # createFindModelApp() factory (server)
 │   └── ui/
 ├── show-model-app/             # Record detail view
 │   ├── index.ts
@@ -430,62 +311,76 @@ src/mcp/apps/
 ├── multi-pick-model-app/       # Browse-and-select picker for small/medium sets
 │   ├── index.ts
 │   └── ui/
-├── lib/                        # Shared server-side helpers
-│   ├── app-form-schema.ts      # generateFormSchema() — pure function
+├── workflow-panel-app/         # Deployer-supplied workflows as clickable cards
+│   ├── index.ts
+│   └── ui/
+├── lib/                        # Shared server-side code
+│   ├── registry.ts             # AppRegistry (+ ThemeOverrides, KindExtension)
+│   ├── create-default-registry.ts  # createDefaultAppRegistry()
+│   ├── create-model-form-app.ts    # createModelFormApp({ mode }) → new/edit apps
+│   ├── base-app-form.ts        # BaseAppForm
+│   ├── bind-app-form.ts        # bindAppForm(FormClass, ModelClass) → BoundAppForm
+│   ├── app-form-schema.ts      # generateAppFormSchema(boundForm) — pure function
+│   ├── app-form-helpers.ts     # resolveAssociationOptions() + defaults helpers
+│   ├── app-form-associations.ts # association pre-check before the form opens
+│   ├── synthesize-form-class.ts # default form class from model attributes
 │   ├── list-schema.ts          # generateListSchema() — list/table schema
 │   ├── detail-schema.ts        # generateDetailSchema() — record detail schema
-│   ├── form-app-helpers.ts     # Shared helpers for new/edit form factories
 │   ├── selection-store.ts      # SelectionStore — session-scoped Map
 │   ├── selection-tools.ts      # createSelectionTools() — per-app selection
-│   ├── registry.ts             # AppRegistry + createAppRegistry
-│   └── …                       # types, helpers, formatters, etc.
+│   └── …                       # form-data store/tools, validators, html-loader, helpers
 ├── shared/                     # Shared client-side JS/CSS for ui/ folders
-│   ├── base.css, app-init.js, helpers.js, formatters.{js,runtime.js}, …
+│   ├── base.css, app-init.js, helpers.js, …
+│   ├── kind-renderers.ts       # kind → DOM renderer decoration
+│   ├── kind-renderers.runtime.js # applies deployer render hints in the iframe
 │   └── model-form/             # Shared form UI consumed by new + edit
 │       ├── main.js             # initModelFormApp() — bulk of form code
 │       └── styles.css
-├── vite.config.js              # Build config (multi-target single-file HTML)
-└── dist/                       # Built outputs (one HTML per app)
+├── scripts/build-all.mjs       # build:all-apps driver
+├── vite.config.js              # BUILD_TARGET-driven single-file HTML build
+└── dist/                       # Prebuilt outputs (one HTML per app, shipped in the package)
     ├── new-model-app.html
     ├── edit-model-app.html
     ├── find-model-app.html
     ├── show-model-app.html
     ├── view-selection-app.html
     ├── pick-model-app.html
-    └── multi-pick-model-app.html
+    ├── multi-pick-model-app.html
+    └── workflow-panel-app.html
 ```
 
 ## Key Components
 
-### `generateFormSchema(ModelClass, PromptClass)` — `src/mcp/apps/lib/app-form-schema.ts`
+### `generateAppFormSchema(boundForm, options?)` — `src/mcp/apps/lib/app-form-schema.ts`
 
-Pure function that generates a form schema from model attributes and prompt configuration. No API calls, no side effects.
+Pure function that generates a form schema from a `BoundAppForm` — the merged view of a form class and its model class produced by `bindAppForm(FormClass, ModelClass)`. No API calls, no side effects.
 
-**Input:** Model class + Prompt class **Output:** `{ model, title, fieldsets, fields }`
+**Input:** `BoundAppForm` (+ optional `{ allModelClasses }` for detecting nested associations) **Output:** `{ model, title, fieldsets, fields }`
 
-Maps model attribute types to form field types, resolves association metadata, preserves validation rules and defaults.
+Maps attribute kinds to form field types via `resolveInputType`, marks association fields, and preserves validation rules, defaults, placeholders, and `visibleWhen` conditions.
 
-### `createNewModelApp(options)` / `createEditModelApp(options)` — `src/mcp/apps/{new,edit}-model-app/index.ts`
+### `createModelFormApp({ mode, … })` — `src/mcp/apps/lib/create-model-form-app.ts`
 
-Two factory functions, one per tool, that produce MCP App definitions:
+One factory, parameterized by `mode: 'create' | 'update'`, produces both form apps. `createDefaultAppRegistry` calls it twice. The returned `AppDefinition` carries:
 
-- `resourceUri` — MCP resource URI for the HTML (`ui://{ns}/new-model-app` / `…/edit-model-app`)
+- `resourceUri` — MCP resource URI for the HTML (`ui://{namespace}/new-model-app` / `…/edit-model-app`)
 - `toolName` — MCP tool name (`new_model_app` / `edit_model_app`)
-- `handleToolCall(args, { dataLayer })` — Generates schema + fetches association options
-- `getHtml()` — Returns the built single-file HTML for that app
+- `handleToolCall(args, { dataLayer, formSubmitMode })` — binds the form, generates the schema, fetches association options
+- `getHtml()` — Returns the prebuilt single-file HTML for that app
 
-**`new_model_app`**: builds defaults from `PromptClass.getDefaultFormState()`, merges pre-fill args, resolves a parent-context banner when nested. **`edit_model_app`**: fetches the existing record from the API via `record_id`, uses record data as defaults.
+**`new_model_app`**: requires `mode: "form"` (calling without it returns guidance to use `get_prompt_guide` first); runs an association pre-check so required associations are resolved via pickers before the form opens; builds defaults from `PromptClass.getDefaultFormState()` (or attribute defaults), merges `prefill` args, and resolves a parent-context banner when the model is nested. **`edit_model_app`**: requires `record_id`; fetches the existing record through the `DataLayer` and uses the record data as defaults.
 
 Both bundles wrap the same `src/mcp/apps/shared/model-form/main.js` client module, so they render identical UI. The runtime mode (`'create'` / `'update'`) is set from the server's tool result, not from the bundle.
 
-### `AppRegistry` — `src/engineer/apps/index.js`
+### `AppRegistry` — `src/mcp/apps/lib/registry.ts`
 
 Registry that manages app registrations. Key methods:
 
-- `registerTools(mcpServer, { getAccessToken })` — Registers tool handlers with auth context
-- `registerResources(mcpServer)` — Registers HTML resources
+- `registerTools(mcpServer, { getAccessToken, selectionStore, formDataStore, extraContext })` — Registers tool handlers with per-session context
+- `registerResources(mcpServer)` — Registers HTML resources (injecting theme overrides and kind render hints into `<head>` at serve time)
+- `registerApp(app)` — Adds one more `AppDefinition` after construction (e.g. a custom app)
 
-For apps with `needsAuth: true`, the registry creates an authenticated API client from the session's access token and passes it to `handleToolCall`.
+Data access is gated: an app with `needsAuth: true` only receives `context.dataLayer` when `getAccessToken`, `apiUrl`, **and** `createApiClient` are all configured. When the gate passes, the registry builds an authenticated API client from the session's access token, wraps it in the configured `DataLayer` factory plus the search-enabled seam, and hands the result to `handleToolCall` — apps never see the raw API client.
 
 ### Client-side App — `src/mcp/apps/shared/model-form/main.js`
 
@@ -494,93 +389,108 @@ Generic form renderer (called by both `new-model-app/ui/app.js` and `edit-model-
 1. Receives schema via `ontoolresult`
 2. Dynamically creates fieldsets and fields based on schema
 3. Handles all field types (text, number, select, multiselect, checkbox_group, etc.)
-4. Validates via `callServerTool('validate_form')`
-5. Submits via `callServerTool('create_model')`
-6. Applies host theme via `applyDocumentTheme()` and `applyHostStyleVariables()`
+4. Gates the submit button on required fields client-side (no server round-trip to validate)
+5. Submits via `callServerTool('create_model')` / `callServerTool('update_model')` — or `callServerTool('collect_form_data')` when the server advertised `submitMode: 'collect'`
+6. Renders backend validation errors (422) inline next to the offending fields
+7. Applies host theme via the shared `app-init.js` bootstrap (`applyDocumentTheme`, `applyHostStyleVariables`, `applyHostFonts`)
 
 ## Building
 
-MCP Apps are built into single-file HTML bundles using Vite + `vite-plugin-singlefile`:
+**These commands are for framework contributors only.** Deployers never build app bundles: the prebuilt `dist/*.html` files ship inside the npm package, and each app's `getHtml()` reads them at serve time. Adding models, forms, prompts, kinds, or theme overrides requires no build step.
+
+If you are working on the framework itself, the apps are built into single-file HTML bundles using Vite + `vite-plugin-singlefile`:
 
 ```bash
-# Build engineer apps
-npm run build:engineer:apps
+# Build every app bundle
+npm run build:all-apps
 
-# Build diagrams apps
-npm run build:diagrams:apps
+# Build one app (defaults to new-model-app via BUILD_TARGET)
+npm run build:apps
+
+# Build a specific app
+npm run build:apps:find-model-app
 ```
 
-The build inlines all CSS and JavaScript into a single `dist/index.html` file, which is read by the server at module load time and served via the MCP resources protocol.
+`vite.config.js` maps `BUILD_TARGET` to a sibling app directory: every app ships its iframe entry at `<app>/ui/index.html` and bundles to `dist/<app>.html`, so adding a new app is a filesystem-only change. The build inlines all CSS and JavaScript into a single HTML file, which is read by the server lazily and served via the MCP resources protocol.
 
-**Important:** After modifying any file in `shared/model-form/` (or in a per-app `ui/` folder), you must rebuild before the changes take effect.
+**Important (contributors):** after modifying any file in `shared/model-form/` (or in a per-app `ui/` folder), rebuild before the changes take effect.
 
 ## Theming
 
-MCP Apps receive theme information from the host via `onhostcontextchanged`. The CSS uses `light-dark()` with distinct values for each color scheme:
+Every app ships `src/mcp/apps/shared/base.css` — one tokenized system with two themes. Light is the default; dark mirrors it via a `prefers-color-scheme: dark` media query, and a host can force either by setting `[data-theme]` on the document root:
 
 ```css
-:root {
-  color-scheme: light dark;
-  --color-text-primary: light-dark(#2c2c2c, #d4d4d4);
-  --color-background-primary: light-dark(#f5f2ed, #1c1c1e);
-  --color-accent: #c4704b;
-  --surface: light-dark(#eae6df, #2a2a2c);
-  --border: light-dark(#d1ccc4, #3a3a3c);
-  --input-bg: light-dark(#ffffff, #2a2a2c);
-  /* ... */
+:root,
+[data-theme='light'] {
+  --acc: #6b4fe6; /* violet accent */
+  --acc-2: #5b3fd6;
+  --acc-tint: rgba(124, 92, 255, 0.09);
+  --acc-line: rgba(124, 92, 255, 0.3);
+  --ink: #16161c; /* text scale: --ink … --ink-4 */
+  --surface: #fafafb; /* surfaces: --surface, --surface-2 */
+  --line: #e9e9ef; /* borders: --line … --line-3 */
+  /* status colors (--mint / --amber / --rose), radii, fonts … */
 }
 ```
 
-The palette uses warm parchment cream for light mode and neutral dark grays for dark mode, with a terracotta accent (`#c4704b`) that complements Claude Desktop's aesthetic. The host can further override these variables via `applyHostStyleVariables()`.
+Deployers restyle every app through the `themeOverrides` and `headerIcon` options on `createDefaultAppRegistry` (or `AppRegistry` directly) — no build step:
+
+```js file=examples/mcp-apps-theming.js
+const appRegistry = createDefaultAppRegistry({
+  modelClasses: { book: Book },
+  namespace: 'bookshelf',
+  // SVG data URI rendered as the h1::before glyph (sugar for --header-icon)
+  headerIcon: 'data:image/svg+xml;base64,…',
+  themeOverrides: {
+    cssVariables: { '--acc': '#0a84ff', '--acc-2': '#0a84ff' },
+    css: '.mr-banner { border-radius: 0; }' // appended verbatim
+  }
+})
+```
+
+```ts file=examples/mcp-apps-theming.ts
+const appRegistry = createDefaultAppRegistry({
+  modelClasses: { book: Book },
+  namespace: 'bookshelf',
+  // SVG data URI rendered as the h1::before glyph (sugar for --header-icon)
+  headerIcon: 'data:image/svg+xml;base64,…',
+  themeOverrides: {
+    cssVariables: { '--acc': '#0a84ff', '--acc-2': '#0a84ff' },
+    css: '.mr-banner { border-radius: 0; }' // appended verbatim
+  }
+})
+```
+
+The registry injects these as a `<style>` block (a `:root { … }` override plus the raw CSS) before `</head>` when serving each app's HTML resource. On top of that, apps also honor host-pushed styling at runtime via `onhostcontextchanged` (`applyDocumentTheme`, `applyHostStyleVariables`).
 
 ## Integration with Prompts
 
-MCP Apps are linked to prompts via the `appToolName` property in the prompt registry:
+App availability derives from **form classes**, not from any prompt-side registration. A model is offered by `new_model_app` / `edit_model_app` when it resolves a form class — an explicit `formClasses` entry, or the synthesized default when the model has renderable attributes. There is no link property to maintain on the prompt side.
 
-```js file=examples/mcp-apps-guide-05.js
-// prompts/registry.js
-create_book: {
-  promptClass: BookPrompt,
-  model: 'book',
-  appToolName: 'create_book_form'  // Links to MCP App tool
-}
-```
+When a user asks to create a model, the `get_prompt_guide` tool checks which models have forms and instructs the LLM to offer three options:
 
-```ts file=examples/mcp-apps-guide-05.ts
-// prompts/registry.js
-create_book: {
-  promptClass: BookPrompt,
-  model: 'book',
-  appToolName: 'create_book_form'  // Links to MCP App tool
-}
-```
+1. **Interactive Form** → the LLM calls `new_model_app(model: "book", mode: "form")` instead of the guide
+2. **Guided** → `get_prompt_guide` with `mode: 'guided'`, step-by-step LLM guidance
+3. **Quick** → `get_prompt_guide` with `mode: 'quick'`, infer from context and ask only for essentials
 
-When a user asks to create a model, the `get_prompt_guide` tool checks `getAppEnabledPrompts()` and offers three options:
-
-1. **Interactive Form** → Calls the MCP App tool (e.g., `create_book`)
-2. **Guided** → Uses the prompt system for step-by-step LLM guidance
-3. **Quick** → Minimal prompt, direct creation
+Models without a form class get only the Guided and Quick options.
 
 ## Dependencies
 
-| Package                          | Version | Purpose                                       |
-| -------------------------------- | ------- | --------------------------------------------- |
-| `@modelcontextprotocol/ext-apps` | ^1.2.0  | MCP Apps protocol (App class, server helpers) |
-| `@modelcontextprotocol/sdk`      | ^1.25.1 | Core MCP protocol (McpServer, types)          |
-| `vite`                           | ^7.3.1  | Build tool for single-file HTML               |
-| `vite-plugin-singlefile`         | ^2.3.0  | Inlines CSS/JS into single HTML               |
-| `zod`                            | ^4.2.1  | Input schema validation                       |
+The apps stack rides on `@modelcontextprotocol/ext-apps` (the `App` class and server registration helpers), `@modelcontextprotocol/sdk`, and `zod` for tool input schemas; framework contributors building bundles additionally use `vite` + `vite-plugin-singlefile`. Version ranges live in [`package.json`](../../../package.json) — this guide deliberately doesn't duplicate them.
 
 ## Building a Custom (Hardcoded) MCP App
 
-The generic schema-driven approach handles most model forms. However, if you need a fully custom UI — unique layout, specialized interactions, non-CRUD workflows — you can build a hardcoded MCP App from scratch. Below is a reference based on the original `create_book` app (before it was replaced by the generic form).
+The generic schema-driven approach handles most model forms. However, if you need a fully custom UI — unique layout, specialized interactions, non-CRUD workflows — you can build a hardcoded MCP App from scratch. Below is a compact reference; the full treatment (app categories, the single-file path, the Vite-bundled path, reusing the kind taxonomy) lives in [Writing a Custom MCP App](../10-extensions/custom-app.md).
+
+The example is a bookshelf review composer: a hand-built form that posts a review for a book.
 
 ### Server-Side: App Definition
 
-A custom app is a plain object with `handleToolCall` and `getHtml`. No schema generation — you control everything.
+A custom app is a plain object satisfying the `AppDefinition` shape — `handleToolCall` plus `getHtml`. No schema generation — you control everything.
 
-```js file=src/get-html.js
-// src/engineer/apps/custom-example.js
+```js file=src/apps/custom-example.js
+// src/apps/custom-example.js
 import { z } from 'zod'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -597,28 +507,27 @@ function getHtml() {
 
 export function createCustomApp() {
   return {
-    resourceUri: 'ui://engineer/custom-tool',
+    resourceUri: 'ui://bookshelf/custom-tool',
     toolName: 'custom_tool',
-    name: 'Custom Tool',
-    description: 'A fully custom interactive UI',
-    toolDescription: 'Show a custom interactive form.',
-    needsAuth: false, // set true if handleToolCall needs apiClient
+    name: 'Review Composer',
+    description: 'A fully custom interactive UI for composing book reviews',
+    toolDescription: 'Show a custom review-composer form.',
+    needsAuth: false, // set true if handleToolCall needs context.dataLayer
 
     toolInputSchema: {
-      title: z.string().describe('Pre-fill the title').optional()
+      title: z.string().describe('Pre-fill the review title').optional()
     },
 
-    handleToolCall(args = {}) {
+    async handleToolCall(args = {}) {
       // Return whatever JSON your client-side app expects
       return {
         content: [
           {
             type: 'text',
             text: JSON.stringify({
-              model: 'custom',
+              model: 'review',
               defaults: { title: args.title || '' },
-              statusOptions: ['draft', 'published'],
-              formatOptions: ['html', 'pdf']
+              statusOptions: ['draft', 'published']
             })
           }
         ]
@@ -630,46 +539,47 @@ export function createCustomApp() {
 }
 ```
 
-```ts file=src/get-html.ts
-// src/engineer/apps/custom-example.js
+```ts file=src/apps/custom-example.ts
+// src/apps/custom-example.ts
 import { z } from 'zod'
 import fs from 'node:fs'
 import path from 'node:path'
 
-const DIST_DIR = path.resolve(import.meta.dirname, 'dist')
-let _cachedHtml = null
+import type { AppDefinition } from '@mcp-rune/mcp-rune/apps'
 
-function getHtml() {
+const DIST_DIR = path.resolve(import.meta.dirname, 'dist')
+let _cachedHtml: string | null = null
+
+function getHtml(): string {
   if (!_cachedHtml) {
     _cachedHtml = fs.readFileSync(path.join(DIST_DIR, 'index.html'), 'utf-8')
   }
   return _cachedHtml
 }
 
-export function createCustomApp() {
+export function createCustomApp(): AppDefinition {
   return {
-    resourceUri: 'ui://engineer/custom-tool',
+    resourceUri: 'ui://bookshelf/custom-tool',
     toolName: 'custom_tool',
-    name: 'Custom Tool',
-    description: 'A fully custom interactive UI',
-    toolDescription: 'Show a custom interactive form.',
-    needsAuth: false, // set true if handleToolCall needs apiClient
+    name: 'Review Composer',
+    description: 'A fully custom interactive UI for composing book reviews',
+    toolDescription: 'Show a custom review-composer form.',
+    needsAuth: false, // set true if handleToolCall needs context.dataLayer
 
     toolInputSchema: {
-      title: z.string().describe('Pre-fill the title').optional()
+      title: z.string().describe('Pre-fill the review title').optional()
     },
 
-    handleToolCall(args = {}) {
+    async handleToolCall(args = {}) {
       // Return whatever JSON your client-side app expects
       return {
         content: [
           {
             type: 'text',
             text: JSON.stringify({
-              model: 'custom',
+              model: 'review',
               defaults: { title: args.title || '' },
-              statusOptions: ['draft', 'published'],
-              formatOptions: ['html', 'pdf']
+              statusOptions: ['draft', 'published']
             })
           }
         ]
@@ -685,8 +595,8 @@ export function createCustomApp() {
 
 The client uses `@modelcontextprotocol/ext-apps` `App` class. Unlike the generic renderer, you write the HTML form by hand and wire up fields directly.
 
-```js file=src/prefill-form.js
-// src/engineer/apps/custom-ui/app.js
+```js file=src/apps/custom-ui-app.js
+// src/apps/custom-ui/app.js
 import {
   App,
   applyDocumentTheme,
@@ -694,7 +604,7 @@ import {
   applyHostFonts
 } from '@modelcontextprotocol/ext-apps'
 
-const app = new App({ name: 'Custom Tool', version: '1.0.0' })
+const app = new App({ name: 'Review Composer', version: '1.0.0' })
 
 // Receive tool result (initial data from handleToolCall)
 app.ontoolresult = (result) => {
@@ -744,29 +654,29 @@ function collectFormData() {
   return data
 }
 
-// Validate via MCP tool
-document.getElementById('btn-validate').addEventListener('click', async () => {
-  const fields = collectFormData()
-  const result = await app.callServerTool({
-    name: 'validate_form',
-    arguments: { model: 'custom', fields }
-  })
-  // Handle validation result...
-})
-
-// Submit via MCP tool
+// Submit via MCP tool. There is no separate validation round-trip:
+// check required fields client-side, then let the backend validate on
+// create — a 422 comes back on the tool result for inline display.
 document.getElementById('btn-submit').addEventListener('click', async () => {
   const fields = collectFormData()
+  if (!fields.title) {
+    // Mark the title field as required inline...
+    return
+  }
   const result = await app.callServerTool({
     name: 'create_model',
-    arguments: { model: 'custom', attributes: fields }
+    arguments: { model: 'review', attributes: fields }
   })
-  // Handle creation result...
+  if (result?.isError) {
+    // Parse the validation payload and render per-field errors inline...
+    return
+  }
+  // Show the success state...
 })
 ```
 
-```ts file=src/prefill-form.ts
-// src/engineer/apps/custom-ui/app.js
+```ts file=src/apps/custom-ui-app.ts
+// src/apps/custom-ui/app.ts
 import {
   App,
   applyDocumentTheme,
@@ -774,7 +684,7 @@ import {
   applyHostFonts
 } from '@modelcontextprotocol/ext-apps'
 
-const app = new App({ name: 'Custom Tool', version: '1.0.0' })
+const app = new App({ name: 'Review Composer', version: '1.0.0' })
 
 // Receive tool result (initial data from handleToolCall)
 app.ontoolresult = (result) => {
@@ -824,24 +734,24 @@ function collectFormData() {
   return data
 }
 
-// Validate via MCP tool
-document.getElementById('btn-validate').addEventListener('click', async () => {
-  const fields = collectFormData()
-  const result = await app.callServerTool({
-    name: 'validate_form',
-    arguments: { model: 'custom', fields }
-  })
-  // Handle validation result...
-})
-
-// Submit via MCP tool
+// Submit via MCP tool. There is no separate validation round-trip:
+// check required fields client-side, then let the backend validate on
+// create — a 422 comes back on the tool result for inline display.
 document.getElementById('btn-submit').addEventListener('click', async () => {
   const fields = collectFormData()
+  if (!fields.title) {
+    // Mark the title field as required inline...
+    return
+  }
   const result = await app.callServerTool({
     name: 'create_model',
-    arguments: { model: 'custom', attributes: fields }
+    arguments: { model: 'review', attributes: fields }
   })
-  // Handle creation result...
+  if (result?.isError) {
+    // Parse the validation payload and render per-field errors inline...
+    return
+  }
+  // Show the success state...
 })
 ```
 
@@ -857,20 +767,42 @@ document.getElementById('btn-submit').addEventListener('click', async () => {
 
 ### Registration
 
-Custom apps are registered the same way — add them to the `apps` array passed to `AppRegistry`:
+Custom apps join the same registry as the framework apps — build the default registry, then add yours with `registerApp`:
 
 ```js file=src/apps/custom-app.js
-// In createAppRegistry or similar
-const customApp = createCustomApp()
-const apps = [...modelFormApps, customApp]
-return new AppRegistry(apps, { apiUrl })
+// src/apps/registry.js
+import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
+
+import { Book } from '../models/book.js'
+import { Review } from '../models/review.js'
+import { createCustomApp } from './custom-example.js'
+
+export function buildAppRegistry() {
+  const registry = createDefaultAppRegistry({
+    modelClasses: { book: Book, review: Review },
+    namespace: 'bookshelf'
+  })
+  registry.registerApp(createCustomApp())
+  return registry
+}
 ```
 
 ```ts file=src/apps/custom-app.ts
-// In createAppRegistry or similar
-const customApp = createCustomApp()
-const apps = [...modelFormApps, customApp]
-return new AppRegistry(apps, { apiUrl })
+// src/apps/registry.ts
+import { createDefaultAppRegistry, type AppRegistry } from '@mcp-rune/mcp-rune/apps'
+
+import { Book } from '../models/book.js'
+import { Review } from '../models/review.js'
+import { createCustomApp } from './custom-example.js'
+
+export function buildAppRegistry(): AppRegistry {
+  const registry = createDefaultAppRegistry({
+    modelClasses: { book: Book, review: Review },
+    namespace: 'bookshelf'
+  })
+  registry.registerApp(createCustomApp())
+  return registry
+}
 ```
 
 ## Column Selection (List View & Search View)
@@ -1025,7 +957,7 @@ The find-model-app UI hides the "Send (Add)" button when the selection escalates
 
 ### Managing selections from the model side
 
-Four model-visible tools let the LLM read and edit the selection store directly. Each is shared across every app (registered once via `createSharedSelectionTools()` and deduplicated by `AppRegistry`).
+Five model-visible tools let the LLM read and edit the selection store directly. Each is shared across every app (registered once via `createSharedSelectionTools()` and deduplicated by `AppRegistry`).
 
 | Tool | Schema | Behavior |
 | --- | --- | --- |
@@ -1068,13 +1000,13 @@ Each app gets its **own** `select_*_records` tool bound to its `resourceUri`, be
 
 ### MCP Server as Source of Truth
 
-The MCP server owns all form metadata — field types, validations, grouping, labels. The Rails API is only used to:
+The MCP server owns all form metadata — field kinds, validations, grouping, labels. The backend behind the `DataLayer` is only consulted to:
 
-1. Fetch association options (locations, tags) at form-open time
-2. Validate submissions (`validate_form` → Rails validates on create)
-3. Create records (`create_model` → `POST /api/v1/books`)
+1. Fetch association options (locations, tags) at form-open time via `resolveAssociationOptions`
+2. Validate submissions — `create_model` / `update_model` surface the backend's validation errors, which the form renders inline
+3. Persist records (`create_model` → a `POST` to the model's endpoint through the `DataLayer`'s convention)
 
-This keeps the MCP server decoupled from the Rails app's internal structure.
+This keeps the MCP server decoupled from the backend's internal structure — the same form pipeline runs against a JSON:API server, a HAL server, or an in-memory adapter.
 
 ### Single Generic Renderer
 

@@ -68,7 +68,7 @@ The single-step advance is what scopes tool context. The LLM only sees the tools
 ### WorkflowDefinition
 
 ```js file=examples/workflow-creation-guide-01.js
-import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
+import { WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
 
 new WorkflowDefinition({
   name, // string — unique identifier, snake_case (e.g., 'log_study_session')
@@ -83,7 +83,7 @@ new WorkflowDefinition({
 ```
 
 ```ts file=examples/workflow-creation-guide-01.ts
-import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
+import { WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
 
 new WorkflowDefinition({
   name, // string — unique identifier, snake_case (e.g., 'log_study_session')
@@ -117,13 +117,16 @@ new WorkflowDefinition({
   description,     // string — what this step does (LLM reads this)
   tool,            // string — MCP tool name to call (e.g., 'find_records', 'search_records')
   toolArgs,        // object — example arguments (shown as JSON in rendered output)
-  decision,        // object — decision point: { question, options: [{label, description}] }
+  decision,        // object — decision point: { question, options: [{label, description, nextStep?}] }
   tips,            // string[] — guidance for the LLM
   parallelGroup,   // string — group ID for concurrent execution (adjacent steps with same ID)
   loopGroup,       // string — group ID for per-page iteration (adjacent steps with same ID)
   exhaustive,      // boolean — step needs ALL paginated records (renders pagination guidance)
   dependsOn,       // number[] — step order numbers that must complete first
   changeset,       // object — MCP client changeset integration: { mutating?: boolean, requiresPlan?: string }
+  optional,        // boolean — renders an "Optional step — skip if the tool is not available" notice
+  fallbackDescription, // string — rendered as "Instead: …" guidance when an optional step is skipped
+  contextHint,     // object — { lifecycle?, consumedBy? } — see "Context hints" below
 }
 ```
 
@@ -134,13 +137,16 @@ new WorkflowDefinition({
   description,     // string — what this step does (LLM reads this)
   tool,            // string — MCP tool name to call (e.g., 'find_records', 'search_records')
   toolArgs,        // object — example arguments (shown as JSON in rendered output)
-  decision,        // object — decision point: { question, options: [{label, description}] }
+  decision,        // object — decision point: { question, options: [{label, description, nextStep?}] }
   tips,            // string[] — guidance for the LLM
   parallelGroup,   // string — group ID for concurrent execution (adjacent steps with same ID)
   loopGroup,       // string — group ID for per-page iteration (adjacent steps with same ID)
   exhaustive,      // boolean — step needs ALL paginated records (renders pagination guidance)
   dependsOn,       // number[] — step order numbers that must complete first
   changeset,       // object — MCP client changeset integration: { mutating?: boolean, requiresPlan?: string }
+  optional,        // boolean — renders an "Optional step — skip if the tool is not available" notice
+  fallbackDescription, // string — rendered as "Instead: …" guidance when an optional step is skipped
+  contextHint,     // object — { lifecycle?, consumedBy? } — see "Context hints" below
 }
 ```
 
@@ -240,6 +246,8 @@ Present the user with choices that affect workflow direction:
   ]
 }
 ```
+
+Each option may also set `nextStep` (a step `order` number) to jump the workflow to a non-adjacent step when that option is chosen.
 
 ### Analysis Steps
 
@@ -385,8 +393,8 @@ Adjacent steps with the same `loopGroup` iterate together per page. Use this whe
 {
   order: 3,
   title: 'Analyze and categorize findings',
-  description: 'Store findings as analysis memories for this page.',
-  tool: 'store_analysis_memory',
+  description: 'Store findings from this page in the analysis session.',
+  tool: 'analysis_store',
   loopGroup: 'fetch-analyze',
   tips: ['...']
 }
@@ -406,8 +414,8 @@ Adjacent steps with the same `loopGroup` iterate together per page. Use this whe
 {
   order: 3,
   title: 'Analyze and categorize findings',
-  description: 'Store findings as analysis memories for this page.',
-  tool: 'store_analysis_memory',
+  description: 'Store findings from this page in the analysis session.',
+  tool: 'analysis_store',
   loopGroup: 'fetch-analyze',
   tips: ['...']
 }
@@ -421,6 +429,10 @@ The renderer groups these steps and instructs the LLM:
 - When all pages processed, advance to the next step
 
 Use `exhaustive: true` on the data-fetching step within the loop to trigger pagination guidance. Steps without `exhaustive` in the group are processing steps that run once per page.
+
+### Context hints
+
+Steps that produce intermediate results for a later step can declare `contextHint: { lifecycle?, consumedBy? }` — how long the produced value stays relevant, and which step consumes it. `get_workflow_step` surfaces the current step's hints to the client as `_meta.contextHints`, so the LLM knows what to carry forward and what it can drop.
 
 ## Tool Selection: Data Tools vs View Tools
 
@@ -524,14 +536,13 @@ Key traits:
 
 ### Analysis Pipeline
 
-Search → aggregate → visualize → decide → act. For workflows that analyze data before acting.
+Search → aggregate → decide → act. For workflows that analyze data before acting.
 
-**Example:** `weekly_learning_review` — search activities → store analysis memories → render diagram → identify gaps (decision) → plan
+**Example:** `weekly_learning_review` — search activities → store analysis findings → identify gaps (decision) → plan
 
 Key traits:
 
-- Uses `store_analysis_memory` and `recall_analysis_memories` for intermediate state
-- `render_diagram` for visualization
+- Uses `analysis_store` and `analysis_query` for intermediate state
 - Decision based on analysis results
 
 ### Draft-Required Mutations
@@ -748,7 +759,7 @@ src/<server>/domain/workflows/<workflow-name>.js
 ### Export pattern
 
 ```js file=src/my-workflows.js
-import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
+import { WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
 
 export const myWorkflows = [
   new WorkflowDefinition({
@@ -760,7 +771,7 @@ export const myWorkflows = [
 ```
 
 ```ts file=src/my-workflows.ts
-import { WorkflowDefinition } from '#src/mcp/domain/workflows.js'
+import { WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
 
 export const myWorkflows = [
   new WorkflowDefinition({
@@ -777,19 +788,19 @@ A file can export multiple workflow definitions in the array.
 
 Add the import and spread into the `WorkflowRegistry` in `src/<server>/domain/registry.js`:
 
-```js file=src/registries/create-engineer-domain-registry.js
+```js file=src/registries/create-domain-registry.js
 import { myWorkflows } from './workflows/my-workflow.js'
 
-export function createEngineerDomainRegistry() {
+export function createDomainRegistry() {
   const workflows = new WorkflowRegistry([...existingWorkflows, ...myWorkflows])
   // ...
 }
 ```
 
-```ts file=src/registries/create-engineer-domain-registry.ts
+```ts file=src/registries/create-domain-registry.ts
 import { myWorkflows } from './workflows/my-workflow.js'
 
-export function createEngineerDomainRegistry() {
+export function createDomainRegistry() {
   const workflows = new WorkflowRegistry([...existingWorkflows, ...myWorkflows])
   // ...
 }

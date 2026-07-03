@@ -21,9 +21,9 @@ The lifecycle is two phases — once at boot, then per tool call:
    ─────                                ─────────────
 
    createServer({                       LLM invokes
-     toolFlowExtensions: [             new_model_app(...)
+     toolFlowExtensions: {             new_model_app(...)
        myExt                                  │
-     ]                                        ▼
+     }                                        ▼
    })                                  ┌───────────────┐
        │                               │ collect form  │
        ▼                               │ data (because │
@@ -110,7 +110,7 @@ interface ContextKey<T> {
  */
 ```
 
-`register` runs **once at server creation**, before app tools are registered on the underlying `McpServer`. It's synchronous from the server factory's perspective (Promises are awaited).
+`register` runs **once at server creation**, before app tools are registered on the underlying `McpServer`. Async `register()` rejections are surfaced via a crash-on-rejection handler (the failure is logged and the process exits), but completion is **not awaited** — tools registered after the first `await` may be silently dropped. This is tracked as a known issue; prefer synchronous `register()` until it lands.
 
 The user-facing config is a map keyed by an extension name:
 
@@ -240,7 +240,7 @@ async handleToolCall(input, context) {
 }
 ```
 
-This is how `centerOfControlExtension` exposes its `FormDataStore` to the `get_form_data` tool without the tool importing the extension directly — see `FORM_DATA_STORE_KEY` in `src/extensions/center-of-control.ts`.
+This is how `centerOfControlExtension` exposes its `AppFormDataStore` to the `get_form_data` tool without the tool importing the extension directly — see `FORM_DATA_STORE_KEY` in `src/extensions/center-of-control.ts`.
 
 Context key names must be **globally unique** across all registered tool-flow extensions. If two extensions provide keys with the same `name`, registration throws at boot with both contributor names and the offending key in the error — never silent overwrites. This mirrors the collision rules already enforced for tool names and `ModelService` mixin methods.
 
@@ -254,34 +254,45 @@ The framework's built-in extension — short enough to fit in 30 lines and a per
 
 ```ts file=src/apps/form-app.ts
 // src/extensions/center-of-control.ts
-import { FormDataStore } from '#src/mcp/apps/lib/form-data-store.js'
-import { createFormDataTools } from '#src/mcp/apps/lib/form-data-tools.js'
+import { AppFormDataStore } from '#src/mcp/apps/lib/app-form-data-store.js'
+import { createAppFormDataTools } from '#src/mcp/apps/lib/app-form-data-tools.js'
 import { defineContextKey, type ToolFlowExtension } from '#src/mcp/extensions/tool-flow.js'
 
-export const FORM_DATA_STORE_KEY = defineContextKey<FormDataStore>('formDataStore')
+export const FORM_DATA_STORE_KEY = defineContextKey<AppFormDataStore>('formDataStore')
 
 export const centerOfControlExtension: ToolFlowExtension = {
   requires: ['apps'],
   register(ctx) {
     const formApp = ctx.getApp('new_model_app')
     if (!formApp?.resourceUri || !formApp.getHtml) {
-      throw new Error('centerOfControlExtension: new_model_app app is required')
+      throw new Error(
+        'centerOfControlExtension: "new_model_app" app is required (resourceUri + getHtml)'
+      )
     }
 
-    // 1. Flip the submit mode.
+    // 1. Derive the accepted model names from the form's z.enum schema.
+    const modelNames = extractModelNames(formApp.toolInputSchema as Record<string, unknown>)
+    if (modelNames.length === 0) {
+      throw new Error(
+        'centerOfControlExtension: could not derive model names from new_model_app.toolInputSchema'
+      )
+    }
+
+    // 2. Flip the submit mode.
     ctx.setFormSubmitMode('collect')
 
-    // 2. Spin up a per-server FormDataStore and expose it to other tools.
-    const store = new FormDataStore()
+    // 3. Spin up a per-server AppFormDataStore and expose it to other tools.
+    const store = new AppFormDataStore()
     ctx.provideContext(FORM_DATA_STORE_KEY, store)
 
-    // 3. Register the collect_form_data + get_form_data tools, sharing the
+    // 4. Register the collect_form_data + get_form_data tools, sharing the
     //    same resourceUri/getHtml as the create-form app.
-    const modelNames = extractModelNames(formApp.toolInputSchema)
-    const tools = createFormDataTools(formApp.resourceUri, modelNames as [string, ...string[]], {
-      getHtml: formApp.getHtml
-    })
-    for (const tool of tools) ctx.registerTool(tool)
+    const formDataTools = createAppFormDataTools(
+      formApp.resourceUri,
+      modelNames as [string, ...string[]],
+      { getHtml: formApp.getHtml }
+    )
+    for (const tool of formDataTools) ctx.registerTool(tool)
 
     ctx.logger.info(`[${ctx.name}] active`, { service: ctx.mcpName, models: modelNames.length })
   }
@@ -290,8 +301,8 @@ export const centerOfControlExtension: ToolFlowExtension = {
 
 ```js file=src/apps/form-app.js
 // src/extensions/center-of-control.ts
-import { FormDataStore } from '#src/mcp/apps/lib/form-data-store.js'
-import { createFormDataTools } from '#src/mcp/apps/lib/form-data-tools.js'
+import { AppFormDataStore } from '#src/mcp/apps/lib/app-form-data-store.js'
+import { createAppFormDataTools } from '#src/mcp/apps/lib/app-form-data-tools.js'
 import { defineContextKey } from '#src/mcp/extensions/tool-flow.js'
 export const FORM_DATA_STORE_KEY = defineContextKey('formDataStore')
 export const centerOfControlExtension = {
@@ -299,20 +310,28 @@ export const centerOfControlExtension = {
   register(ctx) {
     const formApp = ctx.getApp('new_model_app')
     if (!formApp?.resourceUri || !formApp.getHtml) {
-      throw new Error('centerOfControlExtension: new_model_app app is required')
+      throw new Error(
+        'centerOfControlExtension: "new_model_app" app is required (resourceUri + getHtml)'
+      )
     }
-    // 1. Flip the submit mode.
-    ctx.setFormSubmitMode('collect')
-    // 2. Spin up a per-server FormDataStore and expose it to other tools.
-    const store = new FormDataStore()
-    ctx.provideContext(FORM_DATA_STORE_KEY, store)
-    // 3. Register the collect_form_data + get_form_data tools, sharing the
-    //    same resourceUri/getHtml as the create-form app.
+    // 1. Derive the accepted model names from the form's z.enum schema.
     const modelNames = extractModelNames(formApp.toolInputSchema)
-    const tools = createFormDataTools(formApp.resourceUri, modelNames, {
+    if (modelNames.length === 0) {
+      throw new Error(
+        'centerOfControlExtension: could not derive model names from new_model_app.toolInputSchema'
+      )
+    }
+    // 2. Flip the submit mode.
+    ctx.setFormSubmitMode('collect')
+    // 3. Spin up a per-server AppFormDataStore and expose it to other tools.
+    const store = new AppFormDataStore()
+    ctx.provideContext(FORM_DATA_STORE_KEY, store)
+    // 4. Register the collect_form_data + get_form_data tools, sharing the
+    //    same resourceUri/getHtml as the create-form app.
+    const formDataTools = createAppFormDataTools(formApp.resourceUri, modelNames, {
       getHtml: formApp.getHtml
     })
-    for (const tool of tools) ctx.registerTool(tool)
+    for (const tool of formDataTools) ctx.registerTool(tool)
     ctx.logger.info(`[${ctx.name}] active`, { service: ctx.mcpName, models: modelNames.length })
   }
 }
@@ -552,7 +571,7 @@ describe('slackApprovalExtension', () => {
       mcpName: 'test',
       registerTool: (t: unknown) => tools.push(t),
       getApp: () => ({
-        resourceUri: 'mcp://app/x',
+        resourceUri: 'ui://bookshelf/x',
         getHtml: () => '<html></html>',
         toolInputSchema: {}
       }),
@@ -585,7 +604,7 @@ describe('slackApprovalExtension', () => {
       mcpName: 'test',
       registerTool: (t) => tools.push(t),
       getApp: () => ({
-        resourceUri: 'mcp://app/x',
+        resourceUri: 'ui://bookshelf/x',
         getHtml: () => '<html></html>',
         toolInputSchema: {}
       }),

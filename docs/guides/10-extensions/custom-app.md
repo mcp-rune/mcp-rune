@@ -36,7 +36,7 @@ import type { AppDefinition } from '@mcp-rune/mcp-rune/apps'
 interface AppDefinition {
   name: string // unique identifier
   description: string // shown to the LLM
-  resourceUri?: string // mcp://... where the iframe HTML lives
+  resourceUri?: string // ui://<namespace>/<app> where the iframe HTML lives
   toolName?: string // MCP tool that opens the app
   toolDescription?: string
   toolInputSchema?: Record<string, unknown> // Zod-flavored input schema
@@ -69,7 +69,7 @@ interface AppDefinition {
  * @typedef {Object} AppDefinition
  * @property {string} name              unique identifier
  * @property {string} description       shown to the LLM
- * @property {string} [resourceUri]     `mcp://...` where the iframe HTML lives
+ * @property {string} [resourceUri]     `ui://<namespace>/<app>` where the iframe HTML lives
  * @property {string} [toolName]        MCP tool that opens the app
  * @property {string} [toolDescription]
  * @property {Object} [toolInputSchema] Zod-flavored input schema
@@ -111,7 +111,7 @@ The three categories form a simple decision tree:
  └───────────┘         └───────────┘          └────────────┘
 ```
 
-Almost every framework-shipped app is **resource + tool**: the LLM calls the tool, the handler fetches data, and the response points the iframe at an `mcp://` resource the host then loads.
+Almost every framework-shipped app is **resource + tool**: the LLM calls the tool, the handler fetches data, and the response points the iframe at a `ui://` resource the host then loads.
 
 ## Three Categories of App
 
@@ -121,7 +121,7 @@ Almost every framework-shipped app is **resource + tool**: the LLM calls the too
 | **Tool-backed** | `toolName`, `toolInputSchema`, `handleToolCall` | A tool the LLM calls (with no iframe), e.g. `get_field_suggestions`. |
 | **Resource + tool** | All of the above | The standard interactive widget pattern — LLM calls the tool with arguments, server returns metadata pointing the iframe to the resource. |
 
-The shipped apps are almost all category three. `show-model-app`, for instance: the LLM calls `show_model_app(model, ids)`, the handler fetches records and returns a `ToolResult` with `_meta` referencing the `mcp://app/show-model-app` resource; the host loads the HTML, the iframe receives the data via postMessage and renders.
+The shipped apps are almost all category three. `show-model-app`, for instance: the LLM calls `show_model_app(model, ids)`, the handler fetches records and returns a `ToolResult` with `_meta` referencing the `ui://bookshelf/show-model-app` resource; the host loads the HTML, the iframe receives the data via postMessage and renders.
 
 ## Anatomy of a Framework App
 
@@ -143,12 +143,15 @@ src/mcp/apps/
 
 The server file (`show-model-app/index.ts`):
 
-```ts file=src/mcp/apps/show-model-app/index.ts
+```ts file=examples/show-model-app-shape.ts
+// A faithful sketch of the shipped show-model-app's handler. The data the
+// iframe renders travels as JSON in `content[0].text`; `_meta` carries only
+// a short summary string (`appResponseMeta` takes a string, not an object).
 export function createShowModelApp(opts: { models: ModelsRegistry }): AppDefinition {
   return {
-    name: 'record_detail',
-    description: 'Renders a read-only detail card for one or more records',
-    resourceUri: 'mcp://app/show-model-app',
+    name: 'Show Record',
+    description: 'Read-only detail cards for viewing one or more records',
+    resourceUri: 'ui://bookshelf/show-model-app',
     toolName: 'show_model_app',
     toolDescription: 'Open the show-model-app viewer with the given IDs.',
     toolInputSchema: { model: z.enum(modelNames), ids: z.array(z.string()).optional() },
@@ -156,22 +159,25 @@ export function createShowModelApp(opts: { models: ModelsRegistry }): AppDefinit
     getHtml: () => loadHtml(),
     needsAuth: true,
     async handleToolCall(args, context) {
-      const records = await context.dataLayer.list(args.model, { id: args.ids })
+      const records = await fetchRecords(context.dataLayer, args.model, args.ids)
+      const schema = generateDetailSchema(opts.models[args.model])
       return {
-        content: [{ type: 'text', text: formatAppSummary(records) }],
-        _meta: appResponseMeta({ records, schema })
+        // The iframe consumes this JSON payload via the host message.
+        content: [{ type: 'text', text: JSON.stringify({ schema, records }) }],
+        // The LLM sees only this summary; it must not repeat record contents.
+        _meta: appResponseMeta(formatAppSummary(records))
       }
     }
   }
 }
 ```
 
-```js file=src/mcp/apps/show-model-app/index.js
+```js file=examples/show-model-app-shape.js
 export function createShowModelApp(opts) {
   return {
-    name: 'record_detail',
-    description: 'Renders a read-only detail card for one or more records',
-    resourceUri: 'mcp://app/show-model-app',
+    name: 'Show Record',
+    description: 'Read-only detail cards for viewing one or more records',
+    resourceUri: 'ui://bookshelf/show-model-app',
     toolName: 'show_model_app',
     toolDescription: 'Open the show-model-app viewer with the given IDs.',
     toolInputSchema: { model: z.enum(modelNames), ids: z.array(z.string()).optional() },
@@ -179,19 +185,22 @@ export function createShowModelApp(opts) {
     getHtml: () => loadHtml(),
     needsAuth: true,
     async handleToolCall(args, context) {
-      const records = await context.dataLayer.list(args.model, { id: args.ids })
+      const records = await fetchRecords(context.dataLayer, args.model, args.ids)
+      const schema = generateDetailSchema(opts.models[args.model])
       return {
-        content: [{ type: 'text', text: formatAppSummary(records) }],
-        _meta: appResponseMeta({ records, schema })
+        content: [{ type: 'text', text: JSON.stringify({ schema, records }) }],
+        _meta: appResponseMeta(formatAppSummary(records))
       }
     }
   }
 }
 ```
 
-The handler fetches data, formats a summary the LLM sees, and ships `_meta` containing the records and schema the iframe will consume.
+The handler fetches data, ships `{ schema, records }` as JSON in `content[0].text` (the channel the iframe reads), and puts only a short human summary in `_meta` via `appResponseMeta(summary)` — the summary is what the LLM sees, so it doesn't re-narrate the records the cards already display.
 
-The iframe (`show-model-app-ui/app.js`) reads the records out of the host message, walks the schema, calls `renderCellValue(value, field)` from `apps/shared/kind-renderers.ts` for each field, and appends nodes to the DOM. Kind-aware rendering, theming, and selection state are inherited automatically.
+The iframe (`show-model-app/ui/app.js`) parses the records out of the host message, walks the schema, calls `renderCellValue(value, field)` from `apps/shared/kind-renderers.ts` for each field, and appends nodes to the DOM. Kind-aware rendering, theming, and selection state are inherited automatically.
+
+> The custom booking-calendar example below uses its own `_meta['mcp-rune/payload']` key to pass data to a hand-authored iframe. That's a valid deployer choice — `_meta` is a free-form envelope reaching the iframe via `ontoolresult` — but note it differs from how the framework's own apps ship data (JSON in `content`, summary in `_meta`). Pick one channel and use it consistently.
 
 ## Single-File Custom App
 
@@ -206,7 +215,7 @@ export function createBookingCalendarApp(): AppDefinition {
   return {
     name: 'booking_calendar',
     description: 'Display a monthly calendar of bookings.',
-    resourceUri: 'mcp://app/booking-calendar',
+    resourceUri: 'ui://bookshelf/booking-calendar',
     toolName: 'show_booking_calendar',
     toolDescription: 'Open the calendar for a given month.',
     toolInputSchema: { month: z.string().regex(/^\d{4}-\d{2}$/) },
@@ -250,7 +259,7 @@ export function createBookingCalendarApp() {
   return {
     name: 'booking_calendar',
     description: 'Display a monthly calendar of bookings.',
-    resourceUri: 'mcp://app/booking-calendar',
+    resourceUri: 'ui://bookshelf/booking-calendar',
     toolName: 'show_booking_calendar',
     toolDescription: 'Open the calendar for a given month.',
     toolInputSchema: { month: z.string().regex(/^\d{4}-\d{2}$/) },
@@ -404,7 +413,7 @@ import { createBookingCalendarApp } from './apps/booking-calendar.js'
 export const appRegistry = createDefaultAppRegistry({
   modelClasses: MODEL_CLASSES,
   namespace: 'bookings',
-  apps: [createBookingCalendarApp()] // alongside the 6 framework apps
+  apps: [createBookingCalendarApp()] // alongside the seven framework apps
 })
 ```
 
@@ -414,7 +423,7 @@ import { createBookingCalendarApp } from './apps/booking-calendar.js'
 export const appRegistry = createDefaultAppRegistry({
   modelClasses: MODEL_CLASSES,
   namespace: 'bookings',
-  apps: [createBookingCalendarApp()] // alongside the 6 framework apps
+  apps: [createBookingCalendarApp()] // alongside the seven framework apps
 })
 ```
 

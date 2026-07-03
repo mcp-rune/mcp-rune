@@ -12,7 +12,7 @@ If you used `rune new` to scaffold the project, the CLI has already wired up a r
 
 ## The easy path: `rune new`
 
-The [`rune new`](https://github.com/dsaenz/mcp-rune-cli) CLI scaffolds the runner, configures `DATABASE_URL`, verifies the connection, and runs the migrations as part of the project-creation flow. When you select an analysis-enabled preset, the CLI prompts you to choose:
+The [`rune new`](https://github.com/mcp-rune/mcp-rune-cli) CLI scaffolds the runner, configures `DATABASE_URL`, verifies the connection, and runs the migrations as part of the project-creation flow. When you select an analysis-enabled preset, the CLI prompts you to choose:
 
 | Choice | What happens |
 | --- | --- |

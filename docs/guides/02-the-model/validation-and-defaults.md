@@ -85,7 +85,7 @@ Call `validate_form` with `{ "model": "book", "fields": { "name": "Dune", "autho
 
 `enumValues:` is its own validation — the message lists the allowed set, which is what the LLM reads to retry.
 
-**4. `validation: { min, max }` — bounds fire later, not here**
+**4. `validation: { min, max }` — unrecognized keys, so nothing fires**
 
 Call `validate_form` with `{ "model": "book", "fields": { "name": "Dune", "author_id": 1, "rating": 99 } }`:
 
@@ -100,16 +100,16 @@ Call `validate_form` with `{ "model": "book", "fields": { "name": "Dune", "autho
 }
 ```
 
-`validate_form` does **not** currently enforce numeric `validation: { min, max }` bounds — `rating: 99` passes silently here. Bounds fire at write time (`create_model` / `update_model`), which means a backend with an `ApiClient` wired is needed to observe them. Treat `validation: { min, max }` as a write-time guarantee, not a form-time one. (`enumValues` and `required` _do_ fire at validate-form time, as steps 1–3 show.)
+`rating: 99` passes silently because `min` and `max` are **not recognized validation keys** — nothing in the framework reads them, at form time or any other time. The validator reads `minimum` / `maximum` for numeric bounds; the setup block above deliberately uses the wrong spelling so you can see the failure mode (the `validation` type carries an open index signature, so the typo also typechecks). Redeclare the field as `validation: { minimum: 1, maximum: 5 }` and the same call rejects `rating: 99` at validate-form time. (`enumValues` and `required` _do_ fire here regardless, as steps 1–3 show.)
 
-**Observe:** three of the four declarations short-circuit before any network call — that's the point of `validate_form`. Bounds are the exception today; the lifecycle diagram below names "Schema validation" as the pass that owns them, and the closest place the bounds fire today is on dispatch through `DataLayer`.
+**Observe:** every recognized declaration short-circuits before any network call — that's the point of `validate_form`. The step-4 gotcha is not a deferred validation pass; it's a key-name mismatch. Spell the keys the validator reads — listed under [`validation: { … }`](#validation---) below — and bounds fire in the same pass as `required` and `enumValues`.
 
 ## `required: true`
 
 Marks the attribute as mandatory. The framework treats this as a contract that's checked in two places:
 
 1. **At form-validate time** — `validate_form` returns a structured failure that names the missing field, so the LLM can re-prompt without making the round trip to the backend.
-2. **At write time** — `create_model` and `update_model` reject a payload that's missing a required field before dispatching to the `DataLayer`.
+2. **At dispatch time** — the default `ModelService` adapter rejects a create payload that's missing a required field before your backend sees the request; custom `DataLayer`s own this check themselves.
 
 File: `tasks/models/task.ts`
 
@@ -133,7 +133,7 @@ There is no `required: false`; absence of the field is the default.
 Supplied at form-fill time when the field is missing. Two important properties:
 
 - The default is applied by **the framework**, before validation and before the backend sees the payload. Your backend never sees an unset field that had a default.
-- The value is read from the static `AttributeDefinition`; it's not a function call, so dynamic defaults (like "today's date") are not supported here. Use the prompt's `defaults:` callback if you need a runtime value.
+- The value is read from the static `AttributeDefinition`; it's not a function call, so dynamic defaults (like "today's date") are not supported here. Override `getDefaultFormState()` on your Prompt class if you need a runtime value.
 
 ```ts
 status: {
@@ -152,7 +152,7 @@ A `default:` and `required: true` are not contradictory — they describe two di
 
 ## `validation: { … }`
 
-Numeric and length bounds. These fire at **write time** (`create_model` / `update_model`), not at `validate_form` time — as the [Try it](#try-it--required-default-enum-range) section above shows, `rating: 99` passes `validate_form` untouched. Treat them as a backend-dispatch guarantee, not a form-time one.
+Numeric bounds, length bounds, and regex patterns. These fire at **validate-form time** — `BaseFormStrategy.validateField` runs every recognized key on each `validate_form` call, in the same pass as `required` and `enumValues`.
 
 File: `bookshelf/models/book.ts`
 
@@ -160,16 +160,34 @@ File: `bookshelf/models/book.ts`
 rating: {
   type: 'integer',
   description: 'Your rating from 1 to 5',
-  validation: { min: 1, max: 5 }
+  validation: { minimum: 1, maximum: 5 }
 }
 ```
 
-Supported keys today:
+Recognized keys:
 
-- `min`, `max` — numeric range (applies to `integer`, `decimal`, `rating`)
+- `minimum`, `maximum` — numeric range (applies to `integer`, `decimal`)
 - `minLength`, `maxLength` — string length (applies to `string`, `text`)
+- `pattern`, `patternMessage` — a `RegExp` the value must match, plus an optional custom error message
 
-Cross-field or pattern-based rules don't live here — they go on the kind itself (custom kinds with a `validate(v)` function; see the previous chapter) or in a domain `BusinessRule` (see [Domain Knowledge](../08-domain-knowledge/domain-knowledge.md)).
+`min` and `max` are **not** recognized keys — a `validation: { min: 1, max: 5 }` block typechecks (the type carries an open index signature) but is silently ignored, which is exactly what step 4 of the [Try it](#try-it--required-default-enum-range) section demonstrates.
+
+Cross-field rules don't live here — they go on the kind itself (custom kinds with a `validate(v)` function; see the previous chapter) or in a domain `BusinessRule` (see [Domain Knowledge](../08-domain-knowledge/domain-knowledge.md)).
+
+### Bounded values: the `max:` knob and the rating kind
+
+For the common "score out of N" case, the framework's first-class mechanism is not a `validation:` block at all — it's the top-level `max?: number` knob on `AttributeDefinition`, consumed by the `rating` kind:
+
+```ts
+rating: {
+  type: 'integer',
+  format: 'rating',
+  max: 5,
+  description: 'Your rating from 1 to 5'
+}
+```
+
+The `rating` kind reads `max` (default `5`) in both halves of its contract: `validate` rejects values outside `0..max` ("must be between 0 and 5"), and `describe` renders the LLM-facing summary as `3/5`. Declaring the bound this way keeps the number in one place for validation, prompt text, and display.
 
 ## `enumValues:` is a validation
 
@@ -187,28 +205,24 @@ For dynamic enums (values pulled from another table), don't use `enum` — use a
 
 ## When validation fires
 
-The framework runs three passes, in order, every time a write tool is called.
+The framework runs two passes, in order, every time a write tool is called.
 
 ```
 caller payload
       │
       ▼
 ┌────────────────────────────────────────────┐
-│ 1. Schema validation (per attribute kind)  │  Wrong type? Bad ISBN? Missing required?
+│ 1. Field validation (kinds + validation:)  │  Wrong type? Bad ISBN? Missing required?
+│    — synthesized FK fields included        │  Out-of-set enum? author_id absent?
 └────────────────────┬───────────────────────┘
                      │  (fail → structured error, no backend call)
                      ▼
 ┌────────────────────────────────────────────┐
-│ 2. Association validation (per FK)         │  project_id resolves? tag_ids all real?
-└────────────────────┬───────────────────────┘
-                     │  (fail → structured error, no write)
-                     ▼
-┌────────────────────────────────────────────┐
-│ 3. DataLayer.dispatch — backend sees it    │  Backend's own checks (DB constraints, etc.)
-└────────────────────────────────────────────┘
+│ 2. DataLayer.dispatch — backend sees it    │  Backend's own checks (referential
+└────────────────────────────────────────────┘  integrity, DB constraints, etc.)
 ```
 
-`validate_form` runs only passes 1 and 2 — it's the cheap, no-side-effect call the LLM uses to check work-in-progress. `create_model` / `update_model` run all three.
+`validate_form` runs only pass 1 — it's the cheap, no-side-effect call the LLM uses to check work-in-progress. `create_model` / `update_model` run both. Note that the FK fields synthesized from associations are validated as ordinary fields (present, well-formed); whether an ID resolves to a real record is the backend's check in pass 2.
 
 ## Defaults vs prompt defaults — don't confuse them
 

@@ -29,10 +29,6 @@ export class Tag extends BaseModel {
     }
   }
 
-  static get attributesConfig(): Record<string, AttributeDefinition> {
-    return this.attributes
-  }
-
   override get displayValue(): string {
     return String(this.data.name)
   }
@@ -65,7 +61,7 @@ The `endpoint` is a logical name — the actual URL is composed by the `DataLaye
 
 The map from attribute name to `AttributeDefinition`. This is where the model earns its title as the single source of truth — the next chapter ([Attributes and kinds](./attributes-and-kinds.md)) covers it in detail.
 
-A `static get attributesConfig()` getter mirrors `attributes` and exists for the prompt-derivation framework; treat it as boilerplate you copy alongside `attributes` until it goes away in a future release.
+The framework reads `static attributes` only. If a generated file carries a `static get attributesConfig()` mirror getter, it's inert boilerplate — nothing in the framework reads it, and deleting it changes nothing.
 
 ### `displayValue` (recommended)
 
@@ -77,7 +73,7 @@ override get displayValue(): string {
 }
 ```
 
-Omit it and the framework uses `id` — which works but tells the human nothing.
+Omit it and the framework falls back to `name`, then `title`, then `ID: <id>`.
 
 ## Try it — add a second model
 
@@ -140,7 +136,7 @@ export class Tag extends BaseModel {
 }
 ```
 
-Match it against the four fields above: `description` and `api` are filled with safe defaults the scaffold picked from the model name; `attributes` was filled from the `--attrs` flag; `attributesConfig` is the mirror getter the prompt-derivation framework still reads. `displayValue` is not generated — the framework will fall back to `id` until you add one.
+Match it against the four fields above: `description` and `api` are filled with safe defaults the scaffold picked from the model name; `attributes` was filled from the `--attrs` flag. The `attributesConfig` getter the scaffold emits is inert boilerplate — the framework reads `static attributes` only, so you can delete it. `displayValue` is not generated — the framework will fall back to `name`, then `title`, then `ID: <id>` until you add one.
 
 **3. Watch the framework adopt it**
 
@@ -197,11 +193,11 @@ export class Task extends BaseModel {
 }
 ```
 
-The `associations` declaration is enough for the framework to derive `project_id` and `tag_ids` as additional attributes on the form, wire pickers for them, validate that `project_id` references a real `Project`, and emit the foreign-key column in the auto-generated docs. Associations get their own chapter ([Associations](./associations.md)) where the full mechanics are explained.
+The `associations` declaration is enough for the framework to derive `project_id` and `tag_ids` as additional attributes on the form, wire pickers for them, treat the synthesized `project_id` as required at validate-form time, and emit the foreign-key column in the auto-generated docs. Associations get their own chapter ([Associations](./associations.md)) where the full mechanics are explained.
 
 ## What you didn't have to write
 
-The 30-line `Tag` declaration above gives the framework everything it needs to generate, without one more line of your code:
+The one-screen `Tag` declaration above gives the framework everything it needs to generate, without one more line of your code:
 
 - **Six polymorphic CRUD tools** that include `Tag` automatically: `list_models`, `find_records`, `create_model`, `update_model`, `delete_model`, `bulk_action_models`.
 - **Three form-strategy tools** wired to `Tag` validation: `get_prompt_guide`, `validate_form`, `get_form_summary`.

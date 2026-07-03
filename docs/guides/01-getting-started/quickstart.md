@@ -51,7 +51,7 @@ Run interactively without flags and the wizard's single question — _"How would
 Then open the project in the MCP Inspector:
 
 ```bash
-npm run inspect
+rune inspect
 ```
 
 The Inspector opens in your browser, pre-wired to your scaffolded server. You're now connected to a working MCP server with one model (`Book`), the default prompt strategy, and all nine polymorphic tools registered.
@@ -127,16 +127,16 @@ Replace `/abs/path/to/my-server` with the absolute path to the scaffolded projec
 
 From a single model declaration in `my-server/src/models/book.ts`, the framework registered the polymorphic tool set:
 
-- **Discovery & form strategy** — `list_models`, `get_prompt_guide`, `validate_form`, `get_form_summary`
-- **CRUD** — `find_records`, `create_model`, `update_model`, `delete_model`, `bulk_action_models`
+- **Data (CRUD)** — `list_models`, `find_records`, `create_model`, `update_model`, `delete_model`, `bulk_action_models`
+- **Form strategy** — `get_prompt_guide`, `validate_form`, `get_form_summary`
 
-The four discovery/strategy tools work out of the box because they read the `Book` declaration directly. The five CRUD tools route through an `ApiClient`, which the simple preset deliberately leaves as a throwing `Proxy` stub — try `find_records({"model":"book"})` and you'll see the seam: _"No ApiClient configured. Wire `createApiClient` in `src/config.ts` before using auth-gated tools."_ That error is the pointer to the next chapter, not a bug.
+The three form-strategy tools and `list_models` work out of the box because they read the `Book` declaration directly. The other five data tools route through an `ApiClient`, which the simple preset deliberately leaves as a throwing `Proxy` stub — try `find_records({"model":"book"})` and you'll see the seam: _"No ApiClient configured. Wire `createApiClient` in `src/config.ts` before using auth-gated tools."_ That error is the pointer to the next chapter, not a bug.
 
 Add a second model with `rune add model Tag --attrs name:string,color:string` (or scaffold with `--models Book,Tag` from the start) and the same nine tools serve it too. For interactive MCP apps, analysis, GraphRAG, and HTTP+OAuth transport, scaffold the **advanced** preset or the **bookshelf** template above.
 
 ## Going further
 
-Replace the stub `ApiClient` in `src/server.ts` with a real `createApiClient` factory and the same tools, prompts, and apps light up against your backend without touching the model declaration. Three guides walk the wiring: [API configuration](../06-the-three-layers-up-close/api-configuration.md) for the `static api` block every CRUD call reads, [API client](../06-the-three-layers-up-close/api-client.md) for the HTTP contract, and [Data layer](../06-the-three-layers-up-close/data-layer.md) ("Swapping the Adapter") for the swap pattern itself.
+Replace the stub `ApiClient` in `src/config.ts` with a real `createApiClient` factory and the same tools, prompts, and apps light up against your backend without touching the model declaration. Three guides walk the wiring: [API configuration](../06-the-three-layers-up-close/api-configuration.md) for the `static api` block every CRUD call reads, [API client](../06-the-three-layers-up-close/api-client.md) for the HTTP contract, and [Data layer](../06-the-three-layers-up-close/data-layer.md) ("Swapping the Adapter") for the swap pattern itself.
 
 ## Next
 

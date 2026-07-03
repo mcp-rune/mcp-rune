@@ -15,12 +15,13 @@ RETRIEVAL / GRAPHRAG PIPELINE                      MiniLM-L6-v2 · 384-dim · pg
   GET /api/<m>    │     analysis_memories          · describe   ┐         stored &
   analysis_ingest │     MiniLM · 384-dim           · aggregate  │ SQL     recallable
   paginate ≤ 50   ├──>  edges                      · filter     │           │
-                  │     multi-hop ingest           · sample     ┘           ▼
-                  │     relationship graph          · semantic  → cosine   the answer
-                  ├──>  domain                      9 summary strategies   synthesised
-                  │     DomainRegistry              5 field-level          0 raw rows
-                  │     concepts · rules            4 GraphRAG-aware       in context
-                  └──>  ingested_records (raw JSONB · 1h TTL)
+                  │     multi-hop ingest           · sample     │           ▼
+                  │     relationship graph          · path      ┘          the answer
+                  ├──>  domain                      · semantic  → cosine   synthesised
+                  │     DomainRegistry              9 summary strategies   0 raw rows
+                  │     concepts · rules            5 field-level          in context
+                  └──>  ingested_records            4 GraphRAG-aware
+                        (raw JSONB · 7-day TTL)
 ```
 
 ## Three indexes, one ingest
@@ -29,21 +30,24 @@ A single `analysis_ingest` call auto-paginates an API model into offline storage
 
 | Index | What it stores | Lit up by | Deep dive |
 | --- | --- | --- | --- |
-| **Vectors** | every page summary + stored finding, embedded with `all-MiniLM-L6-v2` (384-dim) in local **pgvector** | always | [Analysis Memories](./analysis-memories.md) |
-| **Edges** | relationships between records, followed across models | multi-hop ingest | [Analysis Memories](./analysis-memories.md) |
+| **Vectors** | every page summary + stored finding, embedded with `all-MiniLM-L6-v2` (384-dim) in local **pgvector** — plus per-record embeddings on the ingested rows themselves (`embed_records`, default on) | always | [Analysis Memories](./analysis-memories.md) |
+| **Edges** | relationships between records, followed across models, persisted in `ingested_edges` | multi-hop ingest | [Analysis Memories](./analysis-memories.md) |
 | **Domain** | concepts + business rules that ground findings in your vocabulary | a `DomainRegistry` passed at boot | [Domain Knowledge](../08-domain-knowledge/domain-knowledge.md) |
 
-The raw rows land in an `ingested_records` table (plain JSONB, 1-hour TTL) that the SQL query modes read directly. **Raw rows never cross the context window** — the agent works from summaries and findings.
+The raw rows land in an `ingested_records` table (JSONB rows plus optional per-record embeddings, 7-day TTL) that the SQL query modes read directly. **The full dataset never crosses the context window** — the agent pulls only capped, filtered/sampled slices, and otherwise works from summaries and findings.
 
-## Five query modes
+## Six query modes
 
-`analysis_query` answers in five modes. Four are deterministic SQL over `ingested_records`; one is vector recall over the embedded memories:
+`analysis_query` answers in six modes. Five are deterministic SQL over `ingested_records` and `ingested_edges`; one embeds the query string — and with `target: "records"` ranks the records themselves:
 
 - **describe** — shape of the data: counts, numeric stats, date ranges.
 - **aggregate** — `GROUP BY` over fields.
 - **filter** — JSONB predicates (`@>`, range casts).
 - **sample** — random or **stratified** samples (incl. proximity buckets).
+- **path** — recursive-CTE typed edge chains between two records over `ingested_edges`: `from_model`/`from_id` → `to_model`/`to_id`, with `max_depth` defaulting to 4 (capped at 6).
 - **semantic** — embeds the _query string_ and ranks by cosine distance: stored findings and page summaries by default (`target: "findings"`), or the ingested records themselves (`target: "records"`) — the record ranking composes with `where` for hybrid semantic + filter retrieval in one SQL statement, and with `model` on multi-model sessions.
+
+On multi-model (hop-expanded) sessions, `aggregate`/`filter`/`sample` require the `model` parameter — the error names the candidate models with their record counts (see [ADR 0013](../../architecture/decisions/0013-sessions-are-graphs-analyses-are-per-model.md)).
 
 Only `semantic` pays for an embed (of the query, not the data). The rest are cheap, deterministic SQL.
 
@@ -79,7 +83,7 @@ The LLM drives the loop; the framework provides the seams:
 
 ## Enable it
 
-Retrieval is opt-in. Set `ANALYSIS_ENABLED=true` and provide a Postgres database with the `pgvector` extension; embeddings run **locally** via MiniLM — no external vector database and no embedding API. The [Analysis Quickstart](./analysis-quickstart.md) brings pgvector up and walks every strategy end to end against a 5,000-record dataset.
+Retrieval is opt-in, and the gate has three parts: build a pgvector adapter and pass it to `initVectorStorage({ adapter })`, hand `vectorStorageEnabled` to the `ToolRegistry`, and spread `ANALYSIS_TOOL_CLASSES` into its `toolClasses` map — [Analysis Memories → Setup](./analysis-memories.md#setup-integrators) shows the wiring end to end. You provide a Postgres database with the `pgvector` extension; embeddings run **locally** via MiniLM — no external vector database and no embedding API. The [Analysis Quickstart](./analysis-quickstart.md) brings pgvector up and walks every strategy end to end against a 5,000-record dataset.
 
 ## Where to go next
 

@@ -16,6 +16,7 @@ The LLM downloads records once into offline storage, stores its own qualitative 
   - [`analysis_store`](#analysis_store)
   - [`analysis_query`](#analysis_query)
   - [`analysis_act`](#analysis_act)
+  - [`analysis_summarize`](#analysis_summarize)
   - [`analysis_clear`](#analysis_clear)
 - [Stratified sampling](#stratified-sampling)
 - [End-to-end workflow](#end-to-end-workflow)
@@ -27,7 +28,7 @@ The LLM downloads records once into offline storage, stores its own qualitative 
 
 ## Data flow
 
-Two tables back the feature. Only one of them stores vectors — the other is plain JSONB. The six tools are stitched together by **the LLM**, which drives the loop: ingest once, then read → reason → store (and optionally `analysis_summarize` to re-summarize without re-fetching), optionally act, then clear when done.
+Three tables back the feature: `analysis_memories`, `ingested_records`, and `ingested_edges`. Two of them store vectors — `analysis_memories` embeds findings and page summaries, and `ingested_records` carries an optional per-record embedding alongside the raw JSONB (`embed_records` defaults to true); `ingested_edges` is the plain relationship graph. The six tools are stitched together by **the LLM**, which drives the loop: ingest once, then read → reason → store (and optionally `analysis_summarize` to re-summarize without re-fetching), optionally act, then clear when done.
 
 <!-- illustration: analysis-memories#life -->
 
@@ -38,12 +39,21 @@ Two tables back the feature. Only one of them stores vectors — the other is pl
 
   ① BOOTSTRAP — runs once at the start of an analysis_id
   ──────────────────────────────────────────────────────
-  analysis_ingest(model, filters)
+  analysis_ingest(model, filters, hop_depth?, embed_records?)
        │  GET /api/<model>?page=N  (auto-paginates up to 50)
        │
+       │  record text (string attributes)
+       │      ═════ EMBED ═════ per record — embed_records, default true
+       │           │   MiniLM-L6-v2 (local, 384-dim)
+       │           ▼
        ├─────────────────────────────────────► ingested_records
-       │                                       (raw rows, JSONB,
-       │                                        no embedding, 1h TTL)
+       │                                       (raw rows, JSONB +
+       │                                        384-dim embedding, 7-day TTL)
+       │
+       │  declared associations, followed hop_depth hops
+       ├─────────────────────────────────────► ingested_edges
+       │                                       (typed src→dst edges,
+       │                                        no vectors, 7-day TTL)
        │
        │  per-page summary text
        │  (distributions, numeric stats, date ranges)
@@ -68,11 +78,26 @@ Two tables back the feature. Only one of them stores vectors — the other is pl
        │       ▼
        │   ingested_records
        │
-       └── semantic
+       ├── path
+       │       │  recursive CTE over typed edges:
+       │       │  from_model/from_id → to_model/to_id
+       │       │  (max_depth default 4, capped at 6)
+       │       ▼
+       │   ingested_edges
+       │
+       ├── semantic (target: "findings", the default)
+       │       │  ═════ EMBED(query) ═════  →  cosine distance
+       │       ▼
+       │   analysis_memories
+       │   (page summaries + any findings stored so far)
+       │
+       └── semantic (target: "records")
                │  ═════ EMBED(query) ═════  →  cosine distance
+               │  over per-record embeddings, hybrid with "where"
+               │  in one SQL statement; ensureRecordEmbeddings
+               │  back-fills missing embeddings first
                ▼
-           analysis_memories
-           (page summaries + any findings stored so far)
+           ingested_records
 
 
   ③ WRITE — LLM commits insights it formed in step ②
@@ -124,14 +149,15 @@ Two tables back the feature. Only one of them stores vectors — the other is pl
   ─────────────────────────────────────────────────
   analysis_clear(analysis_id)
        ├── DELETE FROM ingested_records  WHERE analysis_id = ?
+       ├── DELETE FROM ingested_edges    WHERE analysis_id = ?
        └── DELETE FROM analysis_memories WHERE analysis_id = ?
 ```
 
-**Where the embed boundary actually sits.** Embedding happens at exactly three points, all crossing the `═══ EMBED ═══` line: ① the page-summary side-effect of `analysis_ingest`, ③ every `analysis_store` finding, and ② the _query string_ in `semantic` mode (not the data being searched — that was already embedded on write). Raw API rows never touch the embedder.
+**Where the embed boundary actually sits.** Embedding happens at exactly five points, all crossing the `═══ EMBED ═══` line: ① the per-record embeddings written at ingest time (`embed_records`, default true), ① the page-summary side-effect of `analysis_ingest`, ③ every `analysis_store` finding, ② the _query string_ in `semantic` mode (not the memories or records being searched — those were already embedded on write), and ② the `ensureRecordEmbeddings` back-fill that fills embedding gaps before a `target: "records"` ranking or cluster stratifier runs.
 
-This is why aggregate/filter/sample queries are cheap and deterministic SQL, while semantic queries pay for a single query-side embed and rank rows by cosine distance.
+This is why aggregate/filter/sample/path queries are cheap and deterministic SQL, while semantic queries pay for a single query-side embed and rank rows by cosine distance.
 
-> **Maintenance note:** keep this diagram in sync with the code. If a future change adds a new write path (e.g. embedding raw rows, a third table, a new tool, or removing the page-summary side-effect), update the diagram in the same PR — the value of a high-level picture collapses the moment it stops matching the code. The authoritative sources are `analysis-ingest-tool.ts`, `analysis-store-tool.ts`, `analysis-query-tool.ts`, `analysis-act-tool.ts`, `analysis-clear-tool.ts`, and the two pgvector backend files listed under [File reference](#file-reference).
+> **Maintenance note:** keep this diagram in sync with the code. If a future change adds a new write path (e.g. a fourth table, a new tool, or removing the page-summary side-effect), update the diagram in the same PR — the value of a high-level picture collapses the moment it stops matching the code. The authoritative sources are `analysis-ingest-tool.ts`, `analysis-store-tool.ts`, `analysis-query-tool.ts`, `analysis-act-tool.ts`, `analysis-clear-tool.ts`, and the three pgvector backend files (`analysis-memories.ts`, `ingested-records.ts`, `ingested-edges.ts`) listed under [File reference](#file-reference).
 
 ---
 
@@ -165,11 +191,11 @@ The dividing line: if you need the raw data **in context**, use the data tools. 
 | Variable | Required | Notes |
 | --- | --- | --- |
 | `DATABASE_URL` | yes | Standard `postgres://...` connection string. |
-| `ANALYSIS_ENABLED` | yes | Set to `true` to register the four analysis tools. When `false`/unset, they're gated out by `requiresVectorStorage` and won't appear in `tools/list`. |
+| `ANALYSIS_ENABLED` | no | A deployer-side convention, not read anywhere in the framework — the only place it appears is your own migration-filter snippet below (step 2). Tool registration is gated by `initVectorStorage` (step 3) plus `ToolRegistry({ vectorStorageEnabled, toolClasses })` (step 4). |
 
 ### 2. Run migrations
 
-mcp-rune ships migrations as data under the `@mcp-rune/mcp-rune/db/migrations` subpath import. The analysis tables (`analysis_memories`, `ingested_records`) are tagged `feature: 'analysis'` — apply them conditionally:
+mcp-rune ships migrations as data under the `@mcp-rune/mcp-rune/db/migrations` subpath import. The analysis tables (`analysis_memories`, `ingested_records`, `ingested_edges`) are tagged `feature: 'analysis'` — apply them conditionally:
 
 ```ts file=src/needed.ts
 import { migrations } from '@mcp-rune/mcp-rune/db/migrations'
@@ -203,7 +229,8 @@ vectorStorage.initVectorStorage({
   adapter: createPgvectorAdapter({
     pool, // required — pool lifecycle stays with you; mcp-rune never creates pools
     toolMemoriesRetentionDays: 30, // default: 30 — sweep window for tool_memories
-    ingestedRecordsRetentionDays: 7 // default: 7 — TTL for ingested_records
+    ingestedRecordsRetentionDays: 7, // default: 7 — TTL for ingested_records
+    ingestedEdgesRetentionDays: 7 // default: matches ingestedRecordsRetentionDays — TTL for ingested_edges
   }),
   serviceName: 'my-mcp-server',
   version: '1.0.0',
@@ -220,7 +247,8 @@ vectorStorage.initVectorStorage({
   adapter: createPgvectorAdapter({
     pool, // required — pool lifecycle stays with you; mcp-rune never creates pools
     toolMemoriesRetentionDays: 30, // default: 30 — sweep window for tool_memories
-    ingestedRecordsRetentionDays: 7 // default: 7 — TTL for ingested_records
+    ingestedRecordsRetentionDays: 7, // default: 7 — TTL for ingested_records
+    ingestedEdgesRetentionDays: 7 // default: matches ingestedRecordsRetentionDays — TTL for ingested_edges
   }),
   serviceName: 'my-mcp-server',
   version: '1.0.0',
@@ -228,11 +256,47 @@ vectorStorage.initVectorStorage({
 })
 ```
 
-If `options.adapter` is omitted, vector storage stays disabled and the six analysis tools simply won't show up in the tool list. There's no error path — the gate is silent by design.
+If `options.adapter` is omitted, vector storage stays disabled — `initVectorStorage` returns `false` and every storage call becomes a no-op. There's no error path; the gate is silent by design. A live adapter is **necessary but not sufficient** for the tools to appear: the registry wiring in the next step is the other half of the gate.
 
 `backgroundCleanupIntervalMs` is opt-in because short-lived processes (test runs, single-shot scripts) don't need it; the boot-time sweep already evicts expired rows on startup. Set it for long-running servers where on-access eviction alone may leave orphaned rows behind.
 
-### 4. Embeddings
+### 4. Wire the registry
+
+Registering the analysis tools takes both halves: spread `ANALYSIS_TOOL_CLASSES` into the `toolClasses` map, and pass `vectorStorageEnabled` so the `requiresVectorStorage` gate can pass. Miss either one and the tools silently stay out of `tools/list`.
+
+```ts file=src/registry.ts
+import { ToolRegistry, DATA_TOOL_CLASSES, ANALYSIS_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
+import { vectorStorage } from '@mcp-rune/mcp-rune/runtime'
+
+const toolRegistry = new ToolRegistry({
+  // Half one: the analysis tool classes must be in the class map.
+  toolClasses: { ...DATA_TOOL_CLASSES, ...ANALYSIS_TOOL_CLASSES },
+  models: MODEL_CLASSES,
+  serverContext: { name: 'My Server', namespace: 'my-server' },
+  createApiClient: (token) => createApiClient(token, { apiUrl }),
+  // Half two: true only when step 3 initialised a live adapter —
+  // tools flagged requiresVectorStorage are filtered out otherwise.
+  vectorStorageEnabled: vectorStorage.isVectorStorageEnabled()
+})
+```
+
+```js file=src/registry.js
+import { ToolRegistry, DATA_TOOL_CLASSES, ANALYSIS_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
+import { vectorStorage } from '@mcp-rune/mcp-rune/runtime'
+
+const toolRegistry = new ToolRegistry({
+  // Half one: the analysis tool classes must be in the class map.
+  toolClasses: { ...DATA_TOOL_CLASSES, ...ANALYSIS_TOOL_CLASSES },
+  models: MODEL_CLASSES,
+  serverContext: { name: 'My Server', namespace: 'my-server' },
+  createApiClient: (token) => createApiClient(token, { apiUrl }),
+  // Half two: true only when step 3 initialised a live adapter —
+  // tools flagged requiresVectorStorage are filtered out otherwise.
+  vectorStorageEnabled: vectorStorage.isVectorStorageEnabled()
+})
+```
+
+### 5. Embeddings
 
 Embeddings run **locally** via `@huggingface/transformers` using `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions, quantised, lazy-loaded on first use). No API keys, no outbound network calls. The first `analysis_store` or semantic `analysis_query` in a fresh process pays a one-time model warm-up cost.
 
@@ -265,7 +329,11 @@ Downloads records from the model's API and stores them in `ingested_records` as 
 | `ingest_all` | When `true`, auto-paginates up to **50 pages**, reporting progress page-by-page. |
 | `resume` | With `ingest_all`, skips already-stored pages by counting existing rows and continuing from the next page. |
 | `parent_model` / `child_resource` / `parent_ids` | Nested mode. `parent_ids` is capped at 25; if omitted, auto-resolved from previously ingested records of `parent_model` in the same `analysis_id`. Nested fetches run with a concurrency cap of 5. |
+| `hop_depth` | Follow declared associations this many hops deep, ingesting the connected records (and their typed edges into `ingested_edges`) under the same `analysis_id`. Default 0 — extract edges from root records only, no follow-up fetches. Max 3. |
+| `embed_records` | Embed each ingested record (384-dim MiniLM) at write time so `semantic target: "records"`, cluster stratification, and `semantic-cluster` summaries work without a back-fill round-trip. **Default `true`.** Set `false` for large datasets where ingest latency matters; `ensureRecordEmbeddings` back-fills lazily when needed. |
 | `user_id` | Service-account impersonation. |
+
+**Multi-model sessions.** With `hop_depth ≥ 1`, one session holds records of several models — the session is a graph, not a table ([ADR 0013](../../architecture/decisions/0013-sessions-are-graphs-analyses-are-per-model.md)). `describeAnalysisSession` reports the shape as `{ models: [{ model, count }], totalRecords }`, and shape-sensitive queries (`aggregate`/`filter`/`sample`) must scope to one model at a time.
 
 **Side effects beyond storing records:** every successful page also produces a **page summary finding** generated by one or more **summary strategies** (default: `distribution` — field distributions for low-cardinality fields, numeric min/max/avg/median, and date ranges). Each strategy writes one row with category `page_summary:<strategy>` (e.g. `page_summary:distribution`) and `metadata.strategy: <strategy-name>`, immediately searchable via `analysis_query mode: "semantic"`.
 
@@ -291,15 +359,19 @@ Stores LLM-generated qualitative findings — patterns, anomalies, conclusions �
 
 ### `analysis_query`
 
-Single unified tool with five modes. Mode is the only required discriminator beyond `analysis_id`.
+Single unified tool with six modes. Mode is the only required discriminator beyond `analysis_id`.
 
 | Mode | Required params | Returns | Use for |
 | --- | --- | --- | --- |
 | `describe` | — | Markdown table of fields, types, query syntax examples derived from the model's `attributes` config | Discovering shape before querying. |
-| `semantic` | `query` | Findings + page summaries ranked by cosine similarity. Defaults: `top_k=50`, threshold 0.5. Filter by `category` to scope. | Recalling stored insights; searching page summaries by meaning. |
+| `semantic` (`target: "findings"`, the default) | `query` | Findings + page summaries ranked by cosine similarity. Defaults: `top_k=50`, threshold 0.5. Filter by `category` to scope. | Recalling stored insights; searching page summaries by meaning. |
+| `semantic` (`target: "records"`) | `query` | Ingested records ranked by cosine over their per-record embeddings — hybrid with `where` in one SQL statement; `min_similarity` sets an optional similarity floor (omit for rank-only). Back-fills missing embeddings before ranking. | "Records like X", optionally within a filtered subset. |
 | `aggregate` | `group_by` | `{ value, count }` rows sorted by count desc, formatted as a percentage distribution. | Distribution of a field across the dataset. |
 | `filter` | `where` | Matching `data` rows. Default limit 20, hard cap 200. | Inspecting a specific subset. |
 | `sample` | — (all optional) | Sampled `data` rows. Default 5, hard cap 50. Composes `stratify_by`, `where`, and `proximity`. | Representative spot-checks. |
+| `path` | `from_model`, `from_id`, `to_model`, `to_id` | Shortest typed edge chains between the two records, via recursive CTE over `ingested_edges`. `max_depth` defaults to 4 (capped at 6); `top_k` caps the number of paths returned. | "How is A connected to B?" over a hop-expanded session. |
+
+**Model scoping ([ADR 0013](../../architecture/decisions/0013-sessions-are-graphs-analyses-are-per-model.md)).** The record-scoped modes (`aggregate`, `filter`, `sample`, and `semantic target: "records"`) take a `model` parameter. Single-model sessions resolve it automatically; on a multi-model (hop-expanded) session it's required, and the error names the candidate models with their record counts.
 
 **`where` operator syntax** (used by `filter` mode and as a pre-filter in `sample` mode):
 
@@ -369,7 +441,7 @@ Re-runs one or more **summary strategies** against an already-ingested session, 
 | Field | Notes |
 | --- | --- |
 | `analysis_id` | Required. |
-| `model` | Optional override. Defaults to the session's ingested model (via `describeAnalysisSession`). |
+| `model` | Optional override. Single-model sessions resolve automatically (via `describeAnalysisSession`); multi-model (hop-expanded) sessions require it — the error names the candidate models with their record counts. |
 | `strategy` | One strategy name (enum populated from the registry). Mutually exclusive with `strategies`. |
 | `strategies` | Array of strategy names; each one writes a separate memory. Strategies whose `appliesTo` returns false are silently skipped. |
 | `where` | Optional filter using the `analysis_query mode: filter` operator vocabulary. |
@@ -379,7 +451,7 @@ Use it when you ingested with the default `distribution` strategy and now want a
 
 ### `analysis_clear`
 
-Cascade-deletes both `analysis_memories` and `ingested_records` for the given `analysis_id`. Annotated `destructiveHint: true`. Call it once the synthesis is done.
+Cascade-deletes `analysis_memories`, `ingested_records`, and `ingested_edges` for the given `analysis_id`. Annotated `destructiveHint: true`. Call it once the synthesis is done.
 
 ---
 
@@ -553,8 +625,9 @@ analysis_clear({ analysis_id: "library-audit-2026-05" })
 | `analysis_memories` (ephemeral) | 1 hour from creation | On-access: every `recallMemories` call deletes expired rows first. |
 | `analysis_memories` (persistent) | Never (until explicit clear) | Set with `persistent: true` at store time. |
 | `ingested_records` | 7 days from store (configurable via `ingestedRecordsRetentionDays`) | On-access: every `queryRecords` call deletes expired rows first. Boot-time sweep on init. |
+| `ingested_edges` | Matches `ingested_records` by default (`ingestedEdgesRetentionDays` defaults to the records retention) | On-access eviction + boot-time sweep on init. |
 | `tool_memories` (separate feature) | `retentionDays` from `initVectorStorage` | Boot-time sweep + on-access. |
-| Background sweep (opt-in) | Every `backgroundCleanupIntervalMs` ms | Periodic cleanup across all three tables. Off by default — set the option to enable for long-lived servers. |
+| Background sweep (opt-in) | Every `backgroundCleanupIntervalMs` ms | Periodic cleanup across all four tables. Off by default — set the option to enable for long-lived servers. |
 
 **Practical implications:**
 
@@ -567,12 +640,12 @@ analysis_clear({ analysis_id: "library-audit-2026-05" })
 
 ## Troubleshooting
 
-**The four tools don't appear in `tools/list`.** They're gated by `requiresVectorStorage`. Check:
+**The six tools don't appear in `tools/list`.** They're gated by `requiresVectorStorage`. Check:
 
 1. `DATABASE_URL` is set.
-2. `ANALYSIS_ENABLED=true`.
-3. `initVectorStorage({ adapter: createPgvectorAdapter({ pool }) })` was called at server startup. The init returns `false` and logs a warning when the adapter is missing.
-4. The `analysis_memories` and `ingested_records` tables exist (migrations applied).
+2. `initVectorStorage({ adapter: createPgvectorAdapter({ pool }) })` was called at server startup. The init returns `false` and logs a warning when the adapter is missing.
+3. The `ToolRegistry` received `vectorStorageEnabled: vectorStorage.isVectorStorageEnabled()` and has `ANALYSIS_TOOL_CLASSES` spread into `toolClasses` (see [Setup step 4](#4-wire-the-registry)).
+4. The `analysis_memories`, `ingested_records`, and `ingested_edges` tables exist (migrations applied).
 
 **`analysis_ingest` reports duplicate-looking counts after a retry.** Resolved in commit c1cc813 — the table now has a partial unique index and inserts use `ON CONFLICT DO UPDATE`. If you're seeing it, confirm your migrations are up to date (the unique index ships in the relevant migration).
 
@@ -592,16 +665,22 @@ analysis_clear({ analysis_id: "library-audit-2026-05" })
 | --- | --- |
 | `src/mcp/tools/analysis/analysis-ingest-tool.ts` | `analysis_ingest` tool |
 | `src/mcp/tools/analysis/analysis-store-tool.ts` | `analysis_store` tool |
-| `src/mcp/tools/analysis/analysis-query-tool.ts` | `analysis_query` tool (all five modes) |
+| `src/mcp/tools/analysis/analysis-query-tool.ts` | `analysis_query` tool (all six modes) |
 | `src/mcp/tools/analysis/analysis-act-tool.ts` | `analysis_act` tool (server-side ID resolution + batched mutation) |
 | `src/mcp/tools/analysis/analysis-summarize-tool.ts` | `analysis_summarize` tool (re-runs strategies against stored records, no refetch) |
 | `src/mcp/tools/analysis/analysis-clear-tool.ts` | `analysis_clear` tool |
 | `src/mcp/tools/analysis/base-analysis-tool.ts` | Category binding (`ANALYSIS`, `requiresVectorStorage`) |
-| `src/mcp/analysis-layer/summary-strategies/` | Strategy interface + 5 built-ins (`distribution`, `coverage`, `anomaly`, `temporal`, `entity-extraction`) + registry |
+| `src/mcp/tools/analysis/stratifier-validator.ts` | Zod schemas + concept resolution for the sample-mode `stratifiers` parameter |
+| `src/mcp/analysis-layer/analysis-layer.ts` | Per-model-bound seam for analysis-domain operations (summary dispatch, edge projection) |
+| `src/mcp/analysis-layer/edge-extraction.ts` | Projects a record into typed edges + embedding text, driven by `static associations`/`attributes` |
+| `src/mcp/analysis-layer/multi-hop-fetch.ts` | BFS walk of declared `belongsTo` associations for hop-expanded ingestion |
+| `src/mcp/analysis-layer/graph-stratifiers.ts` | CTE builders for the concept / edge / cluster sample stratifiers |
+| `src/mcp/analysis-layer/summary-strategies/` | Strategy interface + 9 built-ins (5 field-level + 4 GraphRAG-aware) + registry |
 | `src/runtime/vector-storage.ts` | Vendor-agnostic facade — `initVectorStorage`, `isVectorStorageEnabled`, all store/query/clear entry points |
 | `src/runtime/vendor/pgvector/index.ts` | Pool injection, cleanup-on-boot |
 | `src/runtime/vendor/pgvector/analysis-memories.ts` | Findings table SQL (store, recall, clear, eviction) |
-| `src/runtime/vendor/pgvector/ingested-records.ts` | Raw-data table SQL (store, aggregate/filter/sample, stratification) |
+| `src/runtime/vendor/pgvector/ingested-records.ts` | Raw-data table SQL (store, aggregate/filter/sample, semantic record ranking, stratification) |
+| `src/runtime/vendor/pgvector/ingested-edges.ts` | Edge table SQL (store, path-mode recursive CTE, eviction) |
 | `src/runtime/embeddings.ts` | Local `all-MiniLM-L6-v2` embeddings |
 | `src/db/migrations.ts` | Migration data (`feature: 'analysis'` for these tables) |
 

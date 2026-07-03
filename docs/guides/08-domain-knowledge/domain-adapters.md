@@ -30,7 +30,7 @@ const domainRegistry = new DomainRegistry({
 - Domain datasets are typically small (~20–200 items). MiniLM cosine similarity over 200 items takes microseconds.
 - Items are authored code — they benefit from TypeScript types, git history, and refactoring tools.
 - No infrastructure dependency: the server starts without a database.
-- Semantic search is built in via `EmbeddingSearch` (same MiniLM model used by the analysis layer).
+- Substring search works out of the box (`SubstringSearch` is the default strategy); the embedding strategy (`EmbeddingSearch`, same MiniLM model used by the analysis layer) is enabled per-registry via `initSearch('embedding')`.
 
 ## Multiple modules
 

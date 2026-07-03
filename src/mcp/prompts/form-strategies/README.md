@@ -86,7 +86,7 @@ get_prompt_guide → LLM guides → validate_form → create_model
 **Flow:**
 
 ```
-get_prompt_guide → [validate_section]* → validate_form → get_form_progress → create_model
+get_prompt_guide → [validate_form(section:)]* → validate_form → get_form_summary → create_model
 ```
 
 **Supported Operations:**
@@ -136,12 +136,11 @@ const strategy = getFormStrategy(strategyType)
 
 ### MCP Tools and Form-Strategies
 
-| MCP Tool            | Stateless     | Hybrid          | Stateful                   |
-| ------------------- | ------------- | --------------- | -------------------------- |
-| `get_prompt_guide`  | Returns docs  | Returns docs    | Returns docs with sections |
-| `validate_form`     | Not supported | Validates all   | Validates all + progress   |
-| `get_form_progress` | Not supported | Not supported   | Returns section progress   |
-| `get_form_summary`  | Not supported | Returns summary | Returns summary + progress |
+| MCP Tool | Stateless | Hybrid | Stateful |
+| --- | --- | --- | --- |
+| `get_prompt_guide` | Returns docs | Returns docs | Returns docs with sections |
+| `validate_form` | Not supported | Validates all | Validates all + progress (or one section via `section:`) |
+| `get_form_summary` | Not supported | Returns summary | Returns summary + progress |
 
 The three form-strategy tools live in `src/mcp/tools/form-strategies/` and all inherit from `BaseFormStrategyTool`.
 

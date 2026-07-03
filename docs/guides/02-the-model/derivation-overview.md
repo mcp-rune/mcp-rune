@@ -78,7 +78,7 @@ No template lives in `src/prompts/book-prompt.ts` for this table — it's synthe
  │      enumValues, … }   │    │ Embedding text (analysis layer)     │
  │  static associations   │    │ FK columns + pickers                │
  │    { belongsTo,        │    │ Graph edges (analysis layer)        │
- │      hasMany }         │    │ Validation of referenced records    │
+ │      hasMany }         │    │ Required-FK checks at form time     │
  │  get displayValue()    │    │ Picker labels + summary rendering   │
  └────────────────────────┘    └────────────────────────────────────┘
 ```
@@ -89,7 +89,7 @@ Derivation covers the _uniform_ parts. The places where you reach back in and wr
 
 - **Custom kinds** — when `'string:isbn'` needs more than what the built-in `string` kind does. See [Attributes and kinds](./attributes-and-kinds.md).
 - **Prompt content** — the actual `promptContent` getter on your `Prompt` class. The framework provides `PromptContentBuilder` as a fluent helper, but you decide what goes into the guide text. See [Prompt creation](../03-the-prompt/prompt-creation.md).
-- **Custom tools** — anything beyond CRUD. The 8 polymorphic tools cover the data-plane uniformly; bespoke verbs (cancel a subscription, recompute a score) are `BaseTool` subclasses you write. See [Tool creation](../04-tools/tool-creation.md).
+- **Custom tools** — anything beyond CRUD. The nine polymorphic tools cover the data-plane uniformly; bespoke verbs (cancel a subscription, recompute a score) are `BaseTool` subclasses you write. See [Tool creation](../04-tools/tool-creation.md).
 - **Custom apps** — when the default 7 apps don't fit your UX. See [Custom app](../10-extensions/custom-app.md).
 - **Domain knowledge** — concepts, business rules, workflows. The framework doesn't synthesize these from your model — they're a separate declaration set. See [Domain knowledge](../08-domain-knowledge/domain-knowledge.md).
 

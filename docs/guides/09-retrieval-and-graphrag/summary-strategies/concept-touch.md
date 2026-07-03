@@ -123,7 +123,7 @@ The top finding identifies the books that fail the `catalogue` concept (missing 
 analysis_query({
   mode: "sample", analysis_id: "tour-graph", sample_size: 5,
   stratifiers: [{ kind: "concept", concept: "catalogue" }],
-  sample_model: "book"
+  model: "book"
 })
 ```
 

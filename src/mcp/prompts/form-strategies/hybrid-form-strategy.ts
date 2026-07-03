@@ -49,7 +49,6 @@
  * | `get_prompt_guide`  | Returns `promptContent`                                             |
  * | `validate_form`     | Validates all fields; returns errors + computed + `ready_to_submit` |
  * | `get_form_summary`  | Human (markdown) + technical (payload) via the injected renderer    |
- * | `get_form_progress` | Not supported                                                       |
  *
  * The LLM is expected to call `validate_form` exactly once after gathering
  * fields, before calling `create_model`. The prompt's `promptContent` must

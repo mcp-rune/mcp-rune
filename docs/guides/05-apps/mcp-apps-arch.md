@@ -1,4 +1,4 @@
-> **Customization:** none — this chapter is the wiring deep-dive (sandbox, channels, schema generators, build). The deployer-facing seams are [`AppRegistry({ apps, ... })`](./mcp-apps.md) for registering custom apps and [`BaseAppForm`](./model-form.md) for tuning the generic form. Architecture below is what runs underneath; you cannot replace it.
+> **Customization:** none — this chapter is the wiring deep-dive (sandbox, channels, schema generators, build). The deployer-facing seams are [`createDefaultAppRegistry({ modelClasses, … })`](./mcp-apps.md) for assembling the default apps (plus `AppRegistry.registerApp` for custom ones) and [`BaseAppForm`](./model-form.md) for tuning the generic form. Architecture below is what runs underneath; you cannot replace it.
 
 # Apps architecture
 
@@ -18,10 +18,10 @@ Unlike traditional web apps, MCP Apps have no server of their own. They are **si
 
 Every MCP App is composed of two MCP primitives:
 
-| Primitive    | Purpose                           | Example                       |
-| ------------ | --------------------------------- | ----------------------------- |
-| **Tool**     | LLM calls this to launch/interact | `new_model_app`               |
-| **Resource** | Client fetches HTML from this URI | `ui://engineer/new-model-app` |
+| Primitive    | Purpose                           | Example                        |
+| ------------ | --------------------------------- | ------------------------------ |
+| **Tool**     | LLM calls this to launch/interact | `new_model_app`                |
+| **Resource** | Client fetches HTML from this URI | `ui://bookshelf/new-model-app` |
 
 The tool declares its UI resource via `_meta.ui.resourceUri`. When the LLM calls the tool, the MCP client:
 
@@ -49,8 +49,9 @@ The tool declares its UI resource via `_meta.ui.resourceUri`. When the LLM calls
 │  │    ← onhostcontextchanged (theme, fonts)      │   │
 │  │                                                │   │
 │  │  Outbound tool calls:                          │   │
-│  │    → callServerTool('validate_form', {...})    │   │
 │  │    → callServerTool('create_model', {...})     │   │
+│  │    → callServerTool('update_model', {...})     │   │
+│  │      (422 errors render as inline field errors)│   │
 │  │    → callServerTool('find_model_app', {...})   │   │
 │  └────────────────────────────────────────────────┘   │
 │                                                       │
@@ -58,8 +59,8 @@ The tool declares its UI resource via `_meta.ui.resourceUri`. When the LLM calls
                       ↕ MCP protocol
 ┌─ MCP Server ─────────────────────────────────────────┐
 │                                                       │
-│  AppRegistry                                          │
-│    ├── registerTools(mcpServer, { getAccessToken })   │
+│  AppRegistry (assembled by createDefaultAppRegistry)  │
+│    ├── registerTools(mcpServer, { getAccessToken, … })│
 │    └── registerResources(mcpServer)                   │
 │                                                       │
 │  App Definitions (tool + resource pairs):             │
@@ -72,16 +73,18 @@ The tool declares its UI resource via `_meta.ui.resourceUri`. When the LLM calls
 │    └── view_selection_app  → ui://…/view-selection-app │
 │                                                       │
 │  Schema Generators (pure functions, no API calls):    │
-│    ├── generateFormSchema(Model, Prompt)              │
+│    ├── generateAppFormSchema(bindAppForm(Form, Model))│
 │    ├── generateListSchema(Model)                      │
 │    └── generateDetailSchema(Model, Prompt?)           │
 │                                                       │
 └───────────────────────────────────────────────────────┘
                       ↕ HTTP (Bearer token)
-┌─ Rails API ──────────────────────────────────────────┐
+┌─ Backend REST API ───────────────────────────────────┐
 │  Association options, record CRUD, search endpoints   │
 └───────────────────────────────────────────────────────┘
 ```
+
+There is no separate validation tool: the form submits straight to `create_model` / `update_model`, and server-side validation failures (HTTP 422) come back through the same call and render as inline field errors in the form.
 
 ### Communication Protocol
 
@@ -110,13 +113,15 @@ The `App` class from `@modelcontextprotocol/ext-apps` provides the communication
 
 | App | Tool Name | Resource URI | Auth | Purpose |
 | --- | --- | --- | --- | --- |
-| New Model App | `new_model_app` | `ui://engineer/new-model-app` | Yes | Interactive form to create records |
-| Edit Model App | `edit_model_app` | `ui://engineer/edit-model-app` | Yes | Interactive form to edit records |
-| Find Model App | `find_model_app` | `ui://engineer/find-model-app` | Yes | Browseable table with optional text query + filter popover |
-| Show Model App | `show_model_app` | `ui://engineer/show-model-app` | Yes | Read-only detail cards |
-| Pick Model App | `pick_model_app` | `ui://engineer/pick-model-app` | Yes | Type-ahead picker (single-model or cross-model group) |
-| Multi-Pick App | `multi_pick_model_app` | `ui://engineer/multi-pick-model-app` | Yes | Browse-and-select picker for small/medium model sets |
-| View Selection App | `view_selection_app` | `ui://engineer/view-selection-app` | Yes | Inspect and manage the in-session selection store |
+| New Model App | `new_model_app` | `ui://bookshelf/new-model-app` | Yes | Interactive form to create records |
+| Edit Model App | `edit_model_app` | `ui://bookshelf/edit-model-app` | Yes | Interactive form to edit records |
+| Find Model App | `find_model_app` | `ui://bookshelf/find-model-app` | Yes | Browseable table with optional text query + filter popover |
+| Show Model App | `show_model_app` | `ui://bookshelf/show-model-app` | Yes | Read-only detail cards |
+| Pick Model App | `pick_model_app` | `ui://bookshelf/pick-model-app` | Yes | Type-ahead picker (single-model or cross-model group) |
+| Multi-Pick App | `multi_pick_model_app` | `ui://bookshelf/multi-pick-model-app` | Yes | Browse-and-select picker for small/medium model sets |
+| View Selection App | `view_selection_app` | `ui://bookshelf/view-selection-app` | Yes | Inspect and manage the in-session selection store |
+
+These seven are the default set assembled by `createDefaultAppRegistry` (the `ui://bookshelf/…` namespace comes from its `namespace` option; use `exclude` to trim the list). An eighth factory, `createWorkflowPanelApp`, is opt-in: it returns the `workflow_panel_app` panel plus its `visibility: ['app']` data tool (see [section 15](#15-tool-response-pattern-ui-data-vs-llm-context)).
 
 Note: `new_model_app` and `edit_model_app` each build their own bundle, but both wrap the same shared client module at `src/mcp/apps/shared/model-form/main.js` — the rendered DOM is identical, and the mode (`'create'` vs `'update'`) is set from the server's tool result.
 
@@ -129,14 +134,19 @@ Note: `new_model_app` and `edit_model_app` each build their own bundle, but both
 ```
 User: "Create a book"
   ↓
-LLM calls new_model_app({ model: 'book' })
+LLM calls new_model_app({ model: 'book', mode: 'form' })
   ↓
 Server:
-  1. generateFormSchema(Book, BookPrompt) → { fieldsets, fields }
-  2. resolveAssociationOptions(fields, apiClient) → fetch locations, tags
-  3. PromptClass.getDefaultFormState() → { status: 'unread', ... }
+  0. Mode gate — without mode: 'form' the tool refuses and points the LLM
+     at get_prompt_guide to present creation-mode options first
+  1. bindAppForm(BookForm, Book) → BoundAppForm (fields ⊕ attributes ⊕ associations)
+  2. Association pre-check — unresolved *required* associations short-circuit
+     with { status: 'associations_needed', associations: [...instructions] }
+  3. generateAppFormSchema(boundForm) → { fieldsets, fields }
+  4. Defaults: BookPrompt.getDefaultFormState() (or attribute `default`s) + prefill
+  5. resolveAssociationOptions(schema.fields, dataLayer, defaults) → fetch locations, tags
   ↓
-Returns: { schema, defaults, mode: 'create' }
+Returns: { schema, defaults, mode: 'create', submitMode, hiddenValues?, parentContext? }
   ↓
 App renders dynamic form → User fills → callServerTool('create_model')
 ```
@@ -149,11 +159,11 @@ User: "Edit book abc-123"
 LLM calls edit_model_app({ model: 'book', record_id: 'abc-123' })
   ↓
 Server:
-  1. generateFormSchema(Book, BookPrompt) → { fieldsets, fields }
-  2. resolveAssociationOptions(fields, apiClient) → fetch locations, tags
-  3. apiClient.get('books/abc-123') → existing record as defaults
+  1. bindAppForm(BookForm, Book) → generateAppFormSchema(boundForm) → { fieldsets, fields }
+  2. dataLayer.dispatch('GET', 'books/abc-123') → existing record as defaults
+  3. resolveAssociationOptions(schema.fields, dataLayer, defaults) → fetch locations, tags
   ↓
-Returns: { schema, defaults, mode: 'update', recordId: 'abc-123' }
+Returns: { schema, defaults, mode: 'update', submitMode, recordId: 'abc-123' }
   ↓
 App renders pre-filled form → User edits → callServerTool('update_model')
 ```
@@ -170,7 +180,7 @@ Server (handler):
   2. dataLayer.searchNormalized('book', undefined, filters, { page: 1, perPage: 20 })
      ← single call; the SearchEnabledDataLayer wrapper routes to a search
        endpoint, a list endpoint, or a nested-resource path based on the
-       model's `extensions.search` config — the handler doesn't care
+       model's `extensions['search']` config — the handler doesn't care
   3. getSearchConfig(Book)?.filters → filterDefinitions (drives the popover)
   ↓
 Returns: { schema, records, pagination, activeFilters, filterDefinitions }
@@ -190,8 +200,9 @@ User: "Show book abc-123"
 LLM calls show_model_app({ model: 'book', ids: ['abc-123'] })
   ↓
 Server:
-  1. generateDetailSchema(Book, BookPrompt?) → { fields, fieldsets? }
-  2. apiClient.get('books/abc-123') → record
+  1. generateDetailSchema(Book, BookPrompt?) → { model, title, endpoint, fields }
+  2. dataLayer.dispatch('GET', 'books/abc-123') → record (parallel per id;
+     association IDs batch-resolved to labels)
   ↓
 Returns: { schema, records }
   ↓
@@ -201,19 +212,19 @@ App renders read-only detail card with sections, badges, stars
 #### Inspect Selection
 
 ```
-User: "What do I have selected for titles?"
+User: "What books do I have selected?"
   ↓
-LLM calls view_selection_app({ model: 'title' })
+LLM calls view_selection_app({ model: 'book' })
   ↓
 Server (handler):
-  1. selectionStore.get('title') → { mode: 'ids', ids: [...], total: N }
-  2. dataLayer.searchNormalized('title', undefined, { id: ids }, …) → records
+  1. selectionStore.get('book') → { mode: 'ids', ids: [...], total: N }
+  2. dataLayer.searchNormalized('book', undefined, { id: ids }, …) → records
   ↓
 Returns: { view: 'ids', schema, records, ids, total }
   ↓
 App renders table with per-row × → User clicks ×:
-  → callServerTool('remove_from_selection', { model: 'title', ids: [<id>] })
-  → callServerTool('view_selection_app', { model: 'title' })   // refresh
+  → callServerTool('remove_from_selection', { model: 'book', ids: [<id>] })
+  → callServerTool('view_selection_app', { model: 'book' })   // refresh
 ```
 
 For filter-mode selections (built via the "Select all N results" escalation in `find_model_app`), the app renders the filter chips + a "Materialize as IDs" button that calls `materialize_selection`.
@@ -228,74 +239,79 @@ Schema generators are **pure functions** — no API calls, no side effects. They
 
 | Generator | Input | Output | Used By |
 | --- | --- | --- | --- |
-| `generateFormSchema()` | ModelClass + PromptClass | `{ model, title, fieldsets, fields }` | New/Edit Model App |
+| `generateAppFormSchema()` | `BoundAppForm` from `bindAppForm(FormClass, ModelClass)` | `{ model, title, fieldsets, fields }` | New/Edit Model App |
 | `generateListSchema()` | ModelClass | `{ model, title, columns, searchFields }` | Find Model App, View Selection App |
-| `generateDetailSchema()` | ModelClass + PromptClass? | `{ model, title, fields, fieldsets? }` | Show Model App |
+| `generateDetailSchema()` | ModelClass + PromptClass? | `{ model, title, endpoint, fields }` | Show Model App |
+
+The form generator never receives raw classes: `bindAppForm(FormClass, ModelClass)` merges the form's `fields`/`fieldsets` declarations with the model's attributes and associations once, and every downstream consumer (schema generation, association resolution, iframe rendering) reads the resulting `BoundAppForm`.
 
 ### Single Source of Truth
 
-The schema generators read from two sources:
+The schema generators read from these sources:
 
 | What | Source | Example |
 | --- | --- | --- |
-| Field types, labels | `Model.attributes` | `title: { type: 'string', label: 'Title' }` |
+| Field kinds, labels | `Model.attributes` | `title: { type: 'string', label: 'Title' }` |
 | Enum options | `Model.attributes` | `status: { enumValues: ['unread', 'reading'] }` |
 | Validations | `Model.attributes` | `rating: { validation: { min: 1, max: 5 } }` |
-| Field grouping | `Prompt.fieldGroups` | `identity: { fields: ['title', 'author'] }` |
-| Section layout | `Prompt.sections` | `identity: { title: 'Book Identity' }` |
-| Defaults | `Prompt.getDefaultFormState()` | `{ status: 'unread', formats: [] }` |
+| Which fields render | `AppForm.fields` | `static fields = ['title', 'author', 'status']` |
+| Fieldset layout | `AppForm.fieldsets` | `identity: { title: 'Book Identity', fields: [...] }` |
+| Defaults | `Prompt.getDefaultFormState()`, falling back to attribute `default`s | `{ status: 'unread', formats: [] }` |
 | Associations | `Model.associations` | `belongsTo: { location: { ... } }` |
-| Search filters | `Model.filters` | `{ status: { type: 'enum', ... } }` |
+| Search filters | `extensions['search']` via `searchConfig({ filters })` | `{ status: { type: 'enum', ... } }` |
 
-The Rails API is only used for:
+The backend API is only used for:
 
-1. **Association options** — fetched at form-open time with the user's token
+1. **Association options** — fetched at form-open time through the session-scoped `DataLayer`
 2. **Record data** — fetched for update forms and detail views
 3. **CRUD operations** — create, update, delete via tool calls
-4. **Search queries** — POST to `{endpoint}/search` with filters
+4. **Search queries** — routed by `SearchEnabledDataLayer` to the model's declared search endpoint
 
 ### Form Field Type Mapping
 
-`generateFormSchema()` maps model attribute types to HTML form field types:
+`generateAppFormSchema()` does not hardcode a type table — it calls `resolveInputType(kind, format, opts)` from the kinds registry (`src/mcp/models/kinds/`), so deployer-registered kinds (`AppRegistry({ kinds })`) slot in automatically. The built-in kinds resolve to:
 
-| Model Attribute                | Form Field Type  | HTML Rendered               |
-| ------------------------------ | ---------------- | --------------------------- |
-| `type: 'string'`               | `text`           | `<input type="text">`       |
-| `type: 'text'`                 | `textarea`       | `<textarea>`                |
-| `type: 'integer'` / `'number'` | `number`         | `<input type="number">`     |
-| `type: 'boolean'`              | `checkbox`       | `<input type="checkbox">`   |
-| `type: 'date'`                 | `date`           | `<input type="date">`       |
-| `type: 'enum'`                 | `select`         | `<select>`                  |
-| `format: 'URL'`                | `url`            | `<input type="url">`        |
-| `format: 'base64'`             | `file`           | Skipped in generic form     |
-| `type: 'array'` + `enumValues` | `checkbox_group` | Checkbox list               |
-| `type: 'array'` (no enum)      | `multiselect`    | Checkbox list (association) |
-| Field ending in `_id`          | `select`         | `<select>` (belongsTo)      |
+| Model Attribute | Form Field Type | HTML Rendered |
+| --- | --- | --- |
+| `type: 'string'` | `text` | `<input type="text">` |
+| `type: 'text'` / `'json'` | `textarea` | `<textarea>` |
+| `type: 'integer'` / `'decimal'` | `number` | `<input type="number">` |
+| `type: 'boolean'` | `checkbox` | `<input type="checkbox">` |
+| `type: 'date'` | `date` | `<input type="date">` |
+| `type: 'datetime'` | `datetime-local` | `<input type="datetime-local">` |
+| `type: 'enum'` | `select` | `<select>` (requires `enumValues`) |
+| `format: 'url'` | `url` | `<input type="url">` (format resolves as a kind) |
+| `type: 'base64'` | `text` | Passthrough input — no dedicated widget |
+| any kind + `enumValues` | `select` | `<select>` — enum-driven widening |
+| `type: 'array'` + `enumValues` | `checkbox_group` | Checkbox list |
+| bound belongsTo field | `select` | `<select>`, options fetched at open time |
+| bound hasMany field | `multiselect` | Checkbox list, options fetched at open time |
+
+Association bindings override the base kind, and `enumValues` on any definition widens it to `select` (`checkbox_group` when the kind is `array`) — both rules live in one place (`resolveInputType`). An `enum` attribute without `enumValues` throws; boot validation catches it before any form opens.
 
 ### Association Resolution
 
-Association fields (belongsTo selects, hasMany multiselects) are detected by:
+Association fields (belongsTo selects, hasMany multiselects) are detected during `bindAppForm`, not by name heuristics in the schema generator. The binder inverts the model's API convention: for each `belongsTo` / `hasMany` entry it asks `convention.resolveAssociationFields(name, config)` which field names carry that association, then maps those names back to the association — so deployments on non-JSON-API conventions (HAL `_link` fields, nested relations) get correct field typing for free. Only when the model declares no `api.convention` does a JSON-API-shaped fallback apply: `<name>_id` for belongsTo, singularized `<name>_ids` for hasMany.
 
-1. **`_id` suffix** → looks up `Model.associations.belongsTo[fieldWithoutId]`
-2. **`_ids` suffix** → looks up `Model.associations.hasMany[fieldWithoutIds + 's']`
-
-The schema generator marks these fields with `association: { endpoint, labelField }`. The app's `handleToolCall` fetches options from the API separately:
+The schema generator marks bound fields with `association: { endpoint, labelField }` (plus `nested: { parentModel, childEndpoint }` for parent-scoped children). The app's `handleToolCall` fetches options from the API separately:
 
 ```js file=examples/mcp-apps-architecture-01.js
 // In handleToolCall (server-side):
-await resolveAssociationOptions(schema.fields, apiClient)
+await resolveAssociationOptions(schema.fields, dataLayer, defaults)
 
-// Fetches: GET /locations → [{ id: 1, name: 'Office' }, ...]
-// Produces: field.options = [{ value: 1, label: 'Office' }, ...]
+// Fetches: dataLayer.dispatch('GET', 'locations') → [{ id: 1, name: 'Office' }, ...]
+// Produces: field.options = [{ value: '1', label: 'Office' }, ...]
 ```
 
 ```ts file=examples/mcp-apps-architecture-01.ts
 // In handleToolCall (server-side):
-await resolveAssociationOptions(schema.fields, apiClient)
+await resolveAssociationOptions(schema.fields, dataLayer, defaults)
 
-// Fetches: GET /locations → [{ id: 1, name: 'Office' }, ...]
-// Produces: field.options = [{ value: 1, label: 'Office' }, ...]
+// Fetches: dataLayer.dispatch('GET', 'locations') → [{ id: 1, name: 'Office' }, ...]
+// Produces: field.options = [{ value: '1', label: 'Office' }, ...]
 ```
+
+`defaults` matters for the nested case: a child scoped under a parent (e.g. a `category` under a `theme`) resolves its options from `themes/<theme_id>/categories`, and the parent id comes from the defaults/prefill bag.
 
 ---
 
@@ -306,44 +322,68 @@ The `AppRegistry` class manages app registrations on the MCP server. It bridges 
 ### Registration Flow
 
 ```
-createAppRegistry({ apiUrl })
+createDefaultAppRegistry({ modelClasses, namespace, ... })
   ↓
-Creates app definitions (factories return plain objects)
+Synthesizes missing form classes, then builds the seven default
+app definitions (factories return plain objects)
   ↓
-new AppRegistry(apps, { apiUrl })
+new AppRegistry(apps, { models, apiUrl, createApiClient, themeOverrides, kinds, ... })
   ↓
-registry.registerTools(mcpServer, { getAccessToken })
+Boot validation: validateRegistries over models + resolved form classes
+(explicit and synthesized) + prompt classes — validate: 'throw' | 'warn' | 'off'
+  ↓
+registry.registerTools(mcpServer, { getAccessToken, selectionStore, formDataStore })
   → For each app: registerAppTool(mcpServer, toolName, metadata, handler)
-  → handler wraps handleToolCall with auth context
+  → handler wraps handleToolCall with layer context (dataLayer, modelLayer, …)
   ↓
 registry.registerResources(mcpServer)
   → For each unique resourceUri: registerAppResource(mcpServer, ...)
-  → Resource callback returns cached HTML via getHtml()
+  → Resource callback returns cached HTML via getHtml(), with theme/kind injection
 ```
+
+Boot validation runs automatically inside `createDefaultAppRegistry` — it is the composition root that actually holds the form declarations, so it validates them itself rather than deferring to `createServer` (see [ADR 0012](../../architecture/decisions/0012-boot-validation-runs-automatically.md)). Declaration errors (unknown kind, form field that doesn't exist on the model, enum without values) fail at boot with a formatted report instead of surfacing as request-time errors; `validate: 'warn'` is the migration hatch, `'off'` skips.
 
 ### Authentication Integration
 
-Apps declaring `needsAuth: true` receive an authenticated API client:
+Apps declaring `needsAuth: true` receive an authenticated, search-enabled `DataLayer` — never the raw API client:
 
 ```js file=src/token.js
 // AppRegistry.registerTools():
-if (app.needsAuth && getAccessToken && this._apiUrl) {
+if (app.needsAuth && getAccessToken && this._apiUrl && this._createApiClient) {
   const token = await getAccessToken()
-  context.apiClient = createApiClient(token, { apiUrl: this._apiUrl })
+  const apiClient = this._createApiClient(token, { apiUrl: this._apiUrl })
+  const baseDataLayer = this._dataLayerFactory({
+    apiClient,
+    models,
+    namespace,
+    defaultConvention,
+    logger
+  })
+  context.dataLayer = withSearchEnabledDataLayer(baseDataLayer, { searchGroups, defaultShaper })
+  context.analysisLayer = createAnalysisLayerFactory(models, context.dataLayer)
 }
 return app.handleToolCall(args, context)
 ```
 
 ```ts file=src/token.ts
 // AppRegistry.registerTools():
-if (app.needsAuth && getAccessToken && this._apiUrl) {
+if (app.needsAuth && getAccessToken && this._apiUrl && this._createApiClient) {
   const token = await getAccessToken()
-  context.apiClient = createApiClient(token, { apiUrl: this._apiUrl })
+  const apiClient = this._createApiClient(token, { apiUrl: this._apiUrl })
+  const baseDataLayer = this._dataLayerFactory({
+    apiClient,
+    models,
+    namespace,
+    defaultConvention,
+    logger
+  })
+  context.dataLayer = withSearchEnabledDataLayer(baseDataLayer, { searchGroups, defaultShaper })
+  context.analysisLayer = createAnalysisLayerFactory(models, context.dataLayer)
 }
 return app.handleToolCall(args, context)
 ```
 
-The `getAccessToken` function comes from the OAuth2 session — it returns the current user's valid access token (refreshing if needed).
+The `getAccessToken` function comes from the OAuth2 session — it returns the current user's valid access token (refreshing if needed). The gate requires all four of `needsAuth`, `getAccessToken`, `apiUrl`, and `createApiClient`; if any is missing, the handler simply runs without a `dataLayer` in its context. The per-request `apiClient` is wrapped into the `DataLayer` and discarded — the handler context never exposes it, which is how the projection-layer rule is enforced by absence.
 
 ### Resource Deduplication
 
@@ -353,7 +393,7 @@ Multiple tools can share the same HTML resource. While `new_model_app` and `edit
 registerResources(mcpServer) {
   const registered = new Set()
   for (const app of this._apps.values()) {
-    if (registered.has(app.resourceUri)) continue
+    if (!app.resourceUri || registered.has(app.resourceUri)) continue
     registered.add(app.resourceUri)
     // ...register once
   }
@@ -364,64 +404,80 @@ registerResources(mcpServer) {
 registerResources(mcpServer) {
   const registered = new Set()
   for (const app of this._apps.values()) {
-    if (registered.has(app.resourceUri)) continue
+    if (!app.resourceUri || registered.has(app.resourceUri)) continue
     registered.add(app.resourceUri)
     // ...register once
   }
 }
 ```
 
+Apps without a `resourceUri` (data-only tools like `workflow_panel_app_data`) are skipped here — they have a tool surface but no iframe. Each served resource passes through `injectIntoHead()`, which splices the deployment's `themeOverrides` / `headerIcon` style block and kind render hints into the bundled HTML just before `</head>`.
+
 ### Model Configuration
 
-The registry wires models to apps via configuration maps:
+There are no per-app model maps to maintain — `createDefaultAppRegistry` is the single configuration surface, and every default app derives its eligibility from it:
 
 ```js file=src/filters.js
-import { getSearchConfig } from '@mcp-rune/mcp-rune/api-extensions/search'
+import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
 
-const FORM_MODEL_CLASSES = { activity: Activity, book: Book, ... }
-const FORM_PROMPT_CLASSES = { activity: ActivityPrompt, book: BookPrompt, ... }
+const appRegistry = createDefaultAppRegistry({
+  // Required: the models every app serves + the ui:// namespace.
+  modelClasses: { book: Book, location: Location, tag: Tag },
+  namespace: 'bookshelf',
 
-// Browse view excludes models with filters (those go to search view only):
-const LIST_VIEW_MODELS = Object.fromEntries(
-  Object.entries(FORM_MODEL_CLASSES).filter(([, M]) => {
-    const filters = getSearchConfig(M)?.filters
-    return !filters || Object.keys(filters).length === 0
-  })
-)
+  // Optional: per-model form classes. Models without an entry get a
+  // synthesized default form (every prompt-visible attribute, in order).
+  formClasses: { book: BookForm },
 
-// Search view includes only models that declare at least one filter:
-const SEARCH_VIEW_MODELS = Object.fromEntries(
-  Object.entries(FORM_MODEL_CLASSES).filter(([, M]) => {
-    const filters = getSearchConfig(M)?.filters
-    return filters && Object.keys(filters).length > 0
-  })
-)
+  // Optional: per-model prompt classes — supply form defaults.
+  promptClasses: { book: BookPrompt },
+
+  // Optional: trim the surface.
+  exclude: ['multi-pick-model-app'],
+
+  // Forwarded to AppRegistry: apiUrl, createApiClient, dataLayer,
+  // searchGroups, defaultShaper, headerIcon, themeOverrides, kinds.
+
+  // Boot-validation policy: 'throw' (default) | 'warn' | 'off'.
+  validate: 'throw'
+})
 ```
 
 ```ts file=src/filters.ts
-import { getSearchConfig } from '@mcp-rune/mcp-rune/api-extensions/search'
+import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
 
-const FORM_MODEL_CLASSES = { activity: Activity, book: Book, ... }
-const FORM_PROMPT_CLASSES = { activity: ActivityPrompt, book: BookPrompt, ... }
+const appRegistry = createDefaultAppRegistry({
+  // Required: the models every app serves + the ui:// namespace.
+  modelClasses: { book: Book, location: Location, tag: Tag },
+  namespace: 'bookshelf',
 
-// Browse view excludes models with filters (those go to search view only):
-const LIST_VIEW_MODELS = Object.fromEntries(
-  Object.entries(FORM_MODEL_CLASSES).filter(([, M]) => {
-    const filters = getSearchConfig(M)?.filters
-    return !filters || Object.keys(filters).length === 0
-  })
-)
+  // Optional: per-model form classes. Models without an entry get a
+  // synthesized default form (every prompt-visible attribute, in order).
+  formClasses: { book: BookForm },
 
-// Search view includes only models that declare at least one filter:
-const SEARCH_VIEW_MODELS = Object.fromEntries(
-  Object.entries(FORM_MODEL_CLASSES).filter(([, M]) => {
-    const filters = getSearchConfig(M)?.filters
-    return filters && Object.keys(filters).length > 0
-  })
-)
+  // Optional: per-model prompt classes — supply form defaults.
+  promptClasses: { book: BookPrompt },
+
+  // Optional: trim the surface.
+  exclude: ['multi-pick-model-app'],
+
+  // Forwarded to AppRegistry: apiUrl, createApiClient, dataLayer,
+  // searchGroups, defaultShaper, headerIcon, themeOverrides, kinds.
+
+  // Boot-validation policy: 'throw' (default) | 'warn' | 'off'.
+  validate: 'throw'
+})
 ```
 
-> The `getSearchConfig` reader reaches into `M.extensions['search']` (v0.48.0+). Filter declarations live there via the `searchConfig({...})` typed helper from the search extension.
+Each app then applies its own eligibility gate:
+
+| App | Eligibility gate |
+| --- | --- |
+| `new_model_app` / `edit_model_app` | Model has a form class — an explicit `formClasses` entry, or a synthesized default with at least one field. Models that would synthesize to zero fields are silently ineligible. |
+| `find_model_app` | Every model in `modelClasses`. The text `query` is honored only for models whose search config declares `query`; the Filters popover comes from `searchConfig({ filters })`. |
+| `pick_model_app` / `multi_pick_model_app` / `show_model_app` / `view_selection_app` | Every model in `modelClasses`. |
+
+> Search declarations live in the model's `extensions['search']` slice via the `searchConfig({...})` typed helper, and `getSearchConfig` (both from `@mcp-rune/mcp-rune/api-extensions/search`) is the single read site.
 
 ---
 
@@ -487,16 +543,18 @@ const ctx = app.getHostContext()
 if (ctx?.theme) applyDocumentTheme(ctx.theme)
 ```
 
+The framework centralizes this bootstrap in `src/mcp/apps/shared/app-init.js`: `initApp(app)` wires `onerror`, `onteardown`, `ontoolcancelled`, and `onhostcontextchanged`, then applies the initial host context (theme, style variables, fonts, safe-area insets) in one call, so per-app entry points don't repeat the handlers above.
+
 ### State Management
 
 Each app maintains minimal client-side state:
 
 | App | State Variables |
 | --- | --- |
-| New/Edit Model | `formSchema`, `currentMode`, `recordId` |
-| List Model App | `listSchema`, `currentRecords`, `currentPage`, `modelName` |
-| Show Model App | `detailSchema`, `record` |
-| Search Model App | `listSchema`, `currentRecords`, `currentPage`, `modelName`, `activeFilters`, `filterDefinitions` |
+| New/Edit model form (`shared/model-form/main.js`) | `formSchema`, `modelName`, `formMode`, `submitMode`, `recordId`, `hiddenValues`, `parentContext` |
+| `find_model_app` | `listSchema`, `currentRecords`, `currentPage`, `currentPagination`, `modelName`, `currentQuery`, `activeFilters`, `filterDefinitions` |
+| `show_model_app` | none — renders directly from each tool result |
+| `view_selection_app` | `currentModel`, `currentSchema`, `currentRecords`, `currentFilters`, `filterDefinitions`, `currentView` (`ids` / `filter` / `summary`), `currentTotal` |
 
 ### Dynamic Rendering
 
@@ -566,19 +624,23 @@ async function fetchPage(page) {
 
 ### Theming
 
-CSS uses custom properties with dark-theme fallback values:
+`src/mcp/apps/shared/base.css` ships one tokenized system with two themes. Light is the default (apps embed in light host surfaces); dark activates via `[data-theme='dark']` on the document root or automatically through `prefers-color-scheme`:
 
 ```css
-:root {
-  --color-text-primary: light-dark(#e0e0e0, #e0e0e0);
-  --color-background-primary: light-dark(#1a1a2e, #1a1a2e);
-  --color-accent: #e94560;
-  --surface: #16213e;
-  --border: #0f3460;
+:root,
+[data-theme='light'] {
+  --app-bg: #ffffff;
+  --surface: #fafafb;
+  --line-2: #dcdce4;
+  --ink: #16161c; /* primary text; --ink-2 … --ink-4 step down */
+  --acc: #6b4fe6; /* violet accent */
+  --acc-2: #5b3fd6;
+  --acc-tint: rgba(124, 92, 255, 0.09);
+  --radius-md: 8px;
 }
 ```
 
-The host overrides these via `applyHostStyleVariables()`, ensuring apps match Claude Desktop's dark mode, COC's custom theme, etc.
+Two override channels stack on top of these tokens. The host pushes its style variables via `applyHostStyleVariables()` at runtime, and the deployment brands every app at serve time through the registry seam: `themeOverrides.cssVariables` writes a `:root { … }` block, `themeOverrides.css` is appended verbatim, and `headerIcon` is sugar for setting the `--header-icon` variable — all injected before `</head>` by `AppRegistry.injectIntoHead()`.
 
 ---
 
@@ -588,74 +650,63 @@ The host overrides these via `applyHostStyleVariables()`, ensuring apps match Cl
 
 Apps are built with Vite and `vite-plugin-singlefile`, which inlines all CSS and JavaScript into a single HTML file. This is required because MCP resources must be self-contained.
 
+This build is framework-contributor-only: deployers never run it. The built HTML ships in the npm package, and deployer-authored custom apps are bundled in the deployer's own repo with whatever tool they like (see [section 10](#10-generic-vs-custom-apps)).
+
 ### Build Configuration
 
+There is no per-app config map. `src/mcp/apps/vite.config.js` maps `BUILD_TARGET` directly to a sibling app directory — every app ships its iframe entry at `<app>/ui/index.html` and bundles to `dist/<app>.html`:
+
 ```js file=src/configs.js
-// src/mcp/apps/vite.config.js
-const configs = {
-  'new-model-app': { root: 'new-model-app/ui', outFile: 'new-model-app.html' },
-  'edit-model-app': { root: 'edit-model-app/ui', outFile: 'edit-model-app.html' },
-  'find-model-app': { root: 'find-model-app/ui', outFile: 'find-model-app.html' },
-  'show-model-app': { root: 'show-model-app/ui', outFile: 'show-model-app.html' },
-  'view-selection-app': { root: 'view-selection-app/ui', outFile: 'view-selection-app.html' },
-  'create-book': { root: 'create-book/ui', outFile: 'create-book.html' }
-}
+// src/mcp/apps/vite.config.js — no per-app config map
+const target = process.env.BUILD_TARGET || 'new-model-app'
+const targetRoot = path.resolve(import.meta.dirname, target, 'ui')
+// fails fast if <target>/ui/index.html does not exist
+const outFile = `${target}.html`
 ```
 
 ```ts file=src/configs.ts
-// src/mcp/apps/vite.config.js
-const configs = {
-  'new-model-app': { root: 'new-model-app/ui', outFile: 'new-model-app.html' },
-  'edit-model-app': { root: 'edit-model-app/ui', outFile: 'edit-model-app.html' },
-  'find-model-app': { root: 'find-model-app/ui', outFile: 'find-model-app.html' },
-  'show-model-app': { root: 'show-model-app/ui', outFile: 'show-model-app.html' },
-  'view-selection-app': { root: 'view-selection-app/ui', outFile: 'view-selection-app.html' },
-  'create-book': { root: 'create-book/ui', outFile: 'create-book.html' }
-}
+// src/mcp/apps/vite.config.js — no per-app config map
+const target = process.env.BUILD_TARGET || 'new-model-app'
+const targetRoot = path.resolve(import.meta.dirname, target, 'ui')
+// fails fast if <target>/ui/index.html does not exist
+const outFile = `${target}.html`
 ```
+
+Adding a new app to the build is a filesystem-only change: drop in `src/mcp/apps/<new-app>/ui/index.html` and it joins.
 
 ### Build Command
 
 ```bash
-npm run build:engineer:apps
+npm run build:all-apps
 ```
 
-This runs sequentially for each target:
+This runs `src/mcp/apps/scripts/build-all.mjs`, which discovers every `src/mcp/apps/<name>/ui/index.html` and runs `BUILD_TARGET=<name> vite build -c src/mcp/apps/vite.config.js` for each (the first build cleans `dist/`, the rest run in parallel with `SKIP_CLEAN=1`). Per-app scripts exist for iterating on a single bundle, e.g. `npm run build:apps:find-model-app`.
 
-```
-BUILD_TARGET=new-model-app vite build
-BUILD_TARGET=edit-model-app vite build
-BUILD_TARGET=find-model-app vite build
-BUILD_TARGET=show-model-app vite build
-BUILD_TARGET=view-selection-app vite build
-BUILD_TARGET=create-book vite build
-```
-
-Output goes to `src/engineer/apps/dist/` (git-tracked).
+Output goes to `src/mcp/apps/dist/<app>.html` (git-tracked); `npm run build:full` copies the bundles into the published `dist/` tree.
 
 ### HTML Caching
 
-At runtime, each app reads its HTML once from disk and caches it:
+At runtime, each app factory gets its `getHtml` from `createHtmlLoader(appName)` (`src/mcp/apps/lib/html-loader.ts`), which reads `dist/<appName>.html` once from disk and caches it:
 
 ```js file=src/get-html.js
-let _cachedHtml = null
-
-function getHtml() {
-  if (!_cachedHtml) {
-    _cachedHtml = fs.readFileSync(HTML_PATH, 'utf-8')
+export function createHtmlLoader(appName) {
+  const htmlPath = path.join(DIST_DIR, `${appName}.html`)
+  let cached = null
+  return () => {
+    if (!cached) cached = fs.readFileSync(htmlPath, 'utf-8')
+    return cached
   }
-  return _cachedHtml
 }
 ```
 
 ```ts file=src/get-html.ts
-let _cachedHtml = null
-
-function getHtml() {
-  if (!_cachedHtml) {
-    _cachedHtml = fs.readFileSync(HTML_PATH, 'utf-8')
+export function createHtmlLoader(appName: string): () => string {
+  const htmlPath = path.join(DIST_DIR, `${appName}.html`)
+  let cached: string | null = null
+  return () => {
+    if (!cached) cached = fs.readFileSync(htmlPath, 'utf-8')
+    return cached
   }
-  return _cachedHtml
 }
 ```
 
@@ -668,29 +719,41 @@ function getHtml() {
 ```
 src/mcp/apps/
 ├── lib/                               # Shared server-side helpers
-│   ├── app-form-schema.ts             # generateFormSchema() — pure function
+│   ├── registry.ts                    # AppRegistry — tools, resources, theme/kind injection
+│   ├── create-default-registry.ts     # createDefaultAppRegistry() — 7 default apps + boot validation
+│   ├── create-model-form-app.ts       # Factory for new_model_app + edit_model_app
+│   ├── bind-app-form.ts               # bindAppForm() — form ⊕ model merge, convention-aware
+│   ├── app-form-schema.ts             # generateAppFormSchema() — pure function
+│   ├── app-form-helpers.ts            # resolveAssociationOptions(), defaults helpers
 │   ├── list-schema.ts                 # generateListSchema() — pure function
 │   ├── detail-schema.ts               # generateDetailSchema() — pure function
-│   ├── form-app-helpers.ts            # Shared form-app server helpers
-│   ├── registry.ts                    # AppRegistry + createAppRegistry()
-│   └── …                              # types, formatters, stores, etc.
+│   ├── base-app-form.ts               # BaseAppForm — deployer form base class
+│   ├── synthesize-form-class.ts       # Default form when formClasses omits a model
+│   ├── html-loader.ts                 # createHtmlLoader() — cached dist/<app>.html reads
+│   ├── selection-store.ts / selection-tools.ts
+│   └── …                              # validators, data stores, formatters, entities
 │
-├── new-model-app/                     # New-record form
-│   ├── index.ts                       # Server factory
-│   └── ui/                            # Iframe entry
+├── new-model-app/                     # New-record form (no index.ts — built by
+│   └── ui/                            #   lib/create-model-form-app.ts)
 │       ├── index.html
-│       ├── app.js                     # Thin shim → shared/model-form/main.js
-│       └── (no per-app CSS — shared)
+│       └── app.js                     # Thin shim → shared/model-form/main.js
 │
-├── edit-model-app/                    # Edit-record form
-│   ├── index.ts
-│   └── ui/                            # Thin shim → shared/model-form/main.js
+├── edit-model-app/                    # Edit-record form (same shim pattern)
+│   └── ui/
 │
 ├── find-model-app/                    # Browseable table + query + filter popover
+│   ├── index.ts                       # Server factory
+│   └── ui/
+│
+├── show-model-app/                    # Record detail cards
 │   ├── index.ts
 │   └── ui/
 │
-├── show-model-app/                    # Record detail
+├── pick-model-app/                    # Type-ahead picker
+│   ├── index.ts
+│   └── ui/
+│
+├── multi-pick-model-app/              # Browse-and-select picker
 │   ├── index.ts
 │   └── ui/
 │
@@ -698,41 +761,54 @@ src/mcp/apps/
 │   ├── index.ts
 │   └── ui/
 │
+├── workflow-panel-app/                # Opt-in workflow launcher (panel + data tool)
+│   ├── index.ts
+│   └── ui/
+│
 ├── shared/                            # Cross-app iframe code
-│   ├── app-init.js
-│   ├── base.css
+│   ├── app-init.js                    # connect + host-context bootstrap
+│   ├── base.css                       # Tokenized light/dark theme
 │   ├── helpers.js
-│   ├── formatters.js / .runtime.js
+│   ├── kind-renderers.ts / .runtime.js
+│   ├── filter-chips.js / filter-popover.js
 │   └── model-form/                    # Shared form UI consumed by new + edit
 │       ├── main.js                    # initModelFormApp() — bulk of form code
 │       └── styles.css
 │
-├── vite.config.js                     # Multi-target build config
+├── scripts/build-all.mjs              # Discovers every <app>/ui/index.html
+├── vite.config.js                     # BUILD_TARGET=<app> → dist/<app>.html
 └── dist/                              # Built single-file HTML (git-tracked)
     ├── new-model-app.html
     ├── edit-model-app.html
     ├── find-model-app.html
     ├── show-model-app.html
-    └── view-selection-app.html
+    ├── pick-model-app.html
+    ├── multi-pick-model-app.html
+    ├── view-selection-app.html
+    └── workflow-panel-app.html
 ```
 
 ---
 
 ## 9. App Definition Contract
 
-Every app (generic or custom) is a plain object with these properties:
+Every app (generic or custom) is a plain object satisfying `AppDefinition` (`src/mcp/apps/lib/registry.ts`). Only `name` and `description` are required:
 
-| Property          | Type       | Required | Description                                   |
-| ----------------- | ---------- | -------- | --------------------------------------------- |
-| `resourceUri`     | `string`   | Yes      | MCP resource URI (e.g., `ui://engineer/...`)  |
-| `toolName`        | `string`   | Yes      | MCP tool name (e.g., `new_model_app`)         |
-| `needsAuth`       | `boolean`  | Yes      | Whether handleToolCall receives apiClient     |
-| `name`            | `string`   | Yes      | Human-readable app name                       |
-| `description`     | `string`   | Yes      | App description for resource listing          |
-| `toolDescription` | `string`   | Yes      | Tool description for LLM                      |
-| `toolInputSchema` | `Object`   | Yes      | Zod schema for tool parameters                |
-| `handleToolCall`  | `Function` | Yes      | `(args, { apiClient? }) → { content: [...] }` |
-| `getHtml`         | `Function` | Yes      | `() → string` — returns single-file HTML      |
+| Property | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | `string` | Yes | Human-readable app name (used when registering the resource) |
+| `description` | `string` | Yes | App description for resource listing |
+| `resourceUri` | `string` | No | MCP resource URI (e.g., `ui://bookshelf/...`); omit for data-only tools with no iframe |
+| `toolName` | `string` | No | MCP tool name (e.g., `new_model_app`); required for `registerApp` and for the tool to register |
+| `needsAuth` | `boolean` | No | When true, the handler context gains `dataLayer` + `analysisLayer` built from the session token |
+| `visibility` | `string[]` | No | `_meta.ui.visibility`; defaults to `['model', 'app']` — `['app']` hides the tool from the LLM |
+| `toolDescription` | `string` | No | Tool description for the LLM |
+| `toolInputSchema` | `Object` | No | Zod raw shape for tool parameters |
+| `annotations` | `Object` | No | Tool annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) |
+| `handleToolCall` | `Function` | No | `(args, context) → Promise<{ content: [...] }>` |
+| `getHtml` | `Function` | No | `() → string` — returns single-file HTML for the resource |
+
+The `context` passed to `handleToolCall` always carries `modelLayer` and `formSubmitMode`, plus `dataLayer` and `analysisLayer` when the auth gate passes, `selectionStore` / `formDataStore` when the server wires them, and any `extraContext` contributed by extensions. It never carries a raw API client.
 
 ---
 
@@ -740,7 +816,7 @@ Every app (generic or custom) is a plain object with these properties:
 
 ### When to Use Generic
 
-The schema-driven generic apps handle any model that has `attributes` and `fieldGroups`/`sections`. Adding a new model requires **zero new HTML** — just a registry entry.
+The schema-driven generic apps handle any model that has `attributes` — the form class is synthesized when you don't supply one. Adding a new model requires **zero new HTML** — just a `createDefaultAppRegistry` entry.
 
 Use generic for:
 
@@ -760,12 +836,13 @@ Build a custom app when:
 
 ### Creating a Custom App
 
-1. Create `src/engineer/apps/my-app.js` (factory function)
-2. Create `src/engineer/apps/my-app-ui/` with `index.html`, `app.js`, `styles.css`
-3. Add build target to `vite.config.js`
-4. Add `BUILD_TARGET=my-app` to build script in `package.json`
-5. Register in `createAppRegistry()` in `index.js`
-6. Build: `npm run build:engineer:apps`
+Custom apps live in the deployer's repo, not the framework's — you bring your own bundle and register it:
+
+1. Build a **single-file HTML bundle** with your own tooling (any bundler works; everything must be inlined — MCP resources are self-contained)
+2. Define a plain `AppDefinition` object: `name`, `description`, `toolName`, `resourceUri: 'ui://bookshelf/my-app'`, `toolInputSchema`, `handleToolCall`, and a `getHtml` that returns your bundle
+3. Register it on the registry returned by `createDefaultAppRegistry`: `appRegistry.registerApp(myApp)`
+
+Framework contributors adding a default app instead drop `src/mcp/apps/<name>/ui/index.html` (plus an `index.ts` factory) into the framework repo — `npm run build:all-apps` discovers it with no vite-config changes.
 
 ---
 
@@ -778,7 +855,7 @@ The search view app works alongside the search tool system:
 ```
 1. LLM calls list_models
    → Response includes filterable_search: { available: true, filter_count: N, hint }
-   → LLM now knows which models support ES-backed filtering
+   → LLM now knows which models support search-backed filtering
 
 2. LLM calls get_filters_guide({ model })        [strategy category, no auth]
    → Returns filter reference: types, enum values, date_range format, examples
@@ -811,11 +888,11 @@ const result = await dataLayer.searchNormalized(model, query, filters, { page, p
 
 The `SearchEnabledDataLayer` decorator (composed automatically by `AppRegistry`) picks the right backend:
 
-| Model shape                         | Routing                                              |
-| ----------------------------------- | ---------------------------------------------------- |
-| Declares `extensions.search.query`  | POST to the model's search endpoint                  |
+| Model shape | Routing |
+| --- | --- |
+| Declares `query` in `extensions['search']` | POST to the model's search endpoint |
 | `api.standalone === false` (nested) | Routed through search to avoid a top-level list call |
-| Plain model, no query, just filters | Plain `listNormalized` — GET on the model endpoint   |
+| Plain model, no query, just filters | Plain `listNormalized` — GET on the model endpoint |
 
 The app handler never branches on model shape; the seam does it.
 
@@ -855,19 +932,22 @@ export class Project extends BaseModel {
 }
 ```
 
-### Step 2: Prompt Configuration
+### Step 2: Form and Prompt Configuration (Optional)
 
-Ensure the prompt has `fieldGroups` and `sections`:
+Both are optional. Without a form class, the registry synthesizes one from the model's prompt-visible attributes; supply a `BaseAppForm` subclass only when you want to control which fields render and how they group. A prompt class contributes form defaults via `getDefaultFormState()` (and detail-view field ordering via `fieldGroups`):
 
 ```js file=src/prompts/project-prompt.js
+import { BaseAppForm } from '@mcp-rune/mcp-rune/apps'
+import { BasePrompt } from '@mcp-rune/mcp-rune/prompts'
+
+export class ProjectForm extends BaseAppForm {
+  static fields = ['name', 'status', 'category_id']
+  static fieldsets = {
+    identity: { title: 'Project Identity', fields: ['name', 'status', 'category_id'] }
+  }
+}
+
 export class ProjectPrompt extends BasePrompt {
-  static strategy = 'hybrid'
-  static fieldGroups = {
-    identity: { fields: ['name', 'status', 'category_id'], context: 'Project Identity' }
-  }
-  static sections = {
-    identity: { title: 'Project Identity', groups: ['identity'], required: true }
-  }
   getDefaultFormState() {
     return { name: '', status: 'planning', category_id: null }
   }
@@ -875,14 +955,17 @@ export class ProjectPrompt extends BasePrompt {
 ```
 
 ```ts file=src/prompts/project-prompt.ts
+import { BaseAppForm } from '@mcp-rune/mcp-rune/apps'
+import { BasePrompt } from '@mcp-rune/mcp-rune/prompts'
+
+export class ProjectForm extends BaseAppForm {
+  static fields = ['name', 'status', 'category_id']
+  static fieldsets = {
+    identity: { title: 'Project Identity', fields: ['name', 'status', 'category_id'] }
+  }
+}
+
 export class ProjectPrompt extends BasePrompt {
-  static strategy = 'hybrid'
-  static fieldGroups = {
-    identity: { fields: ['name', 'status', 'category_id'], context: 'Project Identity' }
-  }
-  static sections = {
-    identity: { title: 'Project Identity', groups: ['identity'], required: true }
-  }
   getDefaultFormState() {
     return { name: '', status: 'planning', category_id: null }
   }
@@ -891,51 +974,59 @@ export class ProjectPrompt extends BasePrompt {
 
 ### Step 3: Register in App Registry
 
-Add entries to the model/prompt maps in `src/engineer/apps/index.js`:
+One `modelClasses` entry in `createDefaultAppRegistry` is the whole registration:
 
 ```js file=examples/mcp-apps-architecture-12.js
-import { Project } from '../models/project.js'
-import { ProjectPrompt } from '../prompts/project_prompt.js'
+import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
 
-const FORM_MODEL_CLASSES = { ..., project: Project }
-const FORM_PROMPT_CLASSES = { ..., project: ProjectPrompt }
-// LIST_VIEW_MODELS and SEARCH_VIEW_MODELS are derived automatically from FORM_MODEL_CLASSES.
-// Models with filters declared via `searchConfig({ filters: ... })` in their `extensions['search']`
-// slice go to the search view; models without go to browse view. The `getSearchConfig` reader
-// from `@mcp-rune/mcp-rune/api-extensions/search` is the single read site.
+import { Project } from '../models/project.js'
+import { ProjectForm, ProjectPrompt } from '../prompts/project-prompt.js'
+
+const appRegistry = createDefaultAppRegistry({
+  modelClasses: { book: Book, project: Project }, // ← the one required entry
+  formClasses: { project: ProjectForm }, // optional — synthesized when omitted
+  promptClasses: { project: ProjectPrompt }, // optional — form defaults
+  namespace: 'bookshelf'
+})
+// find_model_app routing is derived automatically: models with filters declared
+// via `searchConfig({ filters: ... })` in their `extensions['search']` slice get
+// the Filters popover; models declaring `query` honor text search.
 ```
 
 ```ts file=examples/mcp-apps-architecture-12.ts
+import { createDefaultAppRegistry } from '@mcp-rune/mcp-rune/apps'
+
 import { Project } from '../models/project.js'
-import { ProjectPrompt } from '../prompts/project_prompt.js'
+import { ProjectForm, ProjectPrompt } from '../prompts/project-prompt.js'
 
-const FORM_MODEL_CLASSES = { ..., project: Project }
-const FORM_PROMPT_CLASSES = { ..., project: ProjectPrompt }
-// LIST_VIEW_MODELS and SEARCH_VIEW_MODELS are derived automatically from FORM_MODEL_CLASSES.
-// Models with filters declared via `searchConfig({ filters: ... })` in their `extensions['search']`
-// slice go to the search view; models without go to browse view. The `getSearchConfig` reader
-// from `@mcp-rune/mcp-rune/api-extensions/search` is the single read site.
+const appRegistry = createDefaultAppRegistry({
+  modelClasses: { book: Book, project: Project }, // ← the one required entry
+  formClasses: { project: ProjectForm }, // optional — synthesized when omitted
+  promptClasses: { project: ProjectPrompt }, // optional — form defaults
+  namespace: 'bookshelf'
+})
+// find_model_app routing is derived automatically: models with filters declared
+// via `searchConfig({ filters: ... })` in their `extensions['search']` slice get
+// the Filters popover; models declaring `query` honor text search.
 ```
 
-### Step 4: Build
+### Step 4: There Is No Build Step
 
-```bash
-npm run build:engineer:apps
-```
-
-That's it. All five apps (create, update, browse, detail, search) now work with the new model. Zero new HTML.
+That's it — the seven generic apps ship prebuilt in the npm package, so all of them (create, update, find, detail, pickers, selection) now work with the new model. Zero new HTML. Boot validation runs inside `createDefaultAppRegistry`, so a typo'd form field, an unknown attribute kind, or an enum without values fails at server start with a formatted report — not at request time.
 
 ---
 
 ## 13. Dependencies
 
-| Package                          | Version | Purpose                                       |
-| -------------------------------- | ------- | --------------------------------------------- |
-| `@modelcontextprotocol/ext-apps` | ^1.2.0  | MCP Apps protocol (App class, server helpers) |
-| `@modelcontextprotocol/sdk`      | ^1.25.1 | Core MCP protocol (McpServer, types)          |
-| `vite`                           | ^7.3.1  | Build tool for single-file HTML               |
-| `vite-plugin-singlefile`         | ^2.3.0  | Inlines CSS/JS into single HTML               |
-| `zod`                            | ^4.2.1  | Input schema validation                       |
+| Package | Purpose |
+| --- | --- |
+| `@modelcontextprotocol/ext-apps` | MCP Apps protocol (App class, registerAppTool/registerAppResource) |
+| `@modelcontextprotocol/sdk` | Core MCP protocol (McpServer, types) |
+| `vite` | Build tool for single-file HTML (framework build only) |
+| `vite-plugin-singlefile` | Inlines CSS/JS into single HTML (framework build only) |
+| `zod` | Input schema validation |
+
+Exact versions live in the root `package.json` — the table above tracks purpose, not pins.
 
 ---
 
@@ -943,7 +1034,7 @@ That's it. All five apps (create, update, browse, detail, search) now work with 
 
 ### MCP Server as Source of Truth
 
-The MCP server owns all metadata — field types, validations, grouping, labels, filter definitions. The Rails API provides data, not structure. This keeps the MCP server decoupled from the Rails app's internal implementation.
+The MCP server owns all metadata — field kinds, validations, grouping, labels, filter definitions. The backend API provides data, not structure. This keeps the MCP server decoupled from the backend's internal implementation.
 
 ### Schema-Driven Rendering
 
@@ -1014,60 +1105,84 @@ const data = JSON.parse(result.content.find((c) => c.type === 'text').text)
 const data = JSON.parse(result.content.find((c) => c.type === 'text').text)
 ```
 
-#### Strategy B: App-Initiated Data Fetch (display-only tools)
+#### Strategy B: Paired Data Tool (display-only tools)
 
-For tools where the LLM does NOT need the data (e.g., workflow panel, dashboards), return only a summary from the tool and have the app fetch data via `callServerTool`. App-initiated `callServerTool` results do **not** enter the LLM context.
+For tools where the LLM does NOT need the data (e.g., workflow panel, dashboards), the framework pairs two tools: an LLM-visible app tool that returns only a summary, and a `visibility: ['app']` data tool the iframe calls for the full payload. App-initiated `callServerTool` results do **not** enter the LLM context, and the `['app']` visibility keeps the data tool out of the LLM's tool list entirely.
 
-**Server-side** — branch on an internal `action` parameter:
+**Server-side** — `createWorkflowPanelApp` returns the `[panelApp, dataApp]` pair:
 
 ```js file=examples/mcp-apps-architecture-16.js
-handleToolCall(args) {
-  // App-initiated: return full data (invisible to LLM)
-  if (args?.action === 'fetch_data') {
-    return { content: [{ type: 'text', text: JSON.stringify({ items }) }] }
-  }
-  // LLM-initiated: return minimal summary only
-  return {
-    content: [{ type: 'text', text: `Panel displayed with ${items.length} items.` }]
+const panelApp = {
+  toolName: 'workflow_panel_app',
+  resourceUri: `ui://${namespace}/workflow-panel-app`,
+  // LLM-initiated: minimal summary only
+  handleToolCall() {
+    return Promise.resolve({
+      content: [
+        { type: 'text', text: `Workflow panel displayed with ${workflows.length} workflows.` }
+      ]
+    })
+  },
+  getHtml
+}
+
+const dataApp = {
+  toolName: 'workflow_panel_app_data',
+  visibility: ['app'], // never offered to the LLM; no resourceUri — tool only
+  // App-initiated: full data, invisible to the LLM
+  handleToolCall() {
+    return Promise.resolve({
+      content: [{ type: 'text', text: JSON.stringify({ workflows }) }]
+    })
   }
 }
 ```
 
 ```ts file=examples/mcp-apps-architecture-16.ts
-handleToolCall(args) {
-  // App-initiated: return full data (invisible to LLM)
-  if (args?.action === 'fetch_data') {
-    return { content: [{ type: 'text', text: JSON.stringify({ items }) }] }
-  }
-  // LLM-initiated: return minimal summary only
-  return {
-    content: [{ type: 'text', text: `Panel displayed with ${items.length} items.` }]
+const panelApp = {
+  toolName: 'workflow_panel_app',
+  resourceUri: `ui://${namespace}/workflow-panel-app`,
+  // LLM-initiated: minimal summary only
+  handleToolCall() {
+    return Promise.resolve({
+      content: [
+        { type: 'text', text: `Workflow panel displayed with ${workflows.length} workflows.` }
+      ]
+    })
+  },
+  getHtml
+}
+
+const dataApp = {
+  toolName: 'workflow_panel_app_data',
+  visibility: ['app'], // never offered to the LLM; no resourceUri — tool only
+  // App-initiated: full data, invisible to the LLM
+  handleToolCall() {
+    return Promise.resolve({
+      content: [{ type: 'text', text: JSON.stringify({ workflows }) }]
+    })
   }
 }
 ```
 
-**Client-side** — fetch data on tool result:
+**Client-side** — the iframe fetches from the data tool at connect time:
 
 ```js file=src/response.js
-app.ontoolresult = async () => {
-  const response = await app.callServerTool({
-    name: 'my_panel',
-    arguments: { action: 'fetch_data' }
-  })
-  const data = JSON.parse(response.content.find((c) => c.type === 'text').text)
-  renderItems(data.items)
-}
+const response = await app.callServerTool({
+  name: 'workflow_panel_app_data',
+  arguments: {}
+})
+const data = JSON.parse(response.content.find((c) => c.type === 'text').text)
+renderWorkflows(data.workflows)
 ```
 
 ```ts file=src/response.ts
-app.ontoolresult = async () => {
-  const response = await app.callServerTool({
-    name: 'my_panel',
-    arguments: { action: 'fetch_data' }
-  })
-  const data = JSON.parse(response.content.find((c) => c.type === 'text').text)
-  renderItems(data.items)
-}
+const response = await app.callServerTool({
+  name: 'workflow_panel_app_data',
+  arguments: {}
+})
+const data = JSON.parse(response.content.find((c) => c.type === 'text').text)
+renderWorkflows(data.workflows)
 ```
 
 ### Summary Block Guidelines
@@ -1079,8 +1194,8 @@ app.ontoolresult = async () => {
 
 ### Apps by Strategy
 
-| Strategy      | App                  | LLM Context                                 |
-| ------------- | -------------------- | ------------------------------------------- |
-| A (two-block) | `find_model_app`     | JSON + record count + filter/query summary  |
-| A (two-block) | `view_selection_app` | JSON + selection state + management hint    |
-| B (app-fetch) | `workflow_panel`     | Summary only (N workflows, click to launch) |
+| Strategy | App | LLM Context |
+| --- | --- | --- |
+| A (two-block) | `find_model_app` | JSON + record count + filter/query summary |
+| A (two-block) | `view_selection_app` | JSON + selection state + management hint |
+| B (paired data tool) | `workflow_panel_app` | Summary only; data via `workflow_panel_app_data` (`visibility: ['app']`) |
