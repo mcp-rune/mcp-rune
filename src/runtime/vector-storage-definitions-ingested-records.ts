@@ -83,6 +83,22 @@ export interface SessionGraphInfo {
   totalRecordCount: number
 }
 
+export interface SemanticRecordSearchOptions {
+  /** Model scope — same resolution rule as `AggregateQuery.model`. */
+  model?: string
+  /** Maximum hits (default 10, capped at 100). */
+  topK?: number
+  /** Optional JSONB pre-filter — same syntax as `FilterQuery.where`; composed into the same SQL statement as the vector ranking. */
+  where?: Record<string, unknown>
+  /** Cosine-similarity floor. Omitted = rank-only, no threshold. */
+  minSimilarity?: number
+}
+
+export interface SemanticRecordHit {
+  record: Record<string, unknown>
+  similarity: number
+}
+
 export interface DryRunResult {
   matchedCount: number
   sampleIds: string[]
@@ -94,6 +110,11 @@ export interface DryRunResult {
 export interface IngestedRecordsAdapter {
   storeRecords(params: IngestParams): Promise<number>
   queryRecords(analysisId: string, query: IngestedDataQuery): Promise<Record<string, unknown>[]>
+  searchRecordsSemantic(
+    analysisId: string,
+    embedding: ArrayLike<number>,
+    options?: SemanticRecordSearchOptions
+  ): Promise<SemanticRecordHit[]>
   getEmbeddingsForRecords(
     analysisId: string,
     model: string,

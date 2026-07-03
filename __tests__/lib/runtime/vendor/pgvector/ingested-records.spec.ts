@@ -3,6 +3,7 @@ import {
   getRecordIdsFiltered,
   getRecordsForDryRun,
   queryRecords,
+  searchRecordsSemantic,
   storeRecords
 } from '../../../../../src/runtime/vendor/pgvector/ingested-records.js'
 
@@ -500,6 +501,63 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
       ).rejects.toThrow(/At most 3/)
     })
   })
+  describe('searchRecordsSemantic', () => {
+    const vec = [0.1, 0.2, 0.3]
+
+    beforeEach(() => {
+      mockPool.query.mockReset()
+      mockPool.query.mockResolvedValueOnce({ rowCount: 0 })
+      mockPool.query.mockResolvedValueOnce({ rows: [{ model: 'book', total: 3 }] })
+    })
+
+    it('ranks by cosine distance with model scope and embedding guard', async () => {
+      mockPool.query.mockResolvedValueOnce({
+        rows: [{ data: { id: '1', title: 'Clean Code' }, similarity: 0.91 }]
+      })
+      const hits = await searchRecordsSemantic(mockPool as any, 'sess', vec, { topK: 5 })
+      const sql = mockPool.query.mock.calls[2][0] as string
+      const params = mockPool.query.mock.calls[2][1] as unknown[]
+      expect(sql).toContain('model = $2')
+      expect(sql).toContain('embedding IS NOT NULL')
+      expect(sql).toContain('ORDER BY embedding <=> $3')
+      expect(params).toEqual(['sess', 'book', '[0.1,0.2,0.3]', 5])
+      expect(hits).toEqual([{ record: { id: '1', title: 'Clean Code' }, similarity: 0.91 }])
+    })
+
+    it('composes a JSONB where pre-filter into the same statement', async () => {
+      mockPool.query.mockResolvedValueOnce({ rows: [] })
+      await searchRecordsSemantic(mockPool as any, 'sess', vec, {
+        where: { status: 'active' }
+      })
+      const sql = mockPool.query.mock.calls[2][0] as string
+      expect(sql).toContain('data @> $3')
+      expect(sql).toContain('ORDER BY embedding <=> $4')
+    })
+
+    it('applies an optional similarity floor', async () => {
+      mockPool.query.mockResolvedValueOnce({ rows: [] })
+      await searchRecordsSemantic(mockPool as any, 'sess', vec, { minSimilarity: 0.7 })
+      const sql = mockPool.query.mock.calls[2][0] as string
+      const params = mockPool.query.mock.calls[2][1] as unknown[]
+      expect(sql).toContain('1 - (embedding <=> $3) >= $4')
+      expect(params).toContain(0.7)
+    })
+
+    it('inherits the multi-model scoping rule', async () => {
+      mockPool.query.mockReset()
+      mockPool.query.mockResolvedValueOnce({ rowCount: 0 })
+      mockPool.query.mockResolvedValueOnce({
+        rows: [
+          { model: 'book', total: 2 },
+          { model: 'author', total: 1 }
+        ]
+      })
+      await expect(searchRecordsSemantic(mockPool as any, 'sess', vec)).rejects.toThrow(
+        /Multi-model analysis session/
+      )
+    })
+  })
+
   describe('multi-model sessions (ADR 0013)', () => {
     beforeEach(() => {
       mockPool.query.mockReset()

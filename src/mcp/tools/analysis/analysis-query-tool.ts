@@ -7,7 +7,8 @@ import {
   ensureRecordEmbeddings,
   getSessionGraphInfo,
   queryIngestedData,
-  recallAnalysisMemories
+  recallAnalysisMemories,
+  searchIngestedRecords
 } from '#src/runtime/vector-storage.js'
 
 import type { ToolResult } from '../tool-result.js'
@@ -29,7 +30,8 @@ interface AnalysisMemory {
  *
  * Supports five query modes:
  *   - describe: Discover available fields, types, and query syntax
- *   - semantic: Search findings and page summaries by meaning
+ *   - semantic: Search findings/page summaries (target:'findings') or the
+ *     ingested records themselves (target:'records') by meaning
  *   - aggregate: Get counts and distributions by field
  *   - filter: Find specific records matching exact criteria or range conditions
  *   - sample: Get a random sample of records
@@ -43,7 +45,7 @@ export class AnalysisQueryTool extends BaseAnalysisTool {
     return `Query ingested data and stored findings from an analysis session. Supports five modes for different types of reasoning:
 
 - describe: Discover available fields, their types, and query syntax. Call this before querying to understand the data shape and learn which operators are available.
-- semantic: Search findings and page summaries by meaning. Use when asking qualitative questions ("what issues were found?", "any patterns related to missing data?").
+- semantic: Search by meaning. target:'findings' (default) recalls stored findings and page summaries — use for qualitative questions ("what issues were found?"). target:'records' ranks the ingested records themselves by similarity to the query, composable with "where" for hybrid semantic + filter retrieval ("records like X, among status=active").
 - aggregate: Get counts and distributions by field. Use for quantitative questions ("how many records per status?", "what's the distribution of types?").
 - filter: Find specific records matching criteria. Supports exact match and range operators ($gt, $gte, $lt, $lte) for numeric and date fields.
 - sample: Get a sample of records. Supports stratify_by for discrete field stratification, "where" for pre-filtering, and "proximity" for date-windowed sampling with temporal bucket stratification. All three compose freely.
@@ -53,7 +55,7 @@ Typical reasoning flow:
 2. Use aggregate to understand distributions
 3. Use filter (with range operators) to inspect specific subsets
 4. Use sample to spot-check representative records — use proximity to focus around a date
-5. Use semantic to recall your own stored findings or search page summaries`
+5. Use semantic to recall stored findings, or with target:'records' to rank the records themselves by meaning`
   }
 
   override get inputSchema(): Record<string, ZodTypeAny> {
@@ -68,6 +70,20 @@ Typical reasoning flow:
       // semantic mode params
       query: z.string().optional().describe('Semantic search query (required for semantic mode)'),
       category: z.string().optional().describe('Filter by finding category (semantic mode)'),
+      target: z
+        .enum(['findings', 'records'])
+        .optional()
+        .describe(
+          'Semantic-mode target: "findings" (default) searches stored findings and page summaries; ' +
+            '"records" ranks the ingested records themselves by similarity to the query ' +
+            '(composable with "where" and "model").'
+        ),
+      min_similarity: z
+        .number()
+        .optional()
+        .describe(
+          'Cosine-similarity floor for semantic target:"records" (0-1). Omit for rank-only.'
+        ),
       top_k: z.number().optional().describe('Maximum results (semantic mode, default: 50)'),
 
       // aggregate mode params
@@ -136,6 +152,8 @@ Typical reasoning flow:
       mode,
       query,
       category,
+      target,
+      min_similarity,
       top_k,
       group_by,
       where,
@@ -150,6 +168,8 @@ Typical reasoning flow:
       mode: 'describe' | 'semantic' | 'aggregate' | 'filter' | 'sample'
       query?: string
       category?: string
+      target?: 'findings' | 'records'
+      min_similarity?: number
       top_k?: number
       group_by?: string
       where?: Record<string, unknown>
@@ -169,7 +189,9 @@ Typical reasoning flow:
       case 'describe':
         return this._queryDescribe(analysis_id)
       case 'semantic':
-        return this._querySemantic(analysis_id, query, category, top_k)
+        return target === 'records'
+          ? this._querySemanticRecords(analysis_id, query, top_k, where, model, min_similarity)
+          : this._querySemantic(analysis_id, query, category, top_k)
       case 'aggregate':
         return this._queryAggregate(analysis_id, group_by, model)
       case 'filter':
@@ -419,6 +441,63 @@ Typical reasoning flow:
         parts.push(`- ${item.finding}${meta}${sim}`)
       }
       parts.push('')
+    }
+
+    return this.formatResponse(parts.join('\n'))
+  }
+
+  /**
+   * Semantic ranking over the session's record embeddings (target:"records").
+   * Backfills missing embeddings for the scoped model first (same policy as
+   * the cluster stratifier), then ranks by cosine similarity — hybrid with
+   * the JSONB "where" pre-filter in one statement.
+   */
+  private async _querySemanticRecords(
+    analysisId: string,
+    query?: string,
+    topK?: number,
+    where?: Record<string, unknown>,
+    model?: string,
+    minSimilarity?: number
+  ): Promise<ToolResult> {
+    if (!query) {
+      return this.formatResponse(
+        'Please provide a "query" parameter for semantic mode (e.g., "books about distributed systems").'
+      )
+    }
+
+    // Backfill embeddings when the scope is resolvable here; a multi-model
+    // session without an explicit model errors below with the candidate list.
+    const scopedModel = model ?? (await this._resolveSessionModel(analysisId))
+    if (scopedModel) {
+      await ensureRecordEmbeddings(analysisId, scopedModel)
+    }
+
+    const hits = await searchIngestedRecords(analysisId, query, {
+      model,
+      topK,
+      where,
+      minSimilarity
+    })
+
+    if (hits.length === 0) {
+      return this.formatResponse(
+        `No records match "${query}"${where ? ` with filter ${JSON.stringify(where)}` : ''} in analysis "${analysisId}". ` +
+          'Records without embeddings are invisible to semantic ranking — ingest with embed_records or re-run this query to back-fill more.'
+      )
+    }
+
+    const parts: string[] = [`Top ${hits.length} record(s) by similarity to "${query}":\n`]
+    for (const hit of hits) {
+      parts.push(`- [${(hit.similarity * 100).toFixed(1)}%] ${JSON.stringify(hit.record)}`)
+    }
+
+    const graphInfo = await getSessionGraphInfo(analysisId)
+    if (graphInfo.embeddedRecordCount < graphInfo.totalRecordCount) {
+      parts.push(
+        `\nEmbedding coverage: ${graphInfo.embeddedRecordCount}/${graphInfo.totalRecordCount} — ` +
+          'unembedded records are invisible to this ranking (each query back-fills up to 500 more).'
+      )
     }
 
     return this.formatResponse(parts.join('\n'))

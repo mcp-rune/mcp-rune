@@ -4,6 +4,8 @@ import { embedBatch } from './embeddings.js'
 import type {
   IngestedDataQuery,
   RecordEmbedding,
+  SemanticRecordHit,
+  SemanticRecordSearchOptions,
   SessionDescriptor,
   SessionGraphInfo
 } from './vector-storage-definitions-ingested-records.js'
@@ -63,6 +65,23 @@ async function _embedRecordBatch(
     }
   }
   return out
+}
+
+/**
+ * Semantic search over the session's record embeddings: embeds the query
+ * text through the local pipeline, then ranks records by cosine similarity —
+ * composable with a JSONB `where` pre-filter and the `model` scope.
+ */
+export async function searchIngestedRecords(
+  analysisId: string,
+  query: string,
+  options: SemanticRecordSearchOptions = {}
+): Promise<SemanticRecordHit[]> {
+  const adapter = getAdapter()
+  if (!adapter) return []
+  const [embedding] = await embedBatch([query])
+  if (!embedding) return []
+  return adapter.ingestedRecords.searchRecordsSemantic(analysisId, embedding, options)
 }
 
 /** Query ingested records (aggregate, filter, or sample) */
