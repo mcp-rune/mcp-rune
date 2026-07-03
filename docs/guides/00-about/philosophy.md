@@ -81,7 +81,7 @@ Tools, apps, prompts, and api-extensions reach the rest of the framework through
 ```
 
 - **`DataLayer`** — per-authenticated-request backend I/O. Tools and apps call `this.dataLayer.find()`, `.list()`, `.searchNormalized()`, `.dispatch()`. Built-in implementations: in-memory stub, `ModelService` (HTTP via `ApiClient`), `SearchEnabledDataLayer` wrapper.
-- **`ModelLayer`** — per-model-bound, synchronous reads against the model's static config. Surface: `kindFor(attr)`, `resolveDerivedFields(records)`, `validFieldNames()`, `promptSchema()`, `checkRequired(params)`. Constructed via `modelLayer(name)`; no I/O, no DB.
+- **`ModelLayer`** — per-model-bound, synchronous reads against the model's static config. Surface: `resolveDerivedFields(records)`. Constructed via `modelLayer(name)`; no I/O, no DB. Kind descriptors are shared vocabulary read directly from `src/mcp/models/kinds/` (ADR 0009), not a layer method.
 - **`AnalysisLayer`** — per-model-bound, per-request analysis projections that carry the authenticated `DataLayer` for any I/O they need. Surface today: `extractEdges(record)`, `buildEmbeddingText(record)`. Designed to host `walkHops`, `summarize`, `buildStratifier` next.
 
 Projection-layer code never imports the underlying helpers (`ModelService`, `ApiClient`, `resolveDerivedFields`, `extractEdgesFromRecord`, …) directly. The boundary is enforced by `no-restricted-imports` in `eslint.config.js`. See [`AGENTS.md`](../../../AGENTS.md) for the canonical rules.

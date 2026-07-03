@@ -1,4 +1,5 @@
 import type { BaseConvention } from '#src/mcp/data-layer/api-conventions/base-convention.js'
+import type { KnownKind } from '#src/mcp/models/kinds/index.js'
 
 export interface CompletionConfig {
   enabled?: boolean
@@ -11,7 +12,13 @@ export interface CompletionConfig {
 }
 
 export interface AttributeDefinition {
-  type: 'string' | 'integer' | 'boolean' | 'datetime' | 'enum' | 'text' | 'array'
+  /**
+   * Kind name driving parse/serialize/validate/input derivation. Built-ins
+   * get completion via `KnownKind`; any kind registered at runtime (deployer
+   * kinds via `AppRegistry({ kinds })`) is equally valid — `validateRegistries`
+   * enforces membership against the live registry at boot.
+   */
+  type: KnownKind | (string & {})
   required?: boolean
   default?: unknown
   createDefault?: boolean
@@ -19,6 +26,8 @@ export interface AttributeDefinition {
   enumValues?: string[]
   enumDescriptions?: Record<string, string>
   format?: string
+  /** Upper bound consumed by bounded kinds (e.g. `format: 'rating'`); forwarded to form and list runtimes. */
+  max?: number
   examples?: string[]
   items?: { type: string }
   label?: string

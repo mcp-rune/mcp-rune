@@ -59,7 +59,7 @@ new ToolRegistry({
 
 There is no per-model wiring. `ToolRegistry` reads the `models:` map and the tools take it from there.
 
-### Form-strategy — three tools that hit `ModelLayer`
+### Form-strategy — three tools over the prompt registry
 
 | Tool | What it does |
 | --- | --- |
@@ -67,7 +67,7 @@ There is no per-model wiring. `ToolRegistry` reads the `models:` map and the too
 | `validate_form` | Runs the kind/association validators on a partial payload — no backend call |
 | `get_form_summary` | Returns the "what would I be submitting" human-readable summary |
 
-These three are STRATEGY-category tools. They don't take an authenticated `dataLayer` — `validate_form` deliberately can't write, because its purpose is to give the LLM cheap feedback before it commits. They consume `ModelLayer` for kind lookups and required-field checks, and `PromptRegistry` for the guide text.
+These three tools don't take an authenticated `dataLayer` — `validate_form` deliberately can't write, because its purpose is to give the LLM cheap feedback before it commits. They read kind descriptors from `src/mcp/models/kinds/` (shared vocabulary — ADR 0009) and consume `PromptRegistry` for the guide text.
 
 ### Two optional search tools
 

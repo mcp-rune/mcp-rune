@@ -6,10 +6,30 @@
  * DOM-free. Built-in kinds register from `./index.ts`.
  */
 
+import { enumMembershipError } from './helpers.js'
+
 export interface KindOpts {
   format?: string
   enumValues?: string[]
   max?: number
+}
+
+/**
+ * The definition shape kind opts are extracted from — both
+ * `AttributeDefinition` and `PromptFieldDefinition` satisfy it structurally.
+ * When a new kind needs another per-definition knob, extend this interface
+ * and `KindOpts` together and thread the field through `kindOptsFrom`; call
+ * sites never hand-build opts objects, so the extraction has one home.
+ */
+export interface KindOptsSource {
+  format?: string
+  enumValues?: string[]
+  max?: number
+}
+
+/** Extract the `KindOpts` a definition carries for its kind's facets. */
+export function kindOptsFrom(def: KindOptsSource): KindOpts {
+  return { format: def.format, enumValues: def.enumValues, max: def.max }
 }
 
 export interface KindDescriptor {
@@ -56,6 +76,11 @@ export const KIND_REGISTRY = new Map<string, KindDescriptor>()
  * Register a kind descriptor, optionally narrowed to a `format` discriminator
  * (e.g. `registerKind('string', isbn, { format: 'isbn' })`). Partial
  * descriptors are merged onto `passthrough` so callers only specify deltas.
+ *
+ * `enumValues` membership is a definition-level constraint the registry owns:
+ * every registered kind's `validate` — built-in or deployer-supplied — first
+ * checks the value against `opts.enumValues` when present, then runs the
+ * kind's own rules. Kind files never implement membership themselves.
  */
 export function registerKind(
   kind: string,
@@ -63,7 +88,16 @@ export function registerKind(
   { format }: { format?: string } = {}
 ): void {
   const k = format ? `${kind.toLowerCase()}:${format.toLowerCase()}` : kind.toLowerCase()
-  KIND_REGISTRY.set(k, { ...passthrough, ...descriptor })
+  const merged = { ...passthrough, ...descriptor }
+  const kindValidate = merged.validate
+  merged.validate = (v, opts) => {
+    if (v !== null && v !== undefined && v !== '') {
+      const membership = enumMembershipError(v, opts?.enumValues)
+      if (membership) return membership
+    }
+    return kindValidate(v, opts)
+  }
+  KIND_REGISTRY.set(k, merged)
 }
 
 export class UnknownKindError extends Error {
@@ -115,4 +149,22 @@ export function getKind(kind: string | undefined, format?: string): KindDescript
     if (base) return base
   }
   throw new UnknownKindError(kind, format)
+}
+
+/**
+ * Resolve the HTML input type for a definition. A definition carrying
+ * `enumValues` renders as a `select` (`checkbox_group` when the kind is
+ * `array`); everything else uses its descriptor's `htmlInputType`. This is
+ * the one home for enum-driven input widening — form-schema builders call it
+ * instead of encoding the rule themselves.
+ */
+export function resolveInputType(
+  kind: string | undefined,
+  format: string | undefined,
+  opts?: KindOpts
+): string {
+  if (opts?.enumValues && opts.enumValues.length > 0) {
+    return kind?.toLowerCase() === 'array' ? 'checkbox_group' : 'select'
+  }
+  return getKind(kind, format).htmlInputType
 }

@@ -6,8 +6,14 @@
 
 export type { ModelData } from './base-model.js'
 export { BaseModel } from './base-model.js'
-export type { KindDescriptor, KindOpts, KindRenderHint } from './kinds/index.js'
-export { getKind, registerKind } from './kinds/index.js'
+export type {
+  KindDescriptor,
+  KindOpts,
+  KindOptsSource,
+  KindRenderHint,
+  KnownKind
+} from './kinds/index.js'
+export { getKind, kindOptsFrom, registerKind, resolveInputType } from './kinds/index.js'
 export type {
   ApiConfig,
   AssociationConfig,

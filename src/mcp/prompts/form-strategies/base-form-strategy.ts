@@ -23,7 +23,7 @@
  * on your `BasePrompt` subclass.
  */
 
-import { getKind } from '#src/mcp/models/kinds/index.js'
+import { getKind, kindOptsFrom } from '#src/mcp/models/kinds/index.js'
 
 import type { PromptFieldDefinition } from '../../prompts/prompt-definitions.js'
 import type { ValidationContext } from './form-strategy-definitions.js'
@@ -58,25 +58,11 @@ export class BaseFormStrategy {
     const errors: string[] = []
     if (!def || value === undefined || value === '') return errors
 
-    // Enum values (scalar or array)
-    if (def.enumValues) {
-      const values = Array.isArray(value) ? value : [value]
-      const invalid = values.filter((v: unknown) => !def.enumValues!.includes(String(v)))
-      if (invalid.length > 0) {
-        errors.push(
-          `Invalid value "${invalid.join(', ')}". Valid options: ${def.enumValues.join(', ')}`
-        )
-      }
-    }
-
-    // Kind-aware type/format checks (integer, boolean, date, datetime, uuid,
-    // email, url, json, time, decimal, rating, array) come from
+    // Kind-aware checks (enum membership, integer, boolean, date, datetime,
+    // uuid, email, url, json, time, decimal, rating bounds, array) come from
     // src/mcp/models/kinds/ so the rules stay aligned with what the renderer
     // showed to the user.
-    const kindError = getKind(def.type, def.format).validate(value, {
-      format: def.format,
-      enumValues: def.enumValues
-    })
+    const kindError = getKind(def.type, def.format).validate(value, kindOptsFrom(def))
     if (kindError) {
       errors.push(`${fieldName} ${kindError}`)
     }

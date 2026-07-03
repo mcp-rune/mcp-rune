@@ -18,7 +18,7 @@
  * `validateRegistries`.
  */
 
-import { getKind } from '#src/mcp/models/kinds/index.js'
+import { kindOptsFrom, resolveInputType } from '#src/mcp/models/kinds/index.js'
 
 import type {
   AppFormFieldDefinition,
@@ -144,25 +144,24 @@ function buildField(
         }
       }
     }
-  } else if (attr.type === 'array' && attr.enumValues) {
-    field.type = 'checkbox_group'
-    field.options = attr.enumValues.map((v) => ({ value: v, label: humanize(v) }))
-  } else if (attr.type === 'enum' || attr.enumValues) {
-    if (!Array.isArray(attr.enumValues) || attr.enumValues.length === 0) {
-      // Belt-and-braces: validateRegistries() should have caught this at
-      // boot. Anything reaching here bypassed the boot validator (custom
-      // app, test with hand-built schema). Fail loudly with the model and
-      // attribute name so the source is obvious.
-      throw new Error(
-        `app-form-schema: ${ModelClass.singularName}.${name} has type "enum" but no enumValues. ` +
-          `Call validateRegistries() at server boot to catch this earlier.`
-      )
-    }
-    field.type = 'select'
-    field.options = attr.enumValues.map((v) => ({ value: v, label: humanize(v) }))
-    if (attr.default !== undefined) field.default = attr.default
+  } else if (
+    attr.type === 'enum' &&
+    (!Array.isArray(attr.enumValues) || attr.enumValues.length === 0)
+  ) {
+    // Belt-and-braces: validateRegistries() should have caught this at
+    // boot. Anything reaching here bypassed the boot validator (custom
+    // app, test with hand-built schema). Fail loudly with the model and
+    // attribute name so the source is obvious.
+    throw new Error(
+      `app-form-schema: ${ModelClass.singularName}.${name} has type "enum" but no enumValues. ` +
+        `Call validateRegistries() at server boot to catch this earlier.`
+    )
   } else {
-    field.type = getKind(attr.type, attr.format).htmlInputType
+    field.type = resolveInputType(attr.type, attr.format, kindOptsFrom(attr))
+    if (Array.isArray(attr.enumValues) && attr.enumValues.length > 0) {
+      field.options = attr.enumValues.map((v) => ({ value: v, label: humanize(v) }))
+      if (field.type === 'select' && attr.default !== undefined) field.default = attr.default
+    }
   }
 
   if (attr.validation) {

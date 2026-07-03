@@ -25,7 +25,8 @@
  * `enumValues` from each attribute, then calls the model's API convention
  * to resolve association → field mappings. Memoized: the inputs are static
  * at boot, so each `(modelConfig, options)` pair derives at most once.
- * Reached through `modelLayer.promptSchema(options)` after PR2.
+ * Consumed by the prompt subsystem (schema-driven prompts and form
+ * strategies) via the public `prompts` entry point.
  */
 
 import type { BaseConvention } from '#src/mcp/data-layer/api-conventions/base-convention.js'
@@ -235,6 +236,10 @@ export function deriveFieldDefinitions(
 
     if (attrConfig.format) {
       fieldDef.format = attrConfig.format
+    }
+
+    if (attrConfig.max !== undefined) {
+      fieldDef.max = attrConfig.max
     }
 
     // Add autocomplete configuration
