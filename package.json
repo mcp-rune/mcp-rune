@@ -101,8 +101,7 @@
     "./core": {
       "types": "./dist/core.d.ts",
       "import": "./dist/core.js"
-    },
-    "./lib/*": "./dist/*"
+    }
   },
   "imports": {
     "#src/*": "./dist/*"
@@ -175,6 +174,7 @@
   },
   "overrides": {
     "onnxruntime-web": "1.21.0",
+    "sharp": "file:./vendor/sharp-noop",
     "boolean": "3.2.0"
   },
   "dependencies": {
@@ -191,7 +191,6 @@
     "open": "^11.0.0",
     "openid-client": "^6.8.1",
     "pg": "^8.21.0",
-    "sharp": "file:./vendor/sharp-noop",
     "supports-color": "^10.2.2",
     "winston": "^3.18.3",
     "winston-daily-rotate-file": "^5.0.0",
