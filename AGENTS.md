@@ -107,6 +107,10 @@ Run the full gate locally before you tag or `/ship`. Master merges through PRs a
 
 Only when both are green do you tag and push. The one thing `verify:release` cannot check is the npm `publish` step: it needs an npm **automation** token (granular, 2FA-bypassing) in the `NPM_TOKEN` secret — a normal token fails publish with `EOTP` (one-time-password required). That is an account/secret setting, not a code fix.
 
+## Decision records
+
+Non-trivial architecture and AI/LLM decisions get an ADR in `docs/architecture/decisions/` — see that folder's README for the template, numbering, and statuses. "Evaluated and deliberately deferred, with the constraints a future implementation must honor" is a first-class ADR outcome, as valuable as shipped code. PR descriptions summarize the decision; the ADR is the durable record a future maintainer reads to answer _"why is it built this way?"_.
+
 ## Epic workflow for complex changes
 
 For very complex changes, open a single GitHub **epic issue** before any code lands. The epic body enumerates every concrete sub-change in detail — file paths, axes, ordering, BREAKING flags, downstream-fork checks — and stays open as the source of truth for the whole effort.
