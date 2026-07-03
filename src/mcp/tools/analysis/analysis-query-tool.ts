@@ -120,11 +120,12 @@ Typical reasoning flow:
             'E.g., {"field": "created_at", "origin": "2026-03-15", "window": "7 days", "bucket": "1 day"}'
         ),
       stratifiers: StratifiersArraySchema.optional(),
-      sample_model: this.zodEnum(this.getModelNames())
+      model: this.zodEnum(this.getModelNames())
         .optional()
         .describe(
-          'Source model for sample-mode stratifiers (required when `stratifiers` uses kind:"concept"). ' +
-            "Defaults to the session's ingested model."
+          'Model scope for aggregate/filter/sample. Required when the session holds multiple models ' +
+            '(hop-expanded ingestion); resolved automatically for single-model sessions. ' +
+            'Also the source model for concept stratifiers.'
         )
     }
   }
@@ -143,7 +144,7 @@ Typical reasoning flow:
       stratify_by,
       proximity,
       stratifiers,
-      sample_model
+      model
     } = args as {
       analysis_id: string
       mode: 'describe' | 'semantic' | 'aggregate' | 'filter' | 'sample'
@@ -161,7 +162,7 @@ Typical reasoning flow:
         | { kind: 'edge'; edge_type: string; bucket?: 'present' | 'count' }
         | { kind: 'cluster'; k: number }
       >
-      sample_model?: string
+      model?: string
     }
 
     switch (mode) {
@@ -170,9 +171,9 @@ Typical reasoning flow:
       case 'semantic':
         return this._querySemantic(analysis_id, query, category, top_k)
       case 'aggregate':
-        return this._queryAggregate(analysis_id, group_by)
+        return this._queryAggregate(analysis_id, group_by, model)
       case 'filter':
-        return this._queryFilter(analysis_id, where, limit)
+        return this._queryFilter(analysis_id, where, limit, model)
       case 'sample':
         return this._querySample(
           analysis_id,
@@ -181,7 +182,7 @@ Typical reasoning flow:
           where,
           proximity,
           stratifiers,
-          sample_model
+          model
         )
     }
   }
@@ -196,14 +197,27 @@ Typical reasoning flow:
       )
     }
 
-    const { model, totalRecords } = session
+    const { models, totalRecords } = session
+    // Field/syntax documentation renders for the session's dominant model;
+    // multi-model sessions list every model and the scoping requirement.
+    const model = models[0]!.model
     const modelConfig = this.getModelConfig(model)
 
     const parts: string[] = [
       `# Analysis Session: ${analysisId}`,
-      `Model: ${model} | Records: ${totalRecords}`,
+      models.length === 1
+        ? `Model: ${model} | Records: ${totalRecords}`
+        : `Models: ${models.map((m) => `${m.model} (${m.count})`).join(', ')} | Records: ${totalRecords}`,
       ''
     ]
+
+    if (models.length > 1) {
+      parts.push(
+        'Multi-model session (hop-expanded). aggregate/filter/sample require the `model` ' +
+          `parameter; field documentation below covers the dominant model \`${model}\`.`,
+        ''
+      )
+    }
 
     if (modelConfig?.attributes) {
       const attrs = modelConfig.attributes
@@ -411,7 +425,11 @@ Typical reasoning flow:
   }
 
   /** Aggregate query on ingested_records */
-  private async _queryAggregate(analysisId: string, groupBy?: string): Promise<ToolResult> {
+  private async _queryAggregate(
+    analysisId: string,
+    groupBy?: string,
+    model?: string
+  ): Promise<ToolResult> {
     if (!groupBy) {
       return this.formatResponse(
         'Please provide a "group_by" parameter for aggregate mode (e.g., "status").'
@@ -420,7 +438,8 @@ Typical reasoning flow:
 
     const results = await queryIngestedData(analysisId, {
       mode: 'aggregate',
-      groupBy
+      groupBy,
+      model
     })
 
     if (results.length === 0) {
@@ -452,7 +471,8 @@ Typical reasoning flow:
   private async _queryFilter(
     analysisId: string,
     where?: Record<string, unknown>,
-    limit?: number
+    limit?: number,
+    model?: string
   ): Promise<ToolResult> {
     if (!where || Object.keys(where).length === 0) {
       return this.formatResponse(
@@ -463,7 +483,8 @@ Typical reasoning flow:
     const results = await queryIngestedData(analysisId, {
       mode: 'filter',
       where,
-      limit
+      limit,
+      model
     })
 
     if (results.length === 0) {
@@ -493,14 +514,15 @@ Typical reasoning flow:
       | { kind: 'edge'; edge_type: string; bucket?: 'present' | 'count' }
       | { kind: 'cluster'; k: number }
     >,
-    sampleModel?: string
+    model?: string
   ): Promise<ToolResult> {
     let resolvedStratifiers: ReadonlyArray<GraphStratifierSpec> | undefined
+    let stratifierModel: string | undefined
     if (stratifiers && stratifiers.length > 0) {
-      const model = sampleModel ?? (await this._resolveSessionModel(analysisId))
-      if (!model) {
+      stratifierModel = model ?? (await this._resolveSessionModel(analysisId))
+      if (!stratifierModel) {
         return this._textError(
-          'Could not resolve source model for sample stratifiers. Pass `sample_model` explicitly or ingest data first.'
+          'Could not resolve source model for sample stratifiers. Pass `model` explicitly or ingest data first.'
         )
       }
 
@@ -508,13 +530,14 @@ Typical reasoning flow:
         // Pre-fetch concepts for the source model so toGraphStratifierSpec can
         // resolve concept stratifiers synchronously inside the map.
         const conceptsForModel = this.domainRegistry
-          ? await this.domainRegistry.getConceptsForModel(model)
+          ? await this.domainRegistry.getConceptsForModel(stratifierModel)
           : []
+        const sourceModel = stratifierModel
         const conceptResolver =
           conceptsForModel.length > 0
             ? {
                 knowledge: {
-                  getConceptsForModel: (m: string) => (m === model ? conceptsForModel : [])
+                  getConceptsForModel: (m: string) => (m === sourceModel ? conceptsForModel : [])
                 }
               }
             : undefined
@@ -522,7 +545,7 @@ Typical reasoning flow:
           toGraphStratifierSpec(
             s as Parameters<typeof toGraphStratifierSpec>[0],
             conceptResolver,
-            model
+            sourceModel
           )
         )
       } catch (err) {
@@ -531,7 +554,7 @@ Typical reasoning flow:
 
       // Auto-backfill embeddings when a cluster stratifier is requested.
       if (resolvedStratifiers.some((s) => s.kind === 'cluster')) {
-        await ensureRecordEmbeddings(analysisId, model)
+        await ensureRecordEmbeddings(analysisId, stratifierModel)
       }
     }
 
@@ -541,7 +564,8 @@ Typical reasoning flow:
       stratifyBy,
       where,
       proximity,
-      stratifiers: resolvedStratifiers
+      stratifiers: resolvedStratifiers,
+      model
     })
 
     if (results.length === 0) {
@@ -555,7 +579,8 @@ Typical reasoning flow:
 
   private async _resolveSessionModel(analysisId: string): Promise<string | undefined> {
     const session = await describeAnalysisSession(analysisId)
-    return session?.model
+    if (!session || session.models.length !== 1) return undefined
+    return session.models[0]!.model
   }
 
   private _textError(text: string): ToolResult {

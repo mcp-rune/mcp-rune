@@ -306,13 +306,16 @@ export async function queryRecords(
   // Evict expired rows on access
   await cleanupExpired(pool)
 
+  const scope = await resolveModelScope(pool, analysisId, query.model)
+  if (scope === null) return []
+
   switch (query.mode) {
     case 'aggregate':
-      return queryAggregate(pool, analysisId, query)
+      return queryAggregate(pool, analysisId, scope, query)
     case 'filter':
-      return queryFilter(pool, analysisId, query)
+      return queryFilter(pool, analysisId, scope, query)
     case 'sample':
-      return querySample(pool, analysisId, query)
+      return querySample(pool, analysisId, scope, query)
   }
 }
 
@@ -320,15 +323,16 @@ export async function queryRecords(
 async function queryAggregate(
   pool: Pool,
   analysisId: string,
+  model: string,
   query: AggregateQuery
 ): Promise<Record<string, unknown>[]> {
   const result = await pool.query(
     `SELECT data->>$2 AS value, COUNT(*)::integer AS count
      FROM ingested_records
-     WHERE analysis_id = $1 AND (expires_at IS NULL OR expires_at > NOW())
+     WHERE analysis_id = $1 AND model = $3 AND (expires_at IS NULL OR expires_at > NOW())
      GROUP BY data->>$2
      ORDER BY count DESC`,
-    [analysisId, query.groupBy]
+    [analysisId, query.groupBy, model]
   )
 
   return (result.rows as Array<{ value: string | null; count: number }>).map((row) => ({
@@ -353,14 +357,19 @@ async function queryAggregate(
 async function queryFilter(
   pool: Pool,
   analysisId: string,
+  model: string,
   query: FilterQuery
 ): Promise<Record<string, unknown>[]> {
   const limit = Math.min(query.limit || 20, 200)
 
-  const conditions = ['analysis_id = $1', '(expires_at IS NULL OR expires_at > NOW())']
-  const params: unknown[] = [analysisId]
+  const conditions = [
+    'analysis_id = $1',
+    'model = $2',
+    '(expires_at IS NULL OR expires_at > NOW())'
+  ]
+  const params: unknown[] = [analysisId, model]
 
-  const where = buildWhereConditions(query.where, params, 2)
+  const where = buildWhereConditions(query.where, params, 3)
   conditions.push(...where.conditions)
 
   params.push(limit)
@@ -380,26 +389,27 @@ async function queryFilter(
 async function querySample(
   pool: Pool,
   analysisId: string,
+  model: string,
   query: SampleQuery
 ): Promise<Record<string, unknown>[]> {
   const sampleSize = Math.min(query.sampleSize || 5, 50)
 
   // Delegate to proximity-aware path when where, proximity, or graph stratifiers are provided
   if (query.where || query.proximity || (query.stratifiers && query.stratifiers.length > 0)) {
-    return querySampleFiltered(pool, analysisId, sampleSize, query)
+    return querySampleFiltered(pool, analysisId, model, sampleSize, query)
   }
 
   if (query.stratifyBy) {
-    return querySampleStratified(pool, analysisId, sampleSize, query.stratifyBy)
+    return querySampleStratified(pool, analysisId, model, sampleSize, query.stratifyBy)
   }
 
   const result = await pool.query(
     `SELECT data
      FROM ingested_records
-     WHERE analysis_id = $1 AND (expires_at IS NULL OR expires_at > NOW())
+     WHERE analysis_id = $1 AND model = $3 AND (expires_at IS NULL OR expires_at > NOW())
      ORDER BY RANDOM()
      LIMIT $2`,
-    [analysisId, sampleSize]
+    [analysisId, sampleSize, model]
   )
 
   return (result.rows as IngestedRow[]).map((row) => row.data)
@@ -424,12 +434,17 @@ async function querySample(
 async function querySampleFiltered(
   pool: Pool,
   analysisId: string,
+  model: string,
   sampleSize: number,
   query: SampleQuery
 ): Promise<Record<string, unknown>[]> {
-  const baseConditions = ['analysis_id = $1', '(expires_at IS NULL OR expires_at > NOW())']
-  const params: unknown[] = [analysisId]
-  let paramIdx = 2
+  const baseConditions = [
+    'analysis_id = $1',
+    'model = $2',
+    '(expires_at IS NULL OR expires_at > NOW())'
+  ]
+  const params: unknown[] = [analysisId, model]
+  let paramIdx = 3
 
   if (query.where) {
     const where = buildWhereConditions(query.where, params, paramIdx)
@@ -455,7 +470,7 @@ async function querySampleFiltered(
   }
 
   const filteredCte = `filtered AS (
-    SELECT id, data, embedding FROM ingested_records
+    SELECT id, model, data, embedding FROM ingested_records
     WHERE ${baseConditions.join(' AND ')}
   )`
 
@@ -485,7 +500,7 @@ async function querySampleFiltered(
     if (query.stratifiers.length > 3) {
       throw new Error('At most 3 graph stratifiers can be combined per query.')
     }
-    const ref: ParamRef = { next: paramIdx, params }
+    const ref: ParamRef = { next: paramIdx, params, analysisIdParam: '$1' }
     for (const spec of query.stratifiers) {
       const frag = _materializeStratifier(spec, ref)
       if (frag.extraCte) extraCtes.push(frag.extraCte)
@@ -606,6 +621,7 @@ function _materializeStratifier(
 async function querySampleStratified(
   pool: Pool,
   analysisId: string,
+  model: string,
   sampleSize: number,
   stratifyBy: string
 ): Promise<Record<string, unknown>[]> {
@@ -618,19 +634,19 @@ async function querySampleStratified(
            PARTITION BY data->>'${safeField}' ORDER BY RANDOM()
          ) AS rn
        FROM ingested_records
-       WHERE analysis_id = $1 AND (expires_at IS NULL OR expires_at > NOW())
+       WHERE analysis_id = $1 AND model = $3 AND (expires_at IS NULL OR expires_at > NOW())
      ),
      group_count AS (
        SELECT COUNT(DISTINCT data->>'${safeField}') AS num_groups
        FROM ingested_records
-       WHERE analysis_id = $1 AND (expires_at IS NULL OR expires_at > NOW())
+       WHERE analysis_id = $1 AND model = $3 AND (expires_at IS NULL OR expires_at > NOW())
      )
      SELECT ranked.data
      FROM ranked, group_count
      WHERE ranked.rn <= GREATEST(1, CEIL($2::numeric / GREATEST(1, group_count.num_groups)))
      ORDER BY RANDOM()
      LIMIT $2`,
-    [analysisId, sampleSize]
+    [analysisId, sampleSize, model]
   )
 
   return (result.rows as IngestedRow[]).map((row) => row.data)
@@ -674,7 +690,7 @@ export async function getSessionGraphInfo(
   }
 }
 
-/** Describe an analysis session — returns model name and record count */
+/** Describe an analysis session — every model with its live record count. */
 export async function describeSession(
   pool: Pool,
   analysisId: string
@@ -684,14 +700,49 @@ export async function describeSession(
      FROM ingested_records
      WHERE analysis_id = $1 AND (expires_at IS NULL OR expires_at > NOW())
      GROUP BY model
-     LIMIT 1`,
+     ORDER BY total DESC, model ASC`,
     [analysisId]
   )
 
   if (result.rows.length === 0) return null
 
-  const row = result.rows[0] as { model: string; total: number }
-  return { model: row.model, totalRecords: row.total }
+  const rows = result.rows as Array<{ model: string; total: number }>
+  return {
+    models: rows.map((r) => ({ model: r.model, count: r.total })),
+    totalRecords: rows.reduce((sum, r) => sum + r.total, 0)
+  }
+}
+
+/**
+ * Resolve the model scope for a shape-sensitive query. Explicit `requested`
+ * must name a model present in the session; when omitted, a single-model
+ * session resolves automatically and a multi-model session (hop-expanded)
+ * throws, naming the candidates — mixing record shapes silently is never
+ * an answer.
+ */
+async function resolveModelScope(
+  pool: Pool,
+  analysisId: string,
+  requested?: string
+): Promise<string | null> {
+  const session = await describeSession(pool, analysisId)
+  if (!session) return null
+
+  const names = session.models.map((m) => m.model)
+  if (requested !== undefined) {
+    if (!names.includes(requested)) {
+      throw new Error(
+        `Model "${requested}" has no records in analysis session. ` +
+          `Session models: ${session.models.map((m) => `${m.model} (${m.count})`).join(', ')}`
+      )
+    }
+    return requested
+  }
+  if (names.length === 1) return names[0]!
+  throw new Error(
+    `Multi-model analysis session — specify "model" to scope this query. ` +
+      `Session models: ${session.models.map((m) => `${m.model} (${m.count})`).join(', ')}`
+  )
 }
 
 /** Get count of ingested records for a given analysis session and model */

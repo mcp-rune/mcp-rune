@@ -1,7 +1,9 @@
 vi.mock('#src/runtime/vector-storage.js', () => ({
   storeAnalysisMemory: vi.fn(() => Promise.resolve('memo-1')),
   queryIngestedData: vi.fn(() => Promise.resolve([])),
-  describeAnalysisSession: vi.fn(() => Promise.resolve({ model: 'scheduling', totalRecords: 3 }))
+  describeAnalysisSession: vi.fn(() =>
+    Promise.resolve({ models: [{ model: 'scheduling', count: 3 }], totalRecords: 3 })
+  )
 }))
 
 import {
@@ -142,7 +144,8 @@ describe('AnalysisSummarizeTool', () => {
     expect(queryIngestedData).toHaveBeenCalledWith('sess-where', {
       mode: 'filter',
       where: { status: 'invalid' },
-      limit: 250
+      limit: 250,
+      model: 'scheduling'
     })
   })
 
@@ -151,7 +154,8 @@ describe('AnalysisSummarizeTool', () => {
     await tool.execute({ analysis_id: 'sess-sample', max_records: 500 })
     expect(queryIngestedData).toHaveBeenCalledWith('sess-sample', {
       mode: 'sample',
-      sampleSize: 500
+      sampleSize: 500,
+      model: 'scheduling'
     })
   })
 

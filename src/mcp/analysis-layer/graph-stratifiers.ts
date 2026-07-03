@@ -6,6 +6,11 @@
  * sample-query routine) composes them into a multi-CTE PARTITION BY that
  * sits alongside the existing temporal-bucket and discrete-field stratifiers.
  *
+ * Contract with the caller: the `filtered` CTE the fragments join against
+ * selects `id, model, data, embedding`, and edge joins are scoped by
+ * `src_model = f.model` so numerically-colliding ids across models never
+ * cross-match.
+ *
  * No I/O. No SQL execution. Pure string + param assembly.
  */
 
@@ -14,6 +19,12 @@ export interface ParamRef {
   next: number
   /** Param values, in placeholder order. Builders push onto this. */
   params: unknown[]
+  /**
+   * Placeholder (e.g. `$1`) already bound to the session's analysis id by
+   * the caller. Passed explicitly so builders never assume a parameter
+   * position they don't control.
+   */
+  analysisIdParam: string
 }
 
 export type GraphStratifier =
@@ -54,7 +65,7 @@ export function buildConceptStratifier(
   ref: ParamRef
 ): StratifierFragment {
   const cteName = `concept_${safeConceptName(spec.concept)}`
-  const analysisIdParam = `$1`
+  const analysisIdParam = ref.analysisIdParam
   const targetsParam = `$${ref.next}`
   ref.params.push([...spec.targetModels])
   ref.next++
@@ -65,6 +76,7 @@ export function buildConceptStratifier(
         SELECT 1 FROM ingested_edges e
         WHERE e.analysis_id = ${analysisIdParam}
           AND e.src_id = (f.data->>'id')
+          AND e.src_model = f.model
           AND e.dst_model = ANY(${targetsParam}::text[])
           AND (e.expires_at IS NULL OR e.expires_at > NOW())
       ) THEN 1 ELSE 0 END AS concept_flag
@@ -87,7 +99,7 @@ export function buildEdgeStratifier(
   ref: ParamRef
 ): StratifierFragment {
   const cteName = `edge_${safeEdgeType(spec.edge_type)}`
-  const analysisIdParam = `$1`
+  const analysisIdParam = ref.analysisIdParam
   const edgeTypeParam = `$${ref.next}`
   ref.params.push(spec.edge_type)
   ref.next++
@@ -97,6 +109,7 @@ export function buildEdgeStratifier(
       (SELECT COUNT(*) FROM ingested_edges e
        WHERE e.analysis_id = ${analysisIdParam}
          AND e.src_id = (f.data->>'id')
+         AND e.src_model = f.model
          AND e.edge_type = ${edgeTypeParam}
          AND (e.expires_at IS NULL OR e.expires_at > NOW())) AS edge_n
     FROM filtered f
