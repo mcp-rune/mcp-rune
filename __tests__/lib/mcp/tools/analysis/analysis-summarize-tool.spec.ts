@@ -47,7 +47,8 @@ describe('AnalysisSummarizeTool', () => {
     const tool = makeTool()
     expect(tool.name).toBe('analysis_summarize')
     expect(AnalysisSummarizeTool.requiresAuth).toBe(false)
-    expect(AnalysisSummarizeTool.requiresVectorStorage).toBe(true)
+    expect(AnalysisSummarizeTool.requiresAnalysisStorage).toBe(true)
+    expect(AnalysisSummarizeTool.requiresVectorStorage).toBe(false)
   })
 
   it('defaults to the distribution strategy when neither param is given', async () => {

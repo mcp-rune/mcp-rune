@@ -9,7 +9,7 @@ import type { ToolAnnotations } from '../tool-result.js'
  */
 export class BaseAnalysisTool extends BaseTool {
   static override requiresAuth = false
-  static override requiresVectorStorage = true
+  static override requiresAnalysisStorage = true
   static override defaultAnnotations: ToolAnnotations = {
     readOnlyHint: true,
     destructiveHint: false,

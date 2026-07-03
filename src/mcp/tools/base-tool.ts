@@ -131,11 +131,20 @@ export class BaseTool {
   static requiresAuth: boolean = true
 
   /**
-   * Whether this tool requires vector storage (pgvector) to be configured.
-   * Tools with `requiresVectorStorage = true` are skipped at registration
-   * time when the integrator reports vector storage is not available.
+   * Whether this tool requires the CORE vector-storage feature (the
+   * `tool_memories` table — semantic operation memory). Gated by
+   * `vectorStorageEnabled`. The operations tool family sets this.
    */
   static requiresVectorStorage: boolean = false
+
+  /**
+   * Whether this tool requires the ANALYSIS storage feature (the
+   * `analysis_memories` / `ingested_records` / `ingested_edges` tables).
+   * Gated separately by `analysisStorageEnabled`, so a deployment can enable
+   * core operation memory without shipping the heavier analysis tool family.
+   * The analysis tool family sets this.
+   */
+  static requiresAnalysisStorage: boolean = false
 
   /**
    * Whether this tool requires a domain registry to be configured. Implicit

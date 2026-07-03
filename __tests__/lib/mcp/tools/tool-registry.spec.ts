@@ -92,6 +92,23 @@ class AnalysisTool extends BaseTool {
   }
 }
 
+class AnalysisStorageTool extends BaseTool {
+  static override requiresAuth = false
+  static override requiresAnalysisStorage = true
+  get name() {
+    return 'analysis_storage_tool'
+  }
+  get baseDescription() {
+    return 'A tool requiring analysis storage'
+  }
+  get inputSchema() {
+    return {}
+  }
+  async execute(): Promise<ToolResult> {
+    return { content: [{ type: 'text', text: 'analysis-storage' }] }
+  }
+}
+
 class FailingTool extends BaseTool {
   static override requiresAuth = false
   get name() {
@@ -422,6 +439,39 @@ describe('lib/mcp/tools/tool-registry', () => {
 
       expect(mockMcpServer.registeredTools.has('no_auth_tool')).toBe(true)
       expect(mockMcpServer.registeredTools.has('analysis_tool')).toBe(true)
+    })
+
+    it('gates analysis-storage tools on analysisStorageEnabled, independent of vector storage', () => {
+      // Core vector storage on, analysis storage off: the analysis-storage tool
+      // must NOT register — the decoupling this split exists for (ADR 0016).
+      const coreOnly = new ToolRegistry({
+        toolClasses: {
+          analysis_tool: AnalysisTool as any,
+          analysis_storage_tool: AnalysisStorageTool as any
+        },
+        models: {},
+        vectorStorageEnabled: true,
+        analysisStorageEnabled: false
+      })
+      coreOnly.registerTools(mockMcpServer as any, { getAccessToken: async () => null })
+      expect(mockMcpServer.registeredTools.has('analysis_tool')).toBe(true)
+      expect(mockMcpServer.registeredTools.has('analysis_storage_tool')).toBe(false)
+
+      // Reverse: analysis storage on, core off — analysis tool registers, the
+      // vector-storage-only tool does not.
+      mockMcpServer.registeredTools.clear()
+      const analysisOnly = new ToolRegistry({
+        toolClasses: {
+          analysis_tool: AnalysisTool as any,
+          analysis_storage_tool: AnalysisStorageTool as any
+        },
+        models: {},
+        vectorStorageEnabled: false,
+        analysisStorageEnabled: true
+      })
+      analysisOnly.registerTools(mockMcpServer as any, { getAccessToken: async () => null })
+      expect(mockMcpServer.registeredTools.has('analysis_storage_tool')).toBe(true)
+      expect(mockMcpServer.registeredTools.has('analysis_tool')).toBe(false)
     })
 
     it('registers tools with no service requirements unconditionally', () => {

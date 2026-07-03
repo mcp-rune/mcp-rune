@@ -75,7 +75,7 @@ vectorStorage.initVectorStorage({
 })
 ```
 
-Storage init is only half the gate. The bookshelf template registers just the data and form-strategy tool classes, so the analysis tools also need to be spread into the registry's `toolClasses`, with `vectorStorageEnabled` telling the registry the adapter is live. In the same `src/server.ts`, extend the existing `new ToolRegistry({ … })` call:
+Storage init is only half the gate. The bookshelf template registers just the data and form-strategy tool classes, so the analysis tools also need to be spread into the registry's `toolClasses`, with `analysisStorageEnabled` telling the registry the analysis adapter is live. In the same `src/server.ts`, extend the existing `new ToolRegistry({ … })` call:
 
 ```ts file=src/server-registry.ts
 import {
@@ -93,7 +93,7 @@ const toolRegistry = new ToolRegistry({
     ...ANALYSIS_TOOL_CLASSES // add: the analysis tools must be in the class map
   },
   // …keep the template's existing config here (models, serverContext, createApiClient)…
-  vectorStorageEnabled: vectorStorage.isVectorStorageEnabled() // add: lets requiresVectorStorage tools register
+  analysisStorageEnabled: vectorStorage.isVectorStorageEnabled() // add: lets requiresAnalysisStorage tools register
 })
 ```
 
@@ -113,7 +113,7 @@ const toolRegistry = new ToolRegistry({
     ...ANALYSIS_TOOL_CLASSES // add: the analysis tools must be in the class map
   },
   // …keep the template's existing config here (models, serverContext, createApiClient)…
-  vectorStorageEnabled: vectorStorage.isVectorStorageEnabled() // add: lets requiresVectorStorage tools register
+  analysisStorageEnabled: vectorStorage.isVectorStorageEnabled() // add: lets requiresAnalysisStorage tools register
 })
 ```
 
@@ -129,7 +129,7 @@ BOOKSHELF_DATASET=large \
 npx @modelcontextprotocol/inspector -- npx tsx src/server.ts
 ```
 
-Inside the Inspector, confirm the analysis tools are now visible — `analysis_ingest`, `analysis_summarize`, `analysis_query`, `analysis_act`, `analysis_clear`, `analysis_store` should all appear alongside the CRUD tools. If they don't, double-check `initVectorStorage` was called with a live adapter and that the registry got both halves from step 2: the `ANALYSIS_TOOL_CLASSES` spread and `vectorStorageEnabled`.
+Inside the Inspector, confirm the analysis tools are now visible — `analysis_ingest`, `analysis_summarize`, `analysis_query`, `analysis_act`, `analysis_clear`, `analysis_store` should all appear alongside the CRUD tools. If they don't, double-check `initVectorStorage` was called with a live adapter and that the registry got both halves from step 2: the `ANALYSIS_TOOL_CLASSES` spread and `analysisStorageEnabled`.
 
 ## 4. One strategy at a time
 

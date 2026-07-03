@@ -43,7 +43,8 @@ describe('Analysis Memory Tools', () => {
 
     it('should have correct metadata', () => {
       expect(tool.name).toBe('analysis_store')
-      expect(AnalysisStoreTool.requiresVectorStorage).toBe(true)
+      expect(AnalysisStoreTool.requiresAnalysisStorage).toBe(true)
+      expect(AnalysisStoreTool.requiresVectorStorage).toBe(false)
       expect(AnalysisStoreTool.requiresAuth).toBe(false)
     })
 
@@ -158,7 +159,8 @@ describe('Analysis Memory Tools', () => {
 
     it('should have correct metadata', () => {
       expect(tool.name).toBe('analysis_query')
-      expect(AnalysisQueryTool.requiresVectorStorage).toBe(true)
+      expect(AnalysisQueryTool.requiresAnalysisStorage).toBe(true)
+      expect(AnalysisQueryTool.requiresVectorStorage).toBe(false)
       expect(AnalysisQueryTool.requiresAuth).toBe(false)
     })
 
@@ -576,7 +578,8 @@ describe('Analysis Memory Tools', () => {
 
     it('should have correct metadata', () => {
       expect(tool.name).toBe('analysis_clear')
-      expect(AnalysisClearTool.requiresVectorStorage).toBe(true)
+      expect(AnalysisClearTool.requiresAnalysisStorage).toBe(true)
+      expect(AnalysisClearTool.requiresVectorStorage).toBe(false)
       expect(AnalysisClearTool.requiresAuth).toBe(false)
     })
 
