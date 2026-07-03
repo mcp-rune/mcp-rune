@@ -4,6 +4,47 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.107.0] - 2026-07-03
+
+The completion of epic #348: a full architectural review turned into a batch of correctness fixes, seam repairs, and deliberate BREAKING clean-ups, each with its own PR and (where the change was non-trivial) an ADR. Pre-1.0, so breaking changes ride a minor bump. Fourteen ADRs (0005, 0007, 0009–0018) back the decisions below.
+
+### Added
+
+- **Local cross-encoder reranking at the recall facade** (#383, ADR 0018). Opt-in two-stage retrieval: over-fetch a candidate pool by bi-encoder cosine, then rerank it with a local cross-encoder (`Xenova/ms-marco-MiniLM-L-6-v2`) that scores the (query, record) pair jointly, and cut to `topK`. New `reranking` runtime facade (lazy, graceful-disable, no API key, deterministic); `searchIngestedRecords` gains `rerank` / `overFetch`; `analysis_query` semantic `target:'records'` exposes the `rerank` param. Off by default.
+- **Convention hooks for list params and search normalization** (#382, ADR 0017). `BaseConvention.serializeListParams` moves pagination to the convention seam, so JSON:API `page[number]`/`page[size]` (or any nested scheme) backends are serviceable by one override; search normalization delegates to the model's `normalizeListResponse` when a convention is explicitly declared.
+- **Record-level semantic search and edge-graph path queries** (#366, #368). `analysis_query` semantic `target:'records'` ranks the ingested records themselves (hybrid with `where`); `mode:'path'` returns the shortest typed edge chains between two records over `ingested_edges` (recursive CTE).
+- **Typed error taxonomy at the DataLayer seam** (#370, ADR 0014). `DataLayerError` / `RecordNotFoundError` / `ApiRequestError` translated exactly once at the adapter boundary, with the _failing model's_ convention; `ApiClientHttpError` is now a declared contract. Exported from `@mcp-rune/mcp-rune/data-layer`.
+- **Kinds are shared vocabulary** (ADR 0009) and **boot validation runs automatically** (ADR 0012). `getKind` / `kindOptsFrom` / `resolveInputType` read from one registry; `createServer` / `createDefaultAppRegistry` run `validateRegistries` (`validate: 'throw' | 'warn' | 'off'`).
+- **Registry-level typed search config** (ADR 0011): `searchGroups` / `defaultShaper` on `ToolRegistry` / `AppRegistry`; tools reach search through the `SearchEnabledDataLayer` seam.
+- **CI determinism probe** for the built-in summary strategies (#380, ADR 0007): every strategy is run twice over one fixture corpus and asserted byte-identical, so nondeterminism fails the build.
+
+### Changed
+
+- **BREAKING: analysis storage gates separately from core vector storage** (#381, ADR 0016). New `requiresAnalysisStorage` flag + `analysisStorageEnabled` registry option; a core-memory-only deployment no longer ships the analysis tool family. The registry gate now mirrors the migration `core`/`analysis` split one-to-one.
+- **BREAKING: `src/runtime/vendor/` renamed to `src/runtime/integrations/`** (#379, ADR 0005) — the folder holds integration facades and a first-party pgvector adapter, not vendored source. Public subpath `runtime/vendor/pgvector` → `runtime/integrations/pgvector`.
+- **BREAKING: models clean-break** (#377). `@mcp-rune/mcp-rune/models` drops the dead validator re-exports; `BaseModel` sheds its internally-dead consumption methods (`buildPayload` / `validateRequired` / endpoint helpers) and is purely declarative.
+- **BREAKING: data-layer adapter internals are gated from projection code** (#373). The layer-discipline eslint guard now covers `ModelService` / `EndpointResolver` / `SearchService`; conventions stay unrestricted as shared vocabulary.
+- **BREAKING: tool/app seam repairs** (#378). `ToolFlowExtension.register` must be synchronous (`createServer` throws on a Promise); a custom `dataLayer` factory alongside ApiExtension mixins fails at boot; `createDefaultAppRegistry` forwards `defaultConvention` / `apiNamespace`; `registerApp` warns on tool-name collisions.
+- **BREAKING: sessions are graphs of models; analyses are per-model** (ADR 0013). Multi-model sessions require an explicit `model` scope on shape-sensitive queries; `describeSession` reports per-model counts.
+- **BREAKING: search config is registry-level** (ADR 0011) and **boot validation is automatic** (ADR 0012) — see Added; both change composition-root wiring.
+
+### Fixed
+
+- **Analysis correctness** (#375): `detect_operation_gaps` bound filters at the wrong `$N` and failed against a real database; intra-batch duplicate `record_id`s broke the upsert; `analysis_summarize`'s advertised record caps were silently clamped; nested-resource ingestion skipped embeddings and edges; the embedding "batch" ran one inference per text and the back-fill did per-row UPDATEs.
+- **Search filters and schema cache** (#376): `SearchService` dropped filters on two fallback paths (and emitted a literal `"undefined"` query key); the schema-derivation cache keyed on attribute _names_ only, so `enhanceModelConfig` output collided with the base model.
+- **Unknown kinds degrade in iframes instead of crashing** (ADR 0010) — boot validation catches model-driven call sites; the browser bundle falls back to string semantics.
+- Synced the `validate_form` enum-error pinned tutorial output and its spec to the message the kinds registry actually emits (`status must be one of: … (got "…")`) — ADR 0009 changed the wording but left the tutorial fence and `the-model.spec.ts` on the old text, which the executable `docs:verify` lane (excluded from `npm test`) only caught at release time.
+
+### Removed
+
+- **BREAKING: the `./lib/*` wildcard export** (#374, ADR 0015) — it re-opened every compiled internal past the three layers. The public surface is the curated named subpaths only.
+- **BREAKING: the inert `tracingInterceptor`** (#378) — its before/after shape can't span-trace; that's `ToolRegistry`-level `traceToolCall`.
+- `sharp` moves from `dependencies` to `overrides` (#374, ADR 0015) — it was a transitive dep of the optional transformers backend declared as a direct dependency with an unshipped `file:` stub, giving every consumer a dangling symlink.
+
+### Docs
+
+- **Full guides overhaul** (#372): all 12 chapters brought back into agreement with the code after the BREAKING batch, paired with the website's guide registry (link resolution, section config). The category-auth system, phantom tools, and stale surfaces are purged; every relative link resolves.
+
 ## [0.106.0] - 2026-07-03
 
 ### Added
@@ -3210,6 +3251,7 @@ Initial public release. Extracted from production MCP servers.
 
 - 11 subpath exports: `mcp-kit/server`, `mcp-kit/tools`, `mcp-kit/prompts`, `mcp-kit/apps`, `mcp-kit/search`, `mcp-kit/domain`, `mcp-kit/oauth2`, `mcp-kit/services`, `mcp-kit/db`, `mcp-kit/core`
 
+[0.107.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.106.0...v0.107.0
 [0.106.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.105.1...v0.106.0
 [0.104.1]: https://github.com/mcp-rune/mcp-rune/compare/v0.104.0...v0.104.1
 [0.104.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.103.4...v0.104.0
