@@ -73,6 +73,10 @@ export function createPgvectorAdapter(options: PgvectorAdapterOptions): VectorSt
         withSchemaHint(() => ingestedRecords.storeRecords(pool, params, recordsRetention)),
       queryRecords: (analysisId, query) =>
         withSchemaHint(() => ingestedRecords.queryRecords(pool, analysisId, query)),
+      searchRecordsSemantic: (analysisId, embedding, options) =>
+        withSchemaHint(() =>
+          ingestedRecords.searchRecordsSemantic(pool, analysisId, embedding, options)
+        ),
       getEmbeddingsForRecords: (analysisId, model, recordIds) =>
         withSchemaHint(() =>
           ingestedRecords.getEmbeddingsForRecords(pool, analysisId, model, recordIds)

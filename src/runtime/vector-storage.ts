@@ -61,6 +61,7 @@ export {
   getIngestedRecordIdsFiltered,
   getSessionGraphInfo,
   queryIngestedData,
+  searchIngestedRecords,
   storeIngestedRecords
 } from './vector-storage-ingested-records.js'
 export type { VectorStorageOptions } from './vector-storage-lifecycle.js'

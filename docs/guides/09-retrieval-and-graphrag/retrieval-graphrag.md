@@ -43,7 +43,7 @@ The raw rows land in an `ingested_records` table (plain JSONB, 1-hour TTL) that 
 - **aggregate** — `GROUP BY` over fields.
 - **filter** — JSONB predicates (`@>`, range casts).
 - **sample** — random or **stratified** samples (incl. proximity buckets).
-- **semantic** — embeds the _query string_ and ranks memories by cosine distance.
+- **semantic** — embeds the _query string_ and ranks by cosine distance: stored findings and page summaries by default (`target: "findings"`), or the ingested records themselves (`target: "records"`) — the record ranking composes with `where` for hybrid semantic + filter retrieval in one SQL statement, and with `model` on multi-model sessions.
 
 Only `semantic` pays for an embed (of the query, not the data). The rest are cheap, deterministic SQL.
 

@@ -26,6 +26,8 @@ import type {
   IngestParams,
   RecordEmbedding,
   SampleQuery,
+  SemanticRecordHit,
+  SemanticRecordSearchOptions,
   SessionDescriptor,
   SessionGraphInfo
 } from '#src/runtime/vector-storage-definitions-ingested-records.js'
@@ -317,6 +319,65 @@ export async function queryRecords(
     case 'sample':
       return querySample(pool, analysisId, scope, query)
   }
+}
+
+/**
+ * Rank the session's records by cosine similarity to a query embedding —
+ * composable with a JSONB `where` pre-filter in the same SQL statement.
+ * Model scope resolves like every shape-sensitive query (single-model
+ * sessions automatic, multi-model sessions require `options.model`).
+ * Records without embeddings are invisible to the ranking.
+ */
+export async function searchRecordsSemantic(
+  pool: Pool,
+  analysisId: string,
+  embedding: ArrayLike<number>,
+  options: SemanticRecordSearchOptions = {}
+): Promise<SemanticRecordHit[]> {
+  await cleanupExpired(pool)
+
+  const scope = await resolveModelScope(pool, analysisId, options.model)
+  if (scope === null) return []
+
+  const topK = Math.min(options.topK || 10, 100)
+  const conditions = [
+    'analysis_id = $1',
+    'model = $2',
+    'embedding IS NOT NULL',
+    '(expires_at IS NULL OR expires_at > NOW())'
+  ]
+  const params: unknown[] = [analysisId, scope]
+  let paramIdx = 3
+
+  if (options.where) {
+    const where = buildWhereConditions(options.where, params, paramIdx)
+    conditions.push(...where.conditions)
+    paramIdx = where.paramIdx
+  }
+
+  params.push(`[${Array.from(embedding).join(',')}]`)
+  const vectorParam = `$${paramIdx++}`
+
+  if (options.minSimilarity !== undefined) {
+    conditions.push(`1 - (embedding <=> ${vectorParam}) >= $${paramIdx++}`)
+    params.push(options.minSimilarity)
+  }
+
+  params.push(topK)
+  const limitParam = `$${paramIdx}`
+
+  const result = await pool.query(
+    `SELECT data, 1 - (embedding <=> ${vectorParam}) AS similarity
+     FROM ingested_records
+     WHERE ${conditions.join(' AND ')}
+     ORDER BY embedding <=> ${vectorParam}
+     LIMIT ${limitParam}`,
+    params
+  )
+
+  return (result.rows as Array<{ data: Record<string, unknown>; similarity: number }>).map(
+    (row) => ({ record: row.data, similarity: row.similarity })
+  )
 }
 
 /** GROUP BY on a JSONB field */
