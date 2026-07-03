@@ -29,7 +29,7 @@ vi.mock('#src/runtime/logger.js', () => ({
   debug: vi.fn()
 }))
 
-vi.mock('../../../../../src/runtime/vendor/langfuse/mcp-integration.js', () => ({
+vi.mock('../../../../../src/runtime/integrations/langfuse/mcp-integration.js', () => ({
   traceToolCall: vi.fn(),
   traceApiCall: vi.fn(),
   tracePromptGeneration: vi.fn(),
@@ -38,10 +38,10 @@ vi.mock('../../../../../src/runtime/vendor/langfuse/mcp-integration.js', () => (
   setConfigured: vi.fn()
 }))
 
-const langfuse = await import('../../../../../src/runtime/vendor/langfuse/index.js')
-import { setConfigured } from '../../../../../src/runtime/vendor/langfuse/mcp-integration.js'
+const langfuse = await import('../../../../../src/runtime/integrations/langfuse/index.js')
+import { setConfigured } from '../../../../../src/runtime/integrations/langfuse/mcp-integration.js'
 
-describe('lib/services/vendor/langfuse/index', () => {
+describe('lib/runtime/integrations/langfuse/index', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })

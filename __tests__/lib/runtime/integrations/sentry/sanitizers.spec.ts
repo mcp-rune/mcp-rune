@@ -3,9 +3,9 @@ import {
   sanitizeHeaders,
   sanitizeObject,
   sanitizeToolArgs
-} from '../../../../../src/runtime/vendor/sentry/sanitizers.js'
+} from '../../../../../src/runtime/integrations/sentry/sanitizers.js'
 
-describe('lib/services/vendor/sentry/sanitizers', () => {
+describe('lib/runtime/integrations/sentry/sanitizers', () => {
   describe('sanitizeObject', () => {
     it('should redact sensitive fields', () => {
       const obj = {

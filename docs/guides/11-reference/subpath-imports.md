@@ -48,7 +48,7 @@ import { cimdExtension } from '@mcp-rune/mcp-rune/extensions/cimd'
 import { centerOfControlExtension } from '@mcp-rune/mcp-rune/extensions/center-of-control'
 
 import { logger, tracing, errorTracking, vectorStorage } from '@mcp-rune/mcp-rune/runtime'
-import { createPgvectorAdapter } from '@mcp-rune/mcp-rune/runtime/vendor/pgvector'
+import { createPgvectorAdapter } from '@mcp-rune/mcp-rune/runtime/integrations/pgvector'
 
 import { setPool, query } from '@mcp-rune/mcp-rune/db'
 import { migrations } from '@mcp-rune/mcp-rune/db/migrations'
@@ -81,7 +81,7 @@ export {}
 | `@mcp-rune/mcp-rune/extensions/cimd` | Built-in: Client ID Metadata Document. |
 | `@mcp-rune/mcp-rune/extensions/center-of-control` | Built-in: OAuth control-plane extension. |
 | `@mcp-rune/mcp-rune/runtime` | `logger`, `tracing`, `errorTracking`, `embeddings`, `vectorStorage`, `requestContext`, `toolOutputAdapters` facades (record-semantic and path queries live inside the `vectorStorage` facade). |
-| `@mcp-rune/mcp-rune/runtime/vendor/pgvector` | `createPgvectorAdapter` — `VectorStorageAdapter` backed by Postgres + pgvector. |
+| `@mcp-rune/mcp-rune/runtime/integrations/pgvector` | `createPgvectorAdapter` — `VectorStorageAdapter` backed by Postgres + pgvector. |
 | `@mcp-rune/mcp-rune/db` | `getPool`, `setPool`, `query` — minimal PG client. |
 | `@mcp-rune/mcp-rune/db/migrations` | Versioned SQL migrations as a JS array plus the drift guards `getPendingMigrations`, `assertMigrationsCurrent`, `PendingMigrationsError` — feed to your migration runner. |
 

@@ -221,7 +221,7 @@ See the **Database** section of the root README for the full migration runner sn
 ```ts file=src/pool.ts
 import pg from 'pg'
 import { vectorStorage } from '@mcp-rune/mcp-rune/runtime'
-import { createPgvectorAdapter } from '@mcp-rune/mcp-rune/runtime/vendor/pgvector'
+import { createPgvectorAdapter } from '@mcp-rune/mcp-rune/runtime/integrations/pgvector'
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
 
@@ -241,7 +241,7 @@ vectorStorage.initVectorStorage({
 ```js file=src/pool.js
 import pg from 'pg'
 import { vectorStorage } from '@mcp-rune/mcp-rune/runtime'
-import { createPgvectorAdapter } from '@mcp-rune/mcp-rune/runtime/vendor/pgvector'
+import { createPgvectorAdapter } from '@mcp-rune/mcp-rune/runtime/integrations/pgvector'
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
 vectorStorage.initVectorStorage({
   adapter: createPgvectorAdapter({
@@ -677,10 +677,10 @@ analysis_clear({ analysis_id: "library-audit-2026-05" })
 | `src/mcp/analysis-layer/graph-stratifiers.ts` | CTE builders for the concept / edge / cluster sample stratifiers |
 | `src/mcp/analysis-layer/summary-strategies/` | Strategy interface + 9 built-ins (5 field-level + 4 GraphRAG-aware) + registry |
 | `src/runtime/vector-storage.ts` | Vendor-agnostic facade — `initVectorStorage`, `isVectorStorageEnabled`, all store/query/clear entry points |
-| `src/runtime/vendor/pgvector/index.ts` | Pool injection, cleanup-on-boot |
-| `src/runtime/vendor/pgvector/analysis-memories.ts` | Findings table SQL (store, recall, clear, eviction) |
-| `src/runtime/vendor/pgvector/ingested-records.ts` | Raw-data table SQL (store, aggregate/filter/sample, semantic record ranking, stratification) |
-| `src/runtime/vendor/pgvector/ingested-edges.ts` | Edge table SQL (store, path-mode recursive CTE, eviction) |
+| `src/runtime/integrations/pgvector/index.ts` | Pool injection, cleanup-on-boot |
+| `src/runtime/integrations/pgvector/analysis-memories.ts` | Findings table SQL (store, recall, clear, eviction) |
+| `src/runtime/integrations/pgvector/ingested-records.ts` | Raw-data table SQL (store, aggregate/filter/sample, semantic record ranking, stratification) |
+| `src/runtime/integrations/pgvector/ingested-edges.ts` | Edge table SQL (store, path-mode recursive CTE, eviction) |
 | `src/runtime/embeddings.ts` | Local `all-MiniLM-L6-v2` embeddings |
 | `src/db/migrations.ts` | Migration data (`feature: 'analysis'` for these tables) |
 

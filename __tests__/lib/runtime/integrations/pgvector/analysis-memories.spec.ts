@@ -3,9 +3,9 @@ import {
   clearMemories,
   recallMemories,
   storeMemory
-} from '../../../../../src/runtime/vendor/pgvector/analysis-memories.js'
+} from '../../../../../src/runtime/integrations/pgvector/analysis-memories.js'
 
-describe('lib/services/vendor/pgvector/analysis-memories', () => {
+describe('lib/runtime/integrations/pgvector/analysis-memories', () => {
   let mockPool
 
   beforeEach(() => {

@@ -380,7 +380,7 @@ With 3 statuses and 4 weekly buckets → 12 composite groups → 1 record each.
 
 | File | Role |
 | --- | --- |
-| `src/runtime/vendor/pgvector/ingested-records.ts` | Core SQL: `querySampleFiltered`, `buildWhereConditions`, `validateInterval`, `ProximityParams` type |
+| `src/runtime/integrations/pgvector/ingested-records.ts` | Core SQL: `querySampleFiltered`, `buildWhereConditions`, `validateInterval`, `ProximityParams` type |
 | `src/mcp/tools/analysis/analysis-query-tool.ts` | Tool schema: `proximity` parameter, `where` in sample mode, updated `_queryDescribe` output |
 | `src/runtime/vector-storage.ts` | Facade: `IngestedDataQuery` type with `where` and `proximity` on sample variant |
 | `__tests__/lib/services/vendor/pgvector/ingested-records.spec.ts` | SQL-level tests: filtered sample, proximity window, bucket stratification, composite, validation |

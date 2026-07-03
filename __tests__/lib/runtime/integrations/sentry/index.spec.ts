@@ -28,10 +28,10 @@ vi.mock('#src/runtime/logger.js', () => ({
 }))
 
 // Must import after mocks
-const sentry = await import('../../../../../src/runtime/vendor/sentry/index.js')
+const sentry = await import('../../../../../src/runtime/integrations/sentry/index.js')
 import * as Sentry from '@sentry/node'
 
-describe('lib/services/vendor/sentry/index', () => {
+describe('lib/runtime/integrations/sentry/index', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })

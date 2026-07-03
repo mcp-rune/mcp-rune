@@ -1,17 +1,18 @@
 /**
- * Error Tracking Service - Vendor-Agnostic Public API
+ * Error Tracking Service — stable public API over the Sentry integration.
  *
- * This module provides a stable API for error tracking that abstracts
- * the underlying vendor implementation (currently Sentry).
- *
- * To switch vendors, update the import and ensure the vendor module
- * exports the same interface.
+ * The `integrations/sentry` module is an anti-corruption facade over the
+ * `@sentry/node` npm package (not vendored source). The facade injects the
+ * shared `sanitizers` redaction into every event's `beforeSend`, turns
+ * capture into a no-op when no DSN is configured (graceful-disable), and
+ * keeps this module's surface stable across Sentry major versions. See
+ * ADR 0005.
  *
  * @example
  * import { initErrorTracking, captureToolError } from '#src/runtime/error-tracking.js'
  *
  * // Initialize once at startup
- * initErrorTracking({ serviceName: 'mcp-server-engineer' })
+ * initErrorTracking({ serviceName: 'my-mcp-server' })
  *
  * // Capture errors
  * try {
@@ -22,8 +23,7 @@
  * }
  */
 
-// Vendor implementation - change this import to switch vendors
-import * as vendor from './vendor/sentry/index.js'
+import * as integration from './integrations/sentry/index.js'
 
 export interface ErrorTrackingOptions {
   serviceName?: string
@@ -58,7 +58,7 @@ export interface UserInfo {
 }
 
 /** Error categories for classification */
-export const ErrorCategory = vendor.ErrorCategory
+export const ErrorCategory = integration.ErrorCategory
 
 /**
  * Initialize error tracking service
@@ -67,17 +67,17 @@ export const ErrorCategory = vendor.ErrorCategory
  *
  * @example
  * initErrorTracking({
- *   serviceName: 'mcp-server-engineer',
+ *   serviceName: 'my-mcp-server',
  *   version: '1.0.0'
  * })
  */
 export function initErrorTracking(options: ErrorTrackingOptions = {}): boolean {
-  return vendor.initialize(options)
+  return integration.initialize(options)
 }
 
 /** Check if error tracking is configured and enabled */
 export function isErrorTrackingEnabled(): boolean {
-  return vendor.isConfigured()
+  return integration.isConfigured()
 }
 
 /**
@@ -98,7 +98,7 @@ export function captureToolError(
   args: Record<string, unknown> = {},
   context: Record<string, unknown> = {}
 ): void {
-  vendor.captureToolError(error, toolName, args, context)
+  integration.captureToolError(error, toolName, args, context)
 }
 
 /**
@@ -112,7 +112,7 @@ export function captureApiError(
   method = 'GET',
   context: Record<string, unknown> = {}
 ): void {
-  vendor.captureApiError(error, endpoint, method, context)
+  integration.captureApiError(error, endpoint, method, context)
 }
 
 /**
@@ -125,7 +125,7 @@ export function capturePromptError(
   promptName: string,
   context: Record<string, unknown> = {}
 ): void {
-  vendor.capturePromptError(error, promptName, context)
+  integration.capturePromptError(error, promptName, context)
 }
 
 /**
@@ -134,7 +134,7 @@ export function capturePromptError(
  * Use this for errors that don't fit into the specific categories above.
  */
 export function captureException(error: Error, context: ExceptionContext = {}): void {
-  vendor.captureException(error, context)
+  integration.captureException(error, context)
 }
 
 /**
@@ -147,12 +147,12 @@ export function captureMessage(
   level = 'info',
   context: ExceptionContext = {}
 ): void {
-  vendor.captureMessage(message, level, context)
+  integration.captureMessage(message, level, context)
 }
 
 /** Categorize an error for grouping */
 export function categorizeError(error: Error): string {
-  return vendor.categorizeError(error)
+  return integration.categorizeError(error)
 }
 
 /**
@@ -161,12 +161,12 @@ export function categorizeError(error: Error): string {
  * Breadcrumbs appear in error reports to show what happened before the error.
  */
 export function addBreadcrumb(breadcrumb: Breadcrumb): void {
-  vendor.addBreadcrumb(breadcrumb)
+  integration.addBreadcrumb(breadcrumb)
 }
 
 /** Add a breadcrumb specifically for tool invocations */
 export function addToolBreadcrumb(toolName: string, args: Record<string, unknown> = {}): void {
-  vendor.addToolBreadcrumb(toolName, args)
+  integration.addToolBreadcrumb(toolName, args)
 }
 
 /**
@@ -175,7 +175,7 @@ export function addToolBreadcrumb(toolName: string, args: Record<string, unknown
  * Call this when a client connects to track which clients are using the server.
  */
 export function setMcpClientContext(clientInfo: ClientInfo): void {
-  vendor.setMcpClientContext(clientInfo)
+  integration.setMcpClientContext(clientInfo)
 }
 
 /**
@@ -184,7 +184,7 @@ export function setMcpClientContext(clientInfo: ClientInfo): void {
  * Call this after authentication to associate errors with users.
  */
 export function setUser(user: UserInfo): void {
-  vendor.setUser(user)
+  integration.setUser(user)
 }
 
 /**
@@ -193,12 +193,12 @@ export function setUser(user: UserInfo): void {
  * Call this on logout or session end.
  */
 export function clearUser(): void {
-  vendor.clearUser()
+  integration.clearUser()
 }
 
 /** Sanitize tool arguments for safe logging/reporting */
 export function sanitizeToolArgs(args: Record<string, unknown>): Record<string, unknown> {
-  return vendor.sanitizeToolArgs(args)
+  return integration.sanitizeToolArgs(args)
 }
 
 /**
@@ -207,7 +207,7 @@ export function sanitizeToolArgs(args: Record<string, unknown>): Record<string, 
  * Call before process exit to ensure all errors are sent.
  */
 export async function flushErrorTracking(timeout = 2000): Promise<boolean> {
-  return vendor.flush(timeout)
+  return integration.flush(timeout)
 }
 
 /**
@@ -216,5 +216,5 @@ export async function flushErrorTracking(timeout = 2000): Promise<boolean> {
  * Call on graceful shutdown.
  */
 export async function closeErrorTracking(timeout = 2000): Promise<boolean> {
-  return vendor.close(timeout)
+  return integration.close(timeout)
 }

@@ -1,4 +1,4 @@
-vi.mock('../../../src/runtime/vendor/langfuse/index.js', () => ({
+vi.mock('../../../src/runtime/integrations/langfuse/index.js', () => ({
   initialize: vi.fn(() => true),
   isConfigured: vi.fn(() => true),
   traceToolCall: vi.fn(async (name, args, handler) => handler()),
@@ -10,6 +10,7 @@ vi.mock('../../../src/runtime/vendor/langfuse/index.js', () => ({
   close: vi.fn()
 }))
 
+import * as vendor from '../../../src/runtime/integrations/langfuse/index.js'
 import {
   closeTracing,
   extractTraceContext,
@@ -21,7 +22,6 @@ import {
   tracePromptGeneration,
   traceToolCall
 } from '../../../src/runtime/tracing.js'
-import * as vendor from '../../../src/runtime/vendor/langfuse/index.js'
 
 describe('lib/services/tracing', () => {
   beforeEach(() => {
