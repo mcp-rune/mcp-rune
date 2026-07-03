@@ -53,7 +53,7 @@ Open `bookshelf-demo/src/server.ts` and add the storage init before `createServe
 ```ts file=src/pool.ts
 import { Pool } from 'pg'
 import { vectorStorage } from '@mcp-rune/mcp-rune/runtime'
-import { createPgvectorAdapter } from '@mcp-rune/mcp-rune/runtime/vendor/pgvector'
+import { createPgvectorAdapter } from '@mcp-rune/mcp-rune/runtime/integrations/pgvector'
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 vectorStorage.initVectorStorage({
@@ -66,7 +66,7 @@ vectorStorage.initVectorStorage({
 ```js file=src/pool.js
 import { Pool } from 'pg'
 import { vectorStorage } from '@mcp-rune/mcp-rune/runtime'
-import { createPgvectorAdapter } from '@mcp-rune/mcp-rune/runtime/vendor/pgvector'
+import { createPgvectorAdapter } from '@mcp-rune/mcp-rune/runtime/integrations/pgvector'
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 vectorStorage.initVectorStorage({
   adapter: createPgvectorAdapter({ pool }),

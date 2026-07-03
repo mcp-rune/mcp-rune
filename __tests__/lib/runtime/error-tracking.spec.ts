@@ -1,5 +1,5 @@
 // Mock the vendor module
-vi.mock('../../../src/runtime/vendor/sentry/index.js', () => ({
+vi.mock('../../../src/runtime/integrations/sentry/index.js', () => ({
   ErrorCategory: {
     VALIDATION: 'validation_error',
     AUTH: 'auth_error',
@@ -46,7 +46,7 @@ import {
   setMcpClientContext,
   setUser
 } from '../../../src/runtime/error-tracking.js'
-import * as vendor from '../../../src/runtime/vendor/sentry/index.js'
+import * as vendor from '../../../src/runtime/integrations/sentry/index.js'
 
 describe('lib/services/error-tracking', () => {
   beforeEach(() => {

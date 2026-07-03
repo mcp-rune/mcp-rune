@@ -4,9 +4,9 @@ import {
   getEdgesForSources,
   getEdgesFrom,
   storeEdges
-} from '../../../../../src/runtime/vendor/pgvector/ingested-edges.js'
+} from '../../../../../src/runtime/integrations/pgvector/ingested-edges.js'
 
-describe('lib/services/vendor/pgvector/ingested-edges', () => {
+describe('lib/runtime/integrations/pgvector/ingested-edges', () => {
   let mockPool: { query: ReturnType<typeof vi.fn> }
 
   beforeEach(() => {

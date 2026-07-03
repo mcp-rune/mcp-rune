@@ -82,9 +82,9 @@
       "types": "./dist/runtime.d.ts",
       "import": "./dist/runtime.js"
     },
-    "./runtime/vendor/pgvector": {
-      "types": "./dist/runtime/vendor/pgvector/index.d.ts",
-      "import": "./dist/runtime/vendor/pgvector/index.js"
+    "./runtime/integrations/pgvector": {
+      "types": "./dist/runtime/integrations/pgvector/index.d.ts",
+      "import": "./dist/runtime/integrations/pgvector/index.js"
     },
     "./model-service": {
       "types": "./dist/mcp/data-layer/model-service/index.d.ts",

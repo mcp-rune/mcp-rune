@@ -5,7 +5,7 @@ import {
   getClusters,
   getStats,
   storeOperation
-} from '../../../../../src/runtime/vendor/pgvector/tool-memories.js'
+} from '../../../../../src/runtime/integrations/pgvector/tool-memories.js'
 
 // Mock cosine-similarity
 vi.mock('../../../../../src/runtime/cosine-similarity.js', () => ({
@@ -22,7 +22,7 @@ function createMockPool(rows = [], rowCount = 0) {
 
 const testEmbedding = new Float32Array([0.1, 0.2, 0.3])
 
-describe('lib/services/vendor/pgvector/tool-memories', () => {
+describe('lib/runtime/integrations/pgvector/tool-memories', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })

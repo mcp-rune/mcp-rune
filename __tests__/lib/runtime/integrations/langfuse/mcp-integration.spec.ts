@@ -25,8 +25,6 @@ vi.mock('../../../../../src/runtime/logger.js', () => ({
 
 import { propagateAttributes, startActiveObservation } from '@langfuse/tracing'
 
-import * as logger from '../../../../../src/runtime/logger.js'
-import { sanitizeToolArgs } from '../../../../../src/runtime/sanitizers.js'
 import {
   extractTraceContext,
   setConfigured,
@@ -34,9 +32,11 @@ import {
   traceApiCall,
   tracePromptGeneration,
   traceToolCall
-} from '../../../../../src/runtime/vendor/langfuse/mcp-integration.js'
+} from '../../../../../src/runtime/integrations/langfuse/mcp-integration.js'
+import * as logger from '../../../../../src/runtime/logger.js'
+import { sanitizeToolArgs } from '../../../../../src/runtime/sanitizers.js'
 
-describe('lib/services/vendor/langfuse/mcp-integration', () => {
+describe('lib/runtime/integrations/langfuse/mcp-integration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     setConfigured(true)

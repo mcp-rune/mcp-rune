@@ -8,7 +8,7 @@ import {
   getAlertLevel,
   setMcpClientContext,
   startToolTransaction
-} from '../../../../../src/runtime/vendor/sentry/mcp-integration.js'
+} from '../../../../../src/runtime/integrations/sentry/mcp-integration.js'
 
 // Mock Sentry to avoid actual API calls
 vi.mock('@sentry/node', () => ({
@@ -22,7 +22,7 @@ vi.mock('@sentry/node', () => ({
   setTag: vi.fn()
 }))
 
-describe('lib/services/vendor/sentry/mcp-integration', () => {
+describe('lib/runtime/integrations/sentry/mcp-integration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })

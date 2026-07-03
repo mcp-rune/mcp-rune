@@ -36,7 +36,7 @@ export interface PgvectorAdapterOptions {
  * Build a `VectorStorageAdapter` backed by Postgres + pgvector.
  *
  * @example
- * import { createPgvectorAdapter } from '@mcp-rune/mcp-rune/runtime/vendor/pgvector'
+ * import { createPgvectorAdapter } from '@mcp-rune/mcp-rune/runtime/integrations/pgvector'
  * import { initVectorStorage } from '@mcp-rune/mcp-rune/runtime'
  *
  * initVectorStorage({

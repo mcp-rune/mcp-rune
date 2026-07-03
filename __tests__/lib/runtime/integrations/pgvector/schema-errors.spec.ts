@@ -1,4 +1,4 @@
-import { withSchemaHint } from '../../../../../src/runtime/vendor/pgvector/schema-errors.js'
+import { withSchemaHint } from '../../../../../src/runtime/integrations/pgvector/schema-errors.js'
 
 describe('pgvector/schema-errors — withSchemaHint', () => {
   it('returns the operation result when it succeeds', async () => {

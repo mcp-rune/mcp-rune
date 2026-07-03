@@ -5,9 +5,9 @@ import {
   queryRecords,
   searchRecordsSemantic,
   storeRecords
-} from '../../../../../src/runtime/vendor/pgvector/ingested-records.js'
+} from '../../../../../src/runtime/integrations/pgvector/ingested-records.js'
 
-describe('lib/services/vendor/pgvector/ingested-records', () => {
+describe('lib/runtime/integrations/pgvector/ingested-records', () => {
   let mockPool: { query: ReturnType<typeof vi.fn> }
 
   beforeEach(() => {

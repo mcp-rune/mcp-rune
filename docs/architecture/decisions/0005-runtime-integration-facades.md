@@ -6,7 +6,7 @@
 
 ## Context
 
-`src/runtime/vendor/{langfuse,sentry,pgvector}` are not vendored code. The langfuse and sentry modules are thin facades over live npm dependencies (`@langfuse/otel`, `@sentry/node`); pgvector is first-party SQL adapter code. Each facade carries a "change this import to switch vendors" comment (`src/runtime/tracing.ts`, `src/runtime/error-tracking.ts`) with exactly one implementation behind it — which reads as an abstraction justified by symmetry alone, and the folder name actively implies copied third-party source that would carry version-drift risk. The review also found the vitest coverage exclude for the sentry module pointing at a path that no longer exists (`src/services/vendor/sentry/index.ts`), stale rot the misleading layout helped hide.
+`src/runtime/vendor/{langfuse,sentry,pgvector}` (the folder this decision renames to `integrations/`) are not vendored code. The langfuse and sentry modules are thin facades over live npm dependencies (`@langfuse/otel`, `@sentry/node`); pgvector is first-party SQL adapter code. Each facade carries a "change this import to switch vendors" comment (`src/runtime/tracing.ts`, `src/runtime/error-tracking.ts`) with exactly one implementation behind it — which reads as an abstraction justified by symmetry alone, and the folder name actively implies copied third-party source that would carry version-drift risk. The review also found the vitest coverage exclude for the sentry module pointing at a path that no longer exists (`src/services/vendor/sentry/index.ts`), stale rot the misleading layout helped hide.
 
 ## Decision
 

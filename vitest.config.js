@@ -22,7 +22,7 @@ export default defineConfig({
         '**/__tests__/**',
         'vitest.config.js',
         'src/mcp/stdio-server.ts',
-        'src/services/vendor/sentry/index.ts',
+        'src/runtime/integrations/sentry/index.ts',
         'src/oauth2/index.ts',
         'src/oauth2/adapters/base-adapter.ts',
         'src/mcp/tools/data/index.ts',

@@ -1,6 +1,6 @@
 // Mock the four impl modules so we can verify the factory wires them with
 // the bound pool and retention values.
-vi.mock('../../../../../src/runtime/vendor/pgvector/tool-memories.js', () => ({
+vi.mock('../../../../../src/runtime/integrations/pgvector/tool-memories.js', () => ({
   storeOperation: vi.fn(() => Promise.resolve('tm-1')),
   findSimilar: vi.fn(() => Promise.resolve([])),
   detectGaps: vi.fn(() => Promise.resolve([])),
@@ -8,13 +8,13 @@ vi.mock('../../../../../src/runtime/vendor/pgvector/tool-memories.js', () => ({
   getStats: vi.fn(() => Promise.resolve([])),
   cleanupExpired: vi.fn(() => Promise.resolve(0))
 }))
-vi.mock('../../../../../src/runtime/vendor/pgvector/analysis-memories.js', () => ({
+vi.mock('../../../../../src/runtime/integrations/pgvector/analysis-memories.js', () => ({
   storeMemory: vi.fn(() => Promise.resolve('am-1')),
   recallMemories: vi.fn(() => Promise.resolve([])),
   clearMemories: vi.fn(() => Promise.resolve(0)),
   cleanupExpired: vi.fn(() => Promise.resolve(0))
 }))
-vi.mock('../../../../../src/runtime/vendor/pgvector/ingested-records.js', () => ({
+vi.mock('../../../../../src/runtime/integrations/pgvector/ingested-records.js', () => ({
   storeRecords: vi.fn(() => Promise.resolve(0)),
   queryRecords: vi.fn(() => Promise.resolve([])),
   getEmbeddingsForRecords: vi.fn(() => Promise.resolve(new Map())),
@@ -39,7 +39,7 @@ vi.mock('../../../../../src/runtime/vendor/pgvector/ingested-records.js', () => 
   clearRecords: vi.fn(() => Promise.resolve(0)),
   cleanupExpired: vi.fn(() => Promise.resolve(0))
 }))
-vi.mock('../../../../../src/runtime/vendor/pgvector/ingested-edges.js', () => ({
+vi.mock('../../../../../src/runtime/integrations/pgvector/ingested-edges.js', () => ({
   storeEdges: vi.fn(() => Promise.resolve(0)),
   getEdgesFrom: vi.fn(() => Promise.resolve([])),
   getEdgesForSources: vi.fn(() => Promise.resolve([])),
@@ -47,13 +47,13 @@ vi.mock('../../../../../src/runtime/vendor/pgvector/ingested-edges.js', () => ({
   cleanupExpired: vi.fn(() => Promise.resolve(0))
 }))
 
-import * as analysisMemories from '../../../../../src/runtime/vendor/pgvector/analysis-memories.js'
-import { createPgvectorAdapter } from '../../../../../src/runtime/vendor/pgvector/index.js'
-import * as ingestedEdges from '../../../../../src/runtime/vendor/pgvector/ingested-edges.js'
-import * as ingestedRecords from '../../../../../src/runtime/vendor/pgvector/ingested-records.js'
-import * as toolMemories from '../../../../../src/runtime/vendor/pgvector/tool-memories.js'
+import * as analysisMemories from '../../../../../src/runtime/integrations/pgvector/analysis-memories.js'
+import { createPgvectorAdapter } from '../../../../../src/runtime/integrations/pgvector/index.js'
+import * as ingestedEdges from '../../../../../src/runtime/integrations/pgvector/ingested-edges.js'
+import * as ingestedRecords from '../../../../../src/runtime/integrations/pgvector/ingested-records.js'
+import * as toolMemories from '../../../../../src/runtime/integrations/pgvector/tool-memories.js'
 
-describe('lib/services/vendor/pgvector/index — createPgvectorAdapter', () => {
+describe('lib/runtime/integrations/pgvector/index — createPgvectorAdapter', () => {
   const mockPool = { query: vi.fn(), connect: vi.fn() } as any
 
   beforeEach(() => {

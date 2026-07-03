@@ -6,10 +6,10 @@
  * `src/mcp/prompts/prompt-definitions.ts` for prompts: holds the contract
  * (`VectorStorageAdapter` + four sub-adapter interfaces) consumed by the
  * `vector-storage.ts` facade and by every vendor implementation under
- * `vendor/<name>/`. Definition lives here; the facade and the vendor
+ * `integrations/<name>/`. Definition lives here; the facade and the integration
  * factories are consumers.
  *
- * To add a new vendor (e.g. Qdrant), create `vendor/qdrant/index.ts` exporting
+ * To add a new vendor (e.g. Qdrant), create `integrations/qdrant/index.ts` exporting
  * `createQdrantAdapter(...): VectorStorageAdapter`. No edits to this file or
  * to `vector-storage.ts` should be required.
  */
