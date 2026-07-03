@@ -41,7 +41,13 @@ vi.mock('#src/runtime/logger.js', () => ({
   debug: vi.fn(),
   info: vi.fn(),
   warn: vi.fn(),
-  error: vi.fn()
+  error: vi.fn(),
+  child: vi.fn(() => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn()
+  }))
 }))
 
 // Mock error tracking and tracing

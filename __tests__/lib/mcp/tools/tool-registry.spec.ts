@@ -199,7 +199,7 @@ describe('lib/mcp/tools/tool-registry', () => {
       )
     })
 
-    it('should skip tools that throw during schema validation', () => {
+    it('should throw at registration for tools with invalid schemas', () => {
       // Create a tool whose inputSchema getter throws
       class BadSchemaTool extends BaseTool {
         static override requiresAuth = false
@@ -225,17 +225,14 @@ describe('lib/mcp/tools/tool-registry', () => {
         models: {}
       })
 
-      registry.registerTools(mockMcpServer as any, {
-        getAccessToken: async () => null
-      })
-
-      // bad_schema_tool should be skipped, no_auth_tool should register
-      expect(logger.error).toHaveBeenCalledWith(
-        'Skipping tool with invalid schema',
-        expect.objectContaining({ tool: 'bad_schema_tool' })
-      )
+      // A schema that cannot serialize is a programming error — the boot
+      // fails loudly instead of silently shipping without the tool.
+      expect(() =>
+        registry.registerTools(mockMcpServer as any, {
+          getAccessToken: async () => null
+        })
+      ).toThrow(/tool "bad_schema_tool" has an invalid input schema/)
       expect(mockMcpServer.registeredTools.has('bad_schema_tool')).toBe(false)
-      expect(mockMcpServer.registeredTools.has('no_auth_tool')).toBe(true)
     })
 
     it('should execute no-auth tool without API client', async () => {

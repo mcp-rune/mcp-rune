@@ -443,7 +443,7 @@ export const appRegistry = createDefaultAppRegistry({
 })
 ```
 
-At `AppRegistry` construction the descriptor half registers with the shared kind registry; server-side prompt summaries, form-schema generation, and `validate_form` all pick it up immediately. Call `validateRegistries(...)` _after_ construction so the boot-time guard sees deployer-defined kinds.
+At `AppRegistry` construction the descriptor half registers with the shared kind registry; server-side prompt summaries, form-schema generation, and `validate_form` all pick it up immediately. Boot validation runs automatically after construction (`createDefaultAppRegistry` and `createServer` both run `validateRegistries` with a `validate: 'throw' | 'warn' | 'off'` policy), so deployer-defined kinds are registered by the time model attribute types are checked.
 
 > The framework also exports `registerKind(...)` from `@mcp-rune/mcp-rune/models` for tests and framework-internal callers. Application code should configure kinds through `AppRegistry({ kinds })` so there's one extension point to find.
 
