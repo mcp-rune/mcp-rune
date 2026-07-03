@@ -1,8 +1,6 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
-import { MissingRequiredFieldsError } from '#src/mcp/data-layer/model-service/model-service.js'
-
 import { SaveModelBaseTool } from '../save-model-base-tool.js'
 import type { ToolAnnotations, ToolResult } from '../tool-result.js'
 
@@ -92,12 +90,8 @@ export class CreateModelTool extends SaveModelBaseTool {
 
       return this.formatResponse({ status: 'created', model, id: data.id })
     } catch (error) {
-      if (error instanceof MissingRequiredFieldsError) {
-        return {
-          content: [{ type: 'text', text: error.message }],
-          isError: true
-        }
-      }
+      // MissingRequiredFieldsError and every other DataLayerError render via
+      // formatError, which already surfaces the message the seam produced.
       return this.formatError(error as Error)
     }
   }
