@@ -45,7 +45,7 @@ The raw rows land in an `ingested_records` table (JSONB rows plus optional per-r
 - **filter** — JSONB predicates (`@>`, range casts).
 - **sample** — random or **stratified** samples (incl. proximity buckets).
 - **path** — recursive-CTE typed edge chains between two records over `ingested_edges`: `from_model`/`from_id` → `to_model`/`to_id`, with `max_depth` defaulting to 4 (capped at 6).
-- **semantic** — embeds the _query string_ and ranks by cosine distance: stored findings and page summaries by default (`target: "findings"`), or the ingested records themselves (`target: "records"`) — the record ranking composes with `where` for hybrid semantic + filter retrieval in one SQL statement, and with `model` on multi-model sessions.
+- **semantic** — embeds the _query string_ and ranks by cosine distance: stored findings and page summaries by default (`target: "findings"`), or the ingested records themselves (`target: "records"`) — the record ranking composes with `where` for hybrid semantic + filter retrieval in one SQL statement, and with `model` on multi-model sessions. Pass `rerank: true` on `target: "records"` for two-stage retrieval: over-fetch by cosine, then rerank the pool with a local cross-encoder for higher precision (slower, still no API key; [ADR 0018](../../architecture/decisions/0018-local-cross-encoder-reranking.md)). It degrades to cosine order when the reranker model isn't available.
 
 On multi-model (hop-expanded) sessions, `aggregate`/`filter`/`sample` require the `model` parameter — the error names the candidate models with their record counts (see [ADR 0013](../../architecture/decisions/0013-sessions-are-graphs-analyses-are-per-model.md)).
 

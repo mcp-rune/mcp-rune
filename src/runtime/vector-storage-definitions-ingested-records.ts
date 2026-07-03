@@ -103,6 +103,18 @@ export interface SemanticRecordSearchOptions {
   where?: Record<string, unknown>
   /** Cosine-similarity floor. Omitted = rank-only, no threshold. */
   minSimilarity?: number
+  /**
+   * Two-stage retrieval (ADR 0018): over-fetch a candidate pool by cosine, then
+   * rerank it with the local cross-encoder and cut to `topK`. Off by default;
+   * degrades to cosine order when transformers is unavailable.
+   */
+  rerank?: boolean
+  /**
+   * Candidate-pool multiplier for reranking. The cosine stage fetches
+   * `topK * overFetch` candidates (default 5, capped so the pool stays small
+   * enough for the cross-encoder to score quickly).
+   */
+  overFetch?: number
 }
 
 export interface SemanticRecordHit {

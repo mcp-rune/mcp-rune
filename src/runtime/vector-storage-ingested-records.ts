@@ -1,6 +1,7 @@
 import { buildEmbeddingText } from '#src/mcp/analysis-layer/edge-extraction.js'
 
 import { embedBatch } from './embeddings.js'
+import { rerank } from './reranking.js'
 import type {
   IngestedDataQuery,
   RecordEmbedding,
@@ -81,7 +82,34 @@ export async function searchIngestedRecords(
   if (!adapter) return []
   const [embedding] = await embedBatch([query])
   if (!embedding) return []
-  return adapter.ingestedRecords.searchRecordsSemantic(analysisId, embedding, options)
+
+  if (!options.rerank) {
+    return adapter.ingestedRecords.searchRecordsSemantic(analysisId, embedding, options)
+  }
+
+  // Two-stage retrieval (ADR 0018): over-fetch by cosine, then rerank the pool
+  // with the cross-encoder and cut to topK. Falls back to cosine order when the
+  // reranker is unavailable (rerank() returns []).
+  const topK = options.topK ?? 10
+  const overFetch = Math.min(Math.max(options.overFetch ?? 5, 1), 20)
+  const candidates = await adapter.ingestedRecords.searchRecordsSemantic(analysisId, embedding, {
+    ...options,
+    rerank: false,
+    topK: topK * overFetch
+  })
+  if (candidates.length <= 1) return candidates.slice(0, topK)
+
+  const scores = await rerank(
+    query,
+    candidates.map((c) => buildEmbeddingText(c.record))
+  )
+  if (scores.length !== candidates.length) return candidates.slice(0, topK)
+
+  return candidates
+    .map((hit, i) => ({ hit, score: scores[i]! }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK)
+    .map(({ hit }) => hit)
 }
 
 /** Query ingested records (aggregate, filter, or sample) */
