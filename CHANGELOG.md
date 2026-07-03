@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.106.0] - 2026-07-03
+
+### Added
+
+- **`walkHops(rootRecords, options)` on the `AnalysisLayer` seam** (#349, #350). BFS hop expansion across declared associations now lives on the layer interface, delegating to the internal `expandHops` with the bound model as the walk root and fetching destination records through the captured per-request `DataLayer` — the constructor requirement the layer carried unused until now. `HopBatch`, `HopOptions`, and `HopFollow` are re-exported from the seam so projection code never touches `multi-hop-fetch.ts` / `edge-extraction.ts` directly, and `analysis_ingest` hop expansion migrates onto the new method. Part of epic #348.
+
+### Fixed
+
+- **The ModelLayer/AnalysisLayer `no-restricted-imports` guard was inert since it shipped.** Every pattern began with `#` (the subpath-import prefix), which gitignore-style pattern matching parses as a comment, so all seven patterns matched nothing — the ingest tool's direct `expandHops` import shipped through exactly this hole. Patterns are now `**/model-layer/<helper>*` globs that match both the `#src/...` subpath form and relative `../..` forms; the exemption list names the real `app-form-validator.ts` (not the nonexistent `form-validator.ts`); and a new `__tests__/lint/layer-guard.spec.ts` lints known-bad and known-good fixture imports through the live config so the guard can never silently disarm again.
+
+### Changed
+
+- **BREAKING: `expandHops` collapses its duplicate registry parameters.** The never-read `models: ModelsRegistry` and the caller-rebuilt `modelConfigs: Record<string, ModelConfig>` merge into a single `ModelsRegistry` parameter, and `AnalysisLayerContext` gains a required `models` field so the bound layer can traverse into destination models. `createAnalysisLayerFactory`'s signature is unchanged — layers constructed through the factory (the only supported path for projection code) need no migration.
+
 ## [0.104.1] - 2026-06-19
 
 ### Security
@@ -3196,6 +3210,7 @@ Initial public release. Extracted from production MCP servers.
 
 - 11 subpath exports: `mcp-kit/server`, `mcp-kit/tools`, `mcp-kit/prompts`, `mcp-kit/apps`, `mcp-kit/search`, `mcp-kit/domain`, `mcp-kit/oauth2`, `mcp-kit/services`, `mcp-kit/db`, `mcp-kit/core`
 
+[0.106.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.105.1...v0.106.0
 [0.104.1]: https://github.com/mcp-rune/mcp-rune/compare/v0.104.0...v0.104.1
 [0.104.0]: https://github.com/mcp-rune/mcp-rune/compare/v0.103.4...v0.104.0
 [0.103.4]: https://github.com/mcp-rune/mcp-rune/compare/v0.103.3...v0.103.4
