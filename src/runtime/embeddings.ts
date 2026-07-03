@@ -22,9 +22,9 @@ const MODEL_NAME = 'sentence-transformers/all-MiniLM-L6-v2'
 const EMBEDDING_DIMENSIONS = 384
 
 type FeatureExtractionPipeline = (
-  text: string,
+  text: string | string[],
   options: { pooling: string; normalize: boolean }
-) => Promise<{ data: Float32Array }>
+) => Promise<{ data: Float32Array; dims?: number[] }>
 
 let pipeline: FeatureExtractionPipeline | null = null
 let initPromise: Promise<FeatureExtractionPipeline> | null = null
@@ -80,13 +80,30 @@ export async function embed(text: string): Promise<Float32Array> {
   return output.data
 }
 
-/** Embed multiple texts in batch */
+/**
+ * Embed multiple texts in a single batched forward pass. The pipeline accepts
+ * an array and returns one tensor of shape `[texts.length, dims]`; we slice its
+ * flat `data` into per-text vectors instead of running one inference per text.
+ */
 export async function embedBatch(texts: string[]): Promise<Float32Array[]> {
+  if (texts.length === 0) return []
   const extractor = await getOrCreatePipeline()
+  const output = await extractor(texts, { pooling: 'mean', normalize: true })
+  const flat = output.data as Float32Array
+  const dims = output.dims?.[output.dims.length - 1] ?? EMBEDDING_DIMENSIONS
+  // The `vector(EMBEDDING_DIMENSIONS)` DB column and every stored embedding
+  // assume this width. If a model swap changes it without the constant and the
+  // migration following, fail here with a clear message rather than an opaque
+  // pgvector "expected N dimensions" error at INSERT time.
+  if (dims !== EMBEDDING_DIMENSIONS) {
+    throw new Error(
+      `Embedding model produced ${dims}-dim vectors but the schema expects ${EMBEDDING_DIMENSIONS}. ` +
+        `Update EMBEDDING_DIMENSIONS and the ingested_records / analysis_memories vector columns together.`
+    )
+  }
   const results: Float32Array[] = []
-  for (const text of texts) {
-    const output = await extractor(text, { pooling: 'mean', normalize: true })
-    results.push(output.data)
+  for (let i = 0; i < texts.length; i++) {
+    results.push(flat.slice(i * dims, (i + 1) * dims))
   }
   return results
 }

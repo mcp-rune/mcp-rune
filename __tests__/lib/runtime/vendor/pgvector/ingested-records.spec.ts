@@ -399,6 +399,48 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
       expect(expiresAt.getTime()).toBe(Date.now() + 14 * 86_400_000)
     })
 
+    it('dedupes intra-batch duplicate record_ids, keeping the last (ON CONFLICT safety)', async () => {
+      mockPool.query.mockResolvedValueOnce({})
+
+      const stored = await storeRecords(
+        mockPool as any,
+        {
+          analysisId: 'a',
+          model: 'book',
+          records: [
+            { id: 'b-1', data: { id: 'b-1', title: 'first' } },
+            { id: 'b-2', data: { id: 'b-2', title: 'other' } },
+            { id: 'b-1', data: { id: 'b-1', title: 'latest' } }
+          ]
+        },
+        7
+      )
+
+      // 3 input rows → 2 distinct record_ids stored (b-1 collapsed to its last).
+      expect(stored).toBe(2)
+      const params = mockPool.query.mock.calls[0][1] as unknown[]
+      const dataValues = params.filter(
+        (p): p is string => typeof p === 'string' && p.includes('"title"')
+      )
+      expect(dataValues).toHaveLength(2)
+      expect(dataValues.join()).toContain('latest')
+      expect(dataValues.join()).not.toContain('first')
+    })
+
+    it('keeps every id-less record (partial index excludes NULL record_id)', async () => {
+      mockPool.query.mockResolvedValueOnce({})
+      const stored = await storeRecords(
+        mockPool as any,
+        {
+          analysisId: 'a',
+          model: 'book',
+          records: [{ data: { title: 'x' } }, { data: { title: 'y' } }]
+        },
+        7
+      )
+      expect(stored).toBe(2)
+    })
+
     it('honors a different retention on a second call', async () => {
       mockPool.query.mockResolvedValueOnce({})
 

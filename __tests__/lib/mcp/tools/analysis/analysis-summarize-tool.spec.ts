@@ -145,6 +145,7 @@ describe('AnalysisSummarizeTool', () => {
       mode: 'filter',
       where: { status: 'invalid' },
       limit: 250,
+      cap: 5000,
       model: 'scheduling'
     })
   })
@@ -155,6 +156,7 @@ describe('AnalysisSummarizeTool', () => {
     expect(queryIngestedData).toHaveBeenCalledWith('sess-sample', {
       mode: 'sample',
       sampleSize: 500,
+      cap: 5000,
       model: 'scheduling'
     })
   })

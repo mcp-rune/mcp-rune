@@ -295,7 +295,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
           parent_ids,
           fields,
           options,
-          strategies
+          strategies,
+          pipeline
         )
       }
 
@@ -623,7 +624,8 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     explicitParentIds: string[] | undefined,
     fields: string[] | undefined,
     apiOptions: Record<string, unknown>,
-    strategies: ReadonlyArray<string> = ['distribution']
+    strategies: ReadonlyArray<string> = ['distribution'],
+    pipeline: IngestPipelineOptions = { embedRecords: true, hopDepth: 0, hopFollow: 'declared' }
   ): Promise<ToolResult> {
     this.validateModel(parentModel)
 
@@ -757,14 +759,14 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         })
       }
 
-      totalStored = await storeIngestedRecords({
+      // Route through the shared path so nested records get the same
+      // embeddings + edge extraction as top-level and hop-expanded records.
+      totalStored = await this._storeRecordsAndEdges(
         analysisId,
-        model: childModelName,
-        records: allRecords.map((r) => ({
-          id: r.id as string,
-          data: r
-        }))
-      })
+        childModelName,
+        allRecords,
+        pipeline
+      )
 
       // Store page summary for the batch (one memory per strategy)
       await this._runStrategies(strategies, {
@@ -926,7 +928,10 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         : undefined
     })
 
-    if (pipeline.hopFollow !== 'none') {
+    // Edge extraction needs the model's declared associations, so skip it for
+    // nested child resources that aren't registered models (the analysisLayer
+    // factory throws on an unknown model).
+    if (pipeline.hopFollow !== 'none' && this.models[model]) {
       const analysisLayer = this.analysisLayer?.(model)
       const edges = analysisLayer
         ? records.flatMap((r) => analysisLayer.extractEdges(r, { hopFollow: pipeline.hopFollow }))

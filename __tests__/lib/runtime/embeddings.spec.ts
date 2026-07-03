@@ -21,8 +21,11 @@ import {
 describe('lib/services/embeddings', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockPipeline.mockResolvedValue({
-      data: new Float32Array(384).fill(0.1)
+    // Shape the mock output like the real batched pipeline: one flat
+    // Float32Array of length n*384 plus dims [n, 384].
+    mockPipeline.mockImplementation((input: string | string[]) => {
+      const n = Array.isArray(input) ? input.length : 1
+      return Promise.resolve({ data: new Float32Array(n * 384).fill(0.1), dims: [n, 384] })
     })
   })
 
@@ -56,13 +59,30 @@ describe('lib/services/embeddings', () => {
 
       expect(results).toHaveLength(2)
       expect(results[0]).toBeInstanceOf(Float32Array)
+      expect(results[0]).toHaveLength(384)
       expect(results[1]).toBeInstanceOf(Float32Array)
+      expect(results[1]).toHaveLength(384)
     })
 
-    it('should call pipeline for each text', async () => {
+    it('embeds the whole batch in a single forward pass', async () => {
       await embedBatch(['a', 'b', 'c'])
 
-      expect(mockPipeline).toHaveBeenCalledTimes(3)
+      expect(mockPipeline).toHaveBeenCalledTimes(1)
+      expect(mockPipeline).toHaveBeenCalledWith(['a', 'b', 'c'], {
+        pooling: 'mean',
+        normalize: true
+      })
+    })
+
+    it('returns [] without invoking the model for an empty batch', async () => {
+      const results = await embedBatch([])
+      expect(results).toEqual([])
+      expect(mockPipeline).not.toHaveBeenCalled()
+    })
+
+    it('throws on a model/schema dimension mismatch', async () => {
+      mockPipeline.mockResolvedValueOnce({ data: new Float32Array(512), dims: [1, 512] })
+      await expect(embedBatch(['x'])).rejects.toThrow(/512-dim vectors but the schema expects 384/)
     })
   })
 

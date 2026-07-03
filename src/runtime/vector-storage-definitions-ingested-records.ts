@@ -31,6 +31,12 @@ export interface FilterQuery {
   limit?: number
   /** Model scope — same resolution rule as `AggregateQuery.model`. */
   model?: string
+  /**
+   * Hard ceiling on returned rows. Defaults to 200 — the guard that keeps a
+   * query result inside an LLM's context window. `analysis_summarize` raises
+   * it because its records are aggregated server-side and never reach context.
+   */
+  cap?: number
 }
 
 export interface ProximityParams {
@@ -54,6 +60,11 @@ export interface SampleQuery {
   sampleSize?: number
   /** Model scope — same resolution rule as `AggregateQuery.model`. */
   model?: string
+  /**
+   * Hard ceiling on sampled rows. Defaults to 50. Raised by
+   * `analysis_summarize`, whose sample is aggregated server-side.
+   */
+  cap?: number
   stratifyBy?: string
   where?: Record<string, unknown>
   proximity?: ProximityParams

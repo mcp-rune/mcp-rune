@@ -183,7 +183,10 @@ describe('lib/services/vendor/pgvector/tool-memories', () => {
       })
 
       const sql = pool.query.mock.calls[0][0]
-      expect(sql).toContain("tool_args->>'id' = $1")
+      const params = pool.query.mock.calls[0][1]
+      // $1 is the query embedding vector; the filter binds at $2.
+      expect(sql).toContain("tool_args->>'id' = $2")
+      expect(params).toEqual([expect.any(String), '42'])
     })
 
     it('applies modelName filter', async () => {
@@ -194,7 +197,26 @@ describe('lib/services/vendor/pgvector/tool-memories', () => {
       })
 
       const sql = pool.query.mock.calls[0][0]
-      expect(sql).toContain("tool_args->>'model' = $1")
+      expect(sql).toContain("tool_args->>'model' = $2")
+    })
+
+    it('binds both filters at distinct placeholders (regression: paramIdx off-by-one)', async () => {
+      const pool = createMockPool([{ max_similarity: 0.9 }])
+
+      await detectGaps(pool, [{ label: 'S1', embedding: testEmbedding }], {
+        recordId: '42',
+        modelName: 'book'
+      })
+
+      const sql = pool.query.mock.calls[0][0] as string
+      const params = pool.query.mock.calls[0][1] as unknown[]
+      expect(sql).toContain("tool_args->>'id' = $2")
+      expect(sql).toContain("tool_args->>'model' = $3")
+      // Every $N referenced in the SQL must have a matching param — the class
+      // of bug that made this tool fail against a real database.
+      const refs = new Set([...sql.matchAll(/\$(\d+)/g)].map((m) => Number(m[1])))
+      expect(Math.max(...refs)).toBe(params.length)
+      expect(params).toEqual([expect.any(String), '42', 'book'])
     })
 
     it('handles null max_similarity', async () => {
