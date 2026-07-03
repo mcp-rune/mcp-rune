@@ -1,6 +1,10 @@
 import type { Edge } from '#src/mcp/analysis-layer/edge-extraction.js'
 
-import type { EdgeRow } from './vector-storage-definitions-ingested-edges.js'
+import type {
+  EdgePath,
+  EdgeRow,
+  FindPathsParams
+} from './vector-storage-definitions-ingested-edges.js'
 import { getAdapter } from './vector-storage-state.js'
 
 export interface StoreEdgesFacadeParams {
@@ -26,6 +30,20 @@ export async function getEdgesFrom(
   const adapter = getAdapter()
   if (!adapter) return []
   return adapter.ingestedEdges.getEdgesFrom(analysisId, srcModel, srcId)
+}
+
+/**
+ * Shortest typed paths between two records in the session's edge graph —
+ * "how is A connected to B", answered with edge chains whose types come
+ * from the model declarations.
+ */
+export async function findEdgePaths(
+  analysisId: string,
+  params: FindPathsParams
+): Promise<EdgePath[]> {
+  const adapter = getAdapter()
+  if (!adapter) return []
+  return adapter.ingestedEdges.findPaths(analysisId, params)
 }
 
 /** Bulk-load edges for many source records of a model. */

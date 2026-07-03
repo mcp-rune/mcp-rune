@@ -5,6 +5,7 @@ import type { GraphStratifierSpec } from '#src/runtime/vector-storage.js'
 import {
   describeAnalysisSession,
   ensureRecordEmbeddings,
+  findEdgePaths,
   getSessionGraphInfo,
   queryIngestedData,
   recallAnalysisMemories,
@@ -32,6 +33,8 @@ interface AnalysisMemory {
  *   - describe: Discover available fields, types, and query syntax
  *   - semantic: Search findings/page summaries (target:'findings') or the
  *     ingested records themselves (target:'records') by meaning
+ *   - path: Shortest typed edge chains between two records ("how is A
+ *     connected to B")
  *   - aggregate: Get counts and distributions by field
  *   - filter: Find specific records matching exact criteria or range conditions
  *   - sample: Get a random sample of records
@@ -55,16 +58,17 @@ Typical reasoning flow:
 2. Use aggregate to understand distributions
 3. Use filter (with range operators) to inspect specific subsets
 4. Use sample to spot-check representative records — use proximity to focus around a date
-5. Use semantic to recall stored findings, or with target:'records' to rank the records themselves by meaning`
+5. Use semantic to recall stored findings, or with target:'records' to rank the records themselves by meaning
+6. Use path to explain how two records are connected through the session's edge graph`
   }
 
   override get inputSchema(): Record<string, ZodTypeAny> {
     return {
       analysis_id: z.string().describe('Analysis session ID to query'),
       mode: z
-        .enum(['describe', 'semantic', 'aggregate', 'filter', 'sample'])
+        .enum(['describe', 'semantic', 'aggregate', 'filter', 'sample', 'path'])
         .describe(
-          'Query mode: "describe" for field/operator discovery, "semantic" for meaning-based search, "aggregate" for counts/distributions, "filter" for exact/range matches, "sample" for random records'
+          'Query mode: "describe" for field/operator discovery, "semantic" for meaning-based search, "aggregate" for counts/distributions, "filter" for exact/range matches, "sample" for random records, "path" for typed edge chains between two records'
         ),
 
       // semantic mode params
@@ -84,6 +88,18 @@ Typical reasoning flow:
         .describe(
           'Cosine-similarity floor for semantic target:"records" (0-1). Omit for rank-only.'
         ),
+      from_model: this.zodEnum(this.getModelNames())
+        .optional()
+        .describe('Path mode: source record model'),
+      from_id: z.string().optional().describe('Path mode: source record id'),
+      to_model: this.zodEnum(this.getModelNames())
+        .optional()
+        .describe('Path mode: destination record model'),
+      to_id: z.string().optional().describe('Path mode: destination record id'),
+      max_depth: z
+        .number()
+        .optional()
+        .describe('Path mode: maximum path length in edges (default 4, capped at 6)'),
       top_k: z.number().optional().describe('Maximum results (semantic mode, default: 50)'),
 
       // aggregate mode params
@@ -154,6 +170,11 @@ Typical reasoning flow:
       category,
       target,
       min_similarity,
+      from_model,
+      from_id,
+      to_model,
+      to_id,
+      max_depth,
       top_k,
       group_by,
       where,
@@ -165,11 +186,16 @@ Typical reasoning flow:
       model
     } = args as {
       analysis_id: string
-      mode: 'describe' | 'semantic' | 'aggregate' | 'filter' | 'sample'
+      mode: 'describe' | 'semantic' | 'aggregate' | 'filter' | 'sample' | 'path'
       query?: string
       category?: string
       target?: 'findings' | 'records'
       min_similarity?: number
+      from_model?: string
+      from_id?: string
+      to_model?: string
+      to_id?: string
+      max_depth?: number
       top_k?: number
       group_by?: string
       where?: Record<string, unknown>
@@ -206,6 +232,8 @@ Typical reasoning flow:
           stratifiers,
           model
         )
+      case 'path':
+        return this._queryPath(analysis_id, from_model, from_id, to_model, to_id, max_depth, top_k)
     }
   }
 
@@ -441,6 +469,59 @@ Typical reasoning flow:
         parts.push(`- ${item.finding}${meta}${sim}`)
       }
       parts.push('')
+    }
+
+    return this.formatResponse(parts.join('\n'))
+  }
+
+  /**
+   * Shortest typed edge chains between two records ("how is A connected to
+   * B"). Traversal is undirected over the directed edges; each step renders
+   * with the direction it used, so the chain reads as schema semantics:
+   * book/1 \u2014belongsTo:author\u2192 author/7 \u2190fk:owner_id\u2014 project/3.
+   */
+  private async _queryPath(
+    analysisId: string,
+    fromModel?: string,
+    fromId?: string,
+    toModel?: string,
+    toId?: string,
+    maxDepth?: number,
+    topK?: number
+  ): Promise<ToolResult> {
+    if (!fromModel || !fromId || !toModel || !toId) {
+      return this.formatResponse(
+        'Path mode needs "from_model", "from_id", "to_model", and "to_id" (e.g. from_model: "book", from_id: "1", to_model: "author", to_id: "7").'
+      )
+    }
+
+    const paths = await findEdgePaths(analysisId, {
+      from: { model: fromModel, id: fromId },
+      to: { model: toModel, id: toId },
+      maxDepth,
+      limit: topK
+    })
+
+    if (paths.length === 0) {
+      return this.formatResponse(
+        `No path found between ${fromModel}/${fromId} and ${toModel}/${toId} within ` +
+          `${Math.min(maxDepth ?? 4, 6)} edges. Try a larger max_depth, or re-run analysis_ingest ` +
+          'with hop_depth > 0 so the connecting records and their edges are in the session.'
+      )
+    }
+
+    const parts: string[] = [
+      `${paths.length} path(s) between ${fromModel}/${fromId} and ${toModel}/${toId} (shortest: ${paths[0]!.depth} edge(s)):\n`
+    ]
+    for (const path of paths) {
+      let chain = `${fromModel}/${fromId}`
+      for (const step of path.steps) {
+        chain +=
+          step.direction === 'forward'
+            ? ` \u2014${step.edgeType}\u2192 ${step.toModel}/${step.toId}`
+            : ` \u2190${step.edgeType}\u2014 ${step.toModel}/${step.toId}`
+      }
+      parts.push(`- ${chain}`)
     }
 
     return this.formatResponse(parts.join('\n'))

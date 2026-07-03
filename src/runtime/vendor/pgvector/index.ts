@@ -105,6 +105,7 @@ export function createPgvectorAdapter(options: PgvectorAdapterOptions): VectorSt
       storeEdges: (params) => ingestedEdges.storeEdges(pool, params, edgesRetention),
       getEdgesFrom: (analysisId, srcModel, srcId) =>
         ingestedEdges.getEdgesFrom(pool, analysisId, srcModel, srcId),
+      findPaths: (analysisId, params) => ingestedEdges.findPaths(pool, analysisId, params),
       getEdgesForSources: (analysisId, srcModel, srcIds) =>
         ingestedEdges.getEdgesForSources(pool, analysisId, srcModel, srcIds),
       clearEdges: (analysisId) => ingestedEdges.clearEdges(pool, analysisId),

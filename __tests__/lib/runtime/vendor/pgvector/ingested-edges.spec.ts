@@ -1,5 +1,6 @@
 import {
   clearEdges,
+  findPaths,
   getEdgesForSources,
   getEdgesFrom,
   storeEdges
@@ -141,6 +142,58 @@ describe('lib/services/vendor/pgvector/ingested-edges', () => {
       const n = await clearEdges(mockPool as any, 'a1')
       expect(n).toBe(7)
       expect(mockPool.query.mock.calls[0]![0]).toContain('DELETE FROM ingested_edges')
+    })
+  })
+
+  describe('findPaths', () => {
+    it('walks a recursive CTE over a bidirectional adjacency union', async () => {
+      const steps = [
+        {
+          fromModel: 'book',
+          fromId: '1',
+          toModel: 'author',
+          toId: '7',
+          edgeType: 'belongsTo:author',
+          direction: 'forward'
+        }
+      ]
+      mockPool.query.mockResolvedValueOnce({ rows: [{ steps, depth: 1 }] })
+
+      const paths = await findPaths(mockPool as any, 'a1', {
+        from: { model: 'book', id: '1' },
+        to: { model: 'author', id: '7' }
+      })
+
+      const sql = mockPool.query.mock.calls[0]![0] as string
+      const params = mockPool.query.mock.calls[0]![1] as unknown[]
+      expect(sql).toContain('WITH RECURSIVE')
+      expect(sql).toContain("'forward' AS direction")
+      expect(sql).toContain("'reverse'")
+      expect(sql).toContain('ORDER BY depth ASC')
+      expect(params).toEqual(['a1', 'book', '1', 'author', '7', 4, 5])
+      expect(paths).toEqual([{ steps, depth: 1 }])
+    })
+
+    it('caps maxDepth at 6 and limit at 20', async () => {
+      mockPool.query.mockResolvedValueOnce({ rows: [] })
+      await findPaths(mockPool as any, 'a1', {
+        from: { model: 'book', id: '1' },
+        to: { model: 'genre', id: '9' },
+        maxDepth: 12,
+        limit: 99
+      })
+      const params = mockPool.query.mock.calls[0]![1] as unknown[]
+      expect(params).toEqual(['a1', 'book', '1', 'genre', '9', 6, 20])
+    })
+
+    it('guards against cycles with a per-path seen array', async () => {
+      mockPool.query.mockResolvedValueOnce({ rows: [] })
+      await findPaths(mockPool as any, 'a1', {
+        from: { model: 'book', id: '1' },
+        to: { model: 'genre', id: '9' }
+      })
+      const sql = mockPool.query.mock.calls[0]![0] as string
+      expect(sql).toContain('= ANY(w.seen)')
     })
   })
 })
