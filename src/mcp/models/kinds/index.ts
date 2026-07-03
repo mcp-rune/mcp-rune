@@ -91,4 +91,10 @@ for (const [name, descriptor] of Object.entries(BUILT_IN_KINDS)) {
 export type KnownKind = keyof typeof BUILT_IN_KINDS
 
 export type { KindDescriptor, KindOpts, KindOptsSource, KindRenderHint } from './registry.js'
-export { getKind, kindOptsFrom, registerKind, resolveInputType } from './registry.js'
+export {
+  getKind,
+  kindOptsFrom,
+  registerKind,
+  resolveInputType,
+  UnknownKindError
+} from './registry.js'
