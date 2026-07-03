@@ -7,8 +7,8 @@
  * fetch for edit) stay in each factory.
  */
 
+import { defaultConvention } from '#src/mcp/data-layer/api-conventions/index.js'
 import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
-import { normalizeListWithConvention } from '#src/mcp/data-layer/model-service/model-service.js'
 import * as logger from '#src/runtime/logger.js'
 
 import type { AppFormFieldDefinition, AppModelClass } from './app-shared-entities.js'
@@ -43,10 +43,8 @@ export async function resolveAssociationOptions(
       }
 
       const data = await dataLayer.dispatch('GET', endpoint)
-      const { records } = normalizeListWithConvention(data, field.association!.convention, {
-        page: 1,
-        perPage: 200
-      })
+      const convention = field.association!.convention ?? defaultConvention
+      const { records } = convention.normalizeListResponse(data, { page: 1, perPage: 200 })
 
       const valueField = field.association!.valueField || 'id'
       field.options = records.map((record) => ({

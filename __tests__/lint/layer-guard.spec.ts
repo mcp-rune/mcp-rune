@@ -29,7 +29,15 @@ describe('lint/layer-guard', () => {
       'src/mcp/data-layer/api-extensions/search/guard-fixture.ts'
     ],
     ['../../model-layer/validators.js', 'src/mcp/tools/data/guard-fixture.ts'],
-    ['../analysis-layer/multi-hop-fetch.js', 'src/mcp/apps/guard-fixture.ts']
+    ['../analysis-layer/multi-hop-fetch.js', 'src/mcp/apps/guard-fixture.ts'],
+    // DataLayer adapter internals — projection code must use the seam.
+    ['#src/mcp/data-layer/model-service/model-service.js', 'src/mcp/tools/data/guard-fixture.ts'],
+    ['#src/mcp/data-layer/model-service/compound-id.js', 'src/mcp/tools/analysis/guard-fixture.ts'],
+    ['#src/mcp/data-layer/model-service/endpoint-resolver.js', 'src/mcp/apps/lib/guard-fixture.ts'],
+    [
+      '#src/mcp/data-layer/api-extensions/search/search-service.js',
+      'src/mcp/tools/guard-fixture.ts'
+    ]
   ] as const
 
   it.each(restricted)('rejects %s from projection code', async (specifier, filePath) => {
@@ -52,7 +60,17 @@ describe('lint/layer-guard', () => {
     ['#src/mcp/model-layer/validators.js', 'src/mcp/apps/lib/app-form-validator.ts'],
     ['#src/mcp/model-layer/validators.js', 'src/mcp/prompts/prompt-validator.ts'],
     // Non-projection code (the layers' own internals) is out of scope.
-    ['#src/mcp/model-layer/validators.js', 'src/mcp/model-layer/model-layer.ts']
+    ['#src/mcp/model-layer/validators.js', 'src/mcp/model-layer/model-layer.ts'],
+    // The two composition roots legitimately construct the default adapter.
+    ['#src/mcp/data-layer/model-service/model-service.js', 'src/mcp/tools/tool-registry.ts'],
+    ['#src/mcp/data-layer/model-service/model-service.js', 'src/mcp/apps/lib/registry.ts'],
+    // The search extension IS the seam implementation — not projection code.
+    [
+      '#src/mcp/data-layer/model-service/model-service.js',
+      'src/mcp/data-layer/api-extensions/custom-actions/guard-fixture.ts'
+    ],
+    // Conventions are shared vocabulary, never restricted.
+    ['#src/mcp/data-layer/api-conventions/index.js', 'src/mcp/apps/lib/guard-fixture.ts']
   ] as const
 
   it.each(allowed)('allows %s at %s', async (specifier, filePath) => {

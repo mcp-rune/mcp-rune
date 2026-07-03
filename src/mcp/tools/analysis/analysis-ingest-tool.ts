@@ -11,7 +11,6 @@ import type {
   NestedValidationSuccess
 } from '#src/mcp/data-layer/data-layer.js'
 import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
-import { buildCollectionPath } from '#src/mcp/data-layer/model-service/compound-id.js'
 import type { ModelConfig } from '#src/mcp/models/model-definitions.js'
 import {
   getEdgesForSources,
@@ -699,7 +698,7 @@ When NOT to use: For quick lookups of specific records by ID or small result set
 
     const tasks = parentIds.map((parentId) => async () => {
       try {
-        const endpoint = buildCollectionPath(parentConfig.api.endpoint, parentId, childPath)
+        const endpoint = `${parentConfig.api.endpoint}/${parentId}/${childPath}`
         const data = (await dataLayer.dispatch(
           'GET',
           endpoint,
