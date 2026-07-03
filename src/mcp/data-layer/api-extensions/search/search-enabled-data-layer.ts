@@ -237,19 +237,38 @@ export class SearchEnabledDataLayer implements DataLayer {
 }
 
 /**
- * Convenience factory: given a base `DataLayer` and the same context bag
- * `createSearchService` consumes, return a `SearchEnabledDataLayer` ready
- * to drop into a registry context. Avoids forcing every wiring site to
- * import both `createSearchService` and `SearchEnabledDataLayer`.
+ * Convenience factory: given a base `DataLayer` and the typed registry-level
+ * search options, return a `SearchEnabledDataLayer` ready to drop into a
+ * registry context. Avoids forcing every wiring site to import both
+ * `createSearchService` and `SearchEnabledDataLayer`.
+ *
+ * The returned instance completes the decorator: members the wrapper does
+ * not declare (notably `ApiExtension` mixin methods like `action`, applied
+ * to the base adapter inside the registry's default factory) delegate to
+ * the wrapped base, bound to it — so duck-typed callers keep working when
+ * every registry hands out wrapped DataLayers.
  */
 import { createSearchService } from './factory.js'
+import type { SearchServiceOptions } from './types.js'
 
 export function withSearchEnabledDataLayer(
   base: DataLayer,
-  context?: Record<string, unknown>
+  options?: SearchServiceOptions
 ): SearchEnabledDataLayer {
-  const searchService = createSearchService(base, context)
-  return new SearchEnabledDataLayer(base, searchService)
+  const searchService = createSearchService(base, options)
+  const wrapper = new SearchEnabledDataLayer(base, searchService)
+  return new Proxy(wrapper, {
+    get(target, prop, receiver) {
+      if (prop in target) return Reflect.get(target, prop, receiver)
+      const value = (base as unknown as Record<string | symbol, unknown>)[prop]
+      return typeof value === 'function'
+        ? (value as (...a: unknown[]) => unknown).bind(base)
+        : value
+    },
+    has(target, prop) {
+      return prop in target || prop in (base as object)
+    }
+  })
 }
 
 /** Re-export the unwrapped `ApiClient` type so consumers can import from one place. */

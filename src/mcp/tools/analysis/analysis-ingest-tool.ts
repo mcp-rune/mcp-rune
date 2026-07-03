@@ -5,11 +5,7 @@ import { pickFields } from '#src/core/helpers.js'
 import type { HopFollow } from '#src/mcp/analysis-layer/analysis-layer.js'
 import type { SummaryEdge, SummaryInput } from '#src/mcp/analysis-layer/summary-strategies/index.js'
 import { defaultSummaryStrategyRegistry } from '#src/mcp/analysis-layer/summary-strategies/index.js'
-import type { SearchService } from '#src/mcp/data-layer/api-extensions/search/index.js'
-import {
-  createSearchService,
-  getSearchConfig
-} from '#src/mcp/data-layer/api-extensions/search/index.js'
+import { getSearchConfig } from '#src/mcp/data-layer/api-extensions/search/index.js'
 import type {
   NestedValidationError,
   NestedValidationSuccess
@@ -402,22 +398,15 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     // Resolve convention for extraction and flattening
     const convention = modelConfig.api?.convention ?? dataLayer.defaultConvention
 
-    // Use SearchService if model supports query search and filters provided
+    // Route through the search seam if the model supports query search and filters provided
     const hasFullText = getSearchConfig(modelConfig)?.query
     const hasSearchParams = filters && Object.keys(filters).length > 0
 
     if (hasFullText && hasSearchParams) {
-      // Use SearchService for filtered ingestion
-      const searchClient = this._createSearchService(dataLayer)
-      const { records, pagination } = (await searchClient.search(
-        ModelClass as Parameters<typeof searchClient.search>[0],
-        '',
-        {
-          page,
-          perPage,
-          filters
-        }
-      )) as { records: Record<string, unknown>[]; pagination: { total_pages?: number } }
+      const { records, pagination } = await dataLayer.searchNormalized(model, '', filters, {
+        page,
+        perPage
+      })
 
       rawRecords = records
       totalPages = pagination.total_pages ?? null
@@ -517,26 +506,19 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     // Resolve convention once for all pages
     const convention = modelConfig.api?.convention ?? dataLayer.defaultConvention
 
-    // Use SearchService if model supports query search and filters provided
+    // Route through the search seam if the model supports query search and filters provided
     const hasFullText = getSearchConfig(modelConfig)?.query
     const hasSearchParams = filters && Object.keys(filters).length > 0
-    const searchClient =
-      hasFullText && hasSearchParams ? this._createSearchService(dataLayer) : null
+    const useSearch = !!(hasFullText && hasSearchParams)
 
     while (currentPage <= MAX_INGEST_PAGES) {
       let rawRecords: Record<string, unknown>[]
 
-      if (searchClient) {
-        // Use SearchService for filtered ingestion
-        const { records, pagination } = (await searchClient.search(
-          ModelClass as Parameters<typeof searchClient.search>[0],
-          '',
-          {
-            page: currentPage,
-            perPage,
-            filters
-          }
-        )) as { records: Record<string, unknown>[]; pagination: { total_pages?: number } }
+      if (useSearch) {
+        const { records, pagination } = await dataLayer.searchNormalized(model, '', filters, {
+          page: currentPage,
+          perPage
+        })
 
         rawRecords = records
         if (totalPages === null) {
@@ -862,14 +844,6 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       }
     }
     return augmented
-  }
-
-  /** Create a SearchService from the given (or bound) DataLayer and serverContext */
-  private _createSearchService(dataLayer?: DataLayer): SearchService {
-    return createSearchService(
-      dataLayer ?? this.requireDataLayer(),
-      this.serverContext as Record<string, unknown>
-    )
   }
 
   /**

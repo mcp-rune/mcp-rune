@@ -15,6 +15,7 @@ import { z } from 'zod'
 
 import { errorMeta } from '#src/mcp/apps/lib/helpers.js'
 import { createSelectionTools } from '#src/mcp/apps/lib/selection-tools.js'
+import type { SearchGroup } from '#src/mcp/data-layer/api-extensions/search/index.js'
 import { getSearchConfig } from '#src/mcp/data-layer/api-extensions/search/index.js'
 import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
 import type { ToolResult } from '#src/mcp/tools/tool-result.js'
@@ -49,17 +50,15 @@ function buildTypeToModelMap(modelClasses: Record<string, AppModelClass>): Recor
   return typeToModel
 }
 
-interface SearchGroupConfig {
-  name: string
-  description?: string
-  typeField: string
-  models?: string[]
-  [key: string]: unknown
-}
-
 interface AutocompletePickerOptions {
   modelClasses: Record<string, AppModelClass>
-  searchGroups?: Record<string, SearchGroupConfig>
+  /**
+   * The registry-level `SearchGroup` declarations — the same objects passed
+   * to `ToolRegistry` / `AppRegistry` config. The picker consumes their
+   * presentation half (`label`, `description`, `typeField`, `models`);
+   * routing stays behind `dataLayer.groupSearchNormalized`.
+   */
+  searchGroups?: Record<string, SearchGroup>
   namespace: string
 }
 
@@ -120,11 +119,13 @@ export function createPickModelApp({
   if (hasGroups) {
     const groupDescs = groupNames.map((name) => {
       const g = searchGroups[name]!
-      return `"${name}" -- ${g.description || g.name}`
+      return `"${name}" -- ${g.description || g.label || name}`
     })
+    const groupedModels = groupNames.flatMap((name) => searchGroups[name]?.models ?? [])
     toolDesc +=
-      ` When the user says "search the catalogue", "find a catalogue item", or wants to search across ` +
-      `brands/series/episodes/features/collections without specifying a single model, use the group parameter. ` +
+      ` When the user wants to search across related models` +
+      (groupedModels.length > 0 ? ` (${groupedModels.join(', ')})` : '') +
+      ` without specifying a single one, use the group parameter. ` +
       `Available groups: ${groupDescs.join('; ')}. ` +
       `Provide exactly one of model or group.`
   }
@@ -208,7 +209,7 @@ export function createPickModelApp({
             results = records.map((record) => ({
               id: record.id,
               display: String(record.name || record.title || `ID: ${record.id}`),
-              entityType: record[groupConfig.typeField]
+              entityType: record[groupConfig.typeField ?? 'type']
             }))
           } catch (err) {
             logger.warn('Failed to group search for autocomplete', {
@@ -227,8 +228,8 @@ export function createPickModelApp({
               type: 'text',
               text: JSON.stringify({
                 group,
-                groupLabel: groupConfig.name,
-                typeField: groupConfig.typeField,
+                groupLabel: groupConfig.label ?? group,
+                typeField: groupConfig.typeField ?? 'type',
                 typeToModel,
                 results,
                 query: query || '',
