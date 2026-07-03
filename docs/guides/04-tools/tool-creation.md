@@ -147,7 +147,7 @@ Every tool call passes through the same interceptor pipeline before reaching you
                         MCP response
 ```
 
-Built-in interceptors (`loggingInterceptor`, `errorInterceptor`) cover the common cases; tracing is applied outside the chain via `traceToolCall`, and the exported `tracingInterceptor` is only a timing placeholder for manual pipeline composition. Add your own via `ToolRegistry` to insert tenant-scoped header injection, rate limiting, or audit logging — the pipeline is composable and runs in declaration order.
+Built-in interceptors (`loggingInterceptor`, `errorInterceptor`) cover the common cases; tracing is not an interceptor — `ToolRegistry` wraps the whole handler (interceptor chain included) in `traceToolCall`. Add your own interceptors via `ToolRegistry` to insert tenant-scoped header injection, rate limiting, or audit logging — the pipeline is composable and runs in declaration order.
 
 ## Tool families and static requirement flags
 

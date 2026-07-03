@@ -11,6 +11,7 @@
 
 import type { ApiClient } from '#src/core/api-client.js'
 import type { AppFormClassLike } from '#src/mcp/apps/lib/app-form-validator.js'
+import type { BaseConvention } from '#src/mcp/data-layer/api-conventions/base-convention.js'
 import type {
   SearchGroup,
   SearchRequestShaper
@@ -66,6 +67,10 @@ export interface DefaultAppRegistryOptions {
   apiUrl?: string
   createApiClient?: (token: string, options: { apiUrl: string }) => ApiClient
   dataLayer?: DataLayerFactory
+  /** Server-wide wire-format default forwarded to `AppRegistry` (mirrors `ToolRegistry`). */
+  defaultConvention?: BaseConvention
+  /** API-endpoint namespace forwarded to `AppRegistry.apiNamespace` (mirrors `ToolRegistry.namespace`). */
+  apiNamespace?: string
   searchGroups?: Record<string, SearchGroup>
   defaultShaper?: SearchRequestShaper
   headerIcon?: string
@@ -104,6 +109,8 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
     apiUrl,
     createApiClient,
     dataLayer,
+    defaultConvention,
+    apiNamespace,
     searchGroups,
     defaultShaper,
     headerIcon,
@@ -185,6 +192,8 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
     ...(apiUrl !== undefined && { apiUrl }),
     ...(createApiClient && { createApiClient }),
     ...(dataLayer && { dataLayer }),
+    ...(defaultConvention && { defaultConvention }),
+    ...(apiNamespace !== undefined && { apiNamespace }),
     ...(searchGroups && { searchGroups }),
     ...(defaultShaper && { defaultShaper }),
     ...(headerIcon !== undefined && { headerIcon }),

@@ -7,6 +7,7 @@ export {
   AnalysisIngestTool,
   AnalysisQueryTool,
   AnalysisStoreTool,
+  AnalysisSummarizeTool,
   BaseAnalysisTool
 } from './mcp/tools/analysis/index.js'
 export type {
@@ -40,11 +41,7 @@ export {
   GetPromptGuideTool,
   ValidateFormTool
 } from './mcp/tools/form-strategies/index.js'
-export {
-  errorInterceptor,
-  loggingInterceptor,
-  tracingInterceptor
-} from './mcp/tools/interceptors.js'
+export { errorInterceptor, loggingInterceptor } from './mcp/tools/interceptors.js'
 export {
   BaseOperationsTool,
   ClusterOperationsTool,

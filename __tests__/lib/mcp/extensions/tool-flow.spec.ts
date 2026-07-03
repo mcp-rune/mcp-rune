@@ -153,3 +153,17 @@ describe('ToolFlowExtension.provideContext — typed key collision detection', (
     )
   })
 })
+
+describe('ToolFlowExtension.register — synchronous contract', () => {
+  it('throws at boot when register() returns a Promise', () => {
+    const asyncExt = {
+      register: async () => {
+        await Promise.resolve()
+      }
+    } as unknown as ToolFlowExtension
+
+    expect(() => bootWithExtensions({ slowExt: asyncExt })).toThrow(
+      /returned a Promise from register\(\). register\(\) must be synchronous/
+    )
+  })
+})

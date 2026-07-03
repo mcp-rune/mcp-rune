@@ -116,9 +116,13 @@ export interface ToolFlowExtension {
   requires?: ToolFlowExtensionCapability[]
   /**
    * Apply the extension to the host. Called once at MCP server creation,
-   * before app tools are registered on the underlying `McpServer`.
+   * before app tools are registered on the underlying `McpServer`. Must be
+   * synchronous — `createServer` registers app tools immediately after, so a
+   * tool added after an `await` would reach the McpServer too late. Do async
+   * setup before `createServer` and pass the results in via the extension's
+   * own options.
    */
-  register(ctx: ToolFlowExtensionContext): void | Promise<void>
+  register(ctx: ToolFlowExtensionContext): void
 }
 
 /**

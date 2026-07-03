@@ -322,6 +322,22 @@ export class ToolRegistry {
     if (config.apiExtensions) {
       this._applyApiExtensions(config.apiExtensions)
     }
+
+    // ApiExtension mixins are applied only inside the default ModelService
+    // factory. A custom `dataLayer` factory never sees them, so a tool that
+    // depends on a mixin method (e.g. `model_action` calling `service.action`)
+    // would throw per-invocation. Fail at boot instead, with the remedy.
+    if (config.dataLayer && this._modelServiceMixins.length > 0) {
+      const methods = this._modelServiceMixins
+        .flatMap((m) => Object.keys(m(SENTINEL_MODEL_SERVICE)))
+        .join(', ')
+      throw new Error(
+        `ToolRegistry: a custom \`dataLayer\` factory is configured alongside ApiExtension ` +
+          `mixins (${methods}), which the custom factory never applies. Either drop the custom ` +
+          `factory so the default ModelService adapter applies the mixins, or apply them inside ` +
+          `your factory.`
+      )
+    }
   }
 
   /**

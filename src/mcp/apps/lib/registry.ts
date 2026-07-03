@@ -40,7 +40,6 @@ import type { ToolResult } from '#src/mcp/tools/tool-result.js'
 import * as logger from '#src/runtime/logger.js'
 
 import type { FormSubmitMode } from '../../extensions/tool-flow.js'
-import type { AppFormDataStore } from './app-form-data-store.js'
 import type { SelectionStore } from './selection-store.js'
 
 export interface AppDefinition {
@@ -170,7 +169,6 @@ interface RegistryOptions {
 interface RegisterToolsOptions {
   getAccessToken?: () => Promise<string>
   selectionStore?: SelectionStore
-  formDataStore?: AppFormDataStore
   /**
    * Extra context values to merge into every app tool handler's context
    * object. Populated by `ToolFlowExtension.provideContext(...)` and threaded
@@ -287,6 +285,15 @@ export class AppRegistry {
     if (!app.toolName) {
       throw new Error('AppRegistry.registerApp: AppDefinition.toolName is required')
     }
+    if (this._apps.has(app.toolName)) {
+      // Deliberate wrapping (getApp + re-register) is supported, but a silent
+      // clobber usually means two contributors picked the same tool name.
+      logger.warn(
+        `AppRegistry.registerApp: overwriting already-registered app "${app.toolName}". ` +
+          `If this is a deliberate wrap via getApp(), ignore; otherwise two apps share a tool name.`,
+        { service: 'mcp-app', app: app.toolName }
+      )
+    }
     this._apps.set(app.toolName, app)
     return this
   }
@@ -318,7 +325,7 @@ export class AppRegistry {
    */
   registerTools(
     mcpServer: McpServer,
-    { getAccessToken, selectionStore, formDataStore, extraContext }: RegisterToolsOptions = {}
+    { getAccessToken, selectionStore, extraContext }: RegisterToolsOptions = {}
   ): void {
     for (const app of this._apps.values()) {
       if (!app.toolName || !app.handleToolCall) continue
@@ -373,10 +380,6 @@ export class AppRegistry {
 
             if (selectionStore) {
               context.selectionStore = selectionStore
-            }
-
-            if (formDataStore) {
-              context.formDataStore = formDataStore
             }
 
             return await app.handleToolCall!(args, context)

@@ -1,11 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { ToolResult } from '../../../../src/mcp/tools/base-tool.js'
-import {
-  errorInterceptor,
-  loggingInterceptor,
-  tracingInterceptor
-} from '../../../../src/mcp/tools/interceptors.js'
+import { errorInterceptor, loggingInterceptor } from '../../../../src/mcp/tools/interceptors.js'
 import type { ToolContext } from '../../../../src/mcp/tools/tool-pipeline.js'
 
 // Mock logger
@@ -24,8 +20,6 @@ const makeCtx = (overrides: Partial<ToolContext> = {}): ToolContext => ({
   meta: {},
   ...overrides
 })
-
-const ok = (text = 'ok'): ToolResult => ({ content: [{ type: 'text', text }] })
 
 describe('lib/mcp/tools/interceptors', () => {
   afterEach(() => {
@@ -80,37 +74,6 @@ describe('lib/mcp/tools/interceptors', () => {
     it('should have name "logging"', () => {
       const interceptor = loggingInterceptor()
       expect(interceptor.name).toBe('logging')
-    })
-  })
-
-  describe('tracingInterceptor', () => {
-    it('should record start time in before hook', () => {
-      const interceptor = tracingInterceptor()
-      const ctx = makeCtx()
-
-      interceptor.before!(ctx)
-
-      expect(ctx.meta._tracingStart).toBeDefined()
-      expect(typeof ctx.meta._tracingStart).toBe('number')
-    })
-
-    it('should record duration in after hook', async () => {
-      const interceptor = tracingInterceptor()
-      const ctx = makeCtx()
-
-      interceptor.before!(ctx)
-      // Simulate some time passing
-      ctx.meta._tracingStart = Date.now() - 100
-
-      interceptor.after!(ctx, ok())
-
-      expect(ctx.meta._tracingDuration).toBeDefined()
-      expect(ctx.meta._tracingDuration as number).toBeGreaterThanOrEqual(0)
-    })
-
-    it('should have name "tracing"', () => {
-      const interceptor = tracingInterceptor()
-      expect(interceptor.name).toBe('tracing')
     })
   })
 
