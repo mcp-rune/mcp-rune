@@ -31,6 +31,7 @@ import type { ModelConfig, ModelsRegistry } from '../../models/model-definitions
 import type { ToolLogger } from '../../tools/base-tool.js'
 import type { BaseConvention } from '../api-conventions/base-convention.js'
 import { defaultConvention, jsonApiConvention } from '../api-conventions/index.js'
+import { translateApiError } from '../errors.js'
 import type { CrudAction, EndpointResolverConfig } from './endpoint-resolver.js'
 import { EndpointResolver, MissingParentError } from './endpoint-resolver.js'
 
@@ -156,10 +157,13 @@ export class ModelService implements DataLayer {
     const payload = this.buildPayload(model, modelConfig, attributes)
 
     this._log('info', 'Creating model', { model, impersonating: options?.userId ?? null })
-    const data =
-      options !== undefined
-        ? await this._apiClient.post(endpoint, payload, options)
-        : await this._apiClient.post(endpoint, payload)
+    const data = await this._call(
+      () =>
+        options !== undefined
+          ? this._apiClient.post(endpoint, payload, options)
+          : this._apiClient.post(endpoint, payload),
+      { model, modelConfig }
+    )
     this._log('info', 'Model created successfully', {
       model,
       id: (data as Record<string, unknown>).id
@@ -181,9 +185,13 @@ export class ModelService implements DataLayer {
     )
 
     this._log('info', 'Finding model', { model, recordId, impersonating: options?.userId ?? null })
-    return options !== undefined
-      ? await this._apiClient.get(endpoint, {}, options)
-      : await this._apiClient.get(endpoint, {})
+    return this._call(
+      () =>
+        options !== undefined
+          ? this._apiClient.get(endpoint, {}, options)
+          : this._apiClient.get(endpoint, {}),
+      { model, recordId, modelConfig }
+    )
   }
 
   /** List records with optional filters and pagination. Supports parentPath for nested resources. */
@@ -215,9 +223,13 @@ export class ModelService implements DataLayer {
     // shape they'd get from a direct caller. Same treatment v0.49.1 applied
     // to `dispatch`; surfaced after v0.50 routed apps through `list()` via
     // `listNormalized`.
-    return options !== undefined
-      ? await this._apiClient.get(endpoint, queryParams, options)
-      : await this._apiClient.get(endpoint, queryParams)
+    return this._call(
+      () =>
+        options !== undefined
+          ? this._apiClient.get(endpoint, queryParams, options)
+          : this._apiClient.get(endpoint, queryParams),
+      { model, modelConfig }
+    )
   }
 
   /**
@@ -308,10 +320,13 @@ export class ModelService implements DataLayer {
       recordId,
       impersonating: options?.userId ?? null
     })
-    const data =
-      options !== undefined
-        ? await this._apiClient.patch(endpoint, payload, options)
-        : await this._apiClient.patch(endpoint, payload)
+    const data = await this._call(
+      () =>
+        options !== undefined
+          ? this._apiClient.patch(endpoint, payload, options)
+          : this._apiClient.patch(endpoint, payload),
+      { model, recordId, modelConfig }
+    )
     this._log('info', 'Model updated successfully', { model, recordId })
 
     return data
@@ -358,9 +373,33 @@ export class ModelService implements DataLayer {
       recordId,
       impersonating: options?.userId ?? null
     })
-    return options !== undefined
-      ? await this._apiClient.delete(endpoint, options)
-      : await this._apiClient.delete(endpoint)
+    return this._call(
+      () =>
+        options !== undefined
+          ? this._apiClient.delete(endpoint, options)
+          : this._apiClient.delete(endpoint),
+      { model, recordId, modelConfig }
+    )
+  }
+
+  /**
+   * Run an ApiClient call and translate transport failures into the seam's
+   * typed error taxonomy, parsing error bodies with the failing model's
+   * convention (the service default applies when no model does).
+   */
+  private async _call<T>(
+    fn: () => Promise<T>,
+    ctx: { model?: string; recordId?: string; modelConfig?: ModelConfig }
+  ): Promise<T> {
+    try {
+      return await fn()
+    } catch (err) {
+      throw translateApiError(err, {
+        convention: ctx.modelConfig?.api?.convention ?? this.defaultConvention,
+        model: ctx.model,
+        recordId: ctx.recordId
+      })
+    }
   }
 
   // --- Accessors ---
@@ -402,29 +441,32 @@ export class ModelService implements DataLayer {
     // underlying ApiClient sees the same call shape it would receive from a
     // direct caller, which keeps third-party clients (and their tests) free
     // of spurious `undefined` trailing args.
-    switch (method) {
-      case 'GET':
-        if (options !== undefined) return this._apiClient.get(url, params, options)
-        if (params !== undefined) return this._apiClient.get(url, params)
-        return this._apiClient.get(url)
-      case 'POST':
-        if (options !== undefined) return this._apiClient.post(url, payload, options)
-        if (payload !== undefined) return this._apiClient.post(url, payload)
-        return this._apiClient.post(url)
-      case 'PUT':
-        if (options !== undefined) return this._apiClient.put(url, payload, options)
-        if (payload !== undefined) return this._apiClient.put(url, payload)
-        return this._apiClient.put(url)
-      case 'PATCH':
-        if (options !== undefined) return this._apiClient.patch(url, payload, options)
-        if (payload !== undefined) return this._apiClient.patch(url, payload)
-        return this._apiClient.patch(url)
-      case 'DELETE':
-        if (options !== undefined) return this._apiClient.delete(url, options)
-        return this._apiClient.delete(url)
-      default:
-        throw new Error(`Unsupported HTTP method: ${method}`)
+    const run = (): Promise<Record<string, unknown>> => {
+      switch (method) {
+        case 'GET':
+          if (options !== undefined) return this._apiClient.get(url, params, options)
+          if (params !== undefined) return this._apiClient.get(url, params)
+          return this._apiClient.get(url)
+        case 'POST':
+          if (options !== undefined) return this._apiClient.post(url, payload, options)
+          if (payload !== undefined) return this._apiClient.post(url, payload)
+          return this._apiClient.post(url)
+        case 'PUT':
+          if (options !== undefined) return this._apiClient.put(url, payload, options)
+          if (payload !== undefined) return this._apiClient.put(url, payload)
+          return this._apiClient.put(url)
+        case 'PATCH':
+          if (options !== undefined) return this._apiClient.patch(url, payload, options)
+          if (payload !== undefined) return this._apiClient.patch(url, payload)
+          return this._apiClient.patch(url)
+        case 'DELETE':
+          if (options !== undefined) return this._apiClient.delete(url, options)
+          return this._apiClient.delete(url)
+        default:
+          throw new Error(`Unsupported HTTP method: ${method}`)
+      }
     }
+    return this._call(run, {})
   }
 
   /**

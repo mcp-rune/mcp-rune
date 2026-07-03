@@ -1,6 +1,7 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
+import { ApiRequestError } from '#src/mcp/data-layer/errors.js'
 import type { ModelConfig } from '#src/mcp/models/model-definitions.js'
 import {
   getIngestedRecordCount,
@@ -24,13 +25,6 @@ interface ActResult {
   status: 'updated' | 'deleted' | 'api_error'
   errors?: string[]
   status_code?: number
-}
-
-interface HttpError extends Error {
-  response?: {
-    status?: number
-    data?: unknown
-  }
 }
 
 /**
@@ -294,13 +288,14 @@ Failure model: batches are not atomic across the whole set (matches bulk_action_
           .then(() => {
             results[i] = { index: baseIndex + i, id, status: 'updated' }
           })
-          .catch((error: HttpError) => {
+          .catch((error: Error) => {
             results[i] = {
               index: baseIndex + i,
               id,
               status: 'api_error',
               errors: [this._extractErrorMessage(error)],
-              ...(error.response?.status && { status_code: error.response.status })
+              ...(error instanceof ApiRequestError &&
+                error.status !== undefined && { status_code: error.status })
             }
           })
           .finally(onProgress)
@@ -333,13 +328,14 @@ Failure model: batches are not atomic across the whole set (matches bulk_action_
           .then(() => {
             results[i] = { index: baseIndex + i, id, status: 'deleted' }
           })
-          .catch((error: HttpError) => {
+          .catch((error: Error) => {
             results[i] = {
               index: baseIndex + i,
               id,
               status: 'api_error',
               errors: [this._extractErrorMessage(error)],
-              ...(error.response?.status && { status_code: error.response.status })
+              ...(error instanceof ApiRequestError &&
+                error.status !== undefined && { status_code: error.status })
             }
           })
           .finally(onProgress)
@@ -353,15 +349,10 @@ Failure model: batches are not atomic across the whole set (matches bulk_action_
     return recordId.includes('/') ? recordId : `${modelConfig.api.endpoint}/${recordId}`
   }
 
-  private _extractErrorMessage(error: HttpError): string {
-    if (error.response?.data) {
-      const raw =
-        typeof error.response.data === 'string'
-          ? error.response.data
-          : JSON.stringify(error.response.data)
-      return this.truncateString(raw, 5000)
-    }
-    return error.message
+  private _extractErrorMessage(error: Error): string {
+    // Backend failures arrive as the seam's typed taxonomy with messages
+    // already parsed through the failing model's convention.
+    return this.truncateString(error.message, 5000)
   }
 
   private async _runParallel(tasks: Array<() => Promise<void>>): Promise<void> {

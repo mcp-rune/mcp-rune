@@ -15,6 +15,19 @@
  * Moved to `core` in v0.46.0 as part of the search-extension cleanup.
  */
 
+/**
+ * The rejection shape `ApiClient` implementations throw for HTTP failures.
+ * `ModelService` translates this at the adapter boundary into the typed
+ * DataLayer taxonomy (`RecordNotFoundError`, `ApiRequestError` in
+ * `src/mcp/data-layer/errors.ts`); rejections without a `response` (network
+ * failures, timeouts) pass through untranslated. Implementations that reject
+ * with a different shape forfeit typed errors — projection code then sees
+ * the raw rejection.
+ */
+export interface ApiClientHttpError extends Error {
+  response?: { status?: number; data?: unknown }
+}
+
 /** Options passed to API client methods (e.g., userId impersonation). */
 export interface RequestOptions {
   userId?: string

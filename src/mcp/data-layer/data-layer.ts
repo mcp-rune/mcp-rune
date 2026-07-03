@@ -328,3 +328,10 @@ export interface DataLayerFactoryContext {
 }
 
 export type DataLayerFactory = (ctx: DataLayerFactoryContext) => DataLayer
+
+export {
+  ApiRequestError,
+  DataLayerError,
+  RecordNotFoundError,
+  translateApiError
+} from './errors.js'

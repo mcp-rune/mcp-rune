@@ -1,6 +1,7 @@
 import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
+import { ApiRequestError } from '#src/mcp/data-layer/errors.js'
 import type { ModelConfig } from '#src/mcp/models/model-definitions.js'
 
 import { SaveModelBaseTool } from '../save-model-base-tool.js'
@@ -15,13 +16,6 @@ interface BulkResult {
   status: string
   errors?: string[]
   status_code?: number
-}
-
-interface HttpError extends Error {
-  response?: {
-    status?: number
-    data?: unknown
-  }
 }
 
 /**
@@ -370,12 +364,13 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
               id: (data as Record<string, unknown>).id as string
             }
           })
-          .catch((error: HttpError) => {
+          .catch((error: Error) => {
             results[i] = {
               index: i,
               status: 'api_error',
               errors: [this._extractErrorMessage(error)],
-              ...(error.response?.status && { status_code: error.response.status })
+              ...(error instanceof ApiRequestError &&
+                error.status !== undefined && { status_code: error.status })
             }
           })
     )
@@ -409,13 +404,14 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
           .then(() => {
             results[i] = { index: i, id, status: 'updated' }
           })
-          .catch((error: HttpError) => {
+          .catch((error: Error) => {
             results[i] = {
               index: i,
               id,
               status: 'api_error',
               errors: [this._extractErrorMessage(error)],
-              ...(error.response?.status && { status_code: error.response.status })
+              ...(error instanceof ApiRequestError &&
+                error.status !== undefined && { status_code: error.status })
             }
           })
     )
@@ -448,13 +444,14 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
         .then(() => {
           results[i] = { index: i, id: record_id as string, status: 'updated' }
         })
-        .catch((error: HttpError) => {
+        .catch((error: Error) => {
           results[i] = {
             index: i,
             id: record_id as string,
             status: 'api_error',
             errors: [this._extractErrorMessage(error)],
-            ...(error.response?.status && { status_code: error.response.status })
+            ...(error instanceof ApiRequestError &&
+              error.status !== undefined && { status_code: error.status })
           }
         })
     })
@@ -487,13 +484,14 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
           .then(() => {
             results[i] = { index: i, id, status: 'deleted' }
           })
-          .catch((error: HttpError) => {
+          .catch((error: Error) => {
             results[i] = {
               index: i,
               id,
               status: 'api_error',
               errors: [this._extractErrorMessage(error)],
-              ...(error.response?.status && { status_code: error.response.status })
+              ...(error instanceof ApiRequestError &&
+                error.status !== undefined && { status_code: error.status })
             }
           })
     )
@@ -502,15 +500,10 @@ export class BulkActionModelsTool extends SaveModelBaseTool {
     return results
   }
 
-  private _extractErrorMessage(error: HttpError): string {
-    if (error.response?.data) {
-      const raw =
-        typeof error.response.data === 'string'
-          ? error.response.data
-          : JSON.stringify(error.response.data)
-      return this.truncateString(raw, 5000)
-    }
-    return error.message
+  private _extractErrorMessage(error: Error): string {
+    // Backend failures arrive as the seam's typed taxonomy with messages
+    // already parsed through the failing model's convention.
+    return this.truncateString(error.message, 5000)
   }
 
   /**
