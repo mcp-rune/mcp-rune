@@ -102,6 +102,14 @@ Typical reasoning flow:
         .optional()
         .describe('Path mode: maximum path length in edges (default 4, capped at 6)'),
       top_k: z.number().optional().describe('Maximum results (semantic mode, default: 50)'),
+      rerank: z
+        .boolean()
+        .optional()
+        .describe(
+          'Semantic target:"records": over-fetch by cosine, then rerank the pool with the ' +
+            'local cross-encoder for higher precision (slower). Degrades to cosine order when ' +
+            'the model is unavailable.'
+        ),
 
       // aggregate mode params
       group_by: z
@@ -177,6 +185,7 @@ Typical reasoning flow:
       to_id,
       max_depth,
       top_k,
+      rerank,
       group_by,
       where,
       limit,
@@ -198,6 +207,7 @@ Typical reasoning flow:
       to_id?: string
       max_depth?: number
       top_k?: number
+      rerank?: boolean
       group_by?: string
       where?: Record<string, unknown>
       limit?: number
@@ -217,7 +227,15 @@ Typical reasoning flow:
         return this._queryDescribe(analysis_id)
       case 'semantic':
         return target === 'records'
-          ? this._querySemanticRecords(analysis_id, query, top_k, where, model, min_similarity)
+          ? this._querySemanticRecords(
+              analysis_id,
+              query,
+              top_k,
+              where,
+              model,
+              min_similarity,
+              rerank
+            )
           : this._querySemantic(analysis_id, query, category, top_k)
       case 'aggregate':
         return this._queryAggregate(analysis_id, group_by, model)
@@ -540,7 +558,8 @@ Typical reasoning flow:
     topK?: number,
     where?: Record<string, unknown>,
     model?: string,
-    minSimilarity?: number
+    minSimilarity?: number,
+    rerank?: boolean
   ): Promise<ToolResult> {
     if (!query) {
       return this.formatResponse(
@@ -559,7 +578,8 @@ Typical reasoning flow:
       model,
       topK,
       where,
-      minSimilarity
+      minSimilarity,
+      rerank
     })
 
     if (hits.length === 0) {
