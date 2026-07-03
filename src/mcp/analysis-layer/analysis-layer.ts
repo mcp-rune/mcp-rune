@@ -17,13 +17,13 @@
  *
  * AnalysisLayer is an **independent peer** of `ModelLayer` — not a
  * subclass. ModelLayer reads model config; AnalysisLayer projects records
- * into the shapes the analysis pipeline needs (edges today; embedding text,
- * hops, summaries, stratifiers in later PRs).
+ * into the shapes the analysis pipeline needs (edges, embedding text, and
+ * hop expansion today; summaries and stratifiers in later PRs).
  *
- * Because some analysis operations (e.g. `walkHops`) need to fetch
- * destination records, AnalysisLayer is **per-request**: it carries the
- * authenticated `DataLayer` for this invocation, mirroring how `DataLayer`
- * itself is constructed per request.
+ * Because some analysis operations (`walkHops`) need to fetch destination
+ * records, AnalysisLayer is **per-request**: it carries the authenticated
+ * `DataLayer` for this invocation, mirroring how `DataLayer` itself is
+ * constructed per request.
  *
  * Consumers receive an `AnalysisLayerFactory` via
  * `ToolDependencies.analysisLayer` / `context.analysisLayer` and call it
@@ -40,10 +40,12 @@ import {
   type Edge,
   type EmbeddingTextOptions,
   extractEdgesFromRecord,
-  type ExtractOptions
+  type ExtractOptions,
+  type HopFollow
 } from './edge-extraction.js'
+import { expandHops, type HopBatch, type HopOptions } from './multi-hop-fetch.js'
 
-export type { Edge, EmbeddingTextOptions, ExtractOptions }
+export type { Edge, EmbeddingTextOptions, ExtractOptions, HopBatch, HopFollow, HopOptions }
 
 export interface AnalysisLayer {
   /** The Model class this layer is bound to. */
@@ -67,6 +69,18 @@ export interface AnalysisLayer {
    * `options.maxLength` (default 512).
    */
   buildEmbeddingText(record: Record<string, unknown>, options?: EmbeddingTextOptions): string
+
+  /**
+   * BFS-expand a root set of the bound model's records across declared
+   * associations, fetching destination records through the captured
+   * per-request `DataLayer`. Yields one `HopBatch` per (model, depth) tuple;
+   * the caller persists records and edges between yields. Cycle-safe;
+   * per-hop fan-out capped via `options.perHopFanOut` (default 100).
+   */
+  walkHops(
+    rootRecords: ReadonlyArray<Record<string, unknown>>,
+    options: HopOptions
+  ): AsyncGenerator<HopBatch>
 }
 
 export interface AnalysisLayerContext {
@@ -75,10 +89,16 @@ export interface AnalysisLayerContext {
   /** Name of the bound model in the registry. */
   modelName: string
   /**
-   * Per-request DataLayer. Required so I/O-bearing methods (walkHops,
-   * added in a later PR) can fetch destination records.
+   * Per-request DataLayer. Required so I/O-bearing methods (`walkHops`)
+   * can fetch destination records.
    */
   dataLayer: DataLayer
+  /**
+   * Full models registry. `walkHops` traverses into destination models, so
+   * the bound layer needs every model's associations — the binding to one
+   * model fixes the *root* of the walk, not its reach.
+   */
+  models: ModelsRegistry
 }
 
 /**
@@ -105,6 +125,9 @@ export function createAnalysisLayer(ctx: AnalysisLayerContext): AnalysisLayer {
     },
     buildEmbeddingText(record, options) {
       return buildEmbeddingTextImpl(record, options)
+    },
+    walkHops(rootRecords, options) {
+      return expandHops(ctx.dataLayer, ctx.models, ctx.modelName, rootRecords, options)
     }
   }
 }
@@ -139,7 +162,7 @@ export function createAnalysisLayerFactory(
           `Registered: ${Object.keys(models).join(', ') || '(none)'}.`
       )
     }
-    const layer = createAnalysisLayer({ model, modelName, dataLayer })
+    const layer = createAnalysisLayer({ model, modelName, dataLayer, models })
     cache.set(modelName, layer)
     return layer
   }
