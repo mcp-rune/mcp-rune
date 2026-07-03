@@ -1,4 +1,5 @@
 import {
+  describeSession,
   getRecordIdsFiltered,
   getRecordsForDryRun,
   queryRecords,
@@ -14,6 +15,9 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
     }
     // cleanupExpired runs on every queryRecords call
     mockPool.query.mockResolvedValueOnce({ rowCount: 0 })
+    // queryRecords resolves the model scope before querying — answer the
+    // describeSession GROUP BY with a single-model session.
+    mockPool.query.mockResolvedValueOnce({ rows: [{ model: 'title', total: 3 }] })
   })
 
   describe('queryRecords — sample mode with where', () => {
@@ -28,7 +32,7 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
         where: { status: 'active' }
       })
 
-      const sql = mockPool.query.mock.calls[1][0] as string
+      const sql = mockPool.query.mock.calls[2][0] as string
       expect(sql).toContain('WITH filtered AS')
       expect(sql).toContain('data @>')
       expect(sql).toContain('ORDER BY RANDOM()')
@@ -46,7 +50,7 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
         where: { duration_minutes: { $gte: 40, $lte: 120 } }
       })
 
-      const sql = mockPool.query.mock.calls[1][0] as string
+      const sql = mockPool.query.mock.calls[2][0] as string
       expect(sql).toContain('filtered AS')
       expect(sql).toContain("(data->>'duration_minutes')::numeric >=")
       expect(sql).toContain("(data->>'duration_minutes')::numeric <=")
@@ -69,7 +73,7 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
         }
       })
 
-      const sql = mockPool.query.mock.calls[1][0] as string
+      const sql = mockPool.query.mock.calls[2][0] as string
       expect(sql).toContain('filtered AS')
       expect(sql).toContain("(data->>'created_at')::timestamptz >=")
       expect(sql).toContain("'7 days'::interval")
@@ -97,7 +101,7 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
         }
       })
 
-      const sql = mockPool.query.mock.calls[1][0] as string
+      const sql = mockPool.query.mock.calls[2][0] as string
       expect(sql).toContain('date_bin')
       expect(sql).toContain("'1 day'::interval")
       expect(sql).toContain('PARTITION BY')
@@ -124,7 +128,7 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
         }
       })
 
-      const sql = mockPool.query.mock.calls[1][0] as string
+      const sql = mockPool.query.mock.calls[2][0] as string
       // Both where and proximity conditions in filtered CTE
       expect(sql).toContain('data @>')
       expect(sql).toContain("(data->>'created_at')::timestamptz >=")
@@ -150,7 +154,7 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
         }
       })
 
-      const sql = mockPool.query.mock.calls[1][0] as string
+      const sql = mockPool.query.mock.calls[2][0] as string
       // Should have both partition expressions
       expect(sql).toContain('date_bin')
       expect(sql).toContain("data->>'status'")
@@ -191,7 +195,7 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
         }
       })
 
-      expect(mockPool.query).toHaveBeenCalledTimes(2) // cleanup + query
+      expect(mockPool.query).toHaveBeenCalledTimes(3) // cleanup + model scope + query
     })
 
     it('should reject invalid field names in proximity', async () => {
@@ -221,7 +225,7 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
         limit: 10
       })
 
-      const sql = mockPool.query.mock.calls[1][0] as string
+      const sql = mockPool.query.mock.calls[2][0] as string
       expect(sql).toContain('data @>')
       expect(sql).toContain("(data->>'duration_minutes')::numeric >=")
       expect(sql).toContain('LIMIT')
@@ -421,7 +425,7 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
         sampleSize: 10,
         stratifiers: [{ kind: 'concept', concept: 'reading_pipeline', targetModels: ['genre'] }]
       })
-      const sql = mockPool.query.mock.calls[1][0] as string
+      const sql = mockPool.query.mock.calls[2][0] as string
       expect(sql).toContain('concept_reading_pipeline AS')
       expect(sql).toContain('e.dst_model = ANY')
       expect(sql).toContain('PARTITION BY concept_reading_pipeline.concept_flag')
@@ -435,7 +439,7 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
         sampleSize: 6,
         stratifiers: [{ kind: 'edge', edge_type: 'belongsTo:author', bucket: 'count' }]
       })
-      const sql = mockPool.query.mock.calls[1][0] as string
+      const sql = mockPool.query.mock.calls[2][0] as string
       expect(sql).toContain('edge_belongsTo_author AS')
       expect(sql).toContain("THEN '2-5'")
       expect(sql).toContain("ELSE '6+'")
@@ -448,12 +452,12 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
         sampleSize: 9,
         stratifiers: [{ kind: 'cluster', k: 4 }]
       })
-      const sql = mockPool.query.mock.calls[1][0] as string
+      const sql = mockPool.query.mock.calls[2][0] as string
       expect(sql).toContain('cluster_anchors AS')
       expect(sql).toContain('cluster_assign AS')
       expect(sql).toContain('embedding <=> a.embedding')
       expect(sql).toContain('PARTITION BY cluster_assign.cluster_id')
-      const params = mockPool.query.mock.calls[1][1] as unknown[]
+      const params = mockPool.query.mock.calls[2][1] as unknown[]
       expect(params).toContain(4)
     })
 
@@ -469,7 +473,7 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
           { kind: 'cluster', k: 3 }
         ]
       })
-      const sql = mockPool.query.mock.calls[1][0] as string
+      const sql = mockPool.query.mock.calls[2][0] as string
       // All three CTEs present
       expect(sql).toContain('concept_reading_pipeline AS')
       expect(sql).toContain('edge_belongsTo_author AS')
@@ -494,6 +498,68 @@ describe('lib/services/vendor/pgvector/ingested-records', () => {
           ]
         })
       ).rejects.toThrow(/At most 3/)
+    })
+  })
+  describe('multi-model sessions (ADR 0013)', () => {
+    beforeEach(() => {
+      mockPool.query.mockReset()
+      mockPool.query.mockResolvedValueOnce({ rowCount: 0 })
+    })
+
+    it('describeSession returns every model with counts and the total', async () => {
+      // describeSession queries directly — no cleanupExpired pass first.
+      mockPool.query.mockReset()
+      mockPool.query.mockResolvedValueOnce({
+        rows: [
+          { model: 'book', total: 12 },
+          { model: 'author', total: 3 }
+        ]
+      })
+      expect(await describeSession(mockPool as any, 'multi')).toEqual({
+        models: [
+          { model: 'book', count: 12 },
+          { model: 'author', count: 3 }
+        ],
+        totalRecords: 15
+      })
+    })
+
+    it('queryRecords errors without a model scope, naming the candidates', async () => {
+      mockPool.query.mockResolvedValueOnce({
+        rows: [
+          { model: 'book', total: 12 },
+          { model: 'author', total: 3 }
+        ]
+      })
+      await expect(
+        queryRecords(mockPool as any, 'multi', { mode: 'sample', sampleSize: 5 })
+      ).rejects.toThrow(/Multi-model analysis session.*book \(12\), author \(3\)/s)
+    })
+
+    it('queryRecords scopes to an explicit model present in the session', async () => {
+      mockPool.query.mockResolvedValueOnce({
+        rows: [
+          { model: 'book', total: 12 },
+          { model: 'author', total: 3 }
+        ]
+      })
+      mockPool.query.mockResolvedValueOnce({ rows: [] })
+      await queryRecords(mockPool as any, 'multi', {
+        mode: 'sample',
+        sampleSize: 5,
+        model: 'author'
+      })
+      const sql = mockPool.query.mock.calls[2][0] as string
+      const params = mockPool.query.mock.calls[2][1] as unknown[]
+      expect(sql).toContain('model = $3')
+      expect(params).toContain('author')
+    })
+
+    it('queryRecords rejects a model with no records in the session', async () => {
+      mockPool.query.mockResolvedValueOnce({ rows: [{ model: 'book', total: 12 }] })
+      await expect(
+        queryRecords(mockPool as any, 'multi', { mode: 'filter', where: { a: 1 }, model: 'genre' })
+      ).rejects.toThrow(/no records in analysis session/)
     })
   })
 })

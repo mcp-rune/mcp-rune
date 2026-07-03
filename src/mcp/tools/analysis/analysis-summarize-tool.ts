@@ -124,7 +124,13 @@ When NOT to use: for the first ingestion of a session — use analysis_ingest, w
             `No ingested data found for analysis "${analysis_id}". Run analysis_ingest first.`
           )
         }
-        resolvedModel = session.model
+        if (session.models.length > 1) {
+          return this._textError(
+            'Multi-model analysis session — pass "model" to scope the summary. ' +
+              `Session models: ${session.models.map((m) => `${m.model} (${m.count})`).join(', ')}`
+          )
+        }
+        resolvedModel = session.models[0]!.model
       } else {
         this.validateModel(resolvedModel)
       }
@@ -134,11 +140,13 @@ When NOT to use: for the first ingestion of a session — use analysis_ingest, w
           ? await queryIngestedData(analysis_id, {
               mode: 'filter',
               where,
-              limit: max_records
+              limit: max_records,
+              model: resolvedModel
             })
           : await queryIngestedData(analysis_id, {
               mode: 'sample',
-              sampleSize: max_records
+              sampleSize: max_records,
+              model: resolvedModel
             })
 
       const registry = this._registry()

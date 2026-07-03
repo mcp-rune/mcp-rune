@@ -18,12 +18,19 @@ export interface IngestParams {
 export interface AggregateQuery {
   mode: 'aggregate'
   groupBy: string
+  /**
+   * Model scope. Required when the session holds records from more than one
+   * model (hop-expanded sessions); resolved automatically when it holds one.
+   */
+  model?: string
 }
 
 export interface FilterQuery {
   mode: 'filter'
   where: Record<string, unknown>
   limit?: number
+  /** Model scope — same resolution rule as `AggregateQuery.model`. */
+  model?: string
 }
 
 export interface ProximityParams {
@@ -45,6 +52,8 @@ export type GraphStratifierSpec =
 export interface SampleQuery {
   mode: 'sample'
   sampleSize?: number
+  /** Model scope — same resolution rule as `AggregateQuery.model`. */
+  model?: string
   stratifyBy?: string
   where?: Record<string, unknown>
   proximity?: ProximityParams
@@ -58,7 +67,13 @@ export interface SampleQuery {
 export type IngestedDataQuery = AggregateQuery | FilterQuery | SampleQuery
 
 export interface SessionDescriptor {
-  model: string
+  /**
+   * Every model in the session with its live record count, ordered by count
+   * descending then name. Hop-expanded ingestion stores destination models
+   * under the same analysis id, so sessions are graphs of models — shape-
+   * sensitive queries scope to one model at a time.
+   */
+  models: Array<{ model: string; count: number }>
   totalRecords: number
 }
 
