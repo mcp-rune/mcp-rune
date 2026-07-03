@@ -190,10 +190,13 @@ export interface DataLayer {
 
   /**
    * Multi-model typeahead across a configured search group. Used by
-   * pickers that span related models (e.g. an "any title" picker that
-   * searches across `episode` and `feature`). Requires the deployment
-   * to declare `searchGroups` on the search ApiExtension — base
-   * adapters without that wiring throw a clear error.
+   * pickers that span related models (e.g. a "any publication" picker
+   * that searches across `book` and `author`). Requires the deployment
+   * to declare `searchGroups` on the registry config (`ToolRegistryConfig`
+   * / `AppRegistry` options — both registries wrap their per-request
+   * DataLayer in `SearchEnabledDataLayer`); base adapters without that
+   * wiring throw a clear error. Group endpoints are namespace-exempt:
+   * declare them fully qualified.
    *
    * The `SearchEnabledDataLayer` decorator routes through
    * `SearchService.groupSearch`.

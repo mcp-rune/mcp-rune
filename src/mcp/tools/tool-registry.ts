@@ -44,6 +44,11 @@ import {
   SummaryStrategyRegistry
 } from '#src/mcp/analysis-layer/summary-strategies/index.js'
 import type {
+  SearchGroup,
+  SearchRequestShaper
+} from '#src/mcp/data-layer/api-extensions/search/index.js'
+import { withSearchEnabledDataLayer } from '#src/mcp/data-layer/api-extensions/search/index.js'
+import type {
   ApiExtensionContext,
   ApiExtensionMap,
   ModelServiceMixin
@@ -157,8 +162,25 @@ export interface ToolRegistryConfig {
   /**
    * Server-wide namespace prefix passed to the default `ModelService`
    * adapter. Ignored when a custom `dataLayer` factory is supplied.
+   * Applies to model CRUD endpoints only — search endpoints (per-model
+   * `extensions.search` and `searchGroups`) are declared fully qualified.
    */
   namespace?: string
+
+  /**
+   * Multi-model search groups routed by `dataLayer.groupSearchNormalized`.
+   * Mirrors `AppRegistry`'s option of the same name — declare the groups
+   * once and pass the same object to both registries. The registry wraps
+   * every per-request DataLayer in `SearchEnabledDataLayer` so tools reach
+   * search exclusively through the `*Normalized` seam methods.
+   */
+  searchGroups?: Record<string, SearchGroup>
+
+  /**
+   * Default search request shaper applied when a model or group does not
+   * declare its own. Mirrors `AppRegistry`'s option of the same name.
+   */
+  defaultShaper?: SearchRequestShaper
 
   /**
    * Server-wide wire-format default forwarded into
@@ -230,6 +252,8 @@ export class ToolRegistry {
   private _createApiClient: ApiClientFactory | undefined
   private _dataLayerFactory: DataLayerFactory
   private _namespace: string | undefined
+  private _searchGroups: Record<string, SearchGroup>
+  private _defaultShaper: SearchRequestShaper | undefined
   private _defaultConvention: BaseConvention | undefined
   private _summaryRenderer: FormSummaryRenderer | undefined
   private _vectorStorageEnabled: boolean
@@ -251,6 +275,8 @@ export class ToolRegistry {
     this._domainRegistry = config.domainRegistry
     this._createApiClient = config.createApiClient
     this._namespace = config.namespace
+    this._searchGroups = config.searchGroups ?? {}
+    this._defaultShaper = config.defaultShaper
     this._defaultConvention = config.defaultConvention
     this._summaryRenderer = config.summaryRenderer
     this._vectorStorageEnabled = config.vectorStorageEnabled ?? false
@@ -499,12 +525,19 @@ export class ToolRegistry {
       )
     }
     const apiClient = this._createApiClient(token)
-    const dataLayer = this._dataLayerFactory({
+    const baseDataLayer = this._dataLayerFactory({
       apiClient,
       models: this._models,
       namespace: this._namespace,
       defaultConvention: this._defaultConvention,
       logger: this._logger
+    })
+    // Wrap in SearchEnabledDataLayer (mirroring AppRegistry) so tools route
+    // every text/filter/lookup/group operation through the `*Normalized`
+    // seam methods — tools never see SearchService directly.
+    const dataLayer = withSearchEnabledDataLayer(baseDataLayer, {
+      searchGroups: this._searchGroups,
+      defaultShaper: this._defaultShaper
     })
     const analysisLayer = createAnalysisLayerFactory(this._models, dataLayer)
     return new ToolCls({

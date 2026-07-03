@@ -126,11 +126,10 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
     }
   }
 
-  // `searchGroups` here describes the AppRegistry-level SearchService routing,
-  // a different shape from the pick-model-app's group config. The default
-  // helper wires it onto the registry only; deployers who need the picker's
-  // group mode should compose the picker factory by hand.
-  add('pick-model-app', createPickModelApp({ modelClasses, namespace }))
+  // One `searchGroups` declaration serves both halves: the registry wires the
+  // routing half onto the data layer, and the picker consumes the
+  // presentation half (label, typeField, models) of the same objects.
+  add('pick-model-app', createPickModelApp({ modelClasses, namespace, searchGroups }))
   add('find-model-app', createFindModelApp({ modelClasses, namespace }))
   add('multi-pick-model-app', createMultiPickModelApp({ modelClasses, namespace }))
   add(

@@ -71,13 +71,41 @@ export interface SearchModelClass {
   [key: string]: unknown
 }
 
+/**
+ * One multi-model search group: the routing half (`endpoint`, `modelsParam`,
+ * `shaper`, `queryParam`, `expand`) drives `SearchService.groupSearch`; the
+ * presentation half (`label`, `description`, `typeField`, `models`) drives
+ * pickers that expose the group. One declaration serves both — registries
+ * forward the same object to the data layer and to the picker apps.
+ *
+ * Group endpoints are namespace-exempt: declare them fully qualified
+ * (including any API prefix), since a group spans models and has no single
+ * model to resolve a namespace from.
+ */
 export interface SearchGroup {
   endpoint: string
   modelsParam: string
   shaper?: SearchRequestShaper
   queryParam?: string
   expand?: string[]
+  /** Display name pickers show for this group (falls back to the group key). */
+  label?: string
+  description?: string
+  /** Response field carrying each hit's type discriminator (pickers default to `type`). */
+  typeField?: string
+  /** Member model names — used by pickers for descriptions and type mapping. */
+  models?: string[]
   [key: string]: unknown
+}
+
+/**
+ * The registry-level search knobs. Declared once on `ToolRegistryConfig` /
+ * `AppRegistry` options and threaded — typed end-to-end — into
+ * `createSearchService`; nothing reads them out of an untyped context bag.
+ */
+export interface SearchServiceOptions {
+  searchGroups?: Record<string, SearchGroup>
+  defaultShaper?: SearchRequestShaper
 }
 
 export type { NormalizedListResponse, PaginationInfo } from '#src/mcp/data-layer/types.js'

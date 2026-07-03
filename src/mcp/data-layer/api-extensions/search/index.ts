@@ -35,7 +35,6 @@ export {
   searchConfig
 } from './capabilities.js'
 export { GetFiltersGuideTool, searchExtension, SearchRecordsTool } from './extension.js'
-export type { SearchFactoryContext } from './factory.js'
 export { createSearchService } from './factory.js'
 export { SearchRequestShaper } from './request-shapers/default.js'
 export type { RailsShaperConfig } from './request-shapers/rails.js'
@@ -52,5 +51,6 @@ export type {
   SearchGroup,
   SearchModelClass,
   SearchRequest,
-  SearchResult
+  SearchResult,
+  SearchServiceOptions
 } from './types.js'

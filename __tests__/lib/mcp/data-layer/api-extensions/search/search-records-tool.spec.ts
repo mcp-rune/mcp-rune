@@ -1,4 +1,7 @@
-import { SearchRecordsTool } from '#src/mcp/data-layer/api-extensions/search/index.js'
+import {
+  SearchRecordsTool,
+  withSearchEnabledDataLayer
+} from '#src/mcp/data-layer/api-extensions/search/index.js'
 
 // Mock model classes with search.filters and search.query config
 const mockModels = {
@@ -43,9 +46,13 @@ describe('SearchRecordsTool', () => {
       }),
       get: vi.fn().mockResolvedValue({ data: [], meta: { page: 1, per_page: 20, total: 0 } })
     }
+    // Mirror ToolRegistry: every authenticated tool receives its DataLayer
+    // pre-wrapped in SearchEnabledDataLayer.
     tool = new SearchRecordsTool({
       models: mockModels,
-      dataLayer: new ModelService({ apiClient: mockApiClient, models: mockModels }),
+      dataLayer: withSearchEnabledDataLayer(
+        new ModelService({ apiClient: mockApiClient, models: mockModels })
+      ),
       logger: { info: vi.fn(), error: vi.fn() }
     })
   })
@@ -240,7 +247,9 @@ describe('SearchRecordsTool', () => {
   it('should work without logger', async () => {
     const noLogTool = new SearchRecordsTool({
       models: mockModels,
-      dataLayer: new ModelService({ apiClient: mockApiClient, models: mockModels })
+      dataLayer: withSearchEnabledDataLayer(
+        new ModelService({ apiClient: mockApiClient, models: mockModels })
+      )
     })
 
     const result = await noLogTool.execute({
@@ -296,7 +305,9 @@ describe('SearchRecordsTool', () => {
     }
     const noLabelTool = new SearchRecordsTool({
       models: modelsNoLabel,
-      dataLayer: new ModelService({ apiClient: mockApiClient, models: modelsNoLabel }),
+      dataLayer: withSearchEnabledDataLayer(
+        new ModelService({ apiClient: mockApiClient, models: modelsNoLabel })
+      ),
       logger: { info: vi.fn(), error: vi.fn() }
     })
 
@@ -331,7 +342,9 @@ describe('SearchRecordsTool', () => {
     }
     const noTypeTool = new SearchRecordsTool({
       models: modelsNoType,
-      dataLayer: new ModelService({ apiClient: mockApiClient, models: modelsNoType }),
+      dataLayer: withSearchEnabledDataLayer(
+        new ModelService({ apiClient: mockApiClient, models: modelsNoType })
+      ),
       logger: { info: vi.fn(), error: vi.fn() }
     })
 
@@ -553,10 +566,12 @@ describe('SearchRecordsTool', () => {
 
       const derivedTool = new SearchRecordsTool({
         models: modelsWithDerived,
-        dataLayer: new ModelService({
-          apiClient: derivedApiClient as never,
-          models: modelsWithDerived
-        }),
+        dataLayer: withSearchEnabledDataLayer(
+          new ModelService({
+            apiClient: derivedApiClient as never,
+            models: modelsWithDerived
+          })
+        ),
         logger: { info: vi.fn(), error: vi.fn() }
       })
 
@@ -607,10 +622,12 @@ describe('SearchRecordsTool', () => {
 
       const derivedTool = new SearchRecordsTool({
         models: modelsWithDerived,
-        dataLayer: new ModelService({
-          apiClient: derivedApiClient as never,
-          models: modelsWithDerived
-        }),
+        dataLayer: withSearchEnabledDataLayer(
+          new ModelService({
+            apiClient: derivedApiClient as never,
+            models: modelsWithDerived
+          })
+        ),
         logger: { info: vi.fn(), error: vi.fn() }
       })
 

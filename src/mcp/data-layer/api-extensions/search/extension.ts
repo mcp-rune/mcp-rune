@@ -2,13 +2,12 @@
  * The `search` ApiExtension's MCP tools and registration factory.
  *
  * Contributes `search_records` (raw-JSON filtered search) and
- * `get_filters_guide` (filter discovery for LLMs). Both rely on:
- *   - `getSearchConfig` / `getSearchableModelNames` from `./capabilities`
- *   - `createSearchService` from `./factory`
- *
- * Per-model search config currently lives at `static search` on `BaseModel`
- * — moving to the `extensions['search']` bag is planned for a follow-up
- * release once we're ready to coordinate the change across consumers.
+ * `get_filters_guide` (filter discovery for LLMs). Both read per-model
+ * search config from the `extensions['search']` bag via `getSearchConfig` /
+ * `getSearchableModelNames`, and `search_records` searches exclusively
+ * through `dataLayer.searchNormalized` — the registry wraps every
+ * per-request DataLayer in `SearchEnabledDataLayer`, so no tool constructs
+ * a `SearchService` itself.
  */
 
 import type { ZodTypeAny } from 'zod'
@@ -21,7 +20,6 @@ import { BaseTool } from '#src/mcp/tools/base-tool.js'
 import type { ToolAnnotations, ToolResult } from '#src/mcp/tools/tool-result.js'
 
 import { getSearchableModelNames, getSearchConfig } from './capabilities.js'
-import { createSearchService } from './factory.js'
 import type { PaginationInfo } from './types.js'
 
 // ============================================================================
@@ -275,19 +273,10 @@ Call get_filters_guide first to learn available filters for the target model.`
       }
 
       const clampedPerPage = Math.min(per_page, 200)
-      const searchClient = createSearchService(
-        dataLayer,
-        this.serverContext as Record<string, unknown>
-      )
-      const { records, pagination } = (await searchClient.search(
-        ModelClass as unknown as Parameters<typeof searchClient.search>[0],
-        '',
-        {
-          page,
-          perPage: clampedPerPage,
-          filters
-        }
-      )) as unknown as { records: Record<string, unknown>[]; pagination: PaginationInfo }
+      const { records, pagination } = await dataLayer.searchNormalized(model, '', filters, {
+        page,
+        perPage: clampedPerPage
+      })
 
       this.modelLayer?.(model).resolveDerivedFields(records)
       const filteredRecords = pickFields(records, fields)

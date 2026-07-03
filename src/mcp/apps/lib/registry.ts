@@ -26,10 +26,7 @@ import type {
   SearchGroup,
   SearchRequestShaper
 } from '#src/mcp/data-layer/api-extensions/search/index.js'
-import {
-  createSearchService,
-  SearchEnabledDataLayer
-} from '#src/mcp/data-layer/api-extensions/search/index.js'
+import { withSearchEnabledDataLayer } from '#src/mcp/data-layer/api-extensions/search/index.js'
 import type { BaseConvention, DataLayer, DataLayerFactory } from '#src/mcp/data-layer/data-layer.js'
 import { ModelService } from '#src/mcp/data-layer/model-service/model-service.js'
 import {
@@ -134,6 +131,16 @@ interface RegistryOptions {
    * honor or ignore this.
    */
   defaultConvention?: BaseConvention
+  /**
+   * Server-wide namespace prefix forwarded into
+   * `DataLayerFactoryContext.namespace` for the default `ModelService`
+   * adapter — mirrors `ToolRegistry`'s `namespace` option so app CRUD and
+   * tool CRUD hit the same URLs. Distinct from the `namespace` option on
+   * `createDefaultAppRegistry`, which names `ui://` resources. Applies to
+   * model CRUD endpoints only — search endpoints are declared fully
+   * qualified.
+   */
+  apiNamespace?: string
   searchGroups?: Record<string, SearchGroup>
   defaultShaper?: SearchRequestShaper
   /**
@@ -178,6 +185,7 @@ export class AppRegistry {
   private _models: ModelsRegistry
   private _dataLayerFactory: DataLayerFactory
   private _defaultConvention: BaseConvention | undefined
+  private _apiNamespace: string | undefined
   private _modelLayer: ModelLayerFactory
   private _searchGroups: Record<string, SearchGroup>
   private _defaultShaper?: SearchRequestShaper
@@ -194,6 +202,7 @@ export class AppRegistry {
       models,
       dataLayer,
       defaultConvention,
+      apiNamespace,
       searchGroups = {},
       defaultShaper,
       headerIcon,
@@ -205,6 +214,7 @@ export class AppRegistry {
     this._createApiClient = createApiClient
     this._models = models ?? {}
     this._defaultConvention = defaultConvention
+    this._apiNamespace = apiNamespace
     this._searchGroups = searchGroups
     this._defaultShaper = defaultShaper
     this._headerIcon = headerIcon
@@ -231,10 +241,11 @@ export class AppRegistry {
     const modelsRef = this._models
     this._dataLayerFactory =
       dataLayer ??
-      (({ apiClient, models: m, logger: log, defaultConvention: dc }): DataLayer =>
+      (({ apiClient, models: m, namespace, logger: log, defaultConvention: dc }): DataLayer =>
         new ModelService({
           apiClient: apiClient!,
           models: m ?? modelsRef,
+          namespace,
           defaultConvention: dc,
           logger: log
         }))
@@ -346,14 +357,14 @@ export class AppRegistry {
               const baseDataLayer = this._dataLayerFactory({
                 apiClient,
                 models: this._models,
+                namespace: this._apiNamespace,
                 defaultConvention: this._defaultConvention,
                 logger
               })
-              const searchService = createSearchService(baseDataLayer, {
+              const dataLayer = withSearchEnabledDataLayer(baseDataLayer, {
                 searchGroups: this._searchGroups,
                 defaultShaper: this._defaultShaper
               })
-              const dataLayer = new SearchEnabledDataLayer(baseDataLayer, searchService)
               context.dataLayer = dataLayer
               context.analysisLayer = createAnalysisLayerFactory(this._models, dataLayer)
             }

@@ -154,7 +154,7 @@ const base = new ModelService({ apiClient, models, namespace })
 const dataLayer = withSearchEnabledDataLayer(base, { searchGroups, defaultShaper })
 ```
 
-`AppRegistry.registerTools` does this automatically — every app handler receives a `dataLayer` already wrapped. `ToolRegistry` does not auto-wrap today; tools that need text search call `withSearchEnabledDataLayer` explicitly.
+Both registries do this automatically — every app handler and every authenticated tool receives a `dataLayer` already wrapped, built from the `searchGroups` / `defaultShaper` options on their config. Calling `withSearchEnabledDataLayer` yourself is only needed when composing a `DataLayer` outside a registry (tests, custom hosting).
 
 The decorator is a thin proxy: every CRUD method forwards to the base adapter; the three search methods route through `SearchService.search` / `.lookup` / `.groupSearch`. Apps cannot tell whether they're talking to a raw `ModelService` or the search-enabled wrapper — they call `dataLayer.searchNormalized` either way.
 
