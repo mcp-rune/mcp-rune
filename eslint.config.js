@@ -76,9 +76,13 @@ export default [
   // model-config and analysis helpers only through `modelLayer(name)` /
   // `analysisLayer(name)` injected via `ToolDependencies` or app handler
   // context. Direct imports of the underlying helpers bypass the seam and
-  // mirror the "Respect the DataLayer abstraction" rule. See plan
-  // `if-you-look-at-snappy-babbage.md` and memory
-  // `feedback_separate_definition_from_consumption`.
+  // mirror the "Respect the DataLayer abstraction" rule.
+  //
+  // Pattern syntax constraint: `patterns.group` uses gitignore-style matching,
+  // where a leading `#` marks a comment — a pattern written as `#src/...`
+  // silently matches nothing. The `**/` prefix matches both the `#src/...`
+  // subpath-import form and relative `../../` forms. The guard itself is
+  // regression-tested by `__tests__/lint/layer-guard.spec.ts`.
   {
     files: [
       'src/mcp/apps/**/*.ts',
@@ -93,19 +97,19 @@ export default [
           patterns: [
             {
               group: [
-                '#src/mcp/model-layer/derived-fields*',
-                '#src/mcp/model-layer/field-names*',
-                '#src/mcp/model-layer/schema-derivation*',
-                '#src/mcp/model-layer/validators*'
+                '**/model-layer/derived-fields*',
+                '**/model-layer/field-names*',
+                '**/model-layer/schema-derivation*',
+                '**/model-layer/validators*'
               ],
               message:
-                'Use the modelLayer factory (deps.modelLayer / context.modelLayer) instead of importing model-layer helpers directly. See plan `if-you-look-at-snappy-babbage.md`.'
+                'Use the modelLayer factory (deps.modelLayer / context.modelLayer) instead of importing model-layer helpers directly.'
             },
             {
               group: [
-                '#src/mcp/analysis-layer/edge-extraction*',
-                '#src/mcp/analysis-layer/graph-stratifiers*',
-                '#src/mcp/analysis-layer/multi-hop-fetch*'
+                '**/analysis-layer/edge-extraction*',
+                '**/analysis-layer/graph-stratifiers*',
+                '**/analysis-layer/multi-hop-fetch*'
               ],
               message:
                 'Use the analysisLayer factory (deps.analysisLayer / context.analysisLayer) instead of importing analysis-layer helpers directly.'
@@ -118,7 +122,7 @@ export default [
   // Boot-time validators run before any layer factory is constructed, so
   // they're exempt from the abstraction guard.
   {
-    files: ['src/mcp/apps/lib/form-validator.ts', 'src/mcp/prompts/prompt-validator.ts'],
+    files: ['src/mcp/apps/lib/app-form-validator.ts', 'src/mcp/prompts/prompt-validator.ts'],
     rules: {
       'no-restricted-imports': 'off'
     }
