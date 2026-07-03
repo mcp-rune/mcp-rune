@@ -76,6 +76,23 @@ export class BaseConvention {
   }
 
   /**
+   * Serialize list/collection query params to the wire format. The default
+   * emits flat `page` / `per_page` alongside the filters. A convention whose
+   * backend paginates differently — e.g. JSON:API's `page[number]` /
+   * `page[size]`, or Ransack's `q[...]` filter nesting — overrides this so the
+   * pagination shape lives at the convention seam instead of being hardcoded
+   * in `ModelService.list`.
+   */
+  serializeListParams(params: {
+    page?: number
+    perPage?: number
+    filters?: Record<string, unknown>
+  }): Record<string, unknown> {
+    const { page = 1, perPage = 20, filters = {} } = params
+    return { ...filters, page, per_page: perPage }
+  }
+
+  /**
    * Extract records and pagination from an API list response.
    */
   normalizeListResponse(

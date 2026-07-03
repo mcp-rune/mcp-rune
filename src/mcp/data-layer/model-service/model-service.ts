@@ -212,11 +212,11 @@ export class ModelService implements DataLayer {
       throw error instanceof MissingParentError ? this._enrichMissingParentError(error) : error
     }
 
-    const queryParams = {
-      ...filters,
-      page: pagination?.page ?? 1,
-      per_page: pagination?.perPage ?? 20
-    }
+    const queryParams = this._getConvention(modelConfig).serializeListParams({
+      page: pagination?.page,
+      perPage: pagination?.perPage,
+      filters
+    })
 
     this._log('info', 'Listing models', { model, impersonating: options?.userId ?? null })
     // Trim trailing `undefined` so third-party API clients see the same call
