@@ -16,9 +16,8 @@
  *
  * `validateModelClass(name, ModelClass, allModelNames)` returns an `Issue[]`
  * listing every problem with severity + path. Pure functions only — no I/O,
- * no logger calls. The caller (`validateRegistries`) aggregates and surfaces
- * them. Reached through `modelLayer.validate(...)` (record-level) and
- * `validateRegistries` (boot-level) after PR2.
+ * no logger calls. Run at boot by `validateRegistries`; also re-exported from
+ * `@mcp-rune/mcp-rune/models` for deployers who validate a registry directly.
  */
 
 import '#src/mcp/models/kinds/index.js'

@@ -1,8 +1,10 @@
-// mcp-rune model-domain layer — BaseModel, kind metadata, and re-exports of
-// model-layer + analysis-layer helpers for backwards-compatible public access.
-// Helper logic itself lives in `src/mcp/model-layer/` (model-config consumers)
-// and `src/mcp/analysis-layer/` (analysis-domain consumers). PR3 will remove
-// the re-exports below in favor of `modelLayer` / `analysisLayer` injection.
+// mcp-rune model-domain public surface — `@mcp-rune/mcp-rune/models`.
+//
+// What a model IS: `BaseModel`, the kinds vocabulary, and the attribute /
+// association definition types. Plus the model-driven schema validators the
+// boot gate (`validateRegistries`) and deployers use. Consumption machinery
+// (ModelLayer / AnalysisLayer) is reached through its own injected factories,
+// not re-exported here.
 
 export type { ModelData } from './base-model.js'
 export { BaseModel } from './base-model.js'
@@ -13,7 +15,13 @@ export type {
   KindRenderHint,
   KnownKind
 } from './kinds/index.js'
-export { getKind, kindOptsFrom, registerKind, resolveInputType } from './kinds/index.js'
+export {
+  getKind,
+  kindOptsFrom,
+  registerKind,
+  resolveInputType,
+  UnknownKindError
+} from './kinds/index.js'
 export type {
   ApiConfig,
   AssociationConfig,
@@ -32,13 +40,6 @@ export {
   validateAttributeDefinition,
   validateModelClass
 } from '#src/mcp/model-layer/model-validator.js'
-export {
-  validateEnum,
-  validateModel,
-  validatePositiveInt,
-  validateRequired,
-  validateUrl
-} from '#src/mcp/model-layer/validators.js'
 export type {
   Issue,
   IssueLevel,

@@ -65,24 +65,6 @@ export class BaseModel {
     return this.modelName ?? this.api.endpoint!.replace(/s$/, '')
   }
 
-  // --- Static methods ---
-
-  /** Build payload for create/update API calls */
-  static buildPayload(attrs: Record<string, unknown>): Record<string, unknown> {
-    return { [this.singularName]: attrs }
-  }
-
-  /** Validate required attributes for creation */
-  static validateRequired(attrs: Record<string, unknown>): { valid: boolean; missing: string[] } {
-    const missing = this.required.filter((field) => !attrs[field])
-    return { valid: missing.length === 0, missing }
-  }
-
-  /** Get endpoint for a specific record */
-  static getRecordEndpoint(id: string | number): string {
-    return `${this.api.endpoint}/${id}`
-  }
-
   // --- Instance ---
 
   data: ModelData
@@ -111,16 +93,6 @@ export class BaseModel {
   /** Lookup result fields for display. Override in subclasses. */
   get lookupFields(): Record<string, unknown> {
     return {}
-  }
-
-  /** API endpoint for this specific record */
-  get recordEndpoint(): string {
-    return `${(this.constructor as typeof BaseModel).api.endpoint}/${this.id}`
-  }
-
-  /** Build payload for updating this record */
-  buildUpdatePayload(attrs: Record<string, unknown>): Record<string, unknown> {
-    return (this.constructor as typeof BaseModel).buildPayload(attrs)
   }
 
   /** Get raw data for a specific attribute */
