@@ -22,13 +22,13 @@ Never import `resolveDerivedFields`, `collectValidFieldNames`, `derivePromptSche
 
 Carries the authenticated `DataLayer` for I/O-bearing methods. Apps get it as `context.analysisLayer(name)`; tools as `this.analysisLayer?.(name)`. The interface lives at `src/mcp/analysis-layer/analysis-layer.ts`.
 
-Surface today: `extractEdges(record, options?)`, `buildEmbeddingText(record, options?)`. Designed to host `walkHops`, `summarize`, and `buildStratifier` in follow-up releases.
+Surface today: `extractEdges(record, options?)`, `buildEmbeddingText(record, options?)`, `walkHops(rootRecords, options)`. Designed to host `summarize` and `buildStratifier` in follow-up releases.
 
 Never import `extractEdgesFromRecord`, `buildEmbeddingText`, `expandHops`, or anything from `graph-stratifiers.ts` / `multi-hop-fetch.ts` in a projection-layer file.
 
 ### Enforcement
 
-The rules above are enforced by a `no-restricted-imports` block in `eslint.config.js`, scoped to `src/mcp/apps/**`, `src/mcp/tools/**`, `src/mcp/prompts/**`, and `src/mcp/data-layer/api-extensions/**`. Boot-time validators (`src/mcp/apps/lib/form-validator.ts` and `src/mcp/prompts/prompt-validator.ts`) are exempt because they run before any factory is constructed; any new boot-time validator that needs a helper directly should be added to the exemption list rather than left to break the build.
+The rules above are enforced by a `no-restricted-imports` block in `eslint.config.js`, scoped to `src/mcp/apps/**`, `src/mcp/tools/**`, `src/mcp/prompts/**`, and `src/mcp/data-layer/api-extensions/**`. Boot-time validators (`src/mcp/apps/lib/app-form-validator.ts` and `src/mcp/prompts/prompt-validator.ts`) are exempt because they run before any factory is constructed; any new boot-time validator that needs a helper directly should be added to the exemption list rather than left to break the build.
 
 ### Layers vs adapters
 

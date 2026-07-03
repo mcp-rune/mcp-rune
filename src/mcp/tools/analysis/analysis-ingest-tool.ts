@@ -2,8 +2,7 @@ import type { ZodTypeAny } from 'zod'
 import { z } from 'zod'
 
 import { pickFields } from '#src/core/helpers.js'
-import type { HopFollow } from '#src/mcp/analysis-layer/edge-extraction.js'
-import { expandHops } from '#src/mcp/analysis-layer/multi-hop-fetch.js'
+import type { HopFollow } from '#src/mcp/analysis-layer/analysis-layer.js'
 import type { SummaryEdge, SummaryInput } from '#src/mcp/analysis-layer/summary-strategies/index.js'
 import { defaultSummaryStrategyRegistry } from '#src/mcp/analysis-layer/summary-strategies/index.js'
 import type { SearchService } from '#src/mcp/data-layer/api-extensions/search/index.js'
@@ -455,22 +454,10 @@ When NOT to use: For quick lookups of specific records by ID or small result set
       : flatRecords
 
     // Store records (+ embeddings if enabled) and persist edges
-    const stored = await this._storeRecordsAndEdges(
-      analysisId,
-      model,
-      modelConfig,
-      records,
-      pipeline
-    )
+    const stored = await this._storeRecordsAndEdges(analysisId, model, records, pipeline)
 
     // Expand graph via declared associations (when hop_depth > 0)
-    const hopStats = await this._expandAndPersistHops(
-      dataLayer,
-      analysisId,
-      model,
-      records,
-      pipeline
-    )
+    const hopStats = await this._expandAndPersistHops(analysisId, model, records, pipeline)
 
     // Store page summary as analysis memory (one per strategy)
     await this._runStrategies(strategies, {
@@ -592,23 +579,11 @@ When NOT to use: For quick lookups of specific records by ID or small result set
         : flatRecords
 
       // Store records (+ embeddings if enabled) and persist edges
-      const stored = await this._storeRecordsAndEdges(
-        analysisId,
-        model,
-        modelConfig,
-        records,
-        pipeline
-      )
+      const stored = await this._storeRecordsAndEdges(analysisId, model, records, pipeline)
       totalStored += stored
 
       // Expand graph via declared associations (when hop_depth > 0)
-      const hopStats = await this._expandAndPersistHops(
-        dataLayer,
-        analysisId,
-        model,
-        records,
-        pipeline
-      )
+      const hopStats = await this._expandAndPersistHops(analysisId, model, records, pipeline)
       for (const [m, n] of Object.entries(hopStats)) {
         hopTotals.set(m, (hopTotals.get(m) ?? 0) + n)
       }
@@ -964,7 +939,6 @@ When NOT to use: For quick lookups of specific records by ID or small result set
   private async _storeRecordsAndEdges(
     analysisId: string,
     model: string,
-    modelConfig: ModelConfig,
     records: ReadonlyArray<Record<string, unknown>>,
     pipeline: IngestPipelineOptions
   ): Promise<number> {
@@ -998,7 +972,6 @@ When NOT to use: For quick lookups of specific records by ID or small result set
    * model so the caller can summarize.
    */
   private async _expandAndPersistHops(
-    dataLayer: DataLayer,
     analysisId: string,
     rootModel: string,
     rootRecords: ReadonlyArray<Record<string, unknown>>,
@@ -1008,23 +981,17 @@ When NOT to use: For quick lookups of specific records by ID or small result set
     if (pipeline.hopDepth <= 0) return stats
     if (pipeline.hopFollow === 'none') return stats
 
-    const modelConfigs: Record<string, ModelConfig> = {}
-    for (const name of Object.keys(this.models)) {
-      const cfg = this.getModelConfig(name)
-      if (cfg) modelConfigs[name] = cfg
-    }
+    const analysisLayer = this.analysisLayer?.(rootModel)
+    if (!analysisLayer) return stats
 
-    const generator = expandHops(dataLayer, this.models, modelConfigs, rootModel, rootRecords, {
+    const generator = analysisLayer.walkHops(rootRecords, {
       maxDepth: pipeline.hopDepth,
       hopFollow: pipeline.hopFollow,
       modelWhitelist: pipeline.hopModels
     })
 
     for await (const batch of generator) {
-      const dstConfig = modelConfigs[batch.model]
-      if (!dstConfig) continue
-
-      await this._storeRecordsAndEdges(analysisId, batch.model, dstConfig, batch.records, pipeline)
+      await this._storeRecordsAndEdges(analysisId, batch.model, batch.records, pipeline)
       stats[batch.model] = (stats[batch.model] ?? 0) + batch.records.length
     }
 

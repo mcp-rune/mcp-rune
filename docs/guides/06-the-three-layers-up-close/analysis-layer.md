@@ -31,6 +31,16 @@ export interface AnalysisLayer {
    * with id and *_id fields skipped. Truncates at options.maxLength (default 512).
    */
   buildEmbeddingText(record: Record<string, unknown>, options?: EmbeddingTextOptions): string
+
+  /**
+   * BFS-expand a root set of the bound model's records across declared
+   * associations, fetching destination records through the captured
+   * per-request DataLayer. Yields one HopBatch per (model, depth) tuple.
+   */
+  walkHops(
+    rootRecords: ReadonlyArray<Record<string, unknown>>,
+    options: HopOptions
+  ): AsyncGenerator<HopBatch>
 }
 ```
 
@@ -52,9 +62,9 @@ const edges = bookAnalysis?.extractEdges(book) ?? []
 
 ## Why `DataLayer` lives inside `AnalysisLayer`
 
-Some analysis operations (today `walkHops` is in the pipeline, not yet exposed; in the future `summarize` will sit here) need to fetch destination records. Rather than ask consumers to thread both layers in and pass the data layer through manually, the analysis layer captures it at construction.
+Some analysis operations (`walkHops` today; `summarize` will sit here too) need to fetch destination records. Rather than ask consumers to thread both layers in and pass the data layer through manually, the analysis layer captures it at construction.
 
-This also keeps the projection layer's API narrow. A tool that wants to do edge extraction calls `this.analysisLayer?.('book').extractEdges(record)`; it doesn't have to know that, internally, edge extraction will (in a follow-up release) reach back through the data layer to resolve hop targets.
+This also keeps the projection layer's API narrow. A tool that wants graph expansion calls `this.analysisLayer?.('book').walkHops(records, options)`; it doesn't have to know that, internally, the layer reaches back through the captured data layer to materialize each hop's destination records.
 
 ## When to use it
 
@@ -68,7 +78,7 @@ The `analysis_*` tools shipped today (`analysis_ingest`, `analysis_summarize`, `
 
 If you are contributing to mcp-rune itself (not a deployer extending a server) and you need a new analysis projection that today isn't on the interface, the rule — same as `ModelLayer` — is: **extend the interface** in `src/mcp/analysis-layer/analysis-layer.ts`. Never import `extractEdgesFromRecord`, `expandHops`, or anything from `graph-stratifiers.ts` / `multi-hop-fetch.ts` directly from projection-layer code; the eslint guard will reject it.
 
-The roadmap surface listed in the interface doc (`walkHops`, `summarize`, `buildStratifier`) is what the layer is _designed_ to host next; if your use case maps to one of those, the right move is to PR them onto the interface rather than reach past it.
+The roadmap surface listed in the interface doc (`summarize`, `buildStratifier`) is what the layer is _designed_ to host next; if your use case maps to one of those, the right move is to PR them onto the interface rather than reach past it.
 
 ## What's next
 

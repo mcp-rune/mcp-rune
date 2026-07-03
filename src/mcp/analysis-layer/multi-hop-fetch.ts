@@ -21,8 +21,9 @@
  * Cycle-safe via a shared visited Set. Per-hop fan-out is capped so a
  * runaway graph can't explode ingest cost. Composes `extractEdgesFromRecord`
  * (to find destination IDs) with `DataLayer.find` (to materialize each
- * destination record). Reached through `analysisLayer.walkHops(roots, options)`
- * after PR2.
+ * destination record). Projection code reaches this through
+ * `analysisLayer(name).walkHops(rootRecords, options)` — never by importing
+ * `expandHops` directly.
  */
 
 import type { DataLayer } from '#src/mcp/data-layer/data-layer.js'
@@ -63,7 +64,6 @@ export interface HopBatch {
 export async function* expandHops(
   dataLayer: DataLayer,
   models: ModelsRegistry,
-  modelConfigs: Record<string, ModelConfig>,
   rootModel: string,
   rootRecords: ReadonlyArray<Record<string, unknown>>,
   options: HopOptions
@@ -83,7 +83,7 @@ export async function* expandHops(
   let frontiers = collectFrontiers(
     rootRecords,
     rootModel,
-    modelConfigs[rootModel],
+    models[rootModel],
     options.hopFollow,
     visited,
     whitelist
@@ -94,13 +94,13 @@ export async function* expandHops(
     const nextFrontiers = new Map<string, Set<string>>()
 
     for (const [model, idSet] of frontiers) {
-      if (!modelConfigs[model]) continue
+      if (!models[model]) continue
 
       const ids = Array.from(idSet).slice(0, perHopFanOut)
       const fetched = await _findMany(dataLayer, model, ids, concurrency)
       if (fetched.length === 0) continue
 
-      const associations = modelConfigs[model]?.associations
+      const associations = models[model]?.associations
       const batchEdges: Edge[] = []
       for (const record of fetched) {
         const edges = extractEdgesFromRecord(record, associations, model, {
@@ -114,7 +114,7 @@ export async function* expandHops(
       if (currentDepth < options.maxDepth) {
         for (const edge of batchEdges) {
           if (whitelist && !whitelist.has(edge.dst_model)) continue
-          if (!modelConfigs[edge.dst_model]) continue
+          if (!models[edge.dst_model]) continue
           const key = `${edge.dst_model}:${edge.dst_id}`
           if (visited.has(key)) continue
           visited.add(key)
