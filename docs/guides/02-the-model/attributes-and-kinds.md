@@ -447,6 +447,18 @@ At `AppRegistry` construction the descriptor half registers with the shared kind
 
 > The framework also exports `registerKind(...)` from `@mcp-rune/mcp-rune/models` for tests and framework-internal callers. Application code should configure kinds through `AppRegistry({ kinds })` so there's one extension point to find.
 
+### Where each half runs
+
+The behavior half of a `KindExtension` (`parse` / `serialize` / `validate` / `describe` / `toInput` / `fromInput`) runs **server-side only**. App iframes bake the built-in kind registry into their bundles at build time, and deployer functions never cross the CSP-safe channel into them — what crosses is data: the resolved form schema and any declarative `render` hints.
+
+Inside the apps, a top-level custom kind like `currency` therefore:
+
+- **renders cells with your `render` hint** when you declared one — the recommended path for custom display;
+- **degrades to string semantics** (raw value display, passthrough input handling) when no hint exists, with a one-time console warning rather than a crashed cell or a dead form;
+- **keeps your full custom behavior on every server surface** — `validate_form`, form-schema generation, prompt summaries — regardless.
+
+When the form inputs should inherit a built-in's handling (number coercion for currency, say), declare the attribute as a `kind:format` narrowing instead — `invoice_total: { type: 'decimal', format: 'currency' }` with `kinds: { 'decimal:currency': { … } }`. The server applies your narrowed descriptor end-to-end; the iframe, which cannot see it, falls back to the base `decimal` kind for input handling and to your `render` hint for display. [ADR 0010](../../architecture/decisions/0010-server-authoritative-kinds-declarative-iframes.md) records the full design.
+
 ## Worked Example: DOM-Only Override
 
 Sometimes you want to keep a kind's contract intact but change the rendered widget. Example: render `rating` as a slider instead of stars.

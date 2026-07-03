@@ -16,7 +16,7 @@
  */
 
 import type { KindDescriptor, KindOpts } from '#src/mcp/models/kinds/index.js'
-import { getKind } from '#src/mcp/models/kinds/index.js'
+import { getKind, UnknownKindError } from '#src/mcp/models/kinds/index.js'
 
 function humanize(str: string): string {
   return str.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
@@ -139,10 +139,40 @@ export function registerKindRenderer(
   rendererRegistry.set(key(kind, format), renderer.render)
 }
 
+const warnedUnknownKinds = new Set<string>()
+
+/**
+ * Never throws: the iframe bundle bakes the built-in kind registry at build
+ * time, so a deployer kind registered only server-side resolves here as
+ * unknown. Display degrades to string semantics (with a one-time console
+ * warning) instead of killing the cell or the form — server-side behavior
+ * (parse, validate, describe) remains authoritative and loud. Render-hint
+ * resolution mirrors `getKind`'s three steps: `kind:format` narrowing, then
+ * `format` as a top-level kind, then the bare `kind`. See ADR 0010.
+ */
 export function getKindRenderer(kind: string | undefined, format?: string): KindWithRenderer {
-  const descriptor = getKind(kind, format)
+  let descriptor: KindDescriptor
+  try {
+    descriptor = getKind(kind, format)
+  } catch (err) {
+    if (!(err instanceof UnknownKindError)) throw err
+    const unknown = `${kind ?? ''}${format ? `:${format}` : ''}`
+    if (!warnedUnknownKinds.has(unknown)) {
+      warnedUnknownKinds.add(unknown)
+      console.warn(
+        `[mcp-rune] Unknown kind "${unknown}" in this app bundle — rendering with string semantics. ` +
+          `Add a render hint via AppRegistry({ kinds }) for custom display, or declare the ` +
+          `attribute as a kind:format narrowing of a built-in to inherit its input handling.`
+      )
+    }
+    descriptor = getKind('string')
+  }
   const k = (kind || 'string').toLowerCase()
-  const render = rendererRegistry.get(key(k, format)) ?? rendererRegistry.get(k) ?? defaultRender
+  const f = format?.toLowerCase()
+  const render =
+    (f ? (rendererRegistry.get(key(k, f)) ?? rendererRegistry.get(f)) : undefined) ??
+    rendererRegistry.get(k) ??
+    defaultRender
   return { ...descriptor, render }
 }
 

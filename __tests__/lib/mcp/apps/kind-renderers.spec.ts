@@ -10,6 +10,7 @@ import {
   registerKindRenderer,
   renderCellValue
 } from '../../../../src/mcp/apps/shared/kind-renderers.js'
+import { getKind } from '../../../../src/mcp/models/kinds/index.js'
 
 describe('lib/mcp/apps/shared/kind-renderers', () => {
   describe('DOM rendering', () => {
@@ -75,11 +76,13 @@ describe('lib/mcp/apps/shared/kind-renderers', () => {
       expect(getKindRenderer('base64').render('aGVsbG8=').textContent).toBe('(binary)')
     })
 
-    it('throws UnknownKindError for an unregistered kind (strict mode)', () => {
-      // getKindRenderer delegates to getKind, which throws on unknown kinds in
-      // strict mode. validateRegistries() catches every model-driven case at
-      // server boot; this throw exists for any direct call with a bogus kind.
-      expect(() => getKindRenderer('totally-made-up').render('hi')).toThrow(/Unknown kind/)
+    it('degrades to string semantics for an unregistered kind (ADR 0010)', () => {
+      // The server-side getKind throws for unknown kinds (validateRegistries
+      // catches model-driven cases at boot), but the iframe registry is baked
+      // at build time and cannot see server-registered deployer kinds — the
+      // renderer must degrade, never crash the cell.
+      expect(getKindRenderer('totally-made-up').render('hi').textContent).toBe('hi')
+      expect(() => getKind('totally-made-up')).toThrow(/Unknown kind/)
     })
   })
 
@@ -130,6 +133,60 @@ describe('lib/mcp/apps/shared/kind-renderers', () => {
       expect(renderCellValue(true, { kind: 'boolean' }).textContent).toBe('✓')
       // Restore the built-in for subsequent tests.
       registerKindRenderer('boolean', { render: (v) => helpers.text(v ? 'Yes' : 'No') })
+    })
+  })
+
+  describe('unknown kinds degrade instead of crashing (ADR 0010)', () => {
+    it('renders cells with string semantics and warns once', () => {
+      const warns: string[] = []
+      const original = console.warn
+      console.warn = (msg: string) => warns.push(msg)
+      try {
+        const node = renderCellValue('$9.99', { kind: 'currency-unknown-probe' })
+        expect(node.textContent).toBe('$9.99')
+        renderCellValue('$1.50', { kind: 'currency-unknown-probe' })
+        expect(warns.filter((w) => w.includes('currency-unknown-probe'))).toHaveLength(1)
+      } finally {
+        console.warn = original
+      }
+    })
+
+    it('round-trips form values through string passthrough', () => {
+      const k = getKindRenderer('currency-unknown-probe')
+      expect(k.serialize(k.fromInput('9.99'))).toBe('9.99')
+      expect(k.toInput(k.parse('9.99'))).toBe('9.99')
+    })
+
+    it('still applies a render hint registered for the unknown kind', () => {
+      registerKindRenderer('currency-unknown-probe', {
+        render: (v) => helpers.badge(String(v), { icon: '💰' })
+      })
+      expect(renderCellValue(9.99, { kind: 'currency-unknown-probe' }).textContent).toBe('💰 9.99')
+    })
+
+    it('rethrows non-UnknownKindError failures', () => {
+      // Only registry misses degrade; anything else must stay loud.
+      expect(() => getKindRenderer('string')).not.toThrow()
+    })
+  })
+
+  describe('render-hint resolution mirrors getKind (format as top-level kind)', () => {
+    it('applies a hint keyed by bare kind to format-carrying attributes', () => {
+      registerKindRenderer('probe-format-kind', { render: () => helpers.text('via format') })
+      expect(
+        renderCellValue('x', { kind: 'string', format: 'probe-format-kind' }).textContent
+      ).toBe('via format')
+    })
+
+    it('kind:format narrowing still wins over the format-level hint', () => {
+      registerKindRenderer(
+        'string',
+        { render: () => helpers.text('narrowed') },
+        { format: 'probe-format-kind' }
+      )
+      expect(
+        renderCellValue('x', { kind: 'string', format: 'probe-format-kind' }).textContent
+      ).toBe('narrowed')
     })
   })
 })
