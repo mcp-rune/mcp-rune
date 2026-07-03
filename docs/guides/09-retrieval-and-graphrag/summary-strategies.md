@@ -387,7 +387,7 @@ new ToolRegistry({
   models: MODEL_CLASSES,
   apiExtensions: { sales: salesExtension },
   // …and the vector-storage gate must pass (initVectorStorage ran with an adapter).
-  vectorStorageEnabled: vectorStorage.isVectorStorageEnabled()
+  analysisStorageEnabled: vectorStorage.isVectorStorageEnabled()
 })
 ```
 
@@ -409,7 +409,7 @@ new ToolRegistry({
   models: MODEL_CLASSES,
   apiExtensions: { sales: salesExtension },
   // …and the vector-storage gate must pass (initVectorStorage ran with an adapter).
-  vectorStorageEnabled: vectorStorage.isVectorStorageEnabled()
+  analysisStorageEnabled: vectorStorage.isVectorStorageEnabled()
 })
 ```
 

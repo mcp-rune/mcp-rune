@@ -83,7 +83,7 @@ The LLM drives the loop; the framework provides the seams:
 
 ## Enable it
 
-Retrieval is opt-in, and the gate has three parts: build a pgvector adapter and pass it to `initVectorStorage({ adapter })`, hand `vectorStorageEnabled` to the `ToolRegistry`, and spread `ANALYSIS_TOOL_CLASSES` into its `toolClasses` map — [Analysis Memories → Setup](./analysis-memories.md#setup-integrators) shows the wiring end to end. You provide a Postgres database with the `pgvector` extension; embeddings run **locally** via MiniLM — no external vector database and no embedding API. The [Analysis Quickstart](./analysis-quickstart.md) brings pgvector up and walks every strategy end to end against a 5,000-record dataset.
+Retrieval is opt-in, and the gate has three parts: build a pgvector adapter and pass it to `initVectorStorage({ adapter })`, hand `analysisStorageEnabled` to the `ToolRegistry`, and spread `ANALYSIS_TOOL_CLASSES` into its `toolClasses` map — [Analysis Memories → Setup](./analysis-memories.md#setup-integrators) shows the wiring end to end. You provide a Postgres database with the `pgvector` extension; embeddings run **locally** via MiniLM — no external vector database and no embedding API. The [Analysis Quickstart](./analysis-quickstart.md) brings pgvector up and walks every strategy end to end against a 5,000-record dataset.
 
 ## Where to go next
 

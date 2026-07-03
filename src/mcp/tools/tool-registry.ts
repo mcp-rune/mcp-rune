@@ -110,6 +110,7 @@ export interface ToolClass {
   new (deps: ToolDependencies): BaseTool
   readonly requiresAuth: boolean
   readonly requiresVectorStorage: boolean
+  readonly requiresAnalysisStorage: boolean
   readonly requiresDomainRegistry: boolean
   readonly requiresPromptRegistry: boolean
 }
@@ -203,14 +204,24 @@ export interface ToolRegistryConfig {
   summaryRenderer?: FormSummaryRenderer
 
   /**
-   * Whether vector storage (pgvector) is available. Tools with
-   * `static requiresVectorStorage = true` are skipped when false.
+   * Whether the CORE vector-storage feature (the `tool_memories` table) is
+   * available. Tools with `static requiresVectorStorage = true` (the
+   * operations family) are skipped when false.
    *
    * `requiresDomainRegistry` and `requiresPromptRegistry` are gated
    * implicitly by the presence of `domainRegistry` and `promptRegistry`
    * config options — no separate flag needed.
    */
   vectorStorageEnabled?: boolean
+
+  /**
+   * Whether the ANALYSIS storage feature (the `analysis_memories` /
+   * `ingested_records` / `ingested_edges` tables) is available. Tools with
+   * `static requiresAnalysisStorage = true` (the analysis family) are skipped
+   * when false. Independent of `vectorStorageEnabled`, so a deployment can
+   * ship core operation memory without the heavier analysis tool family.
+   */
+  analysisStorageEnabled?: boolean
 
   /**
    * Custom interceptors applied to every tool handler.
@@ -257,6 +268,7 @@ export class ToolRegistry {
   private _defaultConvention: BaseConvention | undefined
   private _summaryRenderer: FormSummaryRenderer | undefined
   private _vectorStorageEnabled: boolean
+  private _analysisStorageEnabled: boolean
   private _interceptors: ToolInterceptor[]
   private _enabledTools: Set<string> | null = null
   private _modelServiceMixins: ModelServiceMixin[] = []
@@ -280,6 +292,7 @@ export class ToolRegistry {
     this._defaultConvention = config.defaultConvention
     this._summaryRenderer = config.summaryRenderer
     this._vectorStorageEnabled = config.vectorStorageEnabled ?? false
+    this._analysisStorageEnabled = config.analysisStorageEnabled ?? false
     this._interceptors = config.interceptors ?? []
     this.serverContext = (config.serverContext as Record<string, unknown>) ?? {}
 
@@ -512,6 +525,7 @@ export class ToolRegistry {
       const tools = Object.keys(this._toolClasses).filter((name) => {
         const ToolCls = this._toolClasses[name]!
         if (ToolCls.requiresVectorStorage && !this._vectorStorageEnabled) return false
+        if (ToolCls.requiresAnalysisStorage && !this._analysisStorageEnabled) return false
         if (ToolCls.requiresDomainRegistry && !this._domainRegistry) return false
         if (ToolCls.requiresPromptRegistry && !this._promptRegistry) return false
         return true

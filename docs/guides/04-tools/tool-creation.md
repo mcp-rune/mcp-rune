@@ -156,7 +156,8 @@ There is no category enum. Each tool class declares what it needs through four s
 | Flag | Default on `BaseTool` | Effect |
 | --- | --- | --- |
 | `requiresAuth` | `true` | When `true`, `ToolRegistry` resolves the session's access token and constructs a fresh `DataLayer` per invocation. When `false`, the tool is instantiated without one — calling `requireDataLayer()` throws. |
-| `requiresVectorStorage` | `false` | When `true`, the tool is skipped at registration unless the registry was configured with `vectorStorageEnabled: true`. |
+| `requiresVectorStorage` | `false` | When `true`, the tool is skipped at registration unless the registry was configured with `vectorStorageEnabled: true`. Gates the **core** `tool_memories` feature (the operations family). |
+| `requiresAnalysisStorage` | `false` | When `true`, the tool is skipped unless the registry was configured with `analysisStorageEnabled: true`. Gates the **analysis** tables (the analysis family), independent of `vectorStorageEnabled` (ADR 0016). |
 | `requiresDomainRegistry` | `false` | When `true`, the tool is skipped at registration unless a `domainRegistry` was passed to the registry. |
 | `requiresPromptRegistry` | `false` | When `true`, the tool is skipped at registration unless a `promptRegistry` was passed to the registry. |
 
@@ -166,7 +167,7 @@ The bundled tools ship in families. Each family base class overrides the flags d
 | --- | --- | --- |
 | `BaseTool` (CRUD tools extend it directly) | — (defaults: auth required, no special services) | `DATA_TOOL_CLASSES` |
 | `BaseFormStrategyTool` | `requiresAuth = false`, `requiresPromptRegistry = true` | `FORM_STRATEGY_TOOL_CLASSES` |
-| `BaseAnalysisTool` | `requiresAuth = false`, `requiresVectorStorage = true` | `ANALYSIS_TOOL_CLASSES` |
+| `BaseAnalysisTool` | `requiresAuth = false`, `requiresAnalysisStorage = true` | `ANALYSIS_TOOL_CLASSES` |
 | `BaseOperationsTool` | `requiresAuth = false`, `requiresVectorStorage = true` | `OPERATIONS_TOOL_CLASSES` |
 | `BaseDomainTool` | `requiresAuth = false`, `requiresDomainRegistry = true` | `DOMAIN_TOOL_CLASSES` |
 
@@ -296,8 +297,10 @@ const toolRegistry = new ToolRegistry({
   // because domainRegistry is present.
   promptRegistry,
   domainRegistry,
-  // Tools with requiresVectorStorage register only when this is true.
-  vectorStorageEnabled: vectorStorage.isEnabled()
+  // Tools with requiresVectorStorage (core operation memory) register only
+  // when this is true; analysis-family tools gate on analysisStorageEnabled.
+  vectorStorageEnabled: vectorStorage.isVectorStorageEnabled(),
+  analysisStorageEnabled: vectorStorage.isVectorStorageEnabled()
 })
 ```
 
@@ -323,8 +326,10 @@ const toolRegistry = new ToolRegistry({
   // because domainRegistry is present.
   promptRegistry,
   domainRegistry,
-  // Tools with requiresVectorStorage register only when this is true.
-  vectorStorageEnabled: vectorStorage.isEnabled()
+  // Tools with requiresVectorStorage (core operation memory) register only
+  // when this is true; analysis-family tools gate on analysisStorageEnabled.
+  vectorStorageEnabled: vectorStorage.isVectorStorageEnabled(),
+  analysisStorageEnabled: vectorStorage.isVectorStorageEnabled()
 })
 ```
 
@@ -598,7 +603,7 @@ export class MyGenericTool extends BaseTool {}
 
 | Method | Description |
 | --- | --- |
-| `static requiresAuth` / `requiresVectorStorage` / `requiresDomainRegistry` / `requiresPromptRegistry` | Dependency flags — override when the tool departs from its base's default |
+| `static requiresAuth` / `requiresVectorStorage` / `requiresAnalysisStorage` / `requiresDomainRegistry` / `requiresPromptRegistry` | Dependency flags — override when the tool departs from its base's default |
 | `static defaultAnnotations` / `get annotations()` | MCP tool annotations (read-only / destructive / idempotent hints) |
 | `getUsageRules()` | Add behavioral rules to description |
 

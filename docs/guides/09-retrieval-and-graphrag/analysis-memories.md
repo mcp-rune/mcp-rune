@@ -191,7 +191,7 @@ The dividing line: if you need the raw data **in context**, use the data tools. 
 | Variable | Required | Notes |
 | --- | --- | --- |
 | `DATABASE_URL` | yes | Standard `postgres://...` connection string. |
-| `ANALYSIS_ENABLED` | no | A deployer-side convention, not read anywhere in the framework — the only place it appears is your own migration-filter snippet below (step 2). Tool registration is gated by `initVectorStorage` (step 3) plus `ToolRegistry({ vectorStorageEnabled, toolClasses })` (step 4). |
+| `ANALYSIS_ENABLED` | no | A deployer-side convention, not read anywhere in the framework — the only place it appears is your own migration-filter snippet below (step 2). Tool registration is gated by `initVectorStorage` (step 3) plus `ToolRegistry({ analysisStorageEnabled, toolClasses })` (step 4). |
 
 ### 2. Run migrations
 
@@ -262,7 +262,7 @@ If `options.adapter` is omitted, vector storage stays disabled — `initVectorSt
 
 ### 4. Wire the registry
 
-Registering the analysis tools takes both halves: spread `ANALYSIS_TOOL_CLASSES` into the `toolClasses` map, and pass `vectorStorageEnabled` so the `requiresVectorStorage` gate can pass. Miss either one and the tools silently stay out of `tools/list`.
+Registering the analysis tools takes both halves: spread `ANALYSIS_TOOL_CLASSES` into the `toolClasses` map, and pass `analysisStorageEnabled` so the `requiresAnalysisStorage` gate can pass. Miss either one and the tools silently stay out of `tools/list`.
 
 ```ts file=src/registry.ts
 import { ToolRegistry, DATA_TOOL_CLASSES, ANALYSIS_TOOL_CLASSES } from '@mcp-rune/mcp-rune/tools'
@@ -276,7 +276,7 @@ const toolRegistry = new ToolRegistry({
   createApiClient: (token) => createApiClient(token, { apiUrl }),
   // Half two: true only when step 3 initialised a live adapter —
   // tools flagged requiresVectorStorage are filtered out otherwise.
-  vectorStorageEnabled: vectorStorage.isVectorStorageEnabled()
+  analysisStorageEnabled: vectorStorage.isVectorStorageEnabled()
 })
 ```
 
@@ -292,7 +292,7 @@ const toolRegistry = new ToolRegistry({
   createApiClient: (token) => createApiClient(token, { apiUrl }),
   // Half two: true only when step 3 initialised a live adapter —
   // tools flagged requiresVectorStorage are filtered out otherwise.
-  vectorStorageEnabled: vectorStorage.isVectorStorageEnabled()
+  analysisStorageEnabled: vectorStorage.isVectorStorageEnabled()
 })
 ```
 
@@ -644,7 +644,7 @@ analysis_clear({ analysis_id: "library-audit-2026-05" })
 
 1. `DATABASE_URL` is set.
 2. `initVectorStorage({ adapter: createPgvectorAdapter({ pool }) })` was called at server startup. The init returns `false` and logs a warning when the adapter is missing.
-3. The `ToolRegistry` received `vectorStorageEnabled: vectorStorage.isVectorStorageEnabled()` and has `ANALYSIS_TOOL_CLASSES` spread into `toolClasses` (see [Setup step 4](#4-wire-the-registry)).
+3. The `ToolRegistry` received `analysisStorageEnabled: vectorStorage.isVectorStorageEnabled()` and has `ANALYSIS_TOOL_CLASSES` spread into `toolClasses` (see [Setup step 4](#4-wire-the-registry)).
 4. The `analysis_memories`, `ingested_records`, and `ingested_edges` tables exist (migrations applied).
 
 **`analysis_ingest` reports duplicate-looking counts after a retry.** Resolved in commit c1cc813 — the table now has a partial unique index and inserts use `ON CONFLICT DO UPDATE`. If you're seeing it, confirm your migrations are up to date (the unique index ships in the relevant migration).

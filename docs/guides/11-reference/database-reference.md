@@ -14,7 +14,7 @@ This chapter is the **schema reference**: which tables exist, what they store, w
 | `ingested_records` | `analysis` | Temporary dataset storage plus per-record embeddings (7-day default retention) |
 | `ingested_edges` | `analysis` | Typed edges between ingested records (GraphRAG substrate; shares the ingested-records retention) |
 
-The `Feature group` column is what `getPendingMigrations`/`assertMigrationsCurrent` scope against (see [Database setup](./database-setup.md)). The `core` tables are created whenever you run migrations against a `DATABASE_URL`; the `analysis` tables are created when the analysis feature is included. Whether the analysis _tools_ are registered is a separate registry decision — `initVectorStorage({ adapter })` plus `new ToolRegistry({ vectorStorageEnabled: true, toolClasses: { ...ANALYSIS_TOOL_CLASSES } })` — not something the framework infers from an environment variable.
+The `Feature group` column is what `getPendingMigrations`/`assertMigrationsCurrent` scope against (see [Database setup](./database-setup.md)). The `core` tables are created whenever you run migrations against a `DATABASE_URL`; the `analysis` tables are created when the analysis feature is included. Whether the analysis _tools_ are registered is a separate registry decision — `initVectorStorage({ adapter })` plus `new ToolRegistry({ analysisStorageEnabled: true, toolClasses: { ...ANALYSIS_TOOL_CLASSES } })` — not something the framework infers from an environment variable. Core operation-memory tools gate on the separate `vectorStorageEnabled` flag (ADR 0016), so a deployment can ship one feature without the other.
 
 ## Environment variables
 
