@@ -194,7 +194,7 @@ describe('lib/mcp/tools/data/delete-model-tool', () => {
       })
 
       expect(result.isError).toBe(true)
-      expect(result.content[0].text).toContain('Record not found')
+      expect(result.content[0].text).toContain('found with id "999"')
     })
 
     it('should log deletion when logger is available', async () => {

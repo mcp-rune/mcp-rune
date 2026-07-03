@@ -16,7 +16,7 @@ import {
 import type { ModelConfig, ModelsRegistry } from '#src/mcp/models/model-definitions.js'
 import { storeOperation } from '#src/runtime/vector-storage.js'
 
-import { defaultConvention } from '../data-layer/api-conventions/index.js'
+import { ApiRequestError } from '../data-layer/errors.js'
 import type { DomainRegistry } from '../domain/registry.js'
 import type { FormSummaryRenderer } from '../prompts/form-strategies/form-strategy-definitions.js'
 import type { PromptRegistry } from '../prompts/prompt-registry.js'
@@ -96,13 +96,6 @@ export interface ToolHandlerExtra {
 }
 
 /** Error with optional HTTP response data */
-interface HttpError extends Error {
-  response?: {
-    status?: number
-    data?: unknown
-  }
-}
-
 // ============================================================================
 // BaseTool
 // ============================================================================
@@ -280,16 +273,21 @@ export class BaseTool {
     return this.models[modelName]
   }
 
-  /** Format error response */
-  formatError(error: HttpError): ToolResult {
-    const errorMessage = error.response ? this.formatErrorResponse(error.response) : error.message
+  /**
+   * Format an error into an LLM-facing ToolResult. Backend failures arrive
+   * as the seam's typed taxonomy (`DataLayerError` subclasses) with messages
+   * already parsed through the failing model's convention — no transport
+   * duck-typing or convention parsing happens here.
+   */
+  formatError(error: Error): ToolResult {
+    const errorMessage = this.truncateString(error.message, 5000)
 
     if (this.logger) {
       this.logger.error('Tool execution failed', {
         service: 'mcp-tools',
         tool: this.name,
         error: errorMessage,
-        status: error.response?.status,
+        status: error instanceof ApiRequestError ? error.status : undefined,
         stack: error.stack
       })
     }
@@ -298,18 +296,6 @@ export class BaseTool {
       content: [{ type: 'text', text: errorMessage }],
       isError: true
     }
-  }
-
-  /**
-   * Format an HTTP error response into LLM-optimized text.
-   * Delegates to convention for error extraction, then joins with semicolons.
-   */
-  private formatErrorResponse(response: { status?: number; data?: unknown }): string {
-    const convention = this.dataLayer?.defaultConvention ?? defaultConvention
-    const errors = convention.parseErrorResponse(response)
-    const message =
-      errors.length > 0 ? this.truncateString(errors.join('; '), 5000) : 'Unknown error'
-    return response.status ? `${message} (${response.status})` : message
   }
 
   /** Truncate string to maximum length */

@@ -45,6 +45,7 @@ import type {
   NormalizedListResponse,
   PaginationParams
 } from './data-layer.js'
+import { RecordNotFoundError } from './errors.js'
 import {
   checkFiltersAgainstAttributes,
   checkLinkAgainstAssociations,
@@ -134,7 +135,7 @@ export class InMemoryDataLayer implements DataLayer {
     this._requireModel(model)
     const record = this._bucket(model).get(recordId)
     if (!record) {
-      throw new Error(`Record not found: ${model}/${recordId}`)
+      throw new RecordNotFoundError({ model, recordId })
     }
     return record
   }
@@ -238,7 +239,7 @@ export class InMemoryDataLayer implements DataLayer {
     const bucket = this._bucket(model)
     const existing = bucket.get(recordId)
     if (!existing) {
-      throw new Error(`Record not found: ${model}/${recordId}`)
+      throw new RecordNotFoundError({ model, recordId })
     }
     const merged = { ...existing, ...attributes, id: existing.id }
     bucket.set(recordId, merged)
@@ -254,7 +255,7 @@ export class InMemoryDataLayer implements DataLayer {
     this._assertWritable(model, modelConfig)
     const bucket = this._bucket(model)
     if (!bucket.has(recordId)) {
-      throw new Error(`Record not found: ${model}/${recordId}`)
+      throw new RecordNotFoundError({ model, recordId })
     }
     bucket.delete(recordId)
     return { id: recordId, deleted: true }

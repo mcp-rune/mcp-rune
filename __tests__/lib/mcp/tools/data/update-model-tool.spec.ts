@@ -182,7 +182,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
       })
 
       expect(result.isError).toBe(true)
-      expect(result.content[0].text).toContain('Record not found')
+      expect(result.content[0].text).toContain('found with id "999"')
     })
 
     it('should log update when logger is available', async () => {
@@ -440,7 +440,7 @@ describe('lib/mcp/tools/data/update-model-tool', () => {
       })
 
       expect(result.isError).toBe(true)
-      expect(result.content[0].text).toContain('Record not found')
+      expect(result.content[0].text).toContain('found with id "999"')
     })
 
     it('should log update when logger is available', async () => {

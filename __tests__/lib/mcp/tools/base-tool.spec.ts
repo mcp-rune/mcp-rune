@@ -1,3 +1,4 @@
+import { ApiRequestError, RecordNotFoundError } from '../../../../src/mcp/data-layer/errors.js'
 import { BaseTool } from '../../../../src/mcp/tools/base-tool.js'
 
 vi.mock('../../../../src/runtime/vector-storage.js', () => ({
@@ -246,26 +247,12 @@ describe('lib/mcp/tools/base-tool', () => {
       expect(result.content[0].text).toBe('Connection timeout')
     })
 
-    it('formats string response body with inline status', () => {
+    it('renders ApiRequestError messages already parsed by the adapter', () => {
       const tool = new BaseTool()
-      // Proxy/nginx 500: plain text body
-      const error = Object.assign(new Error('API Error'), {
-        response: { status: 500, data: 'Internal Server Error' }
-      })
-      const result = tool.formatError(error)
-      expect(result.content[0].text).toBe('Internal Server Error (500)')
-    })
-
-    it('formats Rails validation hash as semicolon-separated field errors', () => {
-      const tool = new BaseTool()
-      // Rails 422: POST /api/titles with invalid attributes
-      const error = Object.assign(new Error('API Error'), {
-        response: {
-          status: 422,
-          data: {
-            errors: { title: ["can't be blank"], status: ['is not included in the list'] }
-          }
-        }
+      const error = new ApiRequestError({
+        model: 'book',
+        status: 422,
+        messages: ["title: can't be blank", 'status: is not included in the list']
       })
       const result = tool.formatError(error)
       expect(result.content[0].text).toBe(
@@ -273,46 +260,28 @@ describe('lib/mcp/tools/base-tool', () => {
       )
     })
 
-    it('formats single error object with inline status', () => {
+    it('renders RecordNotFoundError with model and id', () => {
       const tool = new BaseTool()
-      // Rails 404: GET /api/titles/999
-      const error = Object.assign(new Error('API Error'), {
-        response: { status: 404, data: { error: 'Record not found' } }
-      })
+      const error = new RecordNotFoundError({ model: 'book', recordId: '999' })
       const result = tool.formatError(error)
-      expect(result.content[0].text).toBe('Record not found (404)')
+      expect(result.content[0].text).toBe('No book found with id "999"')
     })
 
-    it('formats error array with semicolons', () => {
+    it('renders Unknown error when the adapter parsed no messages', () => {
       const tool = new BaseTool()
-      // Rails 422: bulk validation errors as array
-      const error = Object.assign(new Error('API Error'), {
-        response: { status: 422, data: { errors: ['Title is required', 'Status must be valid'] } }
-      })
-      const result = tool.formatError(error)
-      expect(result.content[0].text).toBe('Title is required; Status must be valid (422)')
-    })
-
-    it('shows Unknown error when response has no data', () => {
-      const tool = new BaseTool()
-      // Empty response body from upstream timeout
-      const error = Object.assign(new Error('API Error'), {
-        response: { status: 504 }
-      })
+      const error = new ApiRequestError({ status: 504, messages: [] })
       const result = tool.formatError(error)
       expect(result.content[0].text).toBe('Unknown error (504)')
     })
 
-    it('truncates long error responses', () => {
+    it('truncates long error messages', () => {
       const tool = new BaseTool()
-      const error = Object.assign(new Error('API Error'), {
-        response: { status: 500, data: 'x'.repeat(6000) }
-      })
+      const error = new ApiRequestError({ status: 500, messages: ['x'.repeat(6000)] })
       const result = tool.formatError(error)
       expect(result.content[0].text).toContain('[truncated]')
     })
 
-    it('logs error when logger is available', () => {
+    it('logs error with the taxonomy status when logger is available', () => {
       const mockLogger = { error: vi.fn() }
       class TestTool extends BaseTool {
         get name() {
@@ -321,13 +290,14 @@ describe('lib/mcp/tools/base-tool', () => {
       }
 
       const tool = new TestTool({ logger: mockLogger })
-      tool.formatError(new Error('Test error'))
+      tool.formatError(new ApiRequestError({ status: 503, messages: ['upstream down'] }))
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Tool execution failed',
         expect.objectContaining({
           tool: 'test_tool',
-          error: 'Test error'
+          error: 'upstream down (503)',
+          status: 503
         })
       )
     })
