@@ -110,7 +110,7 @@ interface ContextKey<T> {
  */
 ```
 
-`register` runs **once at server creation**, before app tools are registered on the underlying `McpServer`. Async `register()` rejections are surfaced via a crash-on-rejection handler (the failure is logged and the process exits), but completion is **not awaited** — tools registered after the first `await` may be silently dropped. This is tracked as a known issue; prefer synchronous `register()` until it lands.
+`register` runs **once at server creation**, before app tools are registered on the underlying `McpServer`, and **must be synchronous** — `createServer` throws if `register()` returns a Promise. Because app tools are registered immediately after, a tool added past an `await` would reach the `McpServer` too late; do any async setup before `createServer` and pass the results in through the extension's own options.
 
 The user-facing config is a map keyed by an extension name:
 

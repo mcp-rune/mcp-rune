@@ -261,6 +261,27 @@ describe('lib/mcp/api-extensions — ApiExtension mechanism', () => {
   })
 
   describe('ModelService mixin', () => {
+    it('throws at boot when a custom dataLayer factory meets ApiExtension mixins', () => {
+      const ext: ApiExtension = {
+        register(ctx) {
+          ctx.registerModelServiceMixin(() => ({ action: () => 'nope' }))
+        }
+      }
+
+      // The custom factory would never apply the mixin, so `action` would be
+      // undefined at call time — fail loudly at construction instead.
+      expect(
+        () =>
+          new ToolRegistry({
+            toolClasses: {},
+            models: { book: { api: { endpoint: 'books' } } },
+            createApiClient: () => noopApiClient,
+            dataLayer: () => noopApiClient as never,
+            apiExtensions: { ext }
+          })
+      ).toThrow(/custom `dataLayer` factory is configured alongside ApiExtension mixins/)
+    })
+
     it('mixin methods are callable on the DataLayer constructed by the registry', async () => {
       const ext: ApiExtension = {
         register(ctx) {

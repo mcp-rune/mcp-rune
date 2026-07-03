@@ -304,12 +304,6 @@ function applyToolFlowExtensions(
   for (const [name, extension] of Object.entries(extensions) as Array<
     [string, ToolFlowExtension]
   >) {
-    if (extension.requires?.includes('apps') && !appRegistry) {
-      throw new Error(
-        `Tool-flow extension "${name}" requires apps, but no AppRegistry is configured.`
-      )
-    }
-
     const ctx: ToolFlowExtensionContext = {
       name,
       mcpName,
@@ -337,20 +331,18 @@ function applyToolFlowExtensions(
       logger
     }
 
-    const result = extension.register(ctx)
-
-    // register() may return a Promise; surface failures as a boot-time throw so
-    // misconfiguration cannot quietly leave the server in a half-applied state.
+    // register() must be synchronous. `createServer` is synchronous and
+    // registers app tools immediately after, so any tool a `register()` added
+    // after its first `await` would land in the app Map too late to reach the
+    // McpServer — a silent drop. Forbid the async form outright rather than
+    // fire-and-forget its Promise.
+    const result = extension.register(ctx) as unknown
     if (result instanceof Promise) {
-      result.catch((err: Error) => {
-        logger.error(`Tool-flow extension "${name}" failed to register`, {
-          service: mcpName,
-          extensionName: name,
-          error: err.message,
-          stack: err.stack
-        })
-        process.exit(1)
-      })
+      throw new Error(
+        `Tool-flow extension "${name}" returned a Promise from register(). register() must be ` +
+          `synchronous — do async setup before createServer() and pass the results in via the ` +
+          `extension's options.`
+      )
     }
 
     logger.info(`Tool-flow extension "${name}" registered`, {

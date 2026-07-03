@@ -8,8 +8,12 @@
  * import { ToolRegistry } from '@mcp-rune/mcp-rune/tools'
  *
  * // ToolRegistry applies these automatically. For manual use:
- * import { loggingInterceptor, tracingInterceptor, errorInterceptor } from '@mcp-rune/mcp-rune/tools'
- * const handler = wrapToolHandler('find_records', [loggingInterceptor(), tracingInterceptor()], rawHandler)
+ * import { loggingInterceptor, errorInterceptor } from '@mcp-rune/mcp-rune/tools'
+ * const handler = wrapToolHandler('find_records', [loggingInterceptor()], rawHandler)
+ *
+ * Distributed tracing is not an interceptor — `ToolRegistry` wraps the whole
+ * handler (interceptor chain included) in `tracing.traceToolCall`, which the
+ * before/after interceptor shape cannot do.
  */
 
 import * as logger from '#src/runtime/logger.js'
@@ -42,38 +46,6 @@ export function loggingInterceptor(options: LoggingInterceptorOptions = {}): Too
     },
     onError(ctx, error) {
       logger.error('Tool error', { ...logContext, tool: ctx.toolName, error: error.message })
-    }
-  }
-}
-
-// ============================================================================
-// Tracing Interceptor
-// ============================================================================
-
-/**
- * Wraps tool execution with distributed tracing via traceToolCall.
- *
- * Replaces the manual `tracing.traceToolCall(toolName, args, () => ...)` wrapper
- * in every integrator registry. The interceptor stores the traced result in ctx.meta
- * so downstream interceptors see it.
- */
-export function tracingInterceptor(): ToolInterceptor {
-  return {
-    name: 'tracing',
-
-    // Tracing wraps the entire execution, so it's implemented as a before+after pair
-    // that records timing. The actual tracing.traceToolCall wrapper is applied at
-    // the ToolRegistry level where it can wrap the full handler (see tool-registry.ts).
-    // This interceptor is a no-op placeholder for manual pipeline composition.
-    //
-    // When used via ToolRegistry, tracing is applied as the outermost wrapper
-    // around the interceptor chain, not as an interceptor itself. This is the
-    // correct semantic: tracing should capture everything including interceptor work.
-    before(ctx) {
-      ctx.meta._tracingStart = Date.now()
-    },
-    after(ctx) {
-      ctx.meta._tracingDuration = Date.now() - (ctx.meta._tracingStart as number)
     }
   }
 }

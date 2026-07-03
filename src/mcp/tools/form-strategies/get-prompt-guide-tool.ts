@@ -44,43 +44,8 @@ export class GetPromptGuideTool extends BaseFormStrategyTool {
   getUsageRules(): string[] {
     const rules: string[] = []
 
-    // Determine which models have Interactive Form support
-    const formRegistry = (this.serverContext as Record<string, unknown>)?.formRegistry as
-      | Record<string, unknown>
-      | undefined
-    const formModels = formRegistry
-      ? Object.entries(this.models || {})
-          .filter(([name]) =>
-            (formRegistry as Record<string, unknown> & { hasForm: (n: string) => boolean }).hasForm(
-              name
-            )
-          )
-          .map(([name]) => name)
-      : []
-    const hasFormModels =
-      (this.serverContext as Record<string, unknown>)?.appsEnabled && formModels.length > 0
-
-    if (hasFormModels) {
-      rules.push(
-        `IMPORTANT: Before calling this tool, ASK the user how they want to proceed.
-
-For models that support Interactive Form (${formModels.join(', ')}), offer THREE options:
-
-Example:
-  User: "Create a book"
-  You: "I can help create a book. How would you like to proceed?
-    1. **Interactive Form** - I'll open a visual form where you can fill in all fields at once
-    2. **Guided** - I'll walk you through each section step-by-step and ask for your input
-    3. **Quick** - I'll infer what I can from context and ask only for essentials"
-
-If the user chooses **Interactive Form**, call \`new_model_app(model: "<model_name>", mode: "form")\` instead of this tool.
-If the user chooses **Guided** or **Quick**, call this tool with the chosen mode parameter.
-
-For all other models, offer only Guided and Quick options.`
-      )
-    } else {
-      rules.push(
-        `IMPORTANT: Before calling this tool, ASK the user how they want to proceed.
+    rules.push(
+      `IMPORTANT: Before calling this tool, ASK the user how they want to proceed.
 
 Offer TWO options:
 
@@ -91,8 +56,7 @@ Example:
     2. **Quick** - I'll infer what I can from context and ask only for essentials"
 
 Then call this tool with the chosen mode parameter.`
-      )
-    }
+    )
 
     if (this.promptRegistry?.getToolDocDescriptionList) {
       const allGuidesList = this.promptRegistry.getToolDocDescriptionList()
