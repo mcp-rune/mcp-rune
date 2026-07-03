@@ -9,6 +9,7 @@
 
 import { closestMatch } from '#src/core/suggestions.js'
 import { collectValidFieldNames } from '#src/mcp/model-layer/field-names.js'
+import { formStrategies } from '#src/mcp/prompts/form-strategies/index.js'
 import type { PromptClassLike } from '#src/mcp/prompts/prompt-definitions.js'
 import type { Issue, ModelClassLike } from '#src/mcp/schema/types.js'
 
@@ -20,6 +21,24 @@ export function validatePromptClass(
   const issues: Issue[] = []
   const validNames = collectValidFieldNames(ModelClass)
   const groupKeys = new Set(Object.keys(PromptClass.fieldGroups))
+
+  // TS deployers are guarded by the FormStrategyType union; JS deployers are
+  // not, and getFormStrategy silently falls back to stateless at request
+  // time — a typo ships a prompt that quietly lost validation and progress.
+  const strategy = (PromptClass as { formStrategy?: string }).formStrategy
+  const knownStrategies = new Set(Object.keys(formStrategies))
+  if (strategy !== undefined && !knownStrategies.has(strategy)) {
+    const suggestion = closestMatch(strategy, knownStrategies)
+    issues.push({
+      level: 'error',
+      scope: 'prompt',
+      model: modelName,
+      message: `formStrategy "${strategy}" is not a registered form strategy`,
+      hint: suggestion
+        ? `did you mean "${suggestion}"?`
+        : `Known strategies: ${[...knownStrategies].join(', ')}`
+    })
+  }
 
   for (const [gKey, group] of Object.entries(PromptClass.fieldGroups)) {
     for (const fieldName of group.fields ?? []) {

@@ -419,19 +419,20 @@ export class ToolRegistry {
     for (const [toolName, ToolCls] of Object.entries(this._toolClasses)) {
       if (!enabledTools.has(toolName)) continue
 
-      // Create definition instance and validate schema — skip broken tools instead of crashing
+      // Create definition instance and validate schema. A schema that cannot
+      // serialize is a programming error, never an operational condition —
+      // fail the boot loudly instead of silently shipping a server with the
+      // tool missing.
       let defInstance: BaseTool
       try {
         defInstance = this._createInstance(ToolCls)
         validateToolInputSchema(toolName, defInstance.inputSchema)
       } catch (err) {
         const error = err as Error
-        this._logger.error('Skipping tool with invalid schema', {
-          service: 'tool-registry',
-          tool: toolName,
-          error: error.message
-        })
-        continue
+        throw new Error(
+          `ToolRegistry: tool "${toolName}" has an invalid input schema and cannot be registered: ${error.message}`,
+          { cause: err }
+        )
       }
 
       // Build the interceptor chain: [logging, ...custom, error-catch]
@@ -482,6 +483,14 @@ export class ToolRegistry {
    * static `requires*` flags is true but the corresponding registry
    * dependency is not configured.
    */
+  /**
+   * The models registry this ToolRegistry was constructed over. Exposed for
+   * composition roots — `createServer` reads it to run boot validation.
+   */
+  get models(): ModelsRegistry {
+    return this._models
+  }
+
   private _getEnabledTools(): Set<string> {
     if (!this._enabledTools) {
       const tools = Object.keys(this._toolClasses).filter((name) => {

@@ -27,6 +27,10 @@ import type {
   ToolFlowExtensionMap
 } from '#src/mcp/extensions/tool-flow.js'
 import type { PromptRegistry } from '#src/mcp/prompts/prompt-registry.js'
+import { formatReport } from '#src/mcp/schema/format-report.js'
+import { SchemaValidationError } from '#src/mcp/schema/schema-validation-error.js'
+import type { ModelClassLike } from '#src/mcp/schema/types.js'
+import { validateRegistries } from '#src/mcp/schema/validate-registries.js'
 import type { ToolRegistry } from '#src/mcp/tools/tool-registry.js'
 import { setMcpClientContext } from '#src/runtime/error-tracking.js'
 import * as logger from '#src/runtime/logger.js'
@@ -60,6 +64,15 @@ interface CreateServerConfig {
    */
   toolFlowExtensions?: ToolFlowExtensionMap
   getAccessToken: () => Promise<string>
+  /**
+   * Boot-validation policy. `'throw'` (default) runs `validateRegistries`
+   * over the tool registry's models and the prompt registry's model-bound
+   * classes, raising `SchemaValidationError` on any error-level issue;
+   * `'warn'` logs the report and continues; `'off'` skips validation.
+   * Form declarations validate in `createDefaultAppRegistry`, where they
+   * live — an `AppRegistry` holds built apps, not form classes.
+   */
+  validate?: 'throw' | 'warn' | 'off'
 }
 
 /** Create an McpServer with standard handler registration */
@@ -72,10 +85,29 @@ export function createServer({
   promptRegistry,
   appRegistry,
   toolFlowExtensions,
-  getAccessToken
+  getAccessToken,
+  validate = 'throw'
 }: CreateServerConfig): McpServer {
   const mcpServer = new McpServer({ name, version })
   const logContext: Record<string, unknown> = { service: name }
+
+  if (validate !== 'off') {
+    const report = validateRegistries({
+      models: (toolRegistry.models ?? {}) as Record<string, ModelClassLike>,
+      ...(promptRegistry?.getModelBoundClasses
+        ? { prompts: promptRegistry.getModelBoundClasses() }
+        : {})
+    })
+    if (report.errors.length > 0) {
+      if (validate === 'warn') {
+        logger.warn(formatReport(report), logContext)
+      } else {
+        throw new SchemaValidationError(report)
+      }
+    } else if (report.warnings.length > 0) {
+      logger.warn(formatReport(report), logContext)
+    }
+  }
 
   // ============================================================================
   // TOOL-FLOW EXTENSIONS (must run before app tool registration)

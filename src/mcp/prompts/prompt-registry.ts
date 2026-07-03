@@ -62,6 +62,14 @@ export interface PromptRegistry {
   /** Optional: expose cache stats to `/health` and `/cache-stats`. */
   getStats?(): Record<string, unknown>
 
+  /**
+   * Optional: the model-bound prompt classes this registry holds, keyed by
+   * model name. Consumed by boot validation (`createServer`) to include
+   * prompts in `validateRegistries`. Bespoke registries may omit it — their
+   * prompt declarations then sit outside boot validation's sight.
+   */
+  getModelBoundClasses?(): Record<string, PromptClass>
+
   /** Optional: feature-detected by `SaveModelBaseTool` to enrich tool descriptions. */
   getPromptNameByModel?(model: string): string | null
   getPromptClassByModel?(model: string): PromptClass | null
@@ -147,6 +155,15 @@ export class BasePromptRegistry implements PromptRegistry {
       }
       this._modelToName.set(options.model, name)
     }
+  }
+
+  getModelBoundClasses(): Record<string, PromptClass> {
+    const out: Record<string, PromptClass> = {}
+    for (const [model, name] of this._modelToName) {
+      const entry = this._entries.get(name)
+      if (entry) out[model] = entry.promptClass
+    }
+    return out
   }
 
   getDefinitions(): PromptDefinition[] {

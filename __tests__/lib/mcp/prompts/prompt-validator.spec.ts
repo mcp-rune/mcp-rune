@@ -65,4 +65,20 @@ describe('prompt-validator: validatePromptClass', () => {
     expect(issues).toHaveLength(1)
     expect(issues[0]!.hint).toContain('did you mean "identity"')
   })
+
+  it('flags an unregistered formStrategy with a suggestion', () => {
+    const issues = validatePromptClass(
+      'book',
+      prompt({ formStrategy: 'statefull' } as never),
+      BookModel
+    )
+    expect(issues).toHaveLength(1)
+    expect(issues[0]!.message).toContain('formStrategy "statefull" is not a registered')
+    expect(issues[0]!.hint).toContain('did you mean "stateful"')
+  })
+
+  it('accepts registered strategies and prompts without one', () => {
+    expect(validatePromptClass('book', prompt({ formStrategy: 'hybrid' }), BookModel)).toEqual([])
+    expect(validatePromptClass('book', prompt({}), BookModel)).toEqual([])
+  })
 })

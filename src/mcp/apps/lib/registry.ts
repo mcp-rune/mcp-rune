@@ -159,8 +159,10 @@ interface RegistryOptions {
    * serializes `render` into a CSP-safe `<script>` block consumed by
    * `kind-renderers.runtime.js`.
    *
-   * Call `validateRegistries(...)` *after* constructing `AppRegistry` so
-   * boot-time validation sees deployer-defined kinds.
+   * Boot validation runs after construction (`createDefaultAppRegistry`
+   * validates its declarations itself; `createServer` validates the tool
+   * registry's), so deployer-defined kinds are registered by the time
+   * model attribute types are checked.
    */
   kinds?: Record<string, KindExtension>
 }

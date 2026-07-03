@@ -10,11 +10,18 @@
  */
 
 import type { ApiClient } from '#src/core/api-client.js'
+import type { AppFormClassLike } from '#src/mcp/apps/lib/app-form-validator.js'
 import type {
   SearchGroup,
   SearchRequestShaper
 } from '#src/mcp/data-layer/api-extensions/search/index.js'
 import type { DataLayerFactory } from '#src/mcp/data-layer/data-layer.js'
+import type { PromptClassLike } from '#src/mcp/prompts/prompt-definitions.js'
+import { formatReport } from '#src/mcp/schema/format-report.js'
+import { SchemaValidationError } from '#src/mcp/schema/schema-validation-error.js'
+import type { ModelClassLike } from '#src/mcp/schema/types.js'
+import { validateRegistries } from '#src/mcp/schema/validate-registries.js'
+import * as logger from '#src/runtime/logger.js'
 
 import { createFindModelApp } from '../find-model-app/index.js'
 import { createMultiPickModelApp } from '../multi-pick-model-app/index.js'
@@ -64,6 +71,16 @@ export interface DefaultAppRegistryOptions {
   headerIcon?: string
   themeOverrides?: ThemeOverrides
   kinds?: Record<string, KindExtension>
+
+  /**
+   * Boot-validation policy. `'throw'` (default) runs `validateRegistries`
+   * over the models, the resolved form classes (explicit + synthesized),
+   * and any prompt classes, raising `SchemaValidationError` on error-level
+   * issues; `'warn'` logs the report and continues; `'off'` skips.
+   * Runs after `AppRegistry` construction so deployer kinds are registered
+   * by the time model attribute types are checked.
+   */
+  validate?: 'throw' | 'warn' | 'off'
 }
 
 /**
@@ -91,7 +108,8 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
     defaultShaper,
     headerIcon,
     themeOverrides,
-    kinds
+    kinds,
+    validate = 'throw'
   } = opts
 
   const excludedSet = new Set<DefaultAppName>(exclude)
@@ -162,7 +180,7 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
     })
   )
 
-  return new AppRegistry(apps, {
+  const registry = new AppRegistry(apps, {
     models: modelClasses,
     ...(apiUrl !== undefined && { apiUrl }),
     ...(createApiClient && { createApiClient }),
@@ -173,4 +191,23 @@ export function createDefaultAppRegistry(opts: DefaultAppRegistryOptions): AppRe
     ...(themeOverrides && { themeOverrides }),
     ...(kinds && { kinds })
   })
+
+  if (validate !== 'off') {
+    const report = validateRegistries({
+      models: modelClasses as unknown as Record<string, ModelClassLike>,
+      forms: formClassesForApps as unknown as Record<string, AppFormClassLike>,
+      ...(promptClasses ? { prompts: promptClasses as Record<string, PromptClassLike> } : {})
+    })
+    if (report.errors.length > 0) {
+      if (validate === 'warn') {
+        logger.warn(formatReport(report))
+      } else {
+        throw new SchemaValidationError(report)
+      }
+    } else if (report.warnings.length > 0) {
+      logger.warn(formatReport(report))
+    }
+  }
+
+  return registry
 }
