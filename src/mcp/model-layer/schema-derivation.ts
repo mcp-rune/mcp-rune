@@ -100,11 +100,15 @@ function generateCacheKey(
   modelConfig: DerivationModelConfig,
   options: DeriveSchemaOptions = {}
 ): string {
+  // Key on the full attribute *definitions*, not just their names —
+  // `enhanceModelConfig` produces a config with identical attribute names but
+  // different values (prompt metadata), which a names-only key collided with
+  // the base config, silently returning the wrong derivation for one of them.
   const modelKey = JSON.stringify({
     endpoint: modelConfig?.api?.endpoint,
-    attributes: modelConfig?.attributes ? Object.keys(modelConfig.attributes).sort() : [],
+    attributes: modelConfig?.attributes ?? {},
     required: modelConfig?.required,
-    associations: modelConfig?.associations ? Object.keys(modelConfig.associations).sort() : [],
+    associations: modelConfig?.associations ?? {},
     apiConvention: options.apiConvention?.name || modelConfig?.api?.convention?.name
   })
 
@@ -270,7 +274,9 @@ export function deriveFieldDefinitions(
     })
   }
 
-  // Cache and return
+  // Cache and return. Freeze so a consumer can't mutate the shared cached
+  // object and corrupt every later reader.
+  Object.freeze(fieldDefinitions)
   fieldDefinitionsCache.set(cacheKey, fieldDefinitions)
   return fieldDefinitions
 }
@@ -358,7 +364,8 @@ export function derivePromptSchema(
     fieldGroups
   }
 
-  // Cache and return
+  // Cache and return (frozen — see deriveFieldDefinitions).
+  Object.freeze(result)
   promptSchemaCache.set(cacheKey, result)
   return result
 }

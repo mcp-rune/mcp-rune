@@ -46,6 +46,36 @@ describe('lib/mcp/model-layer/schema-derivation - Memoization', () => {
       expect(result2).toBe(result1)
     })
 
+    it('does not collide enhanceModelConfig output with the base (regression: names-only key)', () => {
+      const base = {
+        api: { endpoint: 'books' },
+        attributes: {
+          status: { type: 'enum', enumValues: ['reading', 'read'] }
+        }
+      }
+      const enhanced = enhanceModelConfig(base, {
+        status: { description: 'Reading status', enumDescriptions: { read: 'Finished' } }
+      })
+
+      const baseDefs = deriveFieldDefinitions(base)
+      const enhancedDefs = deriveFieldDefinitions(enhanced)
+
+      // Same attribute names but different metadata — must NOT share a cache
+      // entry, and the enhanced derivation must carry the added description.
+      expect(enhancedDefs).not.toBe(baseDefs)
+      expect(enhancedDefs.status?.description).toBe('Reading status')
+      expect(baseDefs.status?.description).not.toBe('Reading status')
+    })
+
+    it('freezes cached field definitions against mutation', () => {
+      const modelConfig = {
+        api: { endpoint: 'books' },
+        attributes: { name: { type: 'string', required: true } }
+      }
+      const defs = deriveFieldDefinitions(modelConfig)
+      expect(Object.isFrozen(defs)).toBe(true)
+    })
+
     it('should create separate cache entries for different options', () => {
       const modelConfig = {
         api: { endpoint: 'brands' },

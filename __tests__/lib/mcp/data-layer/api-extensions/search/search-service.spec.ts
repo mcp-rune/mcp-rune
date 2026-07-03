@@ -140,6 +140,41 @@ describe('SearchService', () => {
       })
     })
 
+    it('GET search forwards filters (regression: dropped filters)', async () => {
+      const getSearchModel = {
+        ...DirectSearchModel,
+        extensions: {
+          search: {
+            query: { endpoint: 'items/search', method: 'GET' as const, queryParam: 'q' }
+          }
+        }
+      }
+
+      await client.search(getSearchModel, 'test', { filters: { status: 'active' } })
+
+      expect(mockApiClient.get).toHaveBeenCalledWith('items/search', {
+        q: 'test',
+        status: 'active',
+        page: 1,
+        per_page: 20
+      })
+    })
+
+    it('GET search omits the query key when the model declares no queryParam', async () => {
+      const noQueryParamModel = {
+        ...DirectSearchModel,
+        extensions: {
+          search: { query: { endpoint: 'items/search', method: 'GET' as const } }
+        }
+      }
+
+      await client.search(noQueryParamModel, 'test', { filters: { status: 'active' } })
+
+      const params = mockApiClient.get.mock.calls[0][1]
+      expect(params).not.toHaveProperty('undefined')
+      expect(params).toMatchObject({ status: 'active', page: 1, per_page: 20 })
+    })
+
     it('should use custom adapter when declared on model', async () => {
       const customShaper = {
         buildRequest: vi.fn().mockReturnValue({
@@ -463,6 +498,27 @@ describe('SearchService', () => {
       expect(mockApiClient.get).toHaveBeenCalledWith('brands', {
         page: 1,
         per_page: 20
+      })
+    })
+
+    it('forwards filters through the field-based fallback (regression: dropped filters)', async () => {
+      await client.search(ListOnlyModel, 'test query', { filters: { status: 'active' } })
+
+      expect(mockApiClient.get).toHaveBeenCalledWith('brands', {
+        page: 1,
+        per_page: 20,
+        status: 'active',
+        name: 'test query'
+      })
+    })
+
+    it('forwards filters through the plain-list fallback', async () => {
+      await client.search(NoSearchableModel, null, { filters: { archived: false } })
+
+      expect(mockApiClient.get).toHaveBeenCalledWith('settings', {
+        page: 1,
+        per_page: 20,
+        archived: false
       })
     })
   })

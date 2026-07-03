@@ -108,12 +108,12 @@ export class SearchService {
     const queryConfig = searchCfg?.query
 
     if (!queryConfig) {
-      // Fallback: field-based search on first lookup field
+      // Fallback: field-based search on first lookup field. Forward the
+      // caller's filters too — they were validated upstream and dropping them
+      // here silently returned an unfiltered page.
       const searchField = searchCfg?.lookup?.fields?.[0]
-      if (searchField && query) {
-        return this.list(ModelClass, { page, perPage, [searchField]: query })
-      }
-      return this.list(ModelClass, { page, perPage })
+      const searchFilter = searchField && query ? { [searchField]: query } : {}
+      return this.list(ModelClass, { page, perPage, ...filters, ...searchFilter })
     }
 
     // Direct search endpoint
@@ -324,11 +324,16 @@ export class SearchService {
       return this._normalizeResponse(response, { page, perPage })
     }
 
-    // GET request
+    // GET request. Forward the caller's filters, and only bind the query param
+    // when the model declares one (an absent `queryParam` used to produce a
+    // literal "undefined" query key).
     const params: Record<string, unknown> = {
-      [queryConfig!.queryParam!]: query,
+      ...filters,
       page,
       per_page: perPage
+    }
+    if (queryConfig!.queryParam) {
+      params[queryConfig!.queryParam] = query
     }
 
     const data = await this._dataLayer.dispatch('GET', queryConfig!.endpoint!, undefined, params)
