@@ -42,6 +42,7 @@ export type {
 export type { StoreEdgesFacadeParams } from './vector-storage-ingested-edges.js'
 export {
   clearIngestedEdges,
+  findEdgePaths,
   getEdgesForSources,
   getEdgesFrom,
   storeIngestedEdges

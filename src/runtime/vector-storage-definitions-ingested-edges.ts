@@ -15,9 +15,34 @@ export interface EdgeRow {
   hop_depth: number
 }
 
+export interface EdgePathStep {
+  fromModel: string
+  fromId: string
+  toModel: string
+  toId: string
+  edgeType: string
+  /** `forward` follows the stored src→dst direction; `reverse` walks it backwards. */
+  direction: 'forward' | 'reverse'
+}
+
+export interface EdgePath {
+  steps: EdgePathStep[]
+  depth: number
+}
+
+export interface FindPathsParams {
+  from: { model: string; id: string }
+  to: { model: string; id: string }
+  /** Maximum path length in edges. Default 4, capped at 6. */
+  maxDepth?: number
+  /** Maximum paths returned, shortest first. Default 5, capped at 20. */
+  limit?: number
+}
+
 export interface IngestedEdgesAdapter {
   storeEdges(params: StoreEdgesParams): Promise<number>
   getEdgesFrom(analysisId: string, srcModel: string, srcId: string): Promise<EdgeRow[]>
+  findPaths(analysisId: string, params: FindPathsParams): Promise<EdgePath[]>
   getEdgesForSources(
     analysisId: string,
     srcModel: string,

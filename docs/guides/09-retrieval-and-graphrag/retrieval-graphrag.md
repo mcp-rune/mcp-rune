@@ -71,7 +71,7 @@ The LLM drives the loop; the framework provides the seams:
 | Tool                 | Role                                                               |
 | -------------------- | ------------------------------------------------------------------ |
 | `analysis_ingest`    | download once, build the indexes                                   |
-| `analysis_query`     | read — describe / aggregate / filter / sample / semantic           |
+| `analysis_query`     | read — describe / aggregate / filter / sample / semantic / path    |
 | `analysis_store`     | commit a finding (embedded, recallable)                            |
 | `analysis_summarize` | re-summarize a page without re-fetching                            |
 | `analysis_act`       | mutate a filtered subset server-side — IDs never return to context |
