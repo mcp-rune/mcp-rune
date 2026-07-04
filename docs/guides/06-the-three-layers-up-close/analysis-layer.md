@@ -10,7 +10,7 @@ The split is deliberate: where `ModelLayer` answers "what does the model declare
 
 File: `src/mcp/analysis-layer/analysis-layer.ts`
 
-```ts
+```ts file=src/layers/analysis-layer.ts
 export interface AnalysisLayer {
   /** The Model class this layer is bound to. */
   readonly model: ModelClassLike
@@ -44,13 +44,60 @@ export interface AnalysisLayer {
 }
 ```
 
+```js file=src/layers/analysis-layer.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * export interface AnalysisLayer {
+ *   /** The Model class this layer is bound to. */
+ *   readonly model: ModelClassLike
+ *
+ *   /** The name of the bound model — used as `src_model` on emitted edges. */
+ *   readonly modelName: string
+ *
+ *   /**
+ *    * Extract typed edges from a record using the bound model's declared
+ *    * belongsTo and hasMany associations. belongsTo emits one edge per
+ *    * non-null `<rel>_id`; hasMany emits one edge per element of `<singular>_ids`.
+ *    */
+ *   extractEdges(record: Record<string, unknown>, options?: ExtractOptions): Edge[]
+ *
+ *   /**
+ *    * Deterministically textify a record for embedding: concatenates
+ *    * `<field>: <value>` for each string-valued attribute, sorted by field name,
+ *    * with id and *_id fields skipped. Truncates at options.maxLength (default 512).
+ *    */
+ *   buildEmbeddingText(record: Record<string, unknown>, options?: EmbeddingTextOptions): string
+ *
+ *   /**
+ *    * BFS-expand a root set of the bound model's records across declared
+ *    * associations, fetching destination records through the captured
+ *    * per-request DataLayer. Yields one HopBatch per (model, depth) tuple.
+ *    */
+ *   walkHops(
+ *     rootRecords: ReadonlyArray<Record<string, unknown>>,
+ *     options: HopOptions
+ *   ): AsyncGenerator<HopBatch>
+ * }
+ */
+```
+
 `Edge` is a typed `{ src_model, src_id, dst_model, dst_id, edge_type }` shape — the substrate the GraphRAG `concept-touch`, `relationship-coverage`, and `entity-extraction` summary strategies consume.
 
 ## The factory
 
-```ts
+```ts file=src/layers/data-layer.ts
 type AnalysisLayerFactory = (modelName: string) => AnalysisLayer
 
+// In a tool that has both:
+const dataLayer = this.requireDataLayer()
+const bookAnalysis = this.analysisLayer?.('book')
+const book = await dataLayer.find('book', '42')
+const edges = bookAnalysis?.extractEdges(book) ?? []
+```
+
+```js file=src/layers/data-layer.js
 // In a tool that has both:
 const dataLayer = this.requireDataLayer()
 const bookAnalysis = this.analysisLayer?.('book')

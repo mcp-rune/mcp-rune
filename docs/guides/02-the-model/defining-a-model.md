@@ -6,7 +6,7 @@ The smallest realistic model in the examples repo is `Tag` from the `tasks` serv
 
 File: `tasks/models/tag.ts`
 
-```ts
+```ts file=src/tag.ts
 import { BaseModel } from '@mcp-rune/mcp-rune/models'
 import type { AttributeDefinition } from '@mcp-rune/mcp-rune/models'
 
@@ -35,6 +35,31 @@ export class Tag extends BaseModel {
 }
 ```
 
+```js file=src/tag.js
+import { BaseModel } from '@mcp-rune/mcp-rune/models'
+export class Tag extends BaseModel {
+  static description = 'A label that can be applied to many tasks'
+  static api = { endpoint: 'tags' }
+  static attributes = {
+    name: {
+      type: 'string',
+      required: true,
+      description: 'Short, lowercase label',
+      examples: ['urgent', 'frontend', 'blocked', 'review']
+    },
+    color: {
+      type: 'enum',
+      enumValues: ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'gray'],
+      default: 'gray',
+      description: 'Display color in clients that render tags'
+    }
+  }
+  get displayValue() {
+    return String(this.data.name)
+  }
+}
+```
+
 That's the entire declaration. Register it once in your server's `config.ts` and the framework derives a working `Tag` resource: `find_records({ model: "tag" })`, `create_model({ model: "tag", attributes: { ... } })`, the form prompt, validation feedback, a list app, a picker app — none of which you wrote.
 
 ## The four fields the framework reads
@@ -49,10 +74,16 @@ A one-line human description. The framework surfaces it in `list_models`, in the
 
 Tells the `DataLayer` which endpoint backs this model and, optionally, which wire convention to use.
 
-```ts
+```ts file=examples/defining-a-model-02.ts
 static override api = { endpoint: 'tags' }
 // or
 static override api = { endpoint: 'tasks', convention: jsonApiConvention }
+```
+
+```js file=examples/defining-a-model-02.js
+static api = { endpoint: 'tags' }
+// or
+static api = { endpoint: 'tasks', convention: jsonApiConvention }
 ```
 
 The `endpoint` is a logical name — the actual URL is composed by the `DataLayer` adapter (`http://api.example.com/tasks`, or the in-memory stub's internal map, or whatever you've wired). The optional `convention` selects the wire shape (flat REST, JSON:API, your own); when omitted, the server's `defaultConvention` (set on the `DataLayer`, see chapter 6) is used. Per-model conventions override the default for that model only.
@@ -67,8 +98,14 @@ The framework reads `static attributes` only. If a generated file carries a `sta
 
 An instance getter that returns the human-readable label for one record. It's what `pick_model_app` and `multi_pick_model_app` render in the picker, what `view_selection_app` echoes back, and what the framework falls back to when summarizing a record in any context.
 
-```ts
+```ts file=examples/defining-a-model-03.ts
 override get displayValue(): string {
+  return `${this.data.title} by ${this.data.author}`
+}
+```
+
+```js file=examples/defining-a-model-03.js
+get displayValue() {
   return `${this.data.title} by ${this.data.author}`
 }
 ```
@@ -111,7 +148,7 @@ cat src/models/tag.ts
 
 Expected output:
 
-```ts
+```ts file=src/tag.ts
 import type { AttributeDefinition } from '@mcp-rune/mcp-rune/models'
 import { BaseModel } from '@mcp-rune/mcp-rune/models'
 
@@ -131,6 +168,27 @@ export class Tag extends BaseModel {
   }
 
   static get attributesConfig(): Record<string, AttributeDefinition> {
+    return this.attributes
+  }
+}
+```
+
+```js file=src/tag.js
+import { BaseModel } from '@mcp-rune/mcp-rune/models'
+export class Tag extends BaseModel {
+  static description = 'A Tag record'
+  static api = { endpoint: 'tags' }
+  static attributes = {
+    name: {
+      type: 'string',
+      description: 'name'
+    },
+    color: {
+      type: 'string',
+      description: 'color'
+    }
+  }
+  static get attributesConfig() {
     return this.attributes
   }
 }
@@ -163,7 +221,7 @@ When a model has associations, the declaration grows by one field. `Task` from t
 
 File: `tasks/models/task.ts`
 
-```ts
+```ts file=src/task.ts
 export class Task extends BaseModel {
   static override description = 'A single unit of work, scoped to a project, optionally tagged'
   static override api = { endpoint: 'tasks', convention: jsonApiConvention }
@@ -178,6 +236,34 @@ export class Task extends BaseModel {
   }
 
   static override attributes: Record<string, AttributeDefinition> = {
+    title: {
+      type: 'string',
+      required: true,
+      description: 'One-line summary of the task'
+    },
+    status: {
+      type: 'enum',
+      enumValues: ['todo', 'doing', 'done'],
+      default: 'todo'
+    }
+    // …
+  }
+}
+```
+
+```js file=src/task.js
+export class Task extends BaseModel {
+  static description = 'A single unit of work, scoped to a project, optionally tagged'
+  static api = { endpoint: 'tasks', convention: jsonApiConvention }
+  static associations = {
+    belongsTo: {
+      project: { target_model: 'project', required: true }
+    },
+    hasMany: {
+      tags: { target_model: 'tag', many: true }
+    }
+  }
+  static attributes = {
     title: {
       type: 'string',
       required: true,

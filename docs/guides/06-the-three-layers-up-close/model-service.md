@@ -67,13 +67,21 @@ A convention answers "what does the payload look like on the wire?" Flat REST pu
 
 As of v0.85.0, the **default convention lives on `DataLayer`**, not on `BaseModel`. You set it via the `dataLayer` factory's `defaultConvention:` option (or implicitly through `ToolRegistry` / `AppRegistry`'s `defaultConvention:` which forwards into the factory). Per-model overrides still live where they always did — on `static api.convention`.
 
-```ts
+```ts file=src/task.ts
 import { jsonApiConvention } from '@mcp-rune/mcp-rune/api-conventions'
 
 // File: tasks/models/task.ts
 export class Task extends BaseModel {
   static override api = { endpoint: 'tasks', convention: jsonApiConvention }
   // …
+}
+```
+
+```js file=src/task.js
+import { jsonApiConvention } from '@mcp-rune/mcp-rune/api-conventions'
+// File: tasks/models/task.ts
+export class Task extends BaseModel {
+  static api = { endpoint: 'tasks', convention: jsonApiConvention }
 }
 ```
 

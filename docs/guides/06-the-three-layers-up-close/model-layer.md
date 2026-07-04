@@ -6,7 +6,12 @@
 
 Inside any tool, app, prompt, or `ApiExtension`, the call is the same:
 
-```ts
+```ts file=src/layer.ts
+const layer = this.modelLayer('book')
+layer.resolveDerivedFields([r]) // Flattens derived: { from, field } in place
+```
+
+```js file=src/layer.js
 const layer = this.modelLayer('book')
 layer.resolveDerivedFields([r]) // Flattens derived: { from, field } in place
 ```
@@ -111,7 +116,7 @@ Rejecting unknown `filters:` keys at the seam is `DataLayer`'s job — call `dat
 
 File: `src/mcp/model-layer/model-layer.ts`
 
-```ts
+```ts file=src/layers/model-layer.ts
 export interface ModelLayer {
   /** The Model class this layer is bound to. */
   readonly model: ModelClassLike
@@ -119,6 +124,21 @@ export interface ModelLayer {
   /** Flatten `derived: { from, field }` declarations on a list of records (in place). */
   resolveDerivedFields(records: Record<string, unknown>[]): Record<string, unknown>[]
 }
+```
+
+```js file=src/layers/model-layer.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * export interface ModelLayer {
+ *   /** The Model class this layer is bound to. */
+ *   readonly model: ModelClassLike
+ *
+ *   /** Flatten `derived: { from, field }` declarations on a list of records (in place). */
+ *   resolveDerivedFields(records: Record<string, unknown>[]): Record<string, unknown>[]
+ * }
+ */
 ```
 
 Every method operates on the model bound at construction. There's no `(modelName, …)` first argument — that binding happens once, via the factory.
@@ -134,8 +154,17 @@ Every method operates on the model bound at construction. There's no `(modelName
 
 `ModelLayer` instances are produced by a factory bound to your `models:` registry. The factory is constructed once at server boot and reused for every request — every `ModelLayer` it returns is cached per model class, because nothing it does depends on who's calling or what session is active.
 
-```ts
+```ts file=src/model-layer-factory.ts
 type ModelLayerFactory = (modelName: string) => ModelLayer
+```
+
+```js file=src/model-layer-factory.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * type ModelLayerFactory = (modelName: string) => ModelLayer
+ */
 ```
 
 You don't construct or override this factory. The framework calls `createModelLayerFactory(models)` internally from `ToolRegistry` / `AppRegistry`, then threads `this.modelLayer` into every tool, app, prompt, and `ApiExtension` it dispatches. The customization path for "I want a different backend" is `DataLayerFactory`; the customization path for "I want to declare a new attribute kind" is `AppRegistry({ kinds })` (see [Attributes & kinds](../02-the-model/attributes-and-kinds.md)).

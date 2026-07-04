@@ -15,13 +15,27 @@
 
 Each fieldset entry is an `AppFormFieldsetConfig` — a purely presentational grouping:
 
-```ts
+```ts file=src/config/app-form-fieldset-config.ts
 interface AppFormFieldsetConfig {
   title?: string // defaults to the humanized fieldset key
   description?: string
   required?: boolean
   fields?: string[] // which of the form's fields belong to this group
 }
+```
+
+```js file=src/config/app-form-fieldset-config.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * interface AppFormFieldsetConfig {
+ *   title?: string // defaults to the humanized fieldset key
+ *   description?: string
+ *   required?: boolean
+ *   fields?: string[] // which of the form's fields belong to this group
+ * }
+ */
 ```
 
 Note what is _not_ here: there is no `layout` key. Per-group layout is a renderer capability without a declaration path today — see [the layout gap](#the-layout-gap-renderer-support-without-a-declaration-path) below.

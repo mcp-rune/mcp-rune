@@ -10,7 +10,7 @@ Four calls to `validate_form` against your `bookshelf-tour` project surface each
 
 **Setup:** extend the `attributes` block in `src/models/book.ts`:
 
-```ts
+```ts file=examples/validation-and-defaults-01.ts
 status: {
   type: 'enum',
   enumValues: ['unread', 'reading', 'finished'],
@@ -22,6 +22,25 @@ rating: {
   validation: { min: 1, max: 5 },
   description: '1-to-5 personal rating',
 },
+```
+
+```js file=examples/validation-and-defaults-01.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * status: {
+ *   type: 'enum',
+ *   enumValues: ['unread', 'reading', 'finished'],
+ *   default: 'unread',
+ *   description: 'Reading state',
+ * },
+ * rating: {
+ *   type: 'integer',
+ *   validation: { min: 1, max: 5 },
+ *   description: '1-to-5 personal rating',
+ * },
+ */
 ```
 
 (If you completed the [Associations](./associations.md) hands-on, your `Book` model still has `belongsTo: author`. Keep it — you'll need an integer `author_id` in the calls below.)
@@ -113,8 +132,19 @@ Marks the attribute as mandatory. The framework treats this as a contract that's
 
 File: `tasks/models/task.ts`
 
-```ts
+```ts file=examples/validation-and-defaults-02.ts
 static override attributes: Record<string, AttributeDefinition> = {
+  title: {
+    type: 'string',
+    required: true,
+    description: 'One-line summary of the task'
+  },
+  // …
+}
+```
+
+```js file=examples/validation-and-defaults-02.js
+static attributes = {
   title: {
     type: 'string',
     required: true,
@@ -135,7 +165,7 @@ Supplied at form-fill time when the field is missing. Two important properties:
 - The default is applied by **the framework**, before validation and before the backend sees the payload. Your backend never sees an unset field that had a default.
 - The value is read from the static `AttributeDefinition`; it's not a function call, so dynamic defaults (like "today's date") are not supported here. Override `getDefaultFormState()` on your Prompt class if you need a runtime value.
 
-```ts
+```ts file=examples/validation-and-defaults-03.ts
 status: {
   type: 'enum',
   enumValues: ['todo', 'doing', 'done'],
@@ -148,6 +178,24 @@ priority: {
 }
 ```
 
+```js file=examples/validation-and-defaults-03.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * status: {
+ *   type: 'enum',
+ *   enumValues: ['todo', 'doing', 'done'],
+ *   default: 'todo'
+ * },
+ * priority: {
+ *   type: 'enum',
+ *   enumValues: ['low', 'medium', 'high'],
+ *   default: 'medium'
+ * }
+ */
+```
+
 A `default:` and `required: true` are not contradictory — they describe two different things. `required` means "this field must end up in the payload"; `default` means "if the caller didn't supply one, use this". Most required-with-default fields will never actually need to be supplied by the caller.
 
 ## `validation: { … }`
@@ -156,12 +204,25 @@ Numeric bounds, length bounds, and regex patterns. These fire at **validate-form
 
 File: `bookshelf/models/book.ts`
 
-```ts
+```ts file=examples/validation-and-defaults-04.ts
 rating: {
   type: 'integer',
   description: 'Your rating from 1 to 5',
   validation: { minimum: 1, maximum: 5 }
 }
+```
+
+```js file=examples/validation-and-defaults-04.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * rating: {
+ *   type: 'integer',
+ *   description: 'Your rating from 1 to 5',
+ *   validation: { minimum: 1, maximum: 5 }
+ * }
+ */
 ```
 
 Recognized keys:
@@ -178,7 +239,7 @@ Cross-field rules don't live here — they go on the kind itself (custom kinds w
 
 For the common "score out of N" case, the framework's first-class mechanism is not a `validation:` block at all — it's the top-level `max?: number` knob on `AttributeDefinition`, consumed by the `rating` kind:
 
-```ts
+```ts file=examples/validation-and-defaults-05.ts
 rating: {
   type: 'integer',
   format: 'rating',
@@ -187,18 +248,45 @@ rating: {
 }
 ```
 
+```js file=examples/validation-and-defaults-05.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * rating: {
+ *   type: 'integer',
+ *   format: 'rating',
+ *   max: 5,
+ *   description: 'Your rating from 1 to 5'
+ * }
+ */
+```
+
 The `rating` kind reads `max` (default `5`) in both halves of its contract: `validate` rejects values outside `0..max` ("must be between 0 and 5"), and `describe` renders the LLM-facing summary as `3/5`. Declaring the bound this way keeps the number in one place for validation, prompt text, and display.
 
 ## `enumValues:` is a validation
 
 Listing `enumValues:` on an `enum` attribute is itself a validation rule — `validate_form` will reject any value not in the list, naming the allowed values in the failure message.
 
-```ts
+```ts file=examples/validation-and-defaults-06.ts
 status: {
   type: 'enum',
   enumValues: ['unread', 'reading', 'completed'],
   default: 'unread'
 }
+```
+
+```js file=examples/validation-and-defaults-06.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * status: {
+ *   type: 'enum',
+ *   enumValues: ['unread', 'reading', 'completed'],
+ *   default: 'unread'
+ * }
+ */
 ```
 
 For dynamic enums (values pulled from another table), don't use `enum` — use a `belongsTo` association to the table that owns the canonical set. The picker app will surface the same UX with live values.

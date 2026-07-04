@@ -104,13 +104,27 @@ await pool.end()
 
 The `Migration` shape exported alongside the array is:
 
-```ts
+```ts file=src/migration.ts
 interface Migration {
   version: string // '001', '002', …
   name: string // 'create_oauth_sessions', …
   feature: 'core' | 'analysis' // see "Feature gating" below
   up: string // SQL DDL — CREATE TABLE, CREATE INDEX, etc.
 }
+```
+
+```js file=src/migration.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * interface Migration {
+ *   version: string // '001', '002', …
+ *   name: string // 'create_oauth_sessions', …
+ *   feature: 'core' | 'analysis' // see "Feature gating" below
+ *   up: string // SQL DDL — CREATE TABLE, CREATE INDEX, etc.
+ * }
+ */
 ```
 
 There is no `down` SQL. Rollback is the deployer's responsibility — write a reverse migration in your own runner if your release process needs it.
@@ -154,9 +168,18 @@ If you forget step 2, the gap is silent until a tool touches the new schema — 
 
 mcp-rune exports a guard so your server **fails fast** — with the list of pending migrations and the remediation — instead of letting a missing column or table surface as an opaque SQL error mid-request. Call it once at startup, right after the pool is created:
 
-```ts
+```ts file=src/features.ts
 import { assertMigrationsCurrent } from '@mcp-rune/mcp-rune/db/migrations'
 
+// `features` mirrors what this server provisions. Always 'core'; add
+// 'analysis' when ANALYSIS_ENABLED. The check is module-independent — it
+// covers every pending migration, not just analysis ones.
+const features = ['core', ...(analysisEnabled ? ['analysis'] : [])]
+await assertMigrationsCurrent(pool, { features })
+```
+
+```js file=src/features.js
+import { assertMigrationsCurrent } from '@mcp-rune/mcp-rune/db/migrations'
 // `features` mirrors what this server provisions. Always 'core'; add
 // 'analysis' when ANALYSIS_ENABLED. The check is module-independent — it
 // covers every pending migration, not just analysis ones.
