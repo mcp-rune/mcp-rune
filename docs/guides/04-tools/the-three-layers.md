@@ -10,7 +10,7 @@ Every `BaseTool` constructor receives the same `ToolDependencies` bag, and the t
 
 File: `src/mcp/tools/base-tool.ts`
 
-```ts
+```ts file=src/tool-dependencies.ts
 export interface ToolDependencies {
   /** Per-request backend I/O. Absent for tools with `requiresAuth = false`. */
   dataLayer?: DataLayer
@@ -20,6 +20,23 @@ export interface ToolDependencies {
   analysisLayer?: AnalysisLayerFactory
   // …
 }
+```
+
+```js file=src/tool-dependencies.js
+/**
+ * Types are a TypeScript-only artifact — no JS runtime equivalent.
+ * The contract below is duck-typed at runtime.
+ *
+ * export interface ToolDependencies {
+ *   /** Per-request backend I/O. Absent for tools with `requiresAuth = false`. */
+ *   dataLayer?: DataLayer
+ *   /** Per-model-bound, synchronous model-config reads. */
+ *   modelLayer?: ModelLayerFactory
+ *   /** Per-model-bound, per-request analysis projections. */
+ *   analysisLayer?: AnalysisLayerFactory
+ *   // …
+ * }
+ */
 ```
 
 `ToolRegistry` constructs each layer per request, threads them in, and `BaseTool` exposes them as instance fields. From the tool's point of view they are simply `this.dataLayer`, `this.modelLayer`, `this.analysisLayer`.
@@ -62,8 +79,16 @@ Failures cross the seam as typed `DataLayerError` subclasses — `RecordNotFound
 
 **In a tool:**
 
-```ts
+```ts file=src/layer.ts
 override async execute(args: { id: string }): Promise<ToolResult> {
+  const layer = this.requireDataLayer()
+  const book = await layer.find('book', args.id)
+  return this.formatResponse(book)
+}
+```
+
+```js file=src/layer.js
+async execute(args) {
   const layer = this.requireDataLayer()
   const book = await layer.find('book', args.id)
   return this.formatResponse(book)
@@ -86,8 +111,18 @@ Kind descriptors are not on this surface: kinds are shared vocabulary ([ADR 0009
 
 **In a tool:**
 
-```ts
+```ts file=src/data.ts
 override async execute(args: { model: string; record_id: string }) {
+  const data = this.requireDataLayer()
+  const layer = this.modelLayer?.(args.model)
+  const record = await data.find(args.model, args.record_id)
+  layer?.resolveDerivedFields([record])
+  // …
+}
+```
+
+```js file=src/data.js
+async execute(args) {
   const data = this.requireDataLayer()
   const layer = this.modelLayer?.(args.model)
   const record = await data.find(args.model, args.record_id)
@@ -112,8 +147,16 @@ Designed to host `summarize` and `buildStratifier` in follow-up releases.
 
 **In a tool:**
 
-```ts
+```ts file=src/book.ts
 override async execute(args: { id: string }) {
+  const book = await this.requireDataLayer().find('book', args.id)
+  const edges = this.analysisLayer?.('book').extractEdges(book) ?? []
+  return this.formatResponse({ book, edges })
+}
+```
+
+```js file=src/book.js
+async execute(args) {
   const book = await this.requireDataLayer().find('book', args.id)
   const edges = this.analysisLayer?.('book').extractEdges(book) ?? []
   return this.formatResponse({ book, edges })

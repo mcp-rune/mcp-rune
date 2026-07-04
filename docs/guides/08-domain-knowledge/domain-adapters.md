@@ -10,7 +10,7 @@ Layers (`ModelLayer`, `AnalysisLayer`) project _local_ definitions — they alwa
 
 The default adapter. Items are defined in code via `DomainModule` objects and served from in-process memory.
 
-```ts
+```ts file=src/registries/domain-registry.ts
 import { DomainRegistry, InMemoryDomainAdapter } from '@mcp-rune/mcp-rune/domain'
 import type { DomainModule } from '@mcp-rune/mcp-rune/domain'
 
@@ -20,6 +20,18 @@ const taskModule: DomainModule = {
   workflows: taskWorkflows
 }
 
+const domainRegistry = new DomainRegistry({
+  adapter: new InMemoryDomainAdapter([taskModule, projectModule])
+})
+```
+
+```js file=src/registries/domain-registry.js
+import { DomainRegistry, InMemoryDomainAdapter } from '@mcp-rune/mcp-rune/domain'
+const taskModule = {
+  concepts: taskConcepts,
+  rules: taskRules,
+  workflows: taskWorkflows
+}
 const domainRegistry = new DomainRegistry({
   adapter: new InMemoryDomainAdapter([taskModule, projectModule])
 })
@@ -36,8 +48,12 @@ const domainRegistry = new DomainRegistry({
 
 `InMemoryDomainAdapter` accepts an array. Items from all modules are merged:
 
-```ts
-new InMemoryDomainAdapter([catchupModule, dealsModule, rightsModule])
+```ts file=examples/domain-adapters-02.ts
+new InMemoryDomainAdapter([taskModule, projectModule, tagModule])
+```
+
+```js file=examples/domain-adapters-02.js
+new InMemoryDomainAdapter([taskModule, projectModule, tagModule])
 ```
 
 Each `DomainModule` owns one domain area. The adapter merges concepts, rules, and workflows from all modules into flat registries.

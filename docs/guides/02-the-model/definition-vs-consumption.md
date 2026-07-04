@@ -32,7 +32,36 @@ grep -A 3 "model-layer/derived-fields" node_modules/@mcp-rune/mcp-rune/eslint.co
 
 The framework's own `eslint.config.js` declares:
 
-```js
+```js file=examples/definition-vs-consumption-01.js
+'no-restricted-imports': [
+  'error',
+  {
+    patterns: [
+      {
+        group: [
+          '**/model-layer/derived-fields*',
+          '**/model-layer/field-names*',
+          '**/model-layer/schema-derivation*',
+          '**/model-layer/validators*'
+        ],
+        message:
+          'Use the modelLayer factory (deps.modelLayer / context.modelLayer) instead of importing model-layer helpers directly.'
+      },
+      {
+        group: [
+          '**/analysis-layer/edge-extraction*',
+          '**/analysis-layer/graph-stratifiers*',
+          '**/analysis-layer/multi-hop-fetch*'
+        ],
+        message:
+          'Use the analysisLayer factory (deps.analysisLayer / context.analysisLayer) instead of importing analysis-layer helpers directly.'
+      }
+    ]
+  }
+]
+```
+
+```ts file=examples/definition-vs-consumption-01.ts
 'no-restricted-imports': [
   'error',
   {

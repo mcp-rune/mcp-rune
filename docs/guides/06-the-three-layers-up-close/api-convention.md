@@ -137,6 +137,14 @@ class JsonApiConvention extends BaseConvention {
 }
 ```
 
+```js file=examples/json-api-pagination.js
+class JsonApiConvention extends BaseConvention {
+  serializeListParams({ page = 1, perPage = 20, filters = {} }) {
+    return { ...filters, 'page[number]': page, 'page[size]': perPage }
+  }
+}
+```
+
 ## Method Roles
 
 ### `resolveAssociationFields(relName, relConfig, overrides?)`

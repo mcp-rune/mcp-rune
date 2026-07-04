@@ -56,7 +56,7 @@ src/<server>/domain/                 # Server-specific domain data
 
 `DomainModule` (from `domain-definitions.ts`) groups concepts, rules, and workflows for one domain area instead of maintaining separate arrays per resource type:
 
-```ts
+```ts file=examples/domain-knowledge-01.ts
 import type { DomainModule } from '@mcp-rune/mcp-rune/domain'
 import { DomainConcept, BusinessRule, WorkflowDefinition } from '@mcp-rune/mcp-rune/domain'
 
@@ -67,9 +67,22 @@ export const taskModule: DomainModule = {
 }
 ```
 
+```js file=examples/domain-knowledge-01.js
+import { DomainConcept, BusinessRule, WorkflowDefinition } from '@mcp-rune/mcp-rune/domain';
+export const taskModule = {
+    concepts: [new DomainConcept({ name: 'task_lifecycle', ... })],
+    rules: [new BusinessRule({ name: 'task_requires_due_date', ... })],
+    workflows: [new WorkflowDefinition({ name: 'setup_project', ... })]
+};
+```
+
 Multiple modules are merged by the adapter:
 
-```ts
+```ts file=examples/domain-knowledge-02.ts
+new InMemoryDomainAdapter([taskModule, projectModule, bookModule])
+```
+
+```js file=examples/domain-knowledge-02.js
 new InMemoryDomainAdapter([taskModule, projectModule, bookModule])
 ```
 
@@ -646,6 +659,18 @@ export const taskModule: DomainModule = {
 }
 ```
 
+```js file=src/task-module.js
+import { BusinessRule } from '@mcp-rune/mcp-rune/domain';
+export const taskModule = {
+    concepts: [ /* concepts about tasks */],
+    rules: [
+        new BusinessRule({ name: 'task_requires_due_date', ... }),
+        new BusinessRule({ name: 'task_priority_valid', ... }),
+    ],
+    workflows: [ /* task-related workflows */],
+};
+```
+
 ---
 
 ## WorkflowDefinition — Multi-Step Guides
@@ -929,6 +954,18 @@ export function createMyDomainRegistry(): DomainRegistry {
 }
 ```
 
+```js file=src/registries/create-my-domain-registry.js
+// src/<server>/domain/registry.ts
+import { DomainRegistry, InMemoryDomainAdapter } from '@mcp-rune/mcp-rune/domain'
+import { taskModule } from './modules/tasks.js'
+import { projectModule } from './modules/projects.js'
+export function createMyDomainRegistry() {
+  return new DomainRegistry({
+    adapter: new InMemoryDomainAdapter([taskModule, projectModule])
+  })
+}
+```
+
 Each module lives in its own file and groups related concepts, rules, and workflows:
 
 ```ts file=src/modules/tasks.ts
@@ -947,6 +984,21 @@ export const taskModule: DomainModule = {
     new WorkflowDefinition({ name: 'setup_project_with_tasks', ... }),
   ],
 }
+```
+
+```js file=src/modules/tasks.js
+import { DomainConcept, BusinessRule, WorkflowDefinition } from '@mcp-rune/mcp-rune/domain';
+export const taskModule = {
+    concepts: [
+        new DomainConcept({ name: 'task_lifecycle', ... }),
+    ],
+    rules: [
+        new BusinessRule({ name: 'task_requires_due_date', ... }),
+    ],
+    workflows: [
+        new WorkflowDefinition({ name: 'setup_project_with_tasks', ... }),
+    ],
+};
 ```
 
 ### Injecting into the Tool Registry

@@ -43,13 +43,26 @@ All six are wired in via `DATA_TOOL_CLASSES` from `@mcp-rune/mcp-rune/tools`. In
 
 File: `bookshelf/config.ts`
 
-```ts
+```ts file=examples/polymorphic-tools-01.ts
 import {
   DATA_TOOL_CLASSES,
   FORM_STRATEGY_TOOL_CLASSES,
   ToolRegistry
 } from '@mcp-rune/mcp-rune/tools'
 
+new ToolRegistry({
+  toolClasses: { ...DATA_TOOL_CLASSES, ...FORM_STRATEGY_TOOL_CLASSES },
+  models: { book: Book, author: Author, genre: Genre }
+  // …
+})
+```
+
+```js file=examples/polymorphic-tools-01.js
+import {
+  DATA_TOOL_CLASSES,
+  FORM_STRATEGY_TOOL_CLASSES,
+  ToolRegistry
+} from '@mcp-rune/mcp-rune/tools'
 new ToolRegistry({
   toolClasses: { ...DATA_TOOL_CLASSES, ...FORM_STRATEGY_TOOL_CLASSES },
   models: { book: Book, author: Author, genre: Genre }

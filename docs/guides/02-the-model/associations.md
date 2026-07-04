@@ -30,7 +30,7 @@ Edit src/models/author.ts to declare attributes.
 
 Edit `src/models/book.ts` and add three things: a `convention` on the `api` block (associations require it), an `associations` field, and the import for the convention. The minimal diff:
 
-```ts
+```ts file=src/book.ts
 import { jsonApiConvention } from '@mcp-rune/mcp-rune/api-conventions'
 
 export class Book extends BaseModel {
@@ -44,6 +44,19 @@ export class Book extends BaseModel {
   }
 
   // …attributes unchanged…
+}
+```
+
+```js file=src/book.js
+import { jsonApiConvention } from '@mcp-rune/mcp-rune/api-conventions'
+export class Book extends BaseModel {
+  static description = 'A Book record'
+  static api = { endpoint: 'books', convention: jsonApiConvention }
+  static associations = {
+    belongsTo: {
+      author: { target_model: 'author', required: true }
+    }
+  }
 }
 ```
 
@@ -94,7 +107,7 @@ mcp-rune supports two association shapes, declared in a single `static associati
 
 File: `tasks/models/task.ts`
 
-```ts
+```ts file=src/task.ts
 import { BaseModel } from '@mcp-rune/mcp-rune/models'
 import type { AssociationConfig } from '@mcp-rune/mcp-rune/models'
 
@@ -112,6 +125,20 @@ export class Task extends BaseModel {
 }
 ```
 
+```js file=src/task.js
+import { BaseModel } from '@mcp-rune/mcp-rune/models'
+export class Task extends BaseModel {
+  static associations = {
+    belongsTo: {
+      project: { target_model: 'project', required: true }
+    },
+    hasMany: {
+      tags: { target_model: 'tag', many: true }
+    }
+  }
+}
+```
+
 - **`belongsTo`** — a single foreign key from this model to another. The framework infers an attribute named `{key}_id` (here, `project_id`) and treats it as required-or-optional according to the association's `required:` flag.
 - **`hasMany`** — a collection foreign-key from this model to many records of another. The inferred attribute is `{key}_ids` (here, `tag_ids`), typed as an array. The `many: true` flag is required by the type as an explicit discriminant.
 
@@ -119,7 +146,7 @@ A single model can declare any mix: a `Task` belongs to a `Project` and has many
 
 File: `bookshelf/models/book.ts`
 
-```ts
+```ts file=src/book.ts
 export class Book extends BaseModel {
   static override associations: AssociationConfig = {
     belongsTo: {
@@ -128,6 +155,17 @@ export class Book extends BaseModel {
     }
   }
   // …
+}
+```
+
+```js file=src/book.js
+export class Book extends BaseModel {
+  static associations = {
+    belongsTo: {
+      author: { target_model: 'author' },
+      genre: { target_model: 'genre' }
+    }
+  }
 }
 ```
 
@@ -164,7 +202,7 @@ The `bookshelf-graph` example wires `Book ↔ Author ↔ Genre` and uses the res
 
 File: `bookshelf-graph/models/book.ts`
 
-```ts
+```ts file=src/book.ts
 export class Book extends BaseModel {
   static override associations: AssociationConfig = {
     belongsTo: {
@@ -173,6 +211,23 @@ export class Book extends BaseModel {
     }
   }
   static override attributes: Record<string, AttributeDefinition> = {
+    title: { type: 'string', required: true },
+    status: { type: 'enum', enumValues: ['unread', 'reading', 'completed'], default: 'unread' },
+    rating: { type: 'integer', format: 'rating', max: 5 }
+    // …
+  }
+}
+```
+
+```js file=src/book.js
+export class Book extends BaseModel {
+  static associations = {
+    belongsTo: {
+      author: { target_model: 'author' },
+      genre: { target_model: 'genre' }
+    }
+  }
+  static attributes = {
     title: { type: 'string', required: true },
     status: { type: 'enum', enumValues: ['unread', 'reading', 'completed'], default: 'unread' },
     rating: { type: 'integer', format: 'rating', max: 5 }
