@@ -182,7 +182,7 @@
     "@langfuse/tracing": "^5.0.0",
     "@modelcontextprotocol/ext-apps": "^1.7.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@opentelemetry/sdk-node": "^0.219.0",
+    "@opentelemetry/sdk-node": "^0.220.0",
     "@sentry/node": "^10.36.0",
     "axios": "^1.18.0",
     "cors": "^2.8.5",
