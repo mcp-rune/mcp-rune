@@ -1,9 +1,9 @@
 ---
-name: roadmap
-description: Invoke ONLY when the developer explicitly asks for the mcp-rune public Roadmap workflow (e.g. via `/roadmap`). Do NOT auto-trigger on issue / label / milestone keywords — during the current BREAKING-changes phase, most issues could plausibly be Roadmap-relevant and auto-firing would defeat the purpose of extracting this from AGENTS.md.
+name: rune-roadmap
+description: Invoke ONLY when the developer explicitly asks for the mcp-rune public Roadmap workflow (e.g. via `/rune-roadmap`). Do NOT auto-trigger on issue / label / milestone keywords — during the current BREAKING-changes phase, most issues could plausibly be Roadmap-relevant and auto-firing would defeat the purpose of extracting this from AGENTS.md.
 ---
 
-# Roadmap
+# Rune roadmap
 
 This repo's milestones + tagged issues feed the public Roadmap at https://mcp-rune.dev/roadmap. The site (`mcp-rune-site`) fetches at build time; full label/milestone conventions live in `mcp-rune-site/AGENTS.md` under "Roadmap page is GitHub-driven at build time". The rules below are the operating discipline on this side of the seam.
 
