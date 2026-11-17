@@ -115,12 +115,16 @@ Non-trivial architecture and AI/LLM decisions get an ADR in `docs/architecture/d
 
 ## Epic workflow for complex changes
 
-For very complex changes, open a single GitHub **epic issue** before any code lands. The epic body enumerates every concrete sub-change in detail — file paths, axes, ordering, BREAKING flags, downstream-fork checks — and stays open as the source of truth for the whole effort.
+For very complex changes, open a single GitHub **epic issue** before any code lands, planned with the `sdlc` plugin's `/sdlc:plan` (installed once per machine from the agent-sdlc marketplace). The epic body enumerates every concrete sub-change in detail — file paths, axes, ordering, BREAKING flags, downstream-fork checks — and stays open as the source of truth for the whole effort.
 
 Then ship the sub-changes one at a time: open a focused sub-issue per axis (or per natural bundle of axes that touches the same files), open a PR that closes that sub-issue, `/ship` to merge + tag, repeat until every axis on the epic is covered. Close the epic with a summary table (axis → issue → PR → tag) when the last sub-PR lands.
+
+By default only the epic is filed: its body states each axis well enough to become a sub-issue without the conversation that found it — the problem, its files, the proposed change, a BREAKING flag and its labels — and a sub-issue is opened when its axis is decided. Filing every sub-issue up front is for when the user asks for it, and then in the order the epic lists them, one at a time, so the numbers match.
+
+Every issue carries the scoped label of each area it touches, from the repository's current label list, never a new one invented for it; `breaking` when it changes a public export; `epic` on the parent only. The `area:*` and `status:*` labels are the Roadmap's, applied only through the roadmap workflow below.
 
 Each sub-PR stays small enough to review and version-bumpable on its own; the epic carries the connecting tissue without bloating individual PR descriptions, and is where scope shifts get recorded mid-flight rather than buried in commit messages.
 
 ## Roadmap
 
-Workflow for the public Roadmap (milestones, `area:*` / `status:*` / `shipped-in:*` labels, theme convergence) lives in the local `roadmap` skill at `.claude/skills/roadmap/SKILL.md`. Invoke it explicitly with `/roadmap` when you're about to open, label, close, or milestone-manage a Roadmap-relevant issue. It is intentionally opt-in (not auto-loaded) while the project is in heavy BREAKING-changes phase, since almost any issue could plausibly be Roadmap-relevant and auto-firing would defeat the extraction.
+Workflow for the public Roadmap (milestones, `area:*` / `status:*` / `shipped-in:*` labels, theme convergence) lives in the local `rune-roadmap` skill at `.claude/skills/rune-roadmap/SKILL.md`. Invoke it explicitly with `/rune-roadmap` when you're about to open, label, close, or milestone-manage a Roadmap-relevant issue. It is intentionally opt-in (not auto-loaded) while the project is in heavy BREAKING-changes phase, since almost any issue could plausibly be Roadmap-relevant and auto-firing would defeat the extraction. It is a different skill from the `sdlc` plugin's `/sdlc:roadmap`, which reports where the project's epics stand.
